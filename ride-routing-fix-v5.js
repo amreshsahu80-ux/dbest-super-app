@@ -7,11 +7,30 @@
     const j=await r.json(); if(!j.length) throw new Error('Place not found');
     return {lat:+j[0].lat,lon:+j[0].lon};
   }
+  function practicalMinutes(km,osrmMins){
+    let speed;
+    if(km<=5) speed=22;
+    else if(km<=15) speed=28;
+    else if(km<=40) speed=36;
+    else if(km<=100) speed=45;
+    else if(km<=250) speed=50;
+    else speed=55;
+    let mins=Math.round((km/speed)*60 + (km<=15?5:8));
+    // Keep the estimate within a sensible envelope of the routing engine,
+    // but avoid unrealistic road-tag speeds on local Indian routes.
+    if(Number.isFinite(osrmMins)&&osrmMins>0){
+      const low=Math.round(mins*0.80), high=Math.round(mins*1.30);
+      if(osrmMins>=low&&osrmMins<=high) mins=Math.round((mins+osrmMins)/2);
+    }
+    return Math.max(5,mins);
+  }
   async function roadRoute(a,b){
     const url='https://router.project-osrm.org/route/v1/driving/'+a.lon+','+a.lat+';'+b.lon+','+b.lat+'?overview=false&steps=false';
     const r=await fetch(url); if(!r.ok) throw new Error('Road routing unavailable');
     const j=await r.json(); const rt=j.routes&&j.routes[0]; if(!rt) throw new Error('No drivable route found');
-    return {km:Math.round((rt.distance/1000)*10)/10,mins:Math.max(1,Math.round(rt.duration/60))};
+    const km=Math.round((rt.distance/1000)*10)/10;
+    const osrmMins=Math.max(1,Math.round(rt.duration/60));
+    return {km,mins:practicalMinutes(km,osrmMins),osrmMins};
   }
   function updateFareCards(km){
     try{
