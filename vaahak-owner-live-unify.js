@@ -1,24 +1,23 @@
 (function(){
   const escLive=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const notifyLive=m=>{try{typeof toast==='function'?toast(m):alert(m)}catch(e){alert(m)}};
-  function ownerRoleOk(){return !!(window.session&&window.session.role==='owner')}
+  function currentSession(){try{return typeof session!=='undefined'?session:(window.session||null)}catch(e){return window.session||null}}
+  function ownerRoleOk(){const s=currentSession();return !!(s&&s.role==='owner')}
   function ownerToken(){try{return window.DBEST_OWNER_AUTH_BRIDGE?.getOwnerToken?.()||''}catch(e){return''}}
   function liveReady(){return !!window.DBEST_VAAHAK_LIVE?.call}
-  function forceOwnerReauth(msg){
-    try{sessionStorage.removeItem('dbest_owner_session_token')}catch(e){}
-    notifyLive(msg||'Owner security session expired. Please verify Owner OTP again.');
-    setTimeout(()=>{try{typeof ownerLogin==='function'?ownerLogin():typeof owner==='function'&&owner()}catch(e){}},150);
+  function showOwnerLogin(msg){
+    notifyLive(msg||'Owner security session is not active. Please verify Owner OTP.');
+    try{if(typeof ownerLogin==='function')ownerLogin()}catch(e){}
   }
 
   window.ownerApproveLiveVaahak=async function(id,approve){
-    if(!ownerRoleOk()||!liveReady())return forceOwnerReauth('Owner login required.');
-    if(!ownerToken())return forceOwnerReauth();
+    if(!ownerRoleOk()||!liveReady()||!ownerToken())return showOwnerLogin('Owner security session is not active. Please verify Owner OTP.');
     try{
       await window.DBEST_VAAHAK_LIVE.call('owner_approve',{partnerId:id,approve:!!approve},{owner:true});
       notifyLive(approve?'Vaahak approved.':'Vaahak rejected.');
       window.ownerVaahakControl();
     }catch(e){
-      if(/owner_session_invalid|owner_session/i.test(String(e.message||'')))return forceOwnerReauth();
+      if(/owner_session_invalid|owner_session/i.test(String(e.message||'')))return showOwnerLogin('Owner security session expired. Please verify Owner OTP once.');
       notifyLive('Unable to update Vaahak: '+(e.message||'Unknown error'));
     }
   };
@@ -55,8 +54,7 @@
   }
 
   window.ownerVaahakControl=async function(){
-    if(!ownerRoleOk()||!liveReady())return forceOwnerReauth('Please login as Owner again.');
-    if(!ownerToken())return forceOwnerReauth();
+    if(!ownerRoleOk()||!liveReady()||!ownerToken())return showOwnerLogin('Owner session is not active. Please verify Owner OTP once.');
     sectionScreen(`${sectionTopBar('🛵 Vaahak Partner Control','Live Supabase • Registration • Approval • PIN • Dispatch','owner()')}
       <div class="sectionContent ownerMasterPage">
         <div class="notice" style="margin-bottom:12px"><b>Live Supabase Vaahak records.</b> This is now the single source for approval, PIN reset, login and dispatch.</div>
@@ -68,13 +66,15 @@
       const p=document.getElementById('liveVaahakOwnerList'); if(p)p.innerHTML='<h3>Live Vaahak Partners</h3>'+renderPartners(Array.isArray(d.partners)?d.partners:[]);
       const j=document.getElementById('liveVaahakJobs'); if(j)j.innerHTML='<h3>Live Dispatch Jobs</h3><div class="ownerList">'+renderJobs(Array.isArray(d.jobs)?d.jobs:[])+'</div>';
     }catch(e){
-      if(/owner_session_invalid|owner_session/i.test(String(e.message||''))){
-        const p=document.getElementById('liveVaahakOwnerList');if(p)p.innerHTML='<h3>Live Vaahak Partners</h3><div class="notice"><b>Owner security session expired.</b><br>Please verify Owner OTP once again. Your Vaahak data is safe in Supabase.<br><button class="mini" style="margin-top:10px" onclick="ownerLogin()">Verify Owner Again</button></div>';
-        return forceOwnerReauth('Owner security session expired. Please verify Owner OTP again.');
+      const msg=String(e.message||'');
+      const p=document.getElementById('liveVaahakOwnerList');
+      if(/owner_session_invalid|owner_session/i.test(msg)){
+        if(p)p.innerHTML='<h3>Live Vaahak Partners</h3><div class="notice"><b>Owner security session expired.</b><br>Please return to Owner login and verify OTP once.</div>';
+        return notifyLive('Owner security session expired. Please verify Owner OTP once.');
       }
-      const p=document.getElementById('liveVaahakOwnerList');if(p)p.innerHTML='<h3>Live Vaahak Partners</h3><div class="notice">Unable to load live Vaahak data: '+escLive(e.message||'Unknown error')+'</div>';
+      if(p)p.innerHTML='<h3>Live Vaahak Partners</h3><div class="notice">Unable to load live Vaahak data: '+escLive(msg||'Unknown error')+'</div>';
     }
   };
 
-  window.DBEST_VAAHAK_OWNER_LIVE_UNIFIED={version:'1.1.0'};
+  window.DBEST_VAAHAK_OWNER_LIVE_UNIFIED={version:'1.2.0'};
 })();
