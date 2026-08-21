@@ -1,15 +1,26 @@
 (function(){
   const escLive=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const notifyLive=m=>{try{typeof toast==='function'?toast(m):alert(m)}catch(e){alert(m)}};
-  function ownerReady(){return !!(window.session&&window.session.role==='owner'&&window.DBEST_VAAHAK_LIVE?.call)}
+  function ownerRoleOk(){return !!(window.session&&window.session.role==='owner')}
+  function ownerToken(){try{return window.DBEST_OWNER_AUTH_BRIDGE?.getOwnerToken?.()||''}catch(e){return''}}
+  function liveReady(){return !!window.DBEST_VAAHAK_LIVE?.call}
+  function forceOwnerReauth(msg){
+    try{sessionStorage.removeItem('dbest_owner_session_token')}catch(e){}
+    notifyLive(msg||'Owner security session expired. Please verify Owner OTP again.');
+    setTimeout(()=>{try{typeof ownerLogin==='function'?ownerLogin():typeof owner==='function'&&owner()}catch(e){}},150);
+  }
 
   window.ownerApproveLiveVaahak=async function(id,approve){
-    if(!ownerReady())return notifyLive('Owner login required.');
+    if(!ownerRoleOk()||!liveReady())return forceOwnerReauth('Owner login required.');
+    if(!ownerToken())return forceOwnerReauth();
     try{
       await window.DBEST_VAAHAK_LIVE.call('owner_approve',{partnerId:id,approve:!!approve},{owner:true});
       notifyLive(approve?'Vaahak approved.':'Vaahak rejected.');
       window.ownerVaahakControl();
-    }catch(e){notifyLive('Unable to update Vaahak: '+(e.message||'Unknown error'))}
+    }catch(e){
+      if(/owner_session_invalid|owner_session/i.test(String(e.message||'')))return forceOwnerReauth();
+      notifyLive('Unable to update Vaahak: '+(e.message||'Unknown error'));
+    }
   };
 
   function approvalBadge(v){
@@ -20,7 +31,7 @@
   }
 
   function renderPartners(partners){
-    if(!partners.length)return '<div class="notice">No live Vaahak registrations found.</div>';
+    if(!partners.length)return '<div class="notice">No live Vaahak registrations found in Supabase.</div>';
     return partners.map(v=>`<div class="ownerQueueRow" style="border:1px solid #dfe7f2;border-radius:16px;padding:14px;margin:10px 0;background:#fff">
       <h4 style="margin:0 0 6px">${escLive(v.name)} • ${escLive(v.id)} ${approvalBadge(v.owner_approval)}</h4>
       <small>${escLive(v.mobile||'')} • ${escLive(v.vehicle||'')} ${escLive(v.vehicle_no||'')}</small>
@@ -44,21 +55,26 @@
   }
 
   window.ownerVaahakControl=async function(){
-    if(!ownerReady())return notifyLive('Please login as Owner again.');
+    if(!ownerRoleOk()||!liveReady())return forceOwnerReauth('Please login as Owner again.');
+    if(!ownerToken())return forceOwnerReauth();
     sectionScreen(`${sectionTopBar('🛵 Vaahak Partner Control','Live Supabase • Registration • Approval • PIN • Dispatch','owner()')}
       <div class="sectionContent ownerMasterPage">
-        <div class="notice" style="margin-bottom:12px"><b>Live Vaahak records only.</b> Older device/local Vaahak IDs are no longer used for approval or login.</div>
+        <div class="notice" style="margin-bottom:12px"><b>Live Supabase Vaahak records.</b> This is now the single source for approval, PIN reset, login and dispatch.</div>
         <div id="liveVaahakOwnerList" class="ownerPanelCard"><h3>Live Vaahak Partners</h3><div class="notice">Loading live Vaahak records…</div></div>
         <div id="liveVaahakJobs" style="margin-top:16px"><h3>Live Dispatch Jobs</h3><div class="notice">Loading jobs…</div></div>
       </div>`);
     try{
       const d=await window.DBEST_VAAHAK_LIVE.call('owner_list',{}, {owner:true});
-      const p=document.getElementById('liveVaahakOwnerList'); if(p)p.innerHTML='<h3>Live Vaahak Partners</h3>'+renderPartners(d.partners||[]);
-      const j=document.getElementById('liveVaahakJobs'); if(j)j.innerHTML='<h3>Live Dispatch Jobs</h3><div class="ownerList">'+renderJobs(d.jobs||[])+'</div>';
+      const p=document.getElementById('liveVaahakOwnerList'); if(p)p.innerHTML='<h3>Live Vaahak Partners</h3>'+renderPartners(Array.isArray(d.partners)?d.partners:[]);
+      const j=document.getElementById('liveVaahakJobs'); if(j)j.innerHTML='<h3>Live Dispatch Jobs</h3><div class="ownerList">'+renderJobs(Array.isArray(d.jobs)?d.jobs:[])+'</div>';
     }catch(e){
-      const p=document.getElementById('liveVaahakOwnerList');if(p)p.innerHTML='<h3>Live Vaahak Partners</h3><div class="notice">Unable to load live Vaahak data. Please re-login as Owner.</div>';
+      if(/owner_session_invalid|owner_session/i.test(String(e.message||''))){
+        const p=document.getElementById('liveVaahakOwnerList');if(p)p.innerHTML='<h3>Live Vaahak Partners</h3><div class="notice"><b>Owner security session expired.</b><br>Please verify Owner OTP once again. Your Vaahak data is safe in Supabase.<br><button class="mini" style="margin-top:10px" onclick="ownerLogin()">Verify Owner Again</button></div>';
+        return forceOwnerReauth('Owner security session expired. Please verify Owner OTP again.');
+      }
+      const p=document.getElementById('liveVaahakOwnerList');if(p)p.innerHTML='<h3>Live Vaahak Partners</h3><div class="notice">Unable to load live Vaahak data: '+escLive(e.message||'Unknown error')+'</div>';
     }
   };
 
-  window.DBEST_VAAHAK_OWNER_LIVE_UNIFIED={version:'1.0.0'};
+  window.DBEST_VAAHAK_OWNER_LIVE_UNIFIED={version:'1.1.0'};
 })();
