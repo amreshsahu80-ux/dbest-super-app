@@ -74,5 +74,26 @@
     };
   }
 
-  window.DBEST_OWNER_AUTH_BRIDGE={version:'1.1.0',getOwnerToken};
+  const originalRemoveMember=window.removeMember;
+  if(typeof originalRemoveMember==='function'){
+    window.removeMember=async function(id){
+      if(!session||session.role!=='owner')return originalRemoveMember(id);
+      if(!confirm('Remove this member? The member may register again later with the same email, mobile, PAN and Aadhaar.'))return;
+      const ownerToken=getOwnerToken();
+      if(!ownerToken){toast('Owner security session expired. Please log in again.');return ownerLogin();}
+      try{
+        await request('/functions/v1/delete-member',{memberId:String(id||'')},{'x-dbest-owner-token':ownerToken});
+        if(typeof users!=='undefined'&&Array.isArray(users))users=users.filter(x=>String(x.id||'')!==String(id||''));
+        if(typeof txs!=='undefined'&&Array.isArray(txs))txs=txs.filter(x=>String(x.userId||'')!==String(id||''));
+        if(typeof save==='function')save();
+        toast('Member deleted. The same person can register again without duplicate conflict.');
+        if(typeof ownerMemberOnboarding==='function')ownerMemberOnboarding();
+      }catch(err){
+        if(/owner_session/i.test(String(err.message||''))){clearOwnerToken();toast('Owner security session expired. Please log in again.');return ownerLogin();}
+        toast('Member could not be deleted: '+(err.message||'Unknown error'));
+      }
+    };
+  }
+
+  window.DBEST_OWNER_AUTH_BRIDGE={version:'1.2.0',getOwnerToken};
 })();
