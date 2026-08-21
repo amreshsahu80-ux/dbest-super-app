@@ -15,7 +15,7 @@
     const r=await fetch(url+path,{...opts,headers:{...anonHeaders,...(opts.headers||{})}});
     let data={};
     try{data=await r.json()}catch(e){}
-    if(!r.ok)throw new Error(data.message||data.msg||data.error_description||data.hint||('Request failed '+r.status));
+    if(!r.ok)throw new Error(data.message||data.msg||data.error||data.error_description||data.hint||('Request failed '+r.status));
     return data;
   }
 
@@ -59,7 +59,11 @@
   }
 
   async function sendEmailOtp(email){
-    await request('/auth/v1/otp',{method:'POST',body:JSON.stringify({email,create_user:true})});
+    return request('/functions/v1/send-member-otp',{method:'POST',body:JSON.stringify({email})});
+  }
+
+  async function verifyEmailOtp(email,code){
+    return request('/functions/v1/verify-member-otp',{method:'POST',body:JSON.stringify({email,code})});
   }
 
   function removeVerifier(){const x=document.getElementById('dbestEmailVerifyOverlay');if(x)x.remove();}
@@ -82,16 +86,23 @@
 
     const msg=wrap.querySelector('#dbestVerifyMsg');
     wrap.querySelector('#dbestLaterBtn').onclick=removeVerifier;
-    wrap.querySelector('#dbestResendBtn').onclick=async()=>{try{msg.textContent='Sending a new OTP…';await sendEmailOtp(email);msg.textContent='New OTP sent.';}catch(e){msg.textContent=e.message;}};
+    wrap.querySelector('#dbestResendBtn').onclick=async()=>{
+      try{
+        msg.style.color='#687386';msg.textContent='Sending a new OTP…';
+        await sendEmailOtp(email);
+        msg.style.color='#15803d';msg.textContent='New OTP sent from DBest.';
+      }catch(e){
+        msg.style.color='#b91c1c';
+        msg.textContent=e.message==='otp_rate_limited'?'Please wait about a minute before requesting another OTP.':e.message;
+      }
+    };
     wrap.querySelector('#dbestVerifyBtn').onclick=async()=>{
       const token=String(wrap.querySelector('#dbestEmailOtp').value||'').trim();
       if(!/^\d{6}$/.test(token)){msg.textContent='Please enter the 6-digit OTP.';return;}
       try{
-        msg.textContent='Verifying…';
-        const data=await request('/auth/v1/verify',{method:'POST',body:JSON.stringify({email,token,type:'email'})});
-        const access=data.access_token;
-        if(!access)throw new Error('Verification succeeded but no session was returned');
-        await request('/rest/v1/rpc/mark_member_email_verified',{method:'POST',headers:{'Authorization':'Bearer '+access},body:'{}'});
+        msg.style.color='#687386';msg.textContent='Verifying…';
+        const data=await verifyEmailOtp(email,token);
+        if(!data.ok)throw new Error('Invalid or expired OTP');
         try{
           if(typeof users!=='undefined'&&Array.isArray(users)){
             const u=users.find(x=>String(x.id||'')===String(memberId||''));
@@ -100,7 +111,7 @@
         }catch(e){}
         msg.style.color='#15803d';msg.textContent='Email verified successfully.';
         setTimeout(removeVerifier,900);
-      }catch(e){msg.style.color='#b91c1c';msg.textContent=e.message;}
+      }catch(e){msg.style.color='#b91c1c';msg.textContent=(/400|invalid|verification/i.test(e.message)?'Invalid or expired OTP. Please try again.':e.message);}
     };
   }
 
@@ -128,5 +139,5 @@
     }catch(err){console.warn('DBest backend bridge:',err);}
   },true);
 
-  window.DBEST_BACKEND_BRIDGE={version:'1.1.0',syncMemberRegistration,sendEmailOtp,showVerifier};
+  window.DBEST_BACKEND_BRIDGE={version:'1.2.0',syncMemberRegistration,sendEmailOtp,verifyEmailOtp,showVerifier};
 })();
