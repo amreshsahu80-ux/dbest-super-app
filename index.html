@@ -2,13 +2,26 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <meta http-equiv="refresh" content="0; url=./index-26.html">
-  <script>
-    window.location.replace("./index-26.html");
-  </script>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>DBest Super App</title>
 </head>
 <body>
-  Opening DBest Super App...
+  <div style="font-family:system-ui,Arial;padding:24px;text-align:center">Opening DBest Super App...</div>
+  <script>
+    (async function(){
+      try{
+        const r = await fetch('./index-26.html', {cache:'no-store'});
+        if(!r.ok) throw new Error('Unable to load application');
+        let html = await r.text();
+        html = html.replace('</head>', '<script src="./runtime-config.js"><\/script></head>');
+        document.open();
+        document.write(html);
+        document.close();
+      }catch(err){
+        document.body.innerHTML = '<div style="font-family:system-ui,Arial;padding:24px"><h2>DBest Super App</h2><p>Application loading error. Please refresh.</p></div>';
+        console.error(err);
+      }
+    })();
+  </script>
 </body>
 </html>
