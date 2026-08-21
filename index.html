@@ -15,7 +15,7 @@
         if(!r.ok) throw new Error('Unable to load application');
         let html = await r.text();
         html = html.replace('</head>', '<script src="./runtime-config.js"><\/script></head>');
-        html = html.replace('</body>', '<script src="./backend-bridge.js"><\/script><script src="./owner-auth-bridge.js"><\/script><script src="./ux-performance-bridge.js"><\/script><script src="./ui-cab-enhancements.js"><\/script><script src="./ride-exact-location-bridge.js"><\/script><script src="./ride-suggestion-layout-fix.js"><\/script><script src="./ride-ui-cleanup-v4.js"><\/script></body>');
+        html = html.replace('</body>', '<script src="./backend-bridge.js"><\/script><script src="./owner-auth-bridge.js"><\/script><script src="./ux-performance-bridge.js"><\/script><script src="./ui-cab-enhancements.js"><\/script><script src="./ride-exact-location-bridge.js"><\/script><script src="./ride-suggestion-layout-fix.js"><\/script><script src="./ride-ui-cleanup-v4.js"><\/script><script src="./ride-routing-fix-v5.js"><\/script></body>');
         document.open();
         document.write(html);
         document.close();
