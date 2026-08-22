@@ -11,55 +11,17 @@
     if(data.token){try{localStorage.setItem(TOKEN_KEY,String(data.token))}catch(e){}}
     return data;
   }
-  function mergeUser(u){
-    if(!u)return null;
-    try{
-      if(Array.isArray(users)){
-        const i=users.findIndex(x=>String(x.id||'')===String(u.id||''));
-        if(i>=0)users[i]={...users[i],...u}; else users.push(u);
-      }
-    }catch(e){}
-    return u;
-  }
-  function hydrateNetwork(list){
-    if(!Array.isArray(list))return;
-    list.forEach(mergeUser);
-  }
-  function hydrateTransactions(list){
-    if(!Array.isArray(list))return;
-    try{
-      if(!Array.isArray(txs))return;
-      const byId=new Map(txs.map(x=>[String(x.id||''),x]));
-      for(const t of list){
-        const id=String(t.id||''); if(!id)continue;
-        if(byId.has(id)) Object.assign(byId.get(id),t); else {txs.push(t);byId.set(id,t);}
-      }
-      txs.sort((a,b)=>new Date(b.createdISO||b.created||0)-new Date(a.createdISO||a.created||0));
-    }catch(e){}
-  }
+  function mergeUser(u){if(!u)return null;try{if(Array.isArray(users)){const i=users.findIndex(x=>String(x.id||'')===String(u.id||''));if(i>=0)users[i]={...users[i],...u};else users.push(u)}}catch(e){}return u}
+  function hydrateNetwork(list){if(!Array.isArray(list))return;list.forEach(mergeUser)}
+  function hydrateTransactions(list){if(!Array.isArray(list))return;try{if(!Array.isArray(txs))return;const byId=new Map(txs.map(x=>[String(x.id||''),x]));for(const t of list){const id=String(t.id||'');if(!id)continue;if(byId.has(id))Object.assign(byId.get(id),t);else{txs.push(t);byId.set(id,t)}}txs.sort((a,b)=>new Date(b.createdISO||b.created||0)-new Date(a.createdISO||a.created||0))}catch(e){}}
   window.DBEST_MEMBER_LIVE={getToken:()=>{try{return localStorage.getItem(TOKEN_KEY)||''}catch(e){return''}},clear:()=>{try{localStorage.removeItem(TOKEN_KEY)}catch(e){}}};
   window.memberGo=async function(e){
-    e.preventDefault();
-    const form=e.target, btn=form.querySelector('button');
-    if(btn){btn.disabled=true;btn.textContent='Checking…';}
+    e.preventDefault();const form=e.target,btn=form.querySelector('button');if(btn){btn.disabled=true;btn.textContent='Checking…'}
     try{
-      const v=new FormData(form).get('id');
-      const data=await lookup(v);
-      const u=mergeUser(data.member);
-      hydrateNetwork(data.network);
-      hydrateTransactions(data.transactions);
-      if(!u){if(typeof toast==='function')toast('Active approved member not found.');return;}
-      session={role:u.tier,id:u.id};
-      u.lastLoginAt=new Date().toLocaleString('en-IN');
-      if(typeof save==='function')save();
-      if(typeof render==='function')render();
-      if(typeof memberDash==='function')memberDash(u.id);
-      if(typeof toast==='function')toast('Login successful — live hierarchy loaded');
-    }catch(err){
-      console.error('DBest live member login',err);
-      if(typeof toast==='function')toast(err.status===404?'Active approved member not found.':'Login could not complete. Please retry.');
-    } finally {
-      if(btn){btn.disabled=false;btn.textContent='Login';}
-    }
+      const v=new FormData(form).get('id');const data=await lookup(v);const u=mergeUser(data.member);hydrateNetwork(data.branch||data.network||[]);hydrateTransactions(data.transactions||[]);
+      if(!u){if(typeof toast==='function')toast('Active approved member not found.');return}
+      session={role:u.tier,id:u.id};u.lastLoginAt=new Date().toLocaleString('en-IN');if(typeof save==='function')save();if(typeof render==='function')render();if(typeof memberDash==='function')memberDash(u.id);if(typeof toast==='function')toast('Login successful — live hierarchy loaded');
+    }catch(err){console.error('DBest live member login',err);if(typeof toast==='function')toast(err.status===404?'Active approved member not found.':'Login could not complete. Please retry.')}
+    finally{if(btn){btn.disabled=false;btn.textContent='Login'}}
   };
 })();
