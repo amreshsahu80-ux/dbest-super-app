@@ -6,7 +6,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
 });
 
 (function(){
-  const V='20260823-0345-three-portals';
+  const V='20260823-0515-my-orders';
   const loadScript=(src,attr)=>{
     const load=()=>{
       if(document.querySelector('script['+attr+']')) return;
