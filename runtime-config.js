@@ -6,7 +6,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
 });
 
 (function(){
-  const V='20260823-0310-vaahak-ownerfix';
+  const V='20260823-0312-vaahak-ownerfix';
   const loadScript=(src,attr)=>{
     const load=()=>{
       if(document.querySelector('script['+attr+']')) return;
