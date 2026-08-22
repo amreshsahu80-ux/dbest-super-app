@@ -17,5 +17,8 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
     if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',load,{once:true}); else load();
   };
   loadScript('./ride-otp-completion-fix.js','data-dbest-ride-otp-fix');
-  if(/\/vaahak\.html$/i.test(location.pathname)) loadScript('./vaahak-ride-history.js','data-dbest-vaahak-history');
+  if(/\/vaahak\.html$/i.test(location.pathname)){
+    loadScript('./vaahak-ride-history.js','data-dbest-vaahak-history');
+    loadScript('./vaahak-nearest-dispatch.js?v=20260823-0245','data-dbest-nearest-dispatch');
+  }
 })();
