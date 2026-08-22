@@ -4,7 +4,6 @@
   if(!base||!key)return;
   const H={'apikey':key,'Authorization':'Bearer '+key,'Content-Type':'application/json'};
   const TOKEN_KEY='dbest_member_live_token';
-
   async function lookup(v){
     const r=await fetch(base+'/functions/v1/member-login-live',{method:'POST',headers:H,body:JSON.stringify({login:String(v||'').trim()})});
     let data={};try{data=await r.json()}catch(e){}
@@ -12,7 +11,7 @@
     if(data.token){try{localStorage.setItem(TOKEN_KEY,String(data.token))}catch(e){}}
     return data;
   }
-  function upsertUser(u){
+  function mergeUser(u){
     if(!u)return null;
     try{
       if(Array.isArray(users)){
@@ -22,23 +21,23 @@
     }catch(e){}
     return u;
   }
-  function hydrateNetwork(data){
-    const network=Array.isArray(data?.network)?data.network:[];
-    network.forEach(upsertUser);
-    try{
-      if(Array.isArray(txs)&&Array.isArray(data?.transactions)){
-        const seen=new Set(txs.map(x=>String(x.id||'')));
-        for(const x of data.transactions){if(!seen.has(String(x.id||''))){txs.push(x);seen.add(String(x.id||''));}}
-        txs.sort((a,b)=>new Date(b.createdISO||b.created||0)-new Date(a.createdISO||a.created||0));
-      }
-    }catch(e){}
-    return upsertUser(data?.member||null);
+  function hydrateNetwork(list){
+    if(!Array.isArray(list))return;
+    list.forEach(mergeUser);
   }
-  window.DBEST_MEMBER_LIVE={
-    getToken:()=>{try{return localStorage.getItem(TOKEN_KEY)||''}catch(e){return''}},
-    clear:()=>{try{localStorage.removeItem(TOKEN_KEY)}catch(e){}},
-    hydrateNetwork
-  };
+  function hydrateTransactions(list){
+    if(!Array.isArray(list))return;
+    try{
+      if(!Array.isArray(txs))return;
+      const byId=new Map(txs.map(x=>[String(x.id||''),x]));
+      for(const t of list){
+        const id=String(t.id||''); if(!id)continue;
+        if(byId.has(id)) Object.assign(byId.get(id),t); else {txs.push(t);byId.set(id,t);}
+      }
+      txs.sort((a,b)=>new Date(b.createdISO||b.created||0)-new Date(a.createdISO||a.created||0));
+    }catch(e){}
+  }
+  window.DBEST_MEMBER_LIVE={getToken:()=>{try{return localStorage.getItem(TOKEN_KEY)||''}catch(e){return''}},clear:()=>{try{localStorage.removeItem(TOKEN_KEY)}catch(e){}}};
   window.memberGo=async function(e){
     e.preventDefault();
     const form=e.target, btn=form.querySelector('button');
@@ -46,14 +45,16 @@
     try{
       const v=new FormData(form).get('id');
       const data=await lookup(v);
-      const u=hydrateNetwork(data);
+      const u=mergeUser(data.member);
+      hydrateNetwork(data.network);
+      hydrateTransactions(data.transactions);
       if(!u){if(typeof toast==='function')toast('Active approved member not found.');return;}
       session={role:u.tier,id:u.id};
       u.lastLoginAt=new Date().toLocaleString('en-IN');
       if(typeof save==='function')save();
       if(typeof render==='function')render();
       if(typeof memberDash==='function')memberDash(u.id);
-      if(typeof toast==='function')toast('Login successful — live branch hierarchy loaded');
+      if(typeof toast==='function')toast('Login successful — live hierarchy loaded');
     }catch(err){
       console.error('DBest live member login',err);
       if(typeof toast==='function')toast(err.status===404?'Active approved member not found.':'Login could not complete. Please retry.');
