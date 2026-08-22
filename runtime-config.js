@@ -6,13 +6,16 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
 });
 
 (function(){
-  if(!/\/vaahak\.html$/i.test(location.pathname)) return;
-  const load=()=>{
-    if(document.querySelector('script[data-dbest-vaahak-history]')) return;
-    const s=document.createElement('script');
-    s.src='./vaahak-ride-history.js';
-    s.setAttribute('data-dbest-vaahak-history','1');
-    document.body.appendChild(s);
+  const loadScript=(src,attr)=>{
+    const load=()=>{
+      if(document.querySelector('script['+attr+']')) return;
+      const s=document.createElement('script');
+      s.src=src;
+      s.setAttribute(attr,'1');
+      document.body.appendChild(s);
+    };
+    if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',load,{once:true}); else load();
   };
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',load,{once:true}); else load();
+  loadScript('./ride-otp-completion-fix.js','data-dbest-ride-otp-fix');
+  if(/\/vaahak\.html$/i.test(location.pathname)) loadScript('./vaahak-ride-history.js','data-dbest-vaahak-history');
 })();
