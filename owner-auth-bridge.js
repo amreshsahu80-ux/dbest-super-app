@@ -6,29 +6,36 @@
   if(!url||!key||!ownerEmail)return;
 
   const OWNER_TOKEN_KEY='dbest_owner_session_token';
-
   async function request(path,body,extraHeaders){
     const r=await fetch(url+path,{method:'POST',headers:{'apikey':key,'Authorization':'Bearer '+key,'Content-Type':'application/json',...(extraHeaders||{})},body:JSON.stringify(body||{})});
     let data={};try{data=await r.json()}catch(e){}
     if(!r.ok)throw new Error(data.error||data.message||('Request failed '+r.status));
     return data;
   }
-
   function saveOwnerToken(token){try{sessionStorage.setItem(OWNER_TOKEN_KEY,String(token||''));}catch(e){}}
   function getOwnerToken(){try{return String(sessionStorage.getItem(OWNER_TOKEN_KEY)||'');}catch(e){return '';}}
   function clearOwnerToken(){try{sessionStorage.removeItem(OWNER_TOKEN_KEY);}catch(e){}}
+  function upsertUser(u){try{if(!Array.isArray(users)||!u)return;const i=users.findIndex(x=>String(x.id||'')===String(u.id||''));if(i>=0)users[i]={...users[i],...u};else users.push(u);}catch(e){}}
+  async function hydrateOwnerLiveData(){
+    const ownerToken=getOwnerToken(); if(!ownerToken)return;
+    try{
+      const d=await request('/functions/v1/owner-live-network',{}, {'x-dbest-owner-token':ownerToken});
+      (d.members||[]).forEach(upsertUser);
+      if(Array.isArray(txs)&&Array.isArray(d.transactions)){
+        const seen=new Set(txs.map(x=>String(x.id||'')));
+        d.transactions.forEach(x=>{if(!seen.has(String(x.id||''))){txs.push(x);seen.add(String(x.id||''));}});
+        txs.sort((a,b)=>new Date(b.createdISO||b.created||0)-new Date(a.createdISO||a.created||0));
+      }
+      if(typeof save==='function')save();
+    }catch(e){console.warn('Owner live network hydration failed',e);}
+  }
 
   window.ownerGo=async function(e){
     e.preventDefault();
     const email=String(new FormData(e.target).get('u')||'').trim().toLowerCase();
     if(email!==ownerEmail)return toast('This email is not authorized as Project Owner');
-    try{
-      await request('/functions/v1/send-owner-otp',{email});
-      ownerOtpVerify(email);
-      toast('6-digit Owner OTP sent from DBest');
-    }catch(err){
-      toast(err.message==='otp_rate_limited'?'Please wait about a minute before requesting another Owner OTP.':'Owner OTP error: '+err.message);
-    }
+    try{await request('/functions/v1/send-owner-otp',{email});ownerOtpVerify(email);toast('6-digit Owner OTP sent from DBest');}
+    catch(err){toast(err.message==='otp_rate_limited'?'Please wait about a minute before requesting another Owner OTP.':'Owner OTP error: '+err.message);}
   };
 
   window.ownerVerifyOtp=async function(e,email){
@@ -39,16 +46,12 @@
       const data=await request('/functions/v1/verify-owner-otp',{email:String(email||'').trim().toLowerCase(),code:token});
       if(!data.ok||!data.ownerToken)throw new Error('Invalid or expired OTP');
       saveOwnerToken(data.ownerToken);
-      session={role:'owner',id:'OWNER'};
-      ownerOpen=true;
-      if(typeof save==='function')save();
+      session={role:'owner',id:'OWNER'}; ownerOpen=true;
+      await hydrateOwnerLiveData();
       if(typeof render==='function')render();
       owner();
-      toast('Owner verified successfully');
-    }catch(err){
-      clearOwnerToken();
-      toast('OTP verification failed: '+(err.message||'Invalid or expired OTP'));
-    }
+      toast('Owner verified — live member hierarchy loaded');
+    }catch(err){clearOwnerToken();toast('OTP verification failed: '+(err.message||'Invalid or expired OTP'));}
   };
 
   const originalApprovePayment=window.approvePayment;
@@ -63,6 +66,7 @@
         toast('Approving membership and sending Welcome Mail…');
         const data=await request('/functions/v1/approve-member-and-welcome',{memberId:String(id||'')},{'x-dbest-owner-token':ownerToken});
         originalApprovePayment(id);
+        await hydrateOwnerLiveData();
         if(data.emailSent)toast('Membership activated. Welcome Mail sent successfully.');
         else if(data.alreadySent)toast('Membership activated. Welcome Mail had already been sent.');
         else toast('Membership activated, but Welcome Mail could not be sent. Please retry later.');
@@ -95,5 +99,5 @@
     };
   }
 
-  window.DBEST_OWNER_AUTH_BRIDGE={version:'1.2.0',getOwnerToken};
+  window.DBEST_OWNER_AUTH_BRIDGE={version:'1.3.0',getOwnerToken,hydrateOwnerLiveData};
 })();
