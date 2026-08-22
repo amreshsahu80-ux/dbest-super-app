@@ -30,15 +30,15 @@
     try{
       const payload={jobId};
       if(action==='start'){
-        const otp=String(prompt('Enter the customer 4-digit Ride OTP to start this ride')||'').trim();
-        if(!/^\d{4}$/.test(otp))return notify('A valid 4-digit Ride OTP is required.');
+        const otp=String(prompt('Enter the customer 4-digit Ride PIN to start this ride')||'').trim();
+        if(!/^\d{4}$/.test(otp))return notify('A valid 4-digit Ride PIN is required.');
         payload.otp=otp;
       }
       await window.DBEST_VAAHAK_LIVE.call(action,payload,{vaahak:true});
-      notify(action==='accept'?'Ride accepted.':action==='start'?'Ride started after OTP verification.':action==='complete'?'Ride completed.':'Request skipped.');
+      notify(action==='accept'?'Ride accepted.':action==='start'?'Ride started after Ride PIN verification.':action==='complete'?'Ride completed.':'Request skipped.');
       window.vaahakDashboard?.();
     }catch(err){
-      if(err.message==='invalid_ride_otp'||err.message==='ride_otp_required')return notify('Ride OTP is incorrect. Please ask the customer for the current OTP.');
+      if(err.message==='invalid_ride_otp'||err.message==='ride_otp_required')return notify('Ride PIN is incorrect. Please ask the customer for the current Ride PIN.');
       notify(err.message==='ride_already_taken'?'Another Vaahak has already accepted this ride.':'Unable to update ride: '+err.message);
     }
   };
@@ -58,7 +58,7 @@
           box.style.cssText='margin:12px 24px;padding:14px;border:1px solid #cfe0ff;border-radius:16px;background:#fff;box-shadow:0 8px 20px rgba(20,60,120,.08)';
           (document.querySelector('.sectionContent')||document.body).prepend(box);
         }
-        box.innerHTML=`<b>📡 Live Vaahak Status: ${esc(d.job.status)}</b>${d.partner?`<div style="margin-top:6px">🛵 ${esc(d.partner.name)} • ${esc(d.partner.vehicle)} ${esc(d.partner.vehicle_no||'')} • ⭐ ${esc(d.partner.rating||'')}</div>`:'<div style="margin-top:6px;color:#64748b">Waiting for an online Vaahak to accept this ride…</div>'}${d.job.otp&&['Accepted','Trip Started'].includes(d.job.status)?`<div style="margin-top:8px;font-size:22px;font-weight:900">Ride OTP: ${esc(d.job.otp)}</div>`:''}`;
+        box.innerHTML=`<b>📡 Live Vaahak Status: ${esc(d.job.status)}</b>${d.partner?`<div style="margin-top:6px">🛵 ${esc(d.partner.name)} • ${esc(d.partner.vehicle)} ${esc(d.partner.vehicle_no||'')} • ⭐ ${esc(d.partner.rating||'')}</div>`:'<div style="margin-top:6px;color:#64748b">Waiting for an online Vaahak to accept this ride…</div>'}${d.job.otp&&['Accepted','Trip Started'].includes(d.job.status)?`<div style="margin-top:8px;font-size:22px;font-weight:900">Ride PIN: ${esc(d.job.otp)}</div>`:''}`;
         if(d.job.status==='Completed'){clearInterval(securePoll);securePoll=null;}
       }catch(e){}
     };
@@ -68,5 +68,5 @@
     window.rideStatusScreen=function(txId){oldRideStatus(txId);setTimeout(()=>secureCustomerPoll(txId),350);};
   }
 
-  window.DBEST_VAAHAK_SECURITY={version:'1.0.0',getCustomerToken};
+  window.DBEST_VAAHAK_SECURITY={version:'1.1.0',getCustomerToken};
 })();
