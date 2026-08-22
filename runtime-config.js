@@ -6,6 +6,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
 });
 
 (function(){
+  const V='20260823-0300-vaahakdash';
   const loadScript=(src,attr)=>{
     const load=()=>{
       if(document.querySelector('script['+attr+']')) return;
@@ -16,9 +17,9 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
     };
     if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',load,{once:true}); else load();
   };
-  loadScript('./ride-otp-completion-fix.js','data-dbest-ride-otp-fix');
+  loadScript('./ride-otp-completion-fix.js?v='+V,'data-dbest-ride-otp-fix');
   if(/\/vaahak\.html$/i.test(location.pathname)){
-    loadScript('./vaahak-ride-history.js','data-dbest-vaahak-history');
-    loadScript('./vaahak-nearest-dispatch.js?v=20260823-0245','data-dbest-nearest-dispatch');
+    loadScript('./vaahak-ride-history.js?v='+V,'data-dbest-vaahak-history');
+    loadScript('./vaahak-nearest-dispatch.js?v='+V,'data-dbest-nearest-dispatch');
   }
 })();
