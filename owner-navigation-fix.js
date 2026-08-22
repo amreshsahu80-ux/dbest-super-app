@@ -1,29 +1,34 @@
 (function(){
-  function validUrl(v){try{const u=new URL(v);return /^https?:$/.test(u.protocol)}catch(e){return false}}
+  function closeShowcase(){
+    document.getElementById('dbestShowcaseEditModal')?.remove();
+    document.getElementById('dbestShowcaseOwnerModal')?.remove();
+  }
   function install(){
-    if(window.__dbestOwnerNavFixInstalled)return;
-    if(typeof window.saveLink==='function'){
-      window.saveLink=function(e,id){
-        e.preventDefault();
-        try{
-          const f=new FormData(e.target),url=String(f.get('url')||'').trim();
-          if(url&&!validUrl(url))return window.toast?.('Enter a valid https:// partner URL');
-          const partner=String(f.get('partner')||'').trim();
-          window.links[id]={partner,url,buttonLabel:String(f.get('buttonLabel')||'').trim(),enabled:f.get('enabled')==='on'&&!!url};
-          if(typeof window.save==='function')window.save();
-          window.toast?.('Partner deeplink saved');
-          setTimeout(()=>{if(typeof window.ownerDeeplinkStudio==='function')window.ownerDeeplinkStudio();},30);
-        }catch(err){window.toast?.('Could not save deeplink: '+(err.message||'Unknown error'))}
-      };
-    }
+    if(window.__dbestOwnerNavFixV2)return;
+
+    // IMPORTANT: do not override the app's native saveLink(). The native
+    // implementation owns the deeplink state and persistence logic.
+
     document.addEventListener('click',function(e){
-      const b=e.target.closest?.('button');if(!b)return;
-      const txt=(b.textContent||'').trim().toLowerCase();
-      if((txt==='back'||txt.startsWith('← back'))&&document.getElementById('dbestShowcaseOwnerModal')){
-        document.getElementById('dbestShowcaseOwnerModal')?.remove();
+      const b=e.target.closest?.('button,[onclick]');
+      if(!b)return;
+      const onclick=String(b.getAttribute?.('onclick')||'');
+      const text=String(b.textContent||'').trim().toLowerCase();
+
+      // Any navigation away from the Insurance/MF visual manager must remove
+      // its full-screen overlay so the Owner console cannot become blocked.
+      if(document.getElementById('dbestShowcaseOwnerModal')){
+        const isShowcaseInternal=!!b.closest?.('#dbestShowcaseOwnerModal,#dbestShowcaseEditModal');
+        if(!isShowcaseInternal || /back|owner\(|owner[A-Z]/.test(onclick) || text.startsWith('← back')) closeShowcase();
       }
     },true);
-    window.__dbestOwnerNavFixInstalled=true;
+
+    // Browser back / Android back should never leave an invisible overlay.
+    window.addEventListener('popstate',closeShowcase);
+    document.addEventListener('keydown',e=>{if(e.key==='Escape')closeShowcase()});
+
+    window.DBEST_CLOSE_SHOWCASE_MANAGER=closeShowcase;
+    window.__dbestOwnerNavFixV2=true;
   }
-  let tries=0;const t=setInterval(()=>{install();if(window.__dbestOwnerNavFixInstalled||++tries>20)clearInterval(t)},150);
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
 })();
