@@ -1,5 +1,5 @@
 (function(){
-  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
   function isOwner(){try{return window.session&&session.role==='owner'}catch(e){return false}}
   function cleanOverlays(){if(!document.getElementById('dbestShowcaseOwnerModal')&&!document.getElementById('dbestShowcaseEditModal'))document.body.style.overflow='';}
   function openFinanceSection(kind){
@@ -16,17 +16,45 @@
   window.ownerInsuranceSectionControl=()=>openFinanceSection('insurance');
   window.ownerMutualFundSectionControl=()=>openFinanceSection('mutual_fund');
 
+  function ownerQuickAddUser(){
+    cleanOverlays();
+    if(typeof window.registerChoice==='function') return window.registerChoice();
+    if(typeof window.account==='function') return window.account();
+    window.toast?.('Member registration screen unavailable');
+  }
+  function ownerQuickAddVendor(){
+    cleanOverlays();
+    if(typeof window.ownerMarketplaceControl==='function') return window.ownerMarketplaceControl();
+    window.toast?.('Vendor onboarding screen unavailable');
+  }
+  function ownerQuickAddVaahak(){
+    cleanOverlays();
+    if(typeof window.ownerVaahakControl==='function') return window.ownerVaahakControl();
+    window.toast?.('Vaahak onboarding screen unavailable');
+  }
+  window.ownerQuickAddUser=ownerQuickAddUser;
+  window.ownerQuickAddVendor=ownerQuickAddVendor;
+  window.ownerQuickAddVaahak=ownerQuickAddVaahak;
+
   function addSectionControls(){
     if(!isOwner())return;
     const root=document.querySelector('.sectionContent.owner55'); if(!root)return;
     document.getElementById('dbestOwnerVisualControl')?.remove();
-    if(document.getElementById('dbestOwnerInsuranceControl'))return;
     const groups=[...root.querySelectorAll('.owner55Group')];
     const platform=groups.find(g=>/Platform & Experience/i.test(g.innerText||''))||groups[0];
-    const grid=platform?.querySelector('.owner55Grid'); if(!grid)return;
-    const ins=document.createElement('button');ins.id='dbestOwnerInsuranceControl';ins.className='owner55Action';ins.innerHTML='<span>🛡️</span><b>Insurance Section</b><small>Only Insurance deeplink, insurer cards, images, text, order and visibility.</small>';ins.onclick=window.ownerInsuranceSectionControl;
-    const mf=document.createElement('button');mf.id='dbestOwnerMutualFundControl';mf.className='owner55Action';mf.innerHTML='<span>📈</span><b>Mutual Fund Section</b><small>Only Mutual Fund deeplink, AMC cards, images, text, order and visibility.</small>';mf.onclick=window.ownerMutualFundSectionControl;
-    grid.append(ins,mf);
+    const grid=platform?.querySelector('.owner55Grid');
+    if(grid&&!document.getElementById('dbestOwnerInsuranceControl')){
+      const ins=document.createElement('button');ins.id='dbestOwnerInsuranceControl';ins.className='owner55Action';ins.innerHTML='<span>🛡️</span><b>Insurance Section</b><small>Only Insurance deeplink, insurer cards, images, text, order and visibility.</small>';ins.onclick=window.ownerInsuranceSectionControl;
+      const mf=document.createElement('button');mf.id='dbestOwnerMutualFundControl';mf.className='owner55Action';mf.innerHTML='<span>📈</span><b>Mutual Fund Section</b><small>Only Mutual Fund deeplink, AMC cards, images, text, order and visibility.</small>';mf.onclick=window.ownerMutualFundSectionControl;
+      grid.append(ins,mf);
+    }
+    if(!document.getElementById('dbestOwnerQuickAddGroup')){
+      const host=root.querySelector('.owner55Groups')||root;
+      const group=document.createElement('div');
+      group.className='owner55Group';group.id='dbestOwnerQuickAddGroup';
+      group.innerHTML='<div class="owner55GroupHead"><div><b>Quick Add / Emergency Onboarding</b><small>Owner can initiate onboarding without bypassing normal validation, KYC or duplicate checks.</small></div></div><div class="owner55Grid"><button class="owner55Action" onclick="ownerQuickAddUser()"><span>👤</span><b>Add User / Member</b><small>Open standard Member registration from Owner Console.</small></button><button class="owner55Action" onclick="ownerQuickAddVendor()"><span>🏪</span><b>Add Vendor</b><small>Open Vendor onboarding and catalogue control.</small></button><button class="owner55Action" onclick="ownerQuickAddVaahak()"><span>🛵</span><b>Add Vaahak</b><small>Open Vaahak onboarding, vehicle and dispatch control.</small></button></div>';
+      host.prepend(group);
+    }
   }
   function routeOwnerControl(e){
     if(!isOwner())return; const b=e.target.closest?.('button'); if(!b)return; const t=(b.innerText||'').trim().toLowerCase();
@@ -39,5 +67,5 @@
   document.addEventListener('click',routeOwnerControl,true);
   const observer=new MutationObserver(()=>{cleanOverlays();addSectionControls();});observer.observe(document.body,{childList:true,subtree:true});
   setTimeout(addSectionControls,250);
-  window.DBEST_OWNER_CLEAN_CONTROLS={refresh:addSectionControls,insurance:window.ownerInsuranceSectionControl,mutualFund:window.ownerMutualFundSectionControl};
+  window.DBEST_OWNER_CLEAN_CONTROLS={refresh:addSectionControls,insurance:window.ownerInsuranceSectionControl,mutualFund:window.ownerMutualFundSectionControl,quickAdd:{user:ownerQuickAddUser,vendor:ownerQuickAddVendor,vaahak:ownerQuickAddVaahak}};
 })();
