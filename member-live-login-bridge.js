@@ -3,10 +3,12 @@
   const base=cfg.supabaseUrl,key=cfg.supabasePublishableKey;
   if(!base||!key)return;
   const H={'apikey':key,'Authorization':'Bearer '+key,'Content-Type':'application/json'};
+  const TOKEN_KEY='dbest_member_live_token';
   async function lookup(v){
     const r=await fetch(base+'/functions/v1/member-login-live',{method:'POST',headers:H,body:JSON.stringify({login:String(v||'').trim()})});
     let data={};try{data=await r.json()}catch(e){}
     if(!r.ok){const err=new Error(data.error||'member_lookup_failed');err.status=r.status;throw err}
+    if(data.token){try{localStorage.setItem(TOKEN_KEY,String(data.token))}catch(e){}}
     return data.member||null;
   }
   function hydrate(u){
@@ -18,6 +20,7 @@
     }catch(e){}
     return u;
   }
+  window.DBEST_MEMBER_LIVE={getToken:()=>{try{return localStorage.getItem(TOKEN_KEY)||''}catch(e){return''}},clear:()=>{try{localStorage.removeItem(TOKEN_KEY)}catch(e){}}};
   window.memberGo=async function(e){
     e.preventDefault();
     const form=e.target, btn=form.querySelector('button');
