@@ -42,15 +42,15 @@
     window.startWithOtp=async function(id){
       const el=document.getElementById('rideOtp')||document.getElementById('otp_'+id);
       const otp=String(el?.value||'').replace(/\D/g,'').slice(0,4);
-      if(!/^\d{4}$/.test(otp))return notify('Enter the 4-digit customer Ride OTP.',false);
+      if(!/^\d{4}$/.test(otp))return notify('Enter the 4-digit customer Ride PIN.',false);
       try{
         const d=await apiCall('start',{jobId:id,otp},true);
-        if(!d.otpVerified)throw new Error('otp_not_verified');
-        notify('OTP verified successfully. Ride started.');
+        if(!d.otpVerified)throw new Error('pin_not_verified');
+        notify('Ride PIN verified successfully. Ride started.');
         if(typeof loadStatus==='function')loadStatus();
         if(typeof window.vaahakDashboard==='function')window.vaahakDashboard();
       }catch(e){
-        if(e.message==='invalid_ride_otp')return notify('OTP does not match this ride. Ask the customer for the OTP shown for this Ride ID.',false);
+        if(e.message==='invalid_ride_otp')return notify('Ride PIN does not match this ride. Ask the customer for the PIN shown for this Ride ID.',false);
         if(e.message==='ride_not_ready_to_start')return notify('This ride is no longer in Accepted status. Refresh the dashboard.',false);
         notify('Ride could not start: '+e.message,false);
       }
@@ -60,20 +60,20 @@
       try{
         const payload={jobId};
         if(action==='start'){
-          const otp=String(prompt('Enter the customer 4-digit Ride OTP for '+jobId)||'').replace(/\D/g,'').slice(0,4);
-          if(!/^\d{4}$/.test(otp))return notify('A valid 4-digit Ride OTP is required.',false);
+          const otp=String(prompt('Enter the customer 4-digit Ride PIN for '+jobId)||'').replace(/\D/g,'').slice(0,4);
+          if(!/^\d{4}$/.test(otp))return notify('A valid 4-digit Ride PIN is required.',false);
           payload.otp=otp;
         }
         const d=await apiCall(action,payload,true);
-        if(action==='start'&&!d.otpVerified)return notify('OTP verification failed.',false);
+        if(action==='start'&&!d.otpVerified)return notify('Ride PIN verification failed.',false);
         if(action==='complete'){
           const mail=d.email||{};
           notify(mail.sent?'Ride completed. Completion voucher email sent to the customer.':'Ride completed. Voucher email could not be confirmed; it is recorded for follow-up.');
-        }else notify(action==='accept'?'Ride accepted.':action==='start'?'OTP verified. Ride started.':'Ride updated.');
+        }else notify(action==='accept'?'Ride accepted.':action==='start'?'Ride PIN verified. Ride started.':'Ride updated.');
         if(typeof window.vaahakDashboard==='function')window.vaahakDashboard();
         if(typeof loadStatus==='function')loadStatus();
       }catch(e){
-        if(e.message==='invalid_ride_otp')return notify('OTP does not match this ride. Ask the customer for the OTP shown for this Ride ID.',false);
+        if(e.message==='invalid_ride_otp')return notify('Ride PIN does not match this ride. Ask the customer for the PIN shown for this Ride ID.',false);
         notify('Unable to update ride: '+e.message,false);
       }
     };
