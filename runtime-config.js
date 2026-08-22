@@ -6,7 +6,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
 });
 
 (function(){
-  const V='20260823-0308-vaahakdash-final';
+  const V='20260823-0310-vaahak-ownerfix';
   const loadScript=(src,attr)=>{
     const load=()=>{
       if(document.querySelector('script['+attr+']')) return;
@@ -18,7 +18,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
     if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',load,{once:true}); else load();
   };
   loadScript('./ride-otp-completion-fix.js?v='+V,'data-dbest-ride-otp-fix');
-  if(/\/vaahak\.html$/i.test(location.pathname)){
+  if(/\/vaahak(?:\.html)?\/?$/i.test(location.pathname)){
     loadScript('./vaahak-completed-dashboard-final.js?v='+V,'data-dbest-completed-final');
     loadScript('./vaahak-nearest-dispatch.js?v='+V,'data-dbest-nearest-dispatch');
   }
