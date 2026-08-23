@@ -1,0 +1,3 @@
+DBest final production deployment marker
+Build: 20260823-1005-final-live-footer
+Includes: transaction ledger, member Excel export, marketplace delivery rules, About Us, Contact Us, Terms & Conditions footer.
