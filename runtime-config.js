@@ -1,5 +1,4 @@
 window.DBEST_RUNTIME_CONFIG = Object.freeze({
-  ownerEmail: "amresh.sahu80@gmail.com",
   supabaseUrl: "https://ydedmotbacnllkijzmvp.supabase.co",
   supabasePublishableKey: "sb_publishable_qWqQExdtL5ddWcK_yLCcNA__-ZUBtox",
   mapplsStaticKey: "yukntloynujcqkanhyuzmvnksznhvwvndcdg",
@@ -7,7 +6,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
 });
 
 (function(){
-  const V='20260824-2245-cab-booking-step';
+  const V='20260824-2312-private-owner-route';
 
   const loadScript=(src,attr)=>{
     const load=()=>{
