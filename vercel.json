@@ -5,6 +5,8 @@
     {"source": "/vaahak", "destination": "/Vaahak", "permanent": true}
   ],
   "rewrites": [
+    {"source": "/Vaahak/runtime-config.js", "destination": "/runtime-config.js"},
+    {"source": "/vaahak/runtime-config.js", "destination": "/runtime-config.js"},
     {"source": "/Vaahak", "destination": "/vaahak.html"}
   ],
   "headers": [
@@ -29,6 +31,12 @@
     },
     {
       "source": "/runtime-config.js",
+      "headers": [
+        {"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}
+      ]
+    },
+    {
+      "source": "/Vaahak/runtime-config.js",
       "headers": [
         {"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}
       ]
