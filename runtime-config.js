@@ -7,7 +7,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
 });
 
 (function(){
-  const V='20260824-1303-cab-route-fallback';
+  const V='20260824-2245-cab-booking-step';
 
   const loadScript=(src,attr)=>{
     const load=()=>{
@@ -62,6 +62,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
       await loadScriptAsync('/cab-location-production-v9.js?v='+V,'data-dbest-cab-location-v9');
       await loadScriptAsync('/mappls-cab-production.js?v='+V,'data-dbest-mappls-cab');
       await loadScriptAsync('/cab-mappls-rental-v2.js?v='+V,'data-dbest-mappls-rental-v2');
+      await loadScriptAsync('/cab-booking-step-fix.js?v='+V,'data-dbest-cab-booking-step-fix');
     }catch(e){
       console.warn('DBest final cab layer load warning',e);
     }
