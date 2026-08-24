@@ -7,7 +7,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
 });
 
 (function(){
-  const V='20260824-1228-mappls-rental-lock';
+  const V='20260824-1239-rental-visible';
 
   const loadScript=(src,attr)=>{
     const load=()=>{
@@ -35,6 +35,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
   });
 
   loadScript('/ride-otp-completion-fix.js?v='+V,'data-dbest-ride-otp-fix');
+  loadScript('/cab-rental-legacy-bridge.js?v='+V,'data-dbest-rental-legacy-bridge');
 
   if(/\/vaahak(?:\.html)?\/?$/i.test(location.pathname)){
     loadScript('/vaahak-completed-dashboard-final.js?v='+V,'data-dbest-completed-final');
