@@ -2,11 +2,13 @@
   "cleanUrls": false,
   "trailingSlash": false,
   "redirects": [
+    {"source": "/owner/", "destination": "/owner", "permanent": true},
     {"source": "/vaahak", "destination": "/Vaahak", "permanent": true},
     {"source": "/vaahak/", "destination": "/Vaahak", "permanent": true},
     {"source": "/Vaahak/", "destination": "/Vaahak", "permanent": true}
   ],
   "rewrites": [
+    {"source": "/owner", "destination": "/index.html"},
     {"source": "/Vaahak/runtime-config.js", "destination": "/runtime-config.js"},
     {"source": "/vaahak/runtime-config.js", "destination": "/runtime-config.js"},
     {"source": "/Vaahak", "destination": "/vaahak.html"}
@@ -17,6 +19,13 @@
       "headers": [
         {"key": "X-Content-Type-Options", "value": "nosniff"},
         {"key": "Referrer-Policy", "value": "strict-origin-when-cross-origin"}
+      ]
+    },
+    {
+      "source": "/owner",
+      "headers": [
+        {"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"},
+        {"key": "X-Robots-Tag", "value": "noindex, nofollow, noarchive"}
       ]
     },
     {
