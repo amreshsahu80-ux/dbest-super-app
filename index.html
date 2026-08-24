@@ -13,7 +13,7 @@
   <script>
     (async function(){
       try{
-        const BUILD='20260824-1255-cab-ui-stable';
+        const BUILD='20260824-1303-cab-route-fallback';
         const r = await fetch('./index-26.html?v='+BUILD, {cache:'no-store'});
         if(!r.ok) throw new Error('Unable to load application');
         let html = await r.text();
