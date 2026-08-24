@@ -1,6 +1,12 @@
 {
   "cleanUrls": true,
   "trailingSlash": false,
+  "redirects": [
+    {"source": "/vaahak", "destination": "/Vaahak", "permanent": true}
+  ],
+  "rewrites": [
+    {"source": "/Vaahak", "destination": "/vaahak.html"}
+  ],
   "headers": [
     {
       "source": "/(.*)",
@@ -10,7 +16,7 @@
       ]
     },
     {
-      "source": "/vaahak",
+      "source": "/Vaahak",
       "headers": [
         {"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}
       ]
