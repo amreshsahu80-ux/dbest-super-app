@@ -7,7 +7,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
 });
 
 (function(){
-  const V='20260824-1248-cab-booking-flow';
+  const V='20260824-1255-cab-ui-stable';
 
   const loadScript=(src,attr)=>{
     const load=()=>{
