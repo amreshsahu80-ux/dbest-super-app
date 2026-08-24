@@ -2,7 +2,9 @@
   "cleanUrls": false,
   "trailingSlash": false,
   "redirects": [
-    {"source": "/vaahak", "destination": "/Vaahak", "permanent": true}
+    {"source": "/vaahak", "destination": "/Vaahak", "permanent": true},
+    {"source": "/vaahak/", "destination": "/Vaahak", "permanent": true},
+    {"source": "/Vaahak/", "destination": "/Vaahak", "permanent": true}
   ],
   "rewrites": [
     {"source": "/Vaahak/runtime-config.js", "destination": "/runtime-config.js"},
