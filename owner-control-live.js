@@ -1,0 +1,60 @@
+(function(){
+'use strict';
+const VERSION='1.0.0';
+const cfg=window.DBEST_RUNTIME_CONFIG||{},base=String(cfg.supabaseUrl||'').replace(/\/$/,''),key=cfg.supabasePublishableKey||'';
+if(!base||!key)return;
+const API=base+'/functions/v1/owner-control-live';
+const H=()=>({'apikey':key,'Authorization':'Bearer '+key,'Content-Type':'application/json'});
+function ownerToken(){try{return window.DBEST_OWNER_AUTH_BRIDGE?.getOwnerToken?.()||sessionStorage.getItem('dbest_owner_session_token')||''}catch(e){return''}}
+async function call(action,body={},owner=false){const h=H();if(owner){const t=ownerToken();if(!t)throw new Error('owner_session_required');h['x-dbest-owner-token']=t}const r=await fetch(API,{method:'POST',headers:h,body:JSON.stringify({action,...body}),cache:'no-store'});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'owner_control_failed');return d}
+function clone(v,fallback){try{return JSON.parse(JSON.stringify(v))}catch(e){return fallback}}
+function snapshot(){
+  const out={};
+  try{if(typeof links!=='undefined')out.links=clone(links,{})}catch(e){}
+  try{if(typeof payout!=='undefined')out.payout=clone(payout,{})}catch(e){}
+  try{if(typeof payuSettings!=='undefined')out.payu={enabled:payuSettings.enabled!==false,mode:payuSettings.mode||'live',merchant_key:payuSettings.merchantKey||'',endpoint:payuSettings.createEndpoint||'',return_url:payuSettings.verifiedReturnUrl||'',button_label:payuSettings.buttonLabel||''}}catch(e){}
+  try{if(typeof serviceControl!=='undefined')out.serviceControl=clone(serviceControl,{})}catch(e){}
+  try{if(typeof customServices!=='undefined')out.customServices=clone(customServices,[])}catch(e){}
+  try{if(typeof serviceFeeOverrides!=='undefined')out.serviceFeeOverrides=clone(serviceFeeOverrides,{})}catch(e){}
+  try{if(typeof membershipPlanConfig!=='undefined')out.membershipPlanConfig=clone(membershipPlanConfig,{})}catch(e){}
+  try{if(typeof masterDesign!=='undefined')out.masterDesign=clone(masterDesign,{})}catch(e){}
+  try{if(typeof rideConfig!=='undefined'){const r=clone(rideConfig,{});delete r.drivers;out.rideConfig=r}}catch(e){}
+  try{if(typeof partnerAgreementConfig!=='undefined')out.partnerAgreementConfig=clone(partnerAgreementConfig,{})}catch(e){}
+  return out;
+}
+let syncTimer=null,syncing=false;
+async function syncOwnerSettings(){
+  try{if(typeof session==='undefined'||session?.role!=='owner')return {skipped:true};if(syncing)return {busy:true};syncing=true;const d=await call('save_snapshot',{config:snapshot()},true);return d}finally{syncing=false}
+}
+function scheduleSync(){clearTimeout(syncTimer);syncTimer=setTimeout(()=>syncOwnerSettings().catch(e=>console.warn('DBest Owner central sync',e.message)),450)}
+function mergePartnerAgreement(dst,src){if(!src||typeof src!=='object')return dst;const o={...(dst||{}),...src};if(src.vendor)o.vendor={...(dst?.vendor||{}),...src.vendor};if(src.vaahak)o.vaahak={...(dst?.vaahak||{}),...src.vaahak};return o}
+async function refreshPublic(){
+  try{
+    const d=await call('get_public'),c=d.config||{};
+    try{if(c.links&&typeof links!=='undefined'){links={...links,...c.links};localStorage.setItem('d2_links',JSON.stringify(links))}}catch(e){}
+    try{if(c.payout&&Object.keys(c.payout).length&&typeof payout!=='undefined')payout={...payout,...c.payout}}catch(e){}
+    try{if(c.serviceControl&&typeof serviceControl!=='undefined')serviceControl={...serviceControl,...c.serviceControl}}catch(e){}
+    try{if(Array.isArray(c.customServices)&&c.customServices.length&&typeof customServices!=='undefined')customServices=c.customServices}catch(e){}
+    try{if(c.serviceFeeOverrides&&typeof serviceFeeOverrides!=='undefined')serviceFeeOverrides={...serviceFeeOverrides,...c.serviceFeeOverrides}}catch(e){}
+    try{if(c.membershipPlanConfig&&typeof membershipPlanConfig!=='undefined')membershipPlanConfig={...membershipPlanConfig,...c.membershipPlanConfig}}catch(e){}
+    try{if(c.masterDesign&&Object.keys(c.masterDesign).length&&typeof masterDesign!=='undefined')masterDesign={...masterDesign,...c.masterDesign}}catch(e){}
+    try{if(c.rideConfig&&Object.keys(c.rideConfig).length&&typeof rideConfig!=='undefined'){const drivers=rideConfig.drivers;rideConfig={...rideConfig,...c.rideConfig};if(drivers)rideConfig.drivers=drivers}}catch(e){}
+    try{if(c.partnerAgreementConfig&&typeof partnerAgreementConfig!=='undefined')partnerAgreementConfig=mergePartnerAgreement(partnerAgreementConfig,c.partnerAgreementConfig)}catch(e){}
+    try{if(typeof applyServiceControl==='function')applyServiceControl()}catch(e){}
+    try{if(typeof applyMasterDesign==='function')applyMasterDesign()}catch(e){}
+    try{if(typeof render==='function')render()}catch(e){}
+    return d;
+  }catch(e){console.warn('DBest Owner public config refresh',e.message);return null}
+}
+function installSaveHook(){
+  try{
+    if(typeof save!=='function'||window.__DBEST_OWNER_SAVE_HOOK__)return;
+    window.__DBEST_OWNER_SAVE_HOOK__=true;const raw=save;
+    save=function(){const out=raw.apply(this,arguments);try{if(typeof session!=='undefined'&&session?.role==='owner')scheduleSync()}catch(e){}return out};
+  }catch(e){}
+}
+[0,500,1500].forEach(ms=>setTimeout(installSaveHook,ms));
+setTimeout(refreshPublic,120);
+window.addEventListener('focus',()=>refreshPublic());
+window.DBEST_OWNER_CONTROL_LIVE={version:VERSION,syncOwnerSettings,refreshPublic,snapshot};
+})();
