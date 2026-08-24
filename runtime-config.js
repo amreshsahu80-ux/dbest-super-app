@@ -6,14 +6,11 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
 });
 
 (function(){
-  const V='20260824-0912-prelaunch-secure';
+  const V='20260824-0914-prelaunch-secure';
   const loadScript=(src,attr)=>{
     const load=()=>{
       if(document.querySelector('script['+attr+']')) return;
-      const s=document.createElement('script');
-      s.src=src;
-      s.setAttribute(attr,'1');
-      document.body.appendChild(s);
+      const s=document.createElement('script');s.src=src;s.setAttribute(attr,'1');document.body.appendChild(s);
     };
     if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',load,{once:true}); else load();
   };
@@ -26,12 +23,10 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
 
   // Final production layers load after all legacy application scripts.
   const loadFinalLayers=()=>{
-    if(!document.querySelector('script[data-dbest-cab-location-v9]')){
-      const s=document.createElement('script');s.src='./cab-location-production-v9.js?v='+V;s.setAttribute('data-dbest-cab-location-v9','1');document.body.appendChild(s);
-    }
-    if(!document.querySelector('script[data-dbest-owner-deeplinks-all]')){
-      const s=document.createElement('script');s.src='./owner-deeplink-all-sections.js?v='+V;s.setAttribute('data-dbest-owner-deeplinks-all','1');document.body.appendChild(s);
-    }
+    const add=(src,attr)=>{if(document.querySelector('script['+attr+']'))return;const s=document.createElement('script');s.src=src;s.setAttribute(attr,'1');document.body.appendChild(s)};
+    add('./owner-control-live.js?v='+V,'data-dbest-owner-control-live');
+    add('./cab-location-production-v9.js?v='+V,'data-dbest-cab-location-v9');
+    add('./owner-deeplink-all-sections.js?v='+V,'data-dbest-owner-deeplinks-all');
   };
   if(document.readyState==='complete') loadFinalLayers();
   else window.addEventListener('load',loadFinalLayers,{once:true});
