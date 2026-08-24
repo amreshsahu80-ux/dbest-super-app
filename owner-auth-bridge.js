@@ -2,8 +2,7 @@
   const cfg=window.DBEST_RUNTIME_CONFIG||{};
   const url=cfg.supabaseUrl;
   const key=cfg.supabasePublishableKey;
-  const ownerEmail=String(cfg.ownerEmail||'').trim().toLowerCase();
-  if(!url||!key||!ownerEmail)return;
+  if(!url||!key)return;
 
   const OWNER_TOKEN_KEY='dbest_owner_session_token';
   async function request(path,body,extraHeaders){
@@ -33,9 +32,16 @@
   window.ownerGo=async function(e){
     e.preventDefault();
     const email=String(new FormData(e.target).get('u')||'').trim().toLowerCase();
-    if(email!==ownerEmail)return toast('This email is not authorized as Project Owner');
-    try{await request('/functions/v1/send-owner-otp',{email});ownerOtpVerify(email);toast('6-digit Owner OTP sent from DBest');}
-    catch(err){toast(err.message==='otp_rate_limited'?'Please wait about a minute before requesting another Owner OTP.':'Owner OTP error: '+err.message);}
+    if(!email||!/^\S+@\S+\.\S+$/.test(email))return toast('Enter the authorized Owner email address');
+    try{
+      await request('/functions/v1/send-owner-otp',{email});
+      ownerOtpVerify(email);
+      toast('6-digit Owner OTP sent if this email is authorized');
+    }catch(err){
+      const m=String(err.message||'');
+      if(m==='owner_not_authorized')return toast('This email is not authorized for Owner access');
+      toast(m==='otp_rate_limited'?'Please wait about a minute before requesting another Owner OTP.':'Owner OTP error: '+m);
+    }
   };
 
   window.ownerVerifyOtp=async function(e,email){
@@ -99,5 +105,5 @@
     };
   }
 
-  window.DBEST_OWNER_AUTH_BRIDGE={version:'1.3.0',getOwnerToken,hydrateOwnerLiveData};
+  window.DBEST_OWNER_AUTH_BRIDGE={version:'1.4.0',getOwnerToken,hydrateOwnerLiveData};
 })();
