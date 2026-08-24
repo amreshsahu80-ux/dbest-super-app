@@ -7,7 +7,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
 });
 
 (function(){
-  const V='20260824-1145-mappls-live';
+  const V='20260824-1155-mappls-rental-v2';
   const loadScript=(src,attr)=>{
     const load=()=>{
       if(document.querySelector('script['+attr+']')) return;
@@ -28,6 +28,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
     add('/owner-control-live.js?v='+V,'data-dbest-owner-control-live');
     add('/cab-location-production-v9.js?v='+V,'data-dbest-cab-location-v9');
     add('/mappls-cab-production.js?v='+V,'data-dbest-mappls-cab');
+    add('/cab-mappls-rental-v2.js?v='+V,'data-dbest-mappls-rental-v2');
     add('/owner-deeplink-all-sections.js?v='+V,'data-dbest-owner-deeplinks-all');
   };
   if(document.readyState==='complete') loadFinalLayers();
