@@ -6,7 +6,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
 });
 
 (function(){
-  const V='20260825-1620-partner-kyc-storage-fix';
+  const V='20260825-1718-partner-kyc-upload-v2';
 
   const installLogoClarity=()=>{
     if(document.getElementById('dbestLogoClarityStyle')) return;
@@ -129,11 +129,12 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
     loadScript('/partner-kyc-self-service.js?v='+V,'data-dbest-partner-kyc-self-service');
     loadScript('/owner-partner-kyc-center.js?v='+V,'data-dbest-owner-partner-kyc-center');
     loadScript('/partner-kyc-owner-display-v2.js?v='+V,'data-dbest-partner-kyc-owner-display-v2');
+    loadScript('/partner-kyc-registration-upload-v2.js?v='+V,'data-dbest-partner-kyc-registration-upload-v2');
 
     try{
       await loadScriptAsync('/cab-location-production-v9.js?v='+V,'data-dbest-cab-location-v9');
       await loadScriptAsync('/mappls-cab-production.js?v='+V,'data-dbest-mappls-cab');
-      await loadScriptAsync('/cab-mappls-rental-v2.js?v='+V,'data-dbest-mappls-rental-v2');
+      await loadScriptAsync('/cab-mappls-rental-v2.js?v='+V,'data-dbest-cab-mappls-rental-v2');
       await loadScriptAsync('/cab-booking-step-fix.js?v='+V,'data-dbest-cab-booking-step-fix');
     }catch(e){
       console.warn('DBest final cab layer load warning',e);
