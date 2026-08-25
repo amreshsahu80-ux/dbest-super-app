@@ -6,20 +6,14 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
 });
 
 (function(){
-  const V='20260825-2208-member-id-collision-fix';
+  const V='20260825-2232-final-live-hardening';
 
   const installLogoClarity=()=>{
     if(document.getElementById('dbestLogoClarityStyle')) return;
     const s=document.createElement('style');
     s.id='dbestLogoClarityStyle';
     s.textContent=`
-      img[src*="dbest-logo.png"],.dbestTopLogo,.dbestFinalLogo{
-        image-rendering:auto!important;
-        object-fit:contain!important;
-        opacity:1!important;
-        filter:contrast(1.08) saturate(1.08) drop-shadow(0 3px 7px rgba(21,72,165,.16))!important;
-        transform:none!important;
-      }
+      img[src*="dbest-logo.png"],.dbestTopLogo,.dbestFinalLogo{image-rendering:auto!important;object-fit:contain!important;opacity:1!important;filter:contrast(1.08) saturate(1.08) drop-shadow(0 3px 7px rgba(21,72,165,.16))!important;transform:none!important}
       .brand{background:#fff!important;border:1px solid #e1e8f3!important;border-radius:16px!important;padding:3px 9px!important;box-shadow:0 5px 14px rgba(22,51,99,.08)!important;overflow:visible!important}
       .dbestTopLogo{width:225px!important;height:70px!important;max-width:none!important;display:block!important;object-position:left center!important}
       .dbestFinalLogoBox{min-height:66px!important;min-width:220px!important;padding:3px 10px!important;border:1px solid #d7e0ef!important;border-radius:14px!important;background:#fff!important;box-shadow:0 6px 16px rgba(16,44,94,.12)!important;overflow:visible!important}
@@ -35,14 +29,12 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
     const load=()=>{if(document.querySelector('script['+attr+']')) return;const s=document.createElement('script');s.src=src;s.setAttribute(attr,'1');document.body.appendChild(s)};
     if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',load,{once:true}); else load();
   };
-
   const loadScriptAsync=(src,attr)=>new Promise((resolve,reject)=>{
     const existing=document.querySelector('script['+attr+']');
     if(existing){if(existing.dataset.loaded==='1') return resolve();existing.addEventListener('load',()=>resolve(),{once:true});existing.addEventListener('error',reject,{once:true});setTimeout(resolve,1200);return}
     const s=document.createElement('script');s.src=src;s.setAttribute(attr,'1');s.onload=()=>{s.dataset.loaded='1';resolve()};s.onerror=reject;document.body.appendChild(s);
   });
 
-  loadScript('/ride-otp-completion-fix.js?v='+V,'data-dbest-ride-otp-fix');
   loadScript('/cab-rental-legacy-bridge.js?v='+V,'data-dbest-rental-legacy-bridge');
   loadScript('/cab-booking-flow-fix.js?v='+V,'data-dbest-cab-booking-flow-fix');
 
@@ -56,7 +48,6 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
 
   const loadFinalLayers=async()=>{
     installLogoClarity();
-    loadScript('/member-id-collision-fix.js?v='+V,'data-dbest-member-id-collision-fix');
     loadScript('/owner-control-live.js?v='+V,'data-dbest-owner-control-live');
     loadScript('/owner-payout-percentage-matrix.js?v='+V,'data-dbest-owner-payout-percentage-matrix');
     loadScript('/payout-subsection-labels.js?v='+V,'data-dbest-payout-subsection-labels');
