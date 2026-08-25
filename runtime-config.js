@@ -6,7 +6,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
 });
 
 (function(){
-  const V='20260825-1202-member-id-card';
+  const V='20260825-1212-member-photo-fix';
 
   const loadScript=(src,attr)=>{
     const load=()=>{
