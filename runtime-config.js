@@ -6,7 +6,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
 });
 
 (function(){
-  const V='20260825-1318-payout-entry-visible';
+  const V='20260825-1331-payout-subsection-labels';
 
   const loadScript=(src,attr)=>{
     const load=()=>{
@@ -56,6 +56,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
   const loadFinalLayers=async()=>{
     loadScript('/owner-control-live.js?v='+V,'data-dbest-owner-control-live');
     loadScript('/owner-payout-percentage-matrix.js?v='+V,'data-dbest-owner-payout-percentage-matrix');
+    loadScript('/payout-subsection-labels.js?v='+V,'data-dbest-payout-subsection-labels');
     loadScript('/owner-payout-entry-visible.js?v='+V,'data-dbest-owner-payout-entry-visible');
     loadScript('/owner-deeplink-all-sections.js?v='+V,'data-dbest-owner-deeplinks-all');
     loadScript('/transaction-capture-universal.js?v='+V,'data-dbest-transaction-universal');
