@@ -6,7 +6,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
 });
 
 (function(){
-  const V='20260825-1555-partner-kyc-owner-otp';
+  const V='20260825-1605-partner-kyc-self-service';
 
   const installLogoClarity=()=>{
     if(document.getElementById('dbestLogoClarityStyle')) return;
@@ -126,6 +126,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
     loadScript('/vendor-agreement-email-otp.js?v='+V,'data-dbest-vendor-agreement-email-otp');
     loadScript('/vaahak-agreement-email-otp.js?v='+V,'data-dbest-vaahak-agreement-email-otp');
     loadScript('/partner-kyc-owner-signing.js?v='+V,'data-dbest-partner-kyc-owner-signing');
+    loadScript('/partner-kyc-self-service.js?v='+V,'data-dbest-partner-kyc-self-service');
 
     try{
       await loadScriptAsync('/cab-location-production-v9.js?v='+V,'data-dbest-cab-location-v9');
