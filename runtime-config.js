@@ -6,7 +6,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
 });
 
 (function(){
-  const V='20260824-2312-private-owner-route';
+  const V='20260825-0903-universal-member-transactions';
 
   const loadScript=(src,attr)=>{
     const load=()=>{
@@ -56,6 +56,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
   const loadFinalLayers=async()=>{
     loadScript('/owner-control-live.js?v='+V,'data-dbest-owner-control-live');
     loadScript('/owner-deeplink-all-sections.js?v='+V,'data-dbest-owner-deeplinks-all');
+    loadScript('/transaction-capture-universal.js?v='+V,'data-dbest-transaction-universal');
 
     try{
       await loadScriptAsync('/cab-location-production-v9.js?v='+V,'data-dbest-cab-location-v9');
