@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='1.1.0';
+const VERSION='1.2.0';
 const MEMBER_ROLES=new Set(['guest','promoter','prime','leader']);
 const recent=new Map();
 let lastCreatedAt=0;
@@ -86,6 +86,18 @@ function transactionalPage(){
   if(/owner operations|project owner|member login|secure dbest login|sign in|login with|my profile|notification settings/.test(t))return false;
   return true;
 }
+function nonTransactionForm(form){
+  try{
+    if(!form)return false;
+    if(form.id==='dbestExternalSuccessForm')return true;
+    if(form.closest?.('#dbestExternalSuccessModal,#dbestPartnerKycSelfModal,#dbestPartnerKycOwnerModal,#dbestEmailVerifyOverlay,#dbestMemberLoginOtpOverlay,#dbestOwnerLoginOtpOverlay,#dbestLiveVendorOtpBox,#dbestLiveVaahakOtpBox,.signCard'))return true;
+    const txt=clean(form.innerText||'').toLowerCase();
+    const hasOtp=!!form.querySelector?.('input[name="otp"],input[name="code"],input[id*="Otp" i],input[autocomplete="one-time-code"]');
+    if(hasOtp&&/(otp|verify|verification|agreement|owner|login|sign)/i.test(txt))return true;
+    if(/submit successful external transaction|owner agreement otp|vendor agreement|vaahak agreement|kyc documents|secure kyc/.test(txt))return true;
+  }catch(e){}
+  return false;
+}
 function recordExternal(url,target,reason='External Partner'){
   const u=safeExternal(url);if(!u||!transactionalPage())return null;
   if(Date.now()-lastCreatedAt<1200)return null;
@@ -113,6 +125,7 @@ document.addEventListener('click',function(e){
 document.addEventListener('submit',function(e){
   if(!isMember()||!transactionalPage())return;
   const form=e.target;if(!(form instanceof HTMLFormElement))return;
+  if(nonTransactionForm(form))return;
   if(form.closest?.('.owner55,.ownerStudio,.dbestFinanceOwnerControl,#dbestMemberLoginOtpOverlay,#dbestOwnerLoginOtpOverlay'))return;
   const txt=clean(form.innerText||'');
   if(!/(pay|book|buy|purchase|order|apply|application|request|checkout|confirm|invest|renew|proceed to payment|place order)/i.test(txt))return;
@@ -139,5 +152,5 @@ async function reconcile(){if(!isMember())return;try{await window.DBEST_TRANSACT
 function maintain(){installAddTxObserver();installWindowOpen();installUniversalGuard()}
 let tries=0;const guard=setInterval(()=>{tries++;maintain();if(tries>=30)clearInterval(guard)},500);
 setTimeout(maintain,0);setTimeout(reconcile,900);setInterval(reconcile,12000);document.addEventListener('visibilitychange',()=>{if(!document.hidden){maintain();reconcile()}});
-window.DBEST_UNIVERSAL_TRANSACTION_CAPTURE={version:VERSION,reconcile,create:createTx,recordExternal,maintain};
+window.DBEST_UNIVERSAL_TRANSACTION_CAPTURE={version:VERSION,reconcile,create:createTx,recordExternal,maintain,nonTransactionForm};
 })();
