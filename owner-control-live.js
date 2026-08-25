@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='1.0.0';
+const VERSION='1.1.0';
 const cfg=window.DBEST_RUNTIME_CONFIG||{},base=String(cfg.supabaseUrl||'').replace(/\/$/,''),key=cfg.supabasePublishableKey||'';
 if(!base||!key)return;
 const API=base+'/functions/v1/owner-control-live';
@@ -12,6 +12,7 @@ function snapshot(){
   const out={};
   try{if(typeof links!=='undefined')out.links=clone(links,{})}catch(e){}
   try{if(typeof payout!=='undefined')out.payout=clone(payout,{})}catch(e){}
+  try{if(typeof payoutRules!=='undefined')out.payoutRules=clone(Array.isArray(payoutRules)?payoutRules:[],[])}catch(e){}
   try{if(typeof payuSettings!=='undefined')out.payu={enabled:payuSettings.enabled!==false,mode:payuSettings.mode||'live',merchant_key:payuSettings.merchantKey||'',endpoint:payuSettings.createEndpoint||'',return_url:payuSettings.verifiedReturnUrl||'',button_label:payuSettings.buttonLabel||''}}catch(e){}
   try{if(typeof serviceControl!=='undefined')out.serviceControl=clone(serviceControl,{})}catch(e){}
   try{if(typeof customServices!=='undefined')out.customServices=clone(customServices,[])}catch(e){}
@@ -32,7 +33,8 @@ async function refreshPublic(){
   try{
     const d=await call('get_public'),c=d.config||{};
     try{if(c.links&&typeof links!=='undefined'){links={...links,...c.links};localStorage.setItem('d2_links',JSON.stringify(links))}}catch(e){}
-    try{if(c.payout&&Object.keys(c.payout).length&&typeof payout!=='undefined')payout={...payout,...c.payout}}catch(e){}
+    try{if(c.payout&&Object.keys(c.payout).length&&typeof payout!=='undefined'){payout={...payout,...c.payout};localStorage.setItem('d2_payout',JSON.stringify(payout))}}catch(e){}
+    try{if(Array.isArray(c.payoutRules)&&typeof payoutRules!=='undefined'){payoutRules=c.payoutRules;localStorage.setItem('d2_payout_rules',JSON.stringify(payoutRules))}}catch(e){}
     try{if(c.serviceControl&&typeof serviceControl!=='undefined')serviceControl={...serviceControl,...c.serviceControl}}catch(e){}
     try{if(Array.isArray(c.customServices)&&c.customServices.length&&typeof customServices!=='undefined')customServices=c.customServices}catch(e){}
     try{if(c.serviceFeeOverrides&&typeof serviceFeeOverrides!=='undefined')serviceFeeOverrides={...serviceFeeOverrides,...c.serviceFeeOverrides}}catch(e){}
