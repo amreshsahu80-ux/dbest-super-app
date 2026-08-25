@@ -6,7 +6,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
 });
 
 (function(){
-  const V='20260825-0927-owner-section-visibility';
+  const V='20260825-0940-guaranteed-transactions';
 
   const loadScript=(src,attr)=>{
     const load=()=>{
