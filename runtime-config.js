@@ -6,7 +6,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
 });
 
 (function(){
-  const V='20260825-0940-guaranteed-transactions';
+  const V='20260825-1058-external-success-claims';
 
   const loadScript=(src,attr)=>{
     const load=()=>{
@@ -58,6 +58,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
     loadScript('/owner-deeplink-all-sections.js?v='+V,'data-dbest-owner-deeplinks-all');
     loadScript('/transaction-capture-universal.js?v='+V,'data-dbest-transaction-universal');
     loadScript('/owner-section-visibility-control.js?v='+V,'data-dbest-owner-section-visibility');
+    loadScript('/external-success-claims.js?v='+V,'data-dbest-external-success-claims');
 
     try{
       await loadScriptAsync('/cab-location-production-v9.js?v='+V,'data-dbest-cab-location-v9');
