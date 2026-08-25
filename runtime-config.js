@@ -6,7 +6,66 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
 });
 
 (function(){
-  const V='20260825-1331-payout-subsection-labels';
+  const V='20260825-1426-crystal-clear-dbest-logo';
+
+  const installLogoClarity=()=>{
+    if(document.getElementById('dbestLogoClarityStyle')) return;
+    const s=document.createElement('style');
+    s.id='dbestLogoClarityStyle';
+    s.textContent=`
+      img[src*="dbest-logo.png"],.dbestTopLogo,.dbestFinalLogo{
+        image-rendering:auto!important;
+        object-fit:contain!important;
+        opacity:1!important;
+        filter:contrast(1.08) saturate(1.08) drop-shadow(0 3px 7px rgba(21,72,165,.16))!important;
+        transform:none!important;
+      }
+      .brand{
+        background:#fff!important;
+        border:1px solid #e1e8f3!important;
+        border-radius:16px!important;
+        padding:3px 9px!important;
+        box-shadow:0 5px 14px rgba(22,51,99,.08)!important;
+        overflow:visible!important;
+      }
+      .dbestTopLogo{
+        width:225px!important;
+        height:70px!important;
+        max-width:none!important;
+        display:block!important;
+        object-position:left center!important;
+      }
+      .dbestFinalLogoBox{
+        min-height:66px!important;
+        min-width:220px!important;
+        padding:3px 10px!important;
+        border:1px solid #d7e0ef!important;
+        border-radius:14px!important;
+        background:#fff!important;
+        box-shadow:0 6px 16px rgba(16,44,94,.12)!important;
+        overflow:visible!important;
+      }
+      .dbestFinalLogo{
+        width:210px!important;
+        height:58px!important;
+        max-height:58px!important;
+        display:block!important;
+        object-position:left center!important;
+      }
+      @media(max-width:700px){
+        .brand{padding:2px 7px!important;border-radius:13px!important}
+        .dbestTopLogo{width:168px!important;height:54px!important}
+        .dbestFinalLogoBox{min-width:160px!important;min-height:54px!important;padding:2px 7px!important}
+        .dbestFinalLogo{width:154px!important;height:48px!important;max-height:48px!important}
+      }
+      @media print{
+        .dbestFinalLogoBox{box-shadow:none!important;border:1px solid #d7e0ef!important}
+        .dbestFinalLogo{filter:contrast(1.08) saturate(1.08)!important}
+      }
+    `;
+    document.head.appendChild(s);
+  };
+  installLogoClarity();
 
   const loadScript=(src,attr)=>{
     const load=()=>{
@@ -54,6 +113,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
   };
 
   const loadFinalLayers=async()=>{
+    installLogoClarity();
     loadScript('/owner-control-live.js?v='+V,'data-dbest-owner-control-live');
     loadScript('/owner-payout-percentage-matrix.js?v='+V,'data-dbest-owner-payout-percentage-matrix');
     loadScript('/payout-subsection-labels.js?v='+V,'data-dbest-payout-subsection-labels');
