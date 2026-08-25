@@ -6,7 +6,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
 });
 
 (function(){
-  const V='20260825-1212-member-photo-fix';
+  const V='20260825-1221-member-id-card-final';
 
   const loadScript=(src,attr)=>{
     const load=()=>{
@@ -59,7 +59,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
     loadScript('/transaction-capture-universal.js?v='+V,'data-dbest-transaction-universal');
     loadScript('/owner-section-visibility-control.js?v='+V,'data-dbest-owner-section-visibility');
     loadScript('/external-success-claims.js?v='+V,'data-dbest-external-success-claims');
-    loadScript('/member-id-card-enhanced.js?v='+V,'data-dbest-member-id-card-enhanced');
+    loadScript('/member-id-card-production-final.js?v='+V,'data-dbest-member-id-card-final');
 
     try{
       await loadScriptAsync('/cab-location-production-v9.js?v='+V,'data-dbest-cab-location-v9');
