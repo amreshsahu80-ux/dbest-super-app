@@ -6,7 +6,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
 });
 
 (function(){
-  const V='20260825-1718-partner-kyc-upload-v2';
+  const V='20260825-1902-final-flow-audit';
 
   const installLogoClarity=()=>{
     if(document.getElementById('dbestLogoClarityStyle')) return;
@@ -120,6 +120,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
     loadScript('/owner-payout-entry-visible.js?v='+V,'data-dbest-owner-payout-entry-visible');
     loadScript('/owner-deeplink-all-sections.js?v='+V,'data-dbest-owner-deeplinks-all');
     loadScript('/transaction-capture-universal.js?v='+V,'data-dbest-transaction-universal');
+    loadScript('/transaction-final-cleanup.js?v='+V,'data-dbest-transaction-final-cleanup');
     loadScript('/owner-section-visibility-control.js?v='+V,'data-dbest-owner-section-visibility');
     loadScript('/external-success-claims.js?v='+V,'data-dbest-external-success-claims');
     loadScript('/member-id-card-production-final.js?v='+V,'data-dbest-member-id-card-final');
