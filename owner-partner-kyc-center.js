@@ -1,0 +1,36 @@
+(function(){
+'use strict';
+const VERSION='1.0.0';
+const cfg=window.DBEST_RUNTIME_CONFIG||{},BASE=String(cfg.supabaseUrl||'').replace(/\/$/,''),KEY=String(cfg.supabasePublishableKey||'');
+if(!BASE||!KEY)return;
+const MARKET=BASE+'/functions/v1/marketplace-live',VAAHAK=BASE+'/functions/v1/vaahak-live';
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const notify=m=>{try{typeof toast==='function'?toast(m):alert(m)}catch(e){alert(m)}};
+function isOwner(){try{return (typeof session!=='undefined'&&session?.role==='owner')||window.session?.role==='owner'}catch(e){return false}}
+function ownerToken(){try{return window.DBEST_OWNER_AUTH_BRIDGE?.getOwnerToken?.()||''}catch(e){return''}}
+async function post(url,action,body={}){const t=ownerToken();if(!t)throw new Error('owner_session_invalid');const r=await fetch(url,{method:'POST',cache:'no-store',headers:{apikey:KEY,Authorization:'Bearer '+KEY,'x-dbest-owner-token':t,'Content-Type':'application/json'},body:JSON.stringify({action,...body})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'request_failed');return d}
+function openOwnerLogin(){notify('Owner security session expired. Please verify Owner OTP again.');try{typeof ownerLogin==='function'&&ownerLogin()}catch(e){}}
+function entryHtml(){return `<div id="dbestOwnerPartnerKycEntry" class="ownerPanelCard" style="margin:12px 0;border:1px solid #cddcf4;background:linear-gradient(135deg,#f8fbff,#eef5ff);padding:16px;border-radius:17px"><div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap"><div><h3 style="margin:0 0 5px">🔐 Partner KYC & Agreements</h3><div style="font-size:12px;color:#60708a">Vendor + Vaahak secure KYC review before approval • Owner email OTP for agreement signing</div></div><button class="btn" onclick="openOwnerPartnerKycCenter()">Open KYC Review</button></div></div>`}
+function injectEntry(){if(!isOwner()||!ownerToken())return; if(document.getElementById('dbestOwnerPartnerKycEntry'))return;const roots=[...document.querySelectorAll('.sectionContent,.ownerMasterPage,main,#app')];let root=roots.find(x=>/Owner|Operations|Control|Finance|Project/i.test(x.textContent||''))||roots[0];if(!root)return;root.insertAdjacentHTML('afterbegin',entryHtml())}
+function row(kind,v){const name=v.name||v.owner_name||'Partner',id=v.id||'',approval=v.owner_approval||'Pending',meta=kind==='vendor'?`${v.owner_name||''} • ${v.type||''} • ${v.mobile||''} • ${v.email||''}`:`${v.mobile||''} • ${v.vehicle||''} ${v.vehicle_no||''} • ${v.email||''}`;return `<div class="ownerQueueRow" style="border:1px solid #dfe7f2;border-radius:15px;padding:13px;margin:9px 0;background:#fff"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><b>${esc(name)} • ${esc(id)}</b><span style="font-size:11px;font-weight:900;padding:5px 8px;border-radius:999px;background:${approval==='Approved'?'#e7f8ee':approval==='Rejected'?'#fff0ef':'#fff7df'};color:${approval==='Approved'?'#17633f':approval==='Rejected'?'#9c3535':'#805b00'}">${esc(approval)}</span></div><small style="display:block;margin-top:5px;color:#67768c">${esc(meta)}</small><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button class="mini" onclick="ownerViewPartnerKyc('${kind}','${esc(id)}')">🔎 View KYC & Review</button><button class="mini" onclick="ownerAgreementOtp('${kind}','${esc(id)}')">✉️ Owner Agreement OTP</button></div><div style="font-size:11px;color:#6f7d91;margin-top:7px">Approval is available inside the KYC review after required documents are checked.</div></div>`}
+window.openOwnerPartnerKycCenter=async function(){if(!isOwner()||!ownerToken())return openOwnerLogin();if(typeof sectionScreen!=='function')return notify('Owner screen is not ready. Please reopen Owner Console.');const top=typeof sectionTopBar==='function'?sectionTopBar('🔐 Partner KYC & Agreements','Review KYC before approval • Vendor & Vaahak','owner()'):'';sectionScreen(`${top}<div class="sectionContent ownerMasterPage"><div class="notice"><b>Mandatory approval sequence:</b> View KYC → review secure documents → Approve/Reject KYC → Owner agreement OTP → Fully Signed.</div><div id="dbestPartnerKycVendorList" class="ownerPanelCard" style="margin-top:12px"><h3>🏪 Vendor KYC</h3><div class="notice">Loading Vendor registrations…</div></div><div id="dbestPartnerKycVaahakList" class="ownerPanelCard" style="margin-top:14px"><h3>🛵 Vaahak KYC</h3><div class="notice">Loading Vaahak registrations…</div></div></div>`);
+ try{
+  const [vd,hd]=await Promise.all([post(MARKET,'owner_list_vendors'),post(VAAHAK,'owner_list')]);
+  const vb=document.getElementById('dbestPartnerKycVendorList'),hb=document.getElementById('dbestPartnerKycVaahakList');
+  const vs=Array.isArray(vd.vendors)?vd.vendors:[],hs=Array.isArray(hd.partners)?hd.partners:[];
+  if(vb)vb.innerHTML=`<h3>🏪 Vendor KYC</h3><div class="notice"><b>${vs.length}</b> registration${vs.length===1?'':'s'} • Open each KYC before approval.</div>${vs.map(v=>row('vendor',v)).join('')||'<div class="notice">No Vendor registrations found.</div>'}`;
+  if(hb)hb.innerHTML=`<h3>🛵 Vaahak KYC</h3><div class="notice"><b>${hs.length}</b> registration${hs.length===1?'':'s'} • Open each KYC before approval.</div>${hs.map(v=>row('vaahak',v)).join('')||'<div class="notice">No Vaahak registrations found.</div>'}`;
+ }catch(e){if(String(e.message).includes('owner_session'))return openOwnerLogin();notify('Unable to load Partner KYC: '+String(e.message||''))}
+};
+// Force approval to pass through visible KYC review first.
+const oldVendorApprove=window.ownerApproveVendor;
+window.ownerApproveVendor=function(id,decision){if(String(decision)==='Approved'&&typeof window.ownerViewPartnerKyc==='function')return window.ownerViewPartnerKyc('vendor',id);return typeof oldVendorApprove==='function'?oldVendorApprove.apply(this,arguments):undefined};
+const oldLiveVaahakApprove=window.ownerApproveLiveVaahak;
+window.ownerApproveLiveVaahak=function(id,approve){if(approve&&typeof window.ownerViewPartnerKyc==='function')return window.ownerViewPartnerKyc('vaahak',id);return typeof oldLiveVaahakApprove==='function'?oldLiveVaahakApprove.apply(this,arguments):undefined};
+if(typeof window.ownerApproveVaahak==='function'){const old=window.ownerApproveVaahak;window.ownerApproveVaahak=function(id,decision){if(String(decision)==='Approved'&&typeof window.ownerViewPartnerKyc==='function')return window.ownerViewPartnerKyc('vaahak',id);return old.apply(this,arguments)}}
+const oldOwner=window.owner;if(typeof oldOwner==='function'&&!oldOwner.__dbestKycCenter){const w=function(){const r=oldOwner.apply(this,arguments);setTimeout(injectEntry,80);setTimeout(injectEntry,350);return r};w.__dbestKycCenter=true;window.owner=w}
+const oldOps=window.ownerOperations;if(typeof oldOps==='function'&&!oldOps.__dbestKycCenter){const w=function(){const r=oldOps.apply(this,arguments);setTimeout(injectEntry,80);return r};w.__dbestKycCenter=true;window.ownerOperations=w}
+function maintain(){if(isOwner()&&ownerToken())injectEntry()}
+setTimeout(maintain,120);setTimeout(maintain,600);setInterval(maintain,2500);
+window.DBEST_OWNER_PARTNER_KYC_CENTER={version:VERSION,open:window.openOwnerPartnerKycCenter,refresh:injectEntry};
+})();
