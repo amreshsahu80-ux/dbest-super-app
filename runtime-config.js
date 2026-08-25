@@ -6,7 +6,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
 });
 
 (function(){
-  const V='20260825-1426-crystal-clear-dbest-logo';
+  const V='20260825-1508-vendor-agreement-email-otp';
 
   const installLogoClarity=()=>{
     if(document.getElementById('dbestLogoClarityStyle')) return;
@@ -123,6 +123,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
     loadScript('/owner-section-visibility-control.js?v='+V,'data-dbest-owner-section-visibility');
     loadScript('/external-success-claims.js?v='+V,'data-dbest-external-success-claims');
     loadScript('/member-id-card-production-final.js?v='+V,'data-dbest-member-id-card-final');
+    loadScript('/vendor-agreement-email-otp.js?v='+V,'data-dbest-vendor-agreement-email-otp');
 
     try{
       await loadScriptAsync('/cab-location-production-v9.js?v='+V,'data-dbest-cab-location-v9');
