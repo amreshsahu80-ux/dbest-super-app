@@ -6,7 +6,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
 });
 
 (function(){
-  const V='20260825-1610-owner-partner-kyc-center';
+  const V='20260825-1620-partner-kyc-storage-fix';
 
   const installLogoClarity=()=>{
     if(document.getElementById('dbestLogoClarityStyle')) return;
@@ -128,6 +128,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
     loadScript('/partner-kyc-owner-signing.js?v='+V,'data-dbest-partner-kyc-owner-signing');
     loadScript('/partner-kyc-self-service.js?v='+V,'data-dbest-partner-kyc-self-service');
     loadScript('/owner-partner-kyc-center.js?v='+V,'data-dbest-owner-partner-kyc-center');
+    loadScript('/partner-kyc-owner-display-v2.js?v='+V,'data-dbest-partner-kyc-owner-display-v2');
 
     try{
       await loadScriptAsync('/cab-location-production-v9.js?v='+V,'data-dbest-cab-location-v9');
