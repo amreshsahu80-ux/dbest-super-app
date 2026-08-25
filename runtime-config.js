@@ -6,7 +6,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
 });
 
 (function(){
-  const V='20260825-1902-final-flow-audit';
+  const V='20260825-1954-production-flow-hardening';
 
   const installLogoClarity=()=>{
     if(document.getElementById('dbestLogoClarityStyle')) return;
@@ -117,6 +117,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
     loadScript('/owner-control-live.js?v='+V,'data-dbest-owner-control-live');
     loadScript('/owner-payout-percentage-matrix.js?v='+V,'data-dbest-owner-payout-percentage-matrix');
     loadScript('/payout-subsection-labels.js?v='+V,'data-dbest-payout-subsection-labels');
+    loadScript('/payout-engine-production-hardening.js?v='+V,'data-dbest-payout-engine-hardening');
     loadScript('/owner-payout-entry-visible.js?v='+V,'data-dbest-owner-payout-entry-visible');
     loadScript('/owner-deeplink-all-sections.js?v='+V,'data-dbest-owner-deeplinks-all');
     loadScript('/transaction-capture-universal.js?v='+V,'data-dbest-transaction-universal');
