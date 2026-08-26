@@ -1,8 +1,8 @@
 (function(){
 'use strict';
-const VERSION='1.0.0',BUILD='20260823-0430-live-order-submit';
+const VERSION='1.1.0',BUILD='20260826-1945-server-delivery';
 const cfg=window.DBEST_RUNTIME_CONFIG||{},BASE=String(cfg.supabaseUrl||'').replace(/\/$/,''),KEY=cfg.supabasePublishableKey||'';
-const API=BASE+'/functions/v1/marketplace-live';
+const API=BASE+'/functions/v1/marketplace-live',ORDER_API=BASE+'/functions/v1/marketplace-order-live-v2';
 let submitting=false;
 const digits=s=>String(s||'').replace(/\D/g,'');
 function memberToken(){try{return window.DBEST_MEMBER_LIVE?.getToken?.()||''}catch(e){return''}}
@@ -12,9 +12,10 @@ async function api(action,body={}){
   const h={'apikey':KEY,'Content-Type':'application/json'};
   if(String(KEY).startsWith('eyJ'))h.Authorization='Bearer '+KEY;
   const mt=memberToken();if(mt)h['x-dbest-member-token']=mt;
-  const r=await fetch(API,{method:'POST',cache:'no-store',headers:h,body:JSON.stringify({action,...body})});
+  const endpoint=action==='create_order'?ORDER_API:API;
+  const r=await fetch(endpoint,{method:'POST',cache:'no-store',headers:h,body:JSON.stringify({action,...body})});
   const d=await r.json().catch(()=>({}));
-  if(!r.ok){const e=new Error(d.error||'marketplace_live_error');e.data=d;e.status=r.status;throw e}
+  if(!r.ok){const e=new Error(d.error||d.detail||'marketplace_live_error');e.data=d;e.status=r.status;throw e}
   return d;
 }
 function txById(id){try{return (txs||[]).find(t=>String(t.id)===String(id))||null}catch(e){return null}}
@@ -35,11 +36,12 @@ async function createLiveOrders(txId){
   const address=String(o.address||o.liveLocation?.label||'').trim();
   if(customerMobile.length<10)throw new Error('customer_mobile_missing');
   if(address.length<4)throw new Error('delivery_address_missing');
+  if(!o.liveLocation?.lat||!o.liveLocation?.lng)throw new Error('customer_location_required');
   const totalSub=Number(o.subtotal||entries.flatMap(e=>e[1]).reduce((a,i)=>a+Number(i.price||0)*Number(i.qty||0),0))||1;
-  const totalTax=Number(o.tax||0),totalDelivery=Number(o.delivery||0),prepaid=String(o.paymentMethod||'').toLowerCase()==='payu';
+  const totalTax=Number(o.tax||0),prepaid=String(o.paymentMethod||'').toLowerCase()==='payu';
   x.meta.liveMarketplaceOrders=[];x.status='Creating live Marketplace order…';persist();
   for(const [vendorId,items] of entries){
-    const v=localVendor(vendorId),sub=items.reduce((a,i)=>a+Number(i.price||0)*Number(i.qty||0),0),tax=Math.round(totalTax*(sub/totalSub)*100)/100,del=Math.round(totalDelivery/entries.length*100)/100,collect=Math.round((sub+tax+del)*100)/100;
+    const v=localVendor(vendorId),sub=items.reduce((a,i)=>a+Number(i.price||0)*Number(i.qty||0),0),tax=Math.round(totalTax*(sub/totalSub)*100)/100;
     try{
       const d=await api('create_order',{
         parentTxId:String(x.id),vendorId:String(vendorId),marketType:type,
@@ -47,27 +49,25 @@ async function createLiveOrders(txId){
         deliveryAddress:address,
         dropLat:o.liveLocation?.lat,dropLng:o.liveLocation?.lng,
         items:items.map(i=>({id:String(i.id||''),name:String(i.name||'Item'),qty:Number(i.qty||1),price:Number(i.price||0)})),
-        orderValue:sub+tax+del,collectAmount:collect,
+        taxAmount:tax,
         paymentMethod:prepaid?'PayU':'Pay after Delivery',prepaid
       });
-      x.meta.liveMarketplaceOrders.push({vendorId:String(vendorId),vendorName:v?.name||String(vendorId),orderId:d.orderId,trackingToken:d.trackingToken||'',vendorNotified:!!d.vendorNotified,emailError:d.emailError||null});
+      x.meta.liveMarketplaceOrders.push({vendorId:String(vendorId),vendorName:v?.name||String(vendorId),orderId:d.orderId,trackingToken:d.trackingToken||'',vendorNotified:!!d.vendorNotified,emailError:d.emailError||null,deliveryRuleApplied:!!d.deliveryRuleApplied,deliveryQuote:d.deliveryRule||null,pricing:d.pricing||null,authoritativeDelivery:!!d.authoritativeDelivery});
     }catch(e){
       x.meta.liveMarketplaceOrders.push({vendorId:String(vendorId),vendorName:v?.name||String(vendorId),error:e.message,status:e.status||0});
     }
   }
   const failures=x.meta.liveMarketplaceOrders.filter(r=>!r.orderId);
-  if(failures.length){x.status='Marketplace live order failed / Retry required';persist();const e=new Error(failures.map(r=>r.vendorName+': '+r.error).join(' • '));e.failures=failures;throw e}
+  if(failures.length){x.status='Marketplace live order failed / Retry required';persist();const e=new Error(failures.map(r=>r.vendorName+': '+(r.error==='vendor_location_missing'?'Store delivery GPS is not set yet.':r.error==='customer_location_required'?'Customer live location is required.':r.error)).join(' • '));e.failures=failures;throw e}
+  const official=x.meta.liveMarketplaceOrders.filter(r=>r.pricing);
+  if(official.length){const delivery=Math.round(official.reduce((a,r)=>a+Number(r.pricing?.deliveryFee||0),0)*100)/100,tax=Math.round(official.reduce((a,r)=>a+Number(r.pricing?.taxAmount||0),0)*100)/100,subtotal=Math.round(official.reduce((a,r)=>a+Number(r.pricing?.itemSubtotal||0),0)*100)/100,total=Math.round(official.reduce((a,r)=>a+Number(r.pricing?.collectAmount||0),0)*100)/100;o.subtotal=subtotal;o.delivery=delivery;o.tax=tax;o.total=total;x.meta.order=o;x.order=o;if('amount' in x)x.amount=total}
   x.status=x.meta.liveMarketplaceOrders.every(r=>r.vendorNotified)?'Vendor Notified / Awaiting Confirmation':'Order Placed / Vendor Email Pending';
   persist();
   return x.meta.liveMarketplaceOrders;
 }
-
-// Explicitly replace the legacy immediate Vaahak-dispatch hook. Marketplace delivery jobs
-// are created only after the Vendor marks the live order Ready for Pickup.
 const dispatchHook=function(txId){createLiveOrders(txId).catch(e=>console.error('Live Marketplace order creation failed',e));return[]};
 try{createVaahakJobsForOrder=dispatchHook}catch(e){}
 window.createVaahakJobsForOrder=dispatchHook;
-
 window.placeMarketOrder=async function(e,type){
   e?.preventDefault?.();
   if(submitting)return false;
@@ -90,17 +90,18 @@ window.placeMarketOrder=async function(e,type){
     x.order=x.meta.order;x.paymentStage=x.meta.paymentStage;persist();
     if(payment==='payu'){submitting=false;return marketPaymentScreen(x.id,type)}
     if(type!=='digital'){
-      say('Creating live order and notifying Vendor…');
+      say('Creating live order and validating final delivery charge…');
       const rows=await createLiveOrders(x.id);
       commerceCarts[type]=[];persist();
       const mailed=rows.every(r=>r.vendorNotified);
-      say(mailed?'Order placed. Vendor notified by email.':'Order placed. Vendor Portal notified; email delivery is pending.');
+      say(mailed?'Order placed. Delivery charge verified and Vendor notified.':'Order placed with verified delivery charge. Vendor Portal notified; email delivery is pending.');
       marketOrderStatus(x.id);submitting=false;return true;
     }
     commerceCarts[type]=[];persist();marketOrderStatus(x.id);submitting=false;return true;
   }catch(err){
     console.error('Marketplace live checkout',err);submitting=false;
-    say('Order was not submitted. '+String(err.message||err));
+    const m=String(err.message||err),friendly=m==='customer_location_required'?'Please capture your live delivery location first.':m.includes('Store delivery GPS is not set')?'The Vendor has not set the store delivery location yet. Please try after the Vendor updates GPS.':m;
+    say('Order was not submitted. '+friendly);
     return false;
   }
 };
