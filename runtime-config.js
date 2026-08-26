@@ -6,7 +6,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
 });
 
 (function(){
-  const V='20260826-0455-hyperlocal-home-jobs';
+  const V='20260826-1615-vendor-growth';
 
   const installLogoClarity=()=>{
     if(document.getElementById('dbestLogoClarityStyle')) return;
@@ -68,6 +68,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
     loadScript('/partner-kyc-registration-upload-v2.js?v='+V,'data-dbest-partner-kyc-registration-upload-v2');
     loadScript('/service-secure-doc-status-fix.js?v='+V,'data-dbest-service-secure-doc-status');
     loadScript('/vendor-multi-catalog-submit.js?v='+V,'data-dbest-vendor-multi-catalog');
+    loadScript('/vendor-growth-ui.js?v='+V,'data-dbest-vendor-growth-ui');
     loadScript('/home-jobs-hyperlocal.js?v='+V,'data-dbest-home-jobs-hyperlocal');
 
     try{await loadScriptAsync('/cab-location-production-v9.js?v='+V,'data-dbest-cab-location-v9');await loadScriptAsync('/mappls-cab-production.js?v='+V,'data-dbest-mappls-cab');await loadScriptAsync('/cab-mappls-rental-v2.js?v='+V,'data-dbest-cab-mappls-rental-v2');await loadScriptAsync('/cab-booking-step-fix.js?v='+V,'data-dbest-cab-booking-step-fix')}catch(e){console.warn('DBest final cab layer load warning',e)}
