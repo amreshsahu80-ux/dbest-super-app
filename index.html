@@ -13,7 +13,7 @@
   <script>
     (async function(){
       try{
-        const BUILD='20260826-2110-master-delivery-fix';
+        const BUILD='20260826-2145-customer-ui-clean';
         const r = await fetch('./index-26.html?v='+BUILD, {cache:'no-store'});
         if(!r.ok) throw new Error('Unable to load application');
         let html = await r.text();
