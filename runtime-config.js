@@ -6,7 +6,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
 });
 
 (function(){
-  const V='20260826-2145-customer-ui-clean';
+  const V='20260826-2205-platform-concise-ui';
 
   const installLogoClarity=()=>{
     if(document.getElementById('dbestLogoClarityStyle')) return;
@@ -77,6 +77,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
     loadScript('/marketplace-master-cart.js?v='+V,'data-dbest-marketplace-master-cart');
     loadScript('/marketplace-master-ui-fix.js?v='+V,'data-dbest-marketplace-master-ui-fix');
     loadScript('/home-jobs-hyperlocal.js?v='+V,'data-dbest-home-jobs-hyperlocal');
+    loadScript('/platform-concise-ui.js?v='+V,'data-dbest-platform-concise-ui');
 
     try{await loadScriptAsync('/cab-location-production-v9.js?v='+V,'data-dbest-cab-location-v9');await loadScriptAsync('/mappls-cab-production.js?v='+V,'data-dbest-mappls-cab');await loadScriptAsync('/cab-mappls-rental-v2.js?v='+V,'data-dbest-cab-mappls-rental-v2');await loadScriptAsync('/cab-booking-step-fix.js?v='+V,'data-dbest-cab-booking-step-fix')}catch(e){console.warn('DBest final cab layer load warning',e)}
 
