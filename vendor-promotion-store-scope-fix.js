@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='1.0.0';
+const VERSION='1.0.1';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const money=v=>'₹'+Number(v||0).toLocaleString('en-IN',{maximumFractionDigits:2});
 function selectedVendor(){
@@ -35,7 +35,11 @@ function wrapMarketplace(){
   const w=function(){const r=fn.apply(this,arguments);[0,80,180,350,700].forEach(ms=>setTimeout(enforce,ms));return r};
   w.__dbestVendorPromoScoped=true;window.openMarketplace=w;
 }
-function install(){wrapMarketplace();enforce()}
+function loadDirectCatalog(){
+  if(document.querySelector('script[data-dbest-vendor-direct-catalog]'))return;
+  const s=document.createElement('script');s.src='/vendor-direct-catalog-finalizer.js?v=20260826-1920-vendor-direct-catalog';s.setAttribute('data-dbest-vendor-direct-catalog','1');document.body.appendChild(s);
+}
+function install(){wrapMarketplace();enforce();loadDirectCatalog()}
 [0,100,300,700,1400,2800,5000,9000].forEach(ms=>setTimeout(install,ms));
 const mo=new MutationObserver(()=>{clearTimeout(window.__dbestVendorPromoScopeTimer);window.__dbestVendorPromoScopeTimer=setTimeout(enforce,50)});if(document.documentElement)mo.observe(document.documentElement,{childList:true,subtree:true});
 window.DBEST_VENDOR_PROMOTION_STORE_SCOPE={version:VERSION,enforce};
