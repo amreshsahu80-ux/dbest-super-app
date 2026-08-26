@@ -6,7 +6,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
 });
 
 (function(){
-  const V='20260826-1830-vendor-promo-store-scope';
+  const V='20260826-1900-vendor-image-storage';
 
   const installLogoClarity=()=>{
     if(document.getElementById('dbestLogoClarityStyle')) return;
@@ -71,6 +71,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
     loadScript('/vendor-growth-ui.js?v='+V,'data-dbest-vendor-growth-ui');
     loadScript('/vendor-growth-scope-fix.js?v='+V,'data-dbest-vendor-growth-scope-fix');
     loadScript('/vendor-catalog-ux-fix.js?v='+V,'data-dbest-vendor-catalog-ux-fix');
+    loadScript('/vendor-image-storage-v2.js?v='+V,'data-dbest-vendor-image-storage-v2');
     loadScript('/vendor-promotion-ux-fix.js?v='+V,'data-dbest-vendor-promotion-ux-fix');
     loadScript('/vendor-promotion-store-scope-fix.js?v='+V,'data-dbest-vendor-promotion-store-scope-fix');
     loadScript('/home-jobs-hyperlocal.js?v='+V,'data-dbest-home-jobs-hyperlocal');
