@@ -6,7 +6,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
 });
 
 (function(){
-  const V='20260826-1635-vendor-scope-fix';
+  const V='20260826-1650-vendor-promo-mount';
 
   const installLogoClarity=()=>{
     if(document.getElementById('dbestLogoClarityStyle')) return;
