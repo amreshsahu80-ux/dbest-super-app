@@ -8,11 +8,15 @@
     {"source": "/Vaahak/", "destination": "/Vaahak", "permanent": true},
     {"source": "/servicepartner", "destination": "/ServicePartner", "permanent": true},
     {"source": "/servicepartner/", "destination": "/ServicePartner", "permanent": true},
-    {"source": "/ServicePartner/", "destination": "/ServicePartner", "permanent": true}
+    {"source": "/ServicePartner/", "destination": "/ServicePartner", "permanent": true},
+    {"source": "/superadmin", "destination": "/SuperAdmin", "permanent": true},
+    {"source": "/superadmin/", "destination": "/SuperAdmin", "permanent": true},
+    {"source": "/SuperAdmin/", "destination": "/SuperAdmin", "permanent": true}
   ],
   "rewrites": [
     {"source": "/owner", "destination": "/index.html"},
     {"source": "/ServicePartner", "destination": "/index.html"},
+    {"source": "/SuperAdmin", "destination": "/index.html"},
     {"source": "/Vaahak/runtime-config.js", "destination": "/runtime-config.js"},
     {"source": "/vaahak/runtime-config.js", "destination": "/runtime-config.js"},
     {"source": "/Vaahak", "destination": "/vaahak.html"}
@@ -37,6 +41,13 @@
     },
     {
       "source": "/ServicePartner",
+      "headers": [
+        {"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"},
+        {"key": "X-Robots-Tag", "value": "noindex, nofollow, noarchive"}
+      ]
+    },
+    {
+      "source": "/SuperAdmin",
       "headers": [
         {"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"},
         {"key": "X-Robots-Tag", "value": "noindex, nofollow, noarchive"}
@@ -74,6 +85,12 @@
     },
     {
       "source": "/service-partner-(.*).js",
+      "headers": [
+        {"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}
+      ]
+    },
+    {
+      "source": "/super-admin-(.*).js",
       "headers": [
         {"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}
       ]
