@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='1.0.0';
+const VERSION='1.0.1';
 const JOB_ID='jobs';
 const HOME_SERVICES=['Maid / House Help','Electrician','Plumber','Refrigerator Mechanic','AC Mechanic'];
 const PARTNER_LINKS=['Become Service Partner','Service Partner Portal'];
@@ -57,9 +57,17 @@ function wrapHyperRefresh(){
   wrapped.__dbestHomeJobsFinalized=true;
   api.refresh=wrapped;
 }
-function install(){apply();wrapOwnerSync();wrapHyperRefresh()}
+function loadStandaloneRoute(){
+  if(document.getElementById('dbestServicePartnerStandaloneRoute'))return;
+  const s=document.createElement('script');
+  s.id='dbestServicePartnerStandaloneRoute';
+  s.src='/service-partner-standalone-route.js?v=20260826-1245';
+  s.defer=true;
+  document.head.appendChild(s);
+}
+function install(){apply();wrapOwnerSync();wrapHyperRefresh();loadStandaloneRoute()}
 [0,100,300,700,1400,2800,4500,6500,9000,12000].forEach(ms=>setTimeout(install,ms));
 document.addEventListener('click',()=>setTimeout(install,40),true);
 window.addEventListener('load',()=>setTimeout(install,120),{once:true});
-window.DBEST_HOME_JOBS_FINALIZER={version:VERSION,apply,services:HOME_SERVICES.slice()};
+window.DBEST_HOME_JOBS_FINALIZER={version:VERSION,apply,services:HOME_SERVICES.slice(),portalUrl:'/ServicePartner'};
 })();
