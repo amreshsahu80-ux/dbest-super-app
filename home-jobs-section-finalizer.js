@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='1.0.1';
+const VERSION='1.1.0';
 const JOB_ID='jobs';
 const HOME_SERVICES=['Maid / House Help','Electrician','Plumber','Refrigerator Mechanic','AC Mechanic'];
 const PARTNER_LINKS=['Become Service Partner','Service Partner Portal'];
@@ -57,15 +57,16 @@ function wrapHyperRefresh(){
   wrapped.__dbestHomeJobsFinalized=true;
   api.refresh=wrapped;
 }
-function loadStandaloneRoute(){
-  if(document.getElementById('dbestServicePartnerStandaloneRoute'))return;
+function loadFreePartnerBridge(){
+  if(window.DBEST_SERVICE_PARTNERS_FREE||document.getElementById('dbestServicePartnerFreeAccountScript'))return;
   const s=document.createElement('script');
-  s.id='dbestServicePartnerStandaloneRoute';
-  s.src='/service-partner-standalone-route.js?v=20260826-1245';
-  s.defer=true;
+  s.id='dbestServicePartnerFreeAccountScript';
+  s.src='/service-partner-free-account.js?v=20260826-1300-free-partner';
+  s.async=false;
+  s.onerror=()=>console.warn('DBest free Service Partner account bridge could not load');
   document.head.appendChild(s);
 }
-function install(){apply();wrapOwnerSync();wrapHyperRefresh();loadStandaloneRoute()}
+function install(){apply();wrapOwnerSync();wrapHyperRefresh();loadFreePartnerBridge()}
 [0,100,300,700,1400,2800,4500,6500,9000,12000].forEach(ms=>setTimeout(install,ms));
 document.addEventListener('click',()=>setTimeout(install,40),true);
 window.addEventListener('load',()=>setTimeout(install,120),{once:true});
