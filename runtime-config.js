@@ -6,7 +6,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
 });
 
 (function(){
-  const V='20260826-1720-vendor-catalog-ux';
+  const V='20260826-1740-vendor-publish-handler';
 
   const installLogoClarity=()=>{
     if(document.getElementById('dbestLogoClarityStyle')) return;
