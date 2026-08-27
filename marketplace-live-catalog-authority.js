@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='1.1.1',BUILD='20260827-1258-dbest-meds-preview-loader';
+const VERSION='1.1.2',BUILD='20260827-1310-meds-images-instant-categories';
 const cfg=window.DBEST_RUNTIME_CONFIG||{},BASE=String(cfg.supabaseUrl||'').replace(/\/$/,''),KEY=cfg.supabasePublishableKey||'',API=BASE+'/functions/v1/marketplace-live';
 const norm=s=>String(s||'').trim().toLowerCase().replace(/\s+/g,' ');
 function persist(){try{typeof save==='function'&&save()}catch(e){}}
@@ -19,20 +19,12 @@ async function enforce(){
     const mapped=ps.map(liveRow);
     const mappedVendors=vs.map(liveVendor);
     const liveVendorIds=new Set(mappedVendors.map(v=>String(v.id)));
-
     commerceConfig.products=commerceConfig.products.filter(p=>!liveTypes.has(String(p.type||'').trim().toLowerCase()));
     for(const row of mapped)commerceConfig.products.push(row);
-
-    commerceConfig.vendors=commerceConfig.vendors.filter(v=>{
-      const t=String(v.type||'').trim().toLowerCase();
-      return !liveTypes.has(t)||liveVendorIds.has(String(v.id));
-    });
+    commerceConfig.vendors=commerceConfig.vendors.filter(v=>{const t=String(v.type||'').trim().toLowerCase();return !liveTypes.has(t)||liveVendorIds.has(String(v.id))});
     for(const v of mappedVendors){let x=commerceConfig.vendors.find(q=>String(q.id)===String(v.id));if(x)Object.assign(x,v);else commerceConfig.vendors.push(v)}
-
     if(typeof commerceCarts!=='undefined'&&commerceCarts){
-      for(const type of liveTypes){const cart=Array.isArray(commerceCarts[type])?commerceCarts[type]:[];if(!cart.length)continue;const next=[];for(const r of cart){let old=oldProducts.find(p=>String(p.id)===String(r.id));let target=mapped.find(p=>p.type===type&&old&&norm(p.name)===norm(old.name)&&Number(p.price)===Number(old.price));if(!target&&mapped.some(p=>String(p.id)===String(r.id)))target=mapped.find(p=>String(p.id)===String(r.id));if(target){const ex=next.find(x=>x.id===target.id);if(ex)ex.qty+=Number(r.qty||1);else next.push({id:target.id,qty:Number(r.qty||1)})}}
-        commerceCarts[type]=next;
-      }
+      for(const type of liveTypes){const cart=Array.isArray(commerceCarts[type])?commerceCarts[type]:[];if(!cart.length)continue;const next=[];for(const r of cart){let old=oldProducts.find(p=>String(p.id)===String(r.id));let target=mapped.find(p=>p.type===type&&old&&norm(p.name)===norm(old.name)&&Number(p.price)===Number(old.price));if(!target&&mapped.some(p=>String(p.id)===String(r.id)))target=mapped.find(p=>String(p.id)===String(r.id));if(target){const ex=next.find(x=>x.id===target.id);if(ex)ex.qty+=Number(r.qty||1);else next.push({id:target.id,qty:Number(r.qty||1)})}}commerceCarts[type]=next}
     }
     persist();
     window.DBEST_LIVE_CATALOG_READY={version:VERSION,build:BUILD,types:[...liveTypes],productCount:mapped.length,vendorCount:mappedVendors.length};
