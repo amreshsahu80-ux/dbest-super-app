@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='1.0.0';
+const VERSION='1.1.0';
 const CACHE_KEY='dbest_top_live_location_v1';
 const MAX_CACHE_MS=20*60*1000;
 let busy=false,lastRequestAt=0;
@@ -17,6 +17,7 @@ function setLabel(label,state){
 }
 function cached(){try{const x=JSON.parse(localStorage.getItem(CACHE_KEY)||'null');return x&&x.label&&x.at?x:null}catch(e){return null}}
 function saveCache(label,lat,lng){try{localStorage.setItem(CACHE_KEY,JSON.stringify({label,lat,lng,at:Date.now()}))}catch(e){}}
+function publish(label,lat,lng,accuracy,state){window.DBEST_TOP_LIVE_LOCATION={...(window.DBEST_TOP_LIVE_LOCATION||{}),version:VERSION,label:label||'Your current area',lat:Number(lat),lng:Number(lng),accuracy:Number(accuracy||0),state:state||'live',updatedAt:new Date().toISOString(),refresh:()=>requestLocation(true)};try{window.dispatchEvent(new CustomEvent('dbest-location-changed',{detail:{label:label||'',lat:Number(lat),lng:Number(lng),accuracy:Number(accuracy||0),state:state||'live'}}))}catch(e){}}
 function bestPlace(d){
   if(!d||typeof d!=='object')return '';
   const locality=clean(d.locality||d.city||d.localityInfo?.administrative?.[0]?.name||'');
@@ -52,19 +53,19 @@ async function requestLocation(force){
     try{
       const lat=Number(pos.coords.latitude),lng=Number(pos.coords.longitude);
       const label=await reverse(lat,lng);
-      if(label){setLabel(label,'live');saveCache(label,lat,lng)}else setLabel('Your current area','coords-only');
-      window.DBEST_TOP_LIVE_LOCATION={...(window.DBEST_TOP_LIVE_LOCATION||{}),version:VERSION,label:label||'Your current area',lat,lng,accuracy:Number(pos.coords.accuracy||0),updatedAt:new Date().toISOString(),refresh:()=>requestLocation(true)};
+      if(label){setLabel(label,'live');saveCache(label,lat,lng)}else{setLabel('Your current area','coords-only');saveCache('Your current area',lat,lng)}
+      publish(label||'Your current area',lat,lng,pos.coords.accuracy,'live');
     }finally{busy=false}
   },err=>{
     busy=false;
-    const c=cached();if(c&&Date.now()-c.at<24*60*60*1000)setLabel(c.label,'cached');else setLabel('India','unavailable');
+    const c=cached();if(c&&Date.now()-c.at<24*60*60*1000){setLabel(c.label,'cached');publish(c.label,c.lat,c.lng,0,'cached')}else setLabel('India','unavailable');
     window.DBEST_TOP_LIVE_LOCATION={...(window.DBEST_TOP_LIVE_LOCATION||{}),version:VERSION,error:err?.code||'location_unavailable',refresh:()=>requestLocation(true)};
   },{enableHighAccuracy:false,timeout:9000,maximumAge:5*60*1000});
 }
 function init(){
   const el=bar();if(!el)return;
   const c=cached();
-  if(c&&Date.now()-c.at<MAX_CACHE_MS)setLabel(c.label,'cached');
+  if(c&&Date.now()-c.at<MAX_CACHE_MS){setLabel(c.label,'cached');publish(c.label,c.lat,c.lng,0,'cached')}
   else setLabel('India','loading');
   el.onclick=()=>requestLocation(true);
   requestLocation(false);
