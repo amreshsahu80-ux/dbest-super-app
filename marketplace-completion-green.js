@@ -11,3 +11,9 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   const load=()=>{if(document.querySelector('script[data-dbest-vendor-csv-bulk]'))return;const s=document.createElement('script');s.src='./vendor-catalog-csv-bulk.js?v='+V;s.setAttribute('data-dbest-vendor-csv-bulk','1');(document.body||document.documentElement).appendChild(s)};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',load,{once:true});else load();
 })();
+
+(function(){
+  const V='20260827-1333-vendor-csv-sample';
+  const load=()=>{if(document.querySelector('script[data-dbest-vendor-csv-sample]'))return;const s=document.createElement('script');s.src='./vendor-csv-sample-helper.js?v='+V;s.setAttribute('data-dbest-vendor-csv-sample','1');(document.body||document.documentElement).appendChild(s)};
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',load,{once:true});else load();
+})();
