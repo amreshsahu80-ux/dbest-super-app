@@ -1,45 +1,19 @@
 (function(){
 'use strict';
-const VERSION='1.1.2',BUILD='20260827-1310-meds-images-instant-categories';
+const VERSION='1.2.0',BUILD='20260827-1325-marketplace-instant-switch';
 const cfg=window.DBEST_RUNTIME_CONFIG||{},BASE=String(cfg.supabaseUrl||'').replace(/\/$/,''),KEY=cfg.supabasePublishableKey||'',API=BASE+'/functions/v1/marketplace-live';
-const norm=s=>String(s||'').trim().toLowerCase().replace(/\s+/g,' ');
-function persist(){try{typeof save==='function'&&save()}catch(e){}}
+const cache=window.DBEST_MARKETPLACE_TYPE_CACHE||{};window.DBEST_MARKETPLACE_TYPE_CACHE=cache;
+const loading={};
+function persist(){try{typeof save==='function'&&save()}catch(_){}}
 async function call(action,body={}){const h={'apikey':KEY,'Content-Type':'application/json'};if(String(KEY).startsWith('eyJ'))h.Authorization='Bearer '+KEY;const r=await fetch(API,{method:'POST',cache:'no-store',headers:h,body:JSON.stringify({action,...body})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'marketplace_live_error');return d}
-function liveRow(p){return {id:p.id,type:String(p.market_type||'').trim().toLowerCase(),vendorId:p.vendor_id,name:p.name,category:'Live Catalogue',unit:'',price:Number(p.price||0),mrp:Number(p.mrp||p.price||0),stock:Number(p.stock||0),offer:Number(p.offer_percent||0),active:p.active!==false,image:p.image_url||'',ownerApproved:true,approvalStatus:'Approved',liveBackend:true}}
+function detail(p){const d=String(p.description||'').trim();let category='General',unit='';if(d.includes(' • ')){const a=d.split(' • ');category=String(a.shift()||'General').trim()||'General';unit=a.join(' • ').trim()}else if(d.includes('|')){const a=d.split('|');category=String(a.shift()||'General').trim()||'General';unit=a.join(' | ').trim()}else if(d)category=d.length<=40?d:'General';return {category,unit}}
+function liveRow(p){const x=detail(p);return {id:p.id,type:String(p.market_type||'').trim().toLowerCase(),vendorId:p.vendor_id,name:p.name,category:x.category,unit:x.unit,description:p.description||'',price:Number(p.price||0),mrp:Number(p.mrp||p.base_price||p.price||0),stock:Number(p.stock||0),offer:Number(p.effective_offer_percent??p.offer_percent??0),active:p.active!==false,image:p.image_url||'',ownerApproved:true,approvalStatus:'Approved',liveBackend:true}}
 function liveVendor(v){return {id:v.id,name:v.name,type:String(v.type||'').trim().toLowerCase(),city:v.city||'',active:true,ownerApproval:'Approved',liveBackend:true,canPrice:true,canStock:true,canOffer:true,agreement:{partnerSigned:true,ownerSigned:true,status:'Fully Signed'}}}
-async function enforce(){
-  if(!BASE||!KEY||typeof commerceConfig==='undefined')return;
-  try{
-    const d=await call('public_catalog',{}),vs=Array.isArray(d.vendors)?d.vendors:[],ps=Array.isArray(d.products)?d.products:[];
-    if(!ps.length)return;
-    commerceConfig.vendors=Array.isArray(commerceConfig.vendors)?commerceConfig.vendors:[];
-    commerceConfig.products=Array.isArray(commerceConfig.products)?commerceConfig.products:[];
-    const oldProducts=[...commerceConfig.products];
-    const liveTypes=new Set(ps.map(p=>String(p.market_type||'').trim().toLowerCase()).filter(Boolean));
-    const mapped=ps.map(liveRow);
-    const mappedVendors=vs.map(liveVendor);
-    const liveVendorIds=new Set(mappedVendors.map(v=>String(v.id)));
-    commerceConfig.products=commerceConfig.products.filter(p=>!liveTypes.has(String(p.type||'').trim().toLowerCase()));
-    for(const row of mapped)commerceConfig.products.push(row);
-    commerceConfig.vendors=commerceConfig.vendors.filter(v=>{const t=String(v.type||'').trim().toLowerCase();return !liveTypes.has(t)||liveVendorIds.has(String(v.id))});
-    for(const v of mappedVendors){let x=commerceConfig.vendors.find(q=>String(q.id)===String(v.id));if(x)Object.assign(x,v);else commerceConfig.vendors.push(v)}
-    if(typeof commerceCarts!=='undefined'&&commerceCarts){
-      for(const type of liveTypes){const cart=Array.isArray(commerceCarts[type])?commerceCarts[type]:[];if(!cart.length)continue;const next=[];for(const r of cart){let old=oldProducts.find(p=>String(p.id)===String(r.id));let target=mapped.find(p=>p.type===type&&old&&norm(p.name)===norm(old.name)&&Number(p.price)===Number(old.price));if(!target&&mapped.some(p=>String(p.id)===String(r.id)))target=mapped.find(p=>String(p.id)===String(r.id));if(target){const ex=next.find(x=>x.id===target.id);if(ex)ex.qty+=Number(r.qty||1);else next.push({id:target.id,qty:Number(r.qty||1)})}}commerceCarts[type]=next}
-    }
-    persist();
-    window.DBEST_LIVE_CATALOG_READY={version:VERSION,build:BUILD,types:[...liveTypes],productCount:mapped.length,vendorCount:mappedVendors.length};
-    try{if(typeof marketState!=='undefined'&&typeof openMarketplace==='function'&&document.querySelector('.shopPage')&&liveTypes.has(String(marketState.type||'').toLowerCase()))setTimeout(()=>openMarketplace(marketState.type),0)}catch(_){}
-  }catch(e){console.warn('Live Marketplace catalogue authority',e)}
-}
-setTimeout(enforce,50);setTimeout(enforce,1200);
-window.addEventListener('focus',()=>setTimeout(enforce,50));
-window.DBEST_MARKETPLACE_LIVE_CATALOG={version:VERSION,enforce};
-try{
-  if(!document.querySelector('script[data-dbest-meds-preview]')){
-    const s=document.createElement('script');
-    s.src='./dbest-meds-preview-catalog.js?v='+BUILD;
-    s.setAttribute('data-dbest-meds-preview','1');
-    (document.body||document.documentElement).appendChild(s);
-  }
-}catch(e){console.warn('DBest Meds preview loader',e)}
+function applyType(type,bundle){if(!bundle||typeof commerceConfig==='undefined')return false;const ps=(bundle.products||[]).map(liveRow),vs=(bundle.vendors||[]).map(liveVendor);if(!ps.length&&!vs.length)return false;commerceConfig.products=Array.isArray(commerceConfig.products)?commerceConfig.products:[];commerceConfig.vendors=Array.isArray(commerceConfig.vendors)?commerceConfig.vendors:[];commerceConfig.products=commerceConfig.products.filter(p=>String(p.type||'').toLowerCase()!==type);commerceConfig.vendors=commerceConfig.vendors.filter(v=>String(v.type||'').toLowerCase()!==type);commerceConfig.products.push(...ps);commerceConfig.vendors.push(...vs);cache[type]={products:bundle.products||[],vendors:bundle.vendors||[],at:Date.now()};persist();return true}
+async function ensureType(type,repaint=false){type=String(type||'').toLowerCase();if(!BASE||!KEY||!type||type==='medicine'||loading[type])return;loading[type]=true;try{const d=await call('public_catalog',{marketType:type});if(applyType(type,d)&&repaint&&typeof marketState!=='undefined'&&String(marketState.type||'').toLowerCase()===type){const fn=window.__DBEST_MARKETPLACE_BASE_OPEN||window.openMarketplace;if(typeof fn==='function')setTimeout(()=>fn(type,marketState.category||'All',marketState.vendor||'All'),0)}}catch(e){console.warn('Marketplace type load',type,e)}finally{loading[type]=false}}
+async function enforce(){if(!BASE||!KEY||typeof commerceConfig==='undefined')return;try{const d=await call('public_catalog',{}),ps=Array.isArray(d.products)?d.products:[],vs=Array.isArray(d.vendors)?d.vendors:[];const types=[...new Set([...ps.map(p=>String(p.market_type||'').toLowerCase()),...vs.map(v=>String(v.type||'').toLowerCase())].filter(Boolean))];for(const type of types)applyType(type,{products:ps.filter(p=>String(p.market_type||'').toLowerCase()===type),vendors:vs.filter(v=>String(v.type||'').toLowerCase()===type)});window.DBEST_LIVE_CATALOG_READY={version:VERSION,build:BUILD,types,productCount:ps.length,vendorCount:vs.length};const current=typeof marketState!=='undefined'?String(marketState.type||'').toLowerCase():'';if(current&&current!=='medicine'&&types.includes(current)&&typeof window.openMarketplace==='function'&&document.querySelector('.shopPage'))setTimeout(()=>window.openMarketplace(current),0)}catch(e){console.warn('Live Marketplace catalogue authority',e)}}
+function installSwitch(){if(window.__DBEST_MARKETPLACE_BASE_OPEN||typeof window.openMarketplace!=='function')return;const base=window.openMarketplace;window.__DBEST_MARKETPLACE_BASE_OPEN=base;window.openMarketplace=function(type,category=null,vendor=null){const t=String(type||'grocery').toLowerCase();if(t!=='medicine'&&cache[t])applyType(t,cache[t]);const out=base(t,category,vendor);if(t!=='medicine'&&!cache[t])ensureType(t,true);return out}}
+setTimeout(()=>{installSwitch();enforce();['restaurant','grocery','digital'].forEach(t=>ensureType(t,false))},35);setTimeout(()=>{installSwitch();enforce()},1000);window.addEventListener('focus',()=>setTimeout(()=>{installSwitch();enforce()},60));
+window.DBEST_MARKETPLACE_LIVE_CATALOG={version:VERSION,enforce,ensureType,cache};
+try{if(!document.querySelector('script[data-dbest-meds-preview]')){const s=document.createElement('script');s.src='./dbest-meds-preview-catalog.js?v='+BUILD;s.setAttribute('data-dbest-meds-preview','1');(document.body||document.documentElement).appendChild(s)}}catch(e){console.warn('DBest Meds preview loader',e)}
 })();
