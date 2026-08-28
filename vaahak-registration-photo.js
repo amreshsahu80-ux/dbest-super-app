@@ -1,0 +1,23 @@
+(function(){
+'use strict';
+const VERSION='1.0.0';
+const cfg=window.DBEST_RUNTIME_CONFIG||{},BASE=String(cfg.supabaseUrl||'').replace(/\/$/,''),KEY=cfg.supabasePublishableKey||'',API=BASE+'/functions/v1/vaahak-profile-live';
+let ready=false;
+const digits=s=>String(s||'').replace(/\D/g,'');
+function headers(){const h={'apikey':KEY,'Content-Type':'application/json'};if(String(KEY).startsWith('eyJ'))h.Authorization='Bearer '+KEY;return h}
+async function call(action,body){const r=await fetch(API,{method:'POST',cache:'no-store',headers:headers(),body:JSON.stringify({action,...body})}),d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'registration_failed');return d}
+function status(msg,ok=false){try{if(typeof note==='function')return note(msg,ok)}catch(e){};alert(msg)}
+async function imageData(file){if(!file)throw new Error('latest_photo_required');if(!/^image\/(jpeg|png|webp)$/i.test(file.type||''))throw new Error('photo_format');
+ let bmp=null,url='';try{if(window.createImageBitmap)bmp=await createImageBitmap(file)}catch(e){}
+ if(!bmp){url=URL.createObjectURL(file);bmp=await new Promise((res,rej)=>{const im=new Image();im.onload=()=>res(im);im.onerror=rej;im.src=url})}
+ const w=Number(bmp.width||bmp.naturalWidth||0),h=Number(bmp.height||bmp.naturalHeight||0);if(!w||!h){if(url)URL.revokeObjectURL(url);throw new Error('photo_read')}
+ const max=720,scale=Math.min(1,max/Math.max(w,h)),c=document.createElement('canvas');c.width=Math.max(1,Math.round(w*scale));c.height=Math.max(1,Math.round(h*scale));const x=c.getContext('2d',{alpha:false});x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(bmp,0,0,c.width,c.height);try{bmp.close?.()}catch(e){}if(url)URL.revokeObjectURL(url);let q=.84,out=c.toDataURL('image/jpeg',q);while(out.length>2450000&&q>.48){q-=.08;out=c.toDataURL('image/jpeg',q)}if(out.length>2800000)throw new Error('photo_too_large');return out
+}
+function install(){if(ready)return;const form=document.getElementById('regForm');if(!form)return;ready=true;
+ const grid=form.querySelector('.grid');if(grid&&!document.getElementById('vaahakLatestPhoto')){const box=document.createElement('div');box.className='field full';box.innerHTML='<label>Latest Photo *</label><div style="display:flex;align-items:center;gap:12px;border:1px solid #ccd7e6;border-radius:14px;padding:10px;background:#fff"><div id="vaahakPhotoPreview" style="width:64px;height:64px;border-radius:50%;background:#eef3ff;display:grid;place-items:center;font-size:28px;overflow:hidden;flex:0 0 64px">📷</div><div style="flex:1"><input id="vaahakLatestPhoto" type="file" accept="image/jpeg,image/png,image/webp" capture="user" required style="width:100%"><small style="display:block;color:#69778d;margin-top:5px">Clear recent face photo</small></div></div>';
+   const actions=grid.querySelector('.full.row:last-child');grid.insertBefore(box,actions||null);const inp=box.querySelector('input');inp.onchange=()=>{const f=inp.files?.[0];if(!f)return;const u=URL.createObjectURL(f),p=document.getElementById('vaahakPhotoPreview');p.innerHTML=`<img src="${u}" alt="Preview" style="width:100%;height:100%;object-fit:cover">`;setTimeout(()=>URL.revokeObjectURL(u),5000)};
+ }
+ form.onsubmit=async e=>{e.preventDefault();const f=new FormData(form),mobile=digits(f.get('mobile')),email=String(f.get('email')||'').trim(),photo=document.getElementById('vaahakLatestPhoto')?.files?.[0];if(mobile.length<10)return status('Enter a valid mobile number.');if(!email.includes('@'))return status('Email is mandatory.');if(!photo)return status('Latest photo is mandatory.');const btn=form.querySelector('button[type=submit]');if(btn){btn.disabled=true;btn.textContent='Creating…'}try{const photoDataUrl=await imageData(photo),d=await call('register',{name:f.get('name'),mobile,email,pin:f.get('pin'),vehicle:f.get('vehicle'),vehicleNo:f.get('vehicleNo'),canRide:f.get('ride')==='on',canDeliver:f.get('delivery')==='on',photoDataUrl});status('Registration submitted. Vaahak ID: '+d.id,true);try{typeof show==='function'&&show('login')}catch(_){}}catch(x){const m=String(x.message||'');status(m==='mobile_already_registered'?'Mobile is already registered.':m==='latest_photo_required'?'Latest photo is mandatory.':m==='photo_format'?'Use JPG, PNG or WebP photo.':m==='photo_too_large'||m==='photo_size_invalid'?'Photo is too large. Please choose another photo.':'Registration failed: '+m)}finally{if(btn){btn.disabled=false;btn.textContent='Submit Registration'}}};
+}
+new MutationObserver(install).observe(document.documentElement,{subtree:true,childList:true});if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();window.DBEST_VAAHAK_REG_PHOTO={version:VERSION};
+})();
