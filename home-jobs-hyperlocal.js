@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='1.0.0';
+const VERSION='1.1.0';
 const JOB_ID='jobs';
 const HYPER=[
   {key:'maid',title:'Maid / House Help',icon:'🧹',requestLabel:'Work Required',requestOptions:['One-time House Cleaning','Regular House Help','Utensils / Cleaning','Cooking Assistance','Deep Cleaning Help','Elderly / Home Assistance','Other']},
@@ -13,6 +13,7 @@ const REQUIRED=[...HYPER.map(x=>x.title),'Job Search','Job Application'];
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function notify(m){try{typeof toast==='function'?toast(m):console.log(m)}catch(e){console.log(m)}}
 function member(){try{return typeof me==='function'?(me()||{}):{}}catch(e){return{}}}
+function memberToken(){try{return String(window.DBEST_MEMBER_LIVE?.getToken?.()||localStorage.getItem('dbest_member_live_token')||'').trim()}catch(e){return''}}
 function mergeRequired(existing){const a=Array.isArray(existing)?existing:[];const extras=a.filter(x=>!REQUIRED.some(r=>String(r).toLowerCase()===String(x).toLowerCase())&&!['Job Search','Job Application'].includes(String(x)));return [...REQUIRED,...extras]}
 function applyStructure(){
   try{
@@ -65,20 +66,28 @@ function openHyper(index){
       </form>
     </div>`);
 }
+async function syncLiveDispatch(tx,loc){
+  const token=memberToken(),api=window.DBEST_HYPERLOCAL_BACKEND?.api;if(!token||typeof api!=='function')return null;
+  const app={...(tx?.meta?.application||{})};if(loc){app.lat=loc.lat;app.lng=loc.lng;app.accuracy=loc.accuracy}
+  const payload={...tx,meta:{...(tx?.meta||{}),application:app,location:loc||tx?.meta?.location||null}};
+  return api({action:'sync_job',transaction:payload},{'x-dbest-member-token':token});
+}
 async function submit(e,index){
   e.preventDefault();const def=HYPER[index];if(!def)return;
   try{if(typeof requireMember==='function'&&!requireMember())return}catch(e2){}
   const f=new FormData(e.target),data={};for(const [k,v] of f.entries())data[k]=String(v||'').trim();
   const lat=Number(data.lat),lng=Number(data.lng),accuracy=Number(data.accuracy);const loc=Number.isFinite(lat)&&Number.isFinite(lng)&&lat&&lng?{lat,lng,accuracy:Number.isFinite(accuracy)?accuracy:null}:null;
-  let tx;
+  let tx,dispatch=null;
   try{
     if(typeof addTx!=='function')throw new Error('transaction_engine_unavailable');
     tx=addTx(session.id,'Home Jobs & Local Services',def.title,0,'Service Request Submitted / Assignment Pending','',{
       source:'DBest Hyperlocal Home Services',flow:'hyperlocal_home_service',serviceKey:def.key,paymentStage:'No Upfront Payment',application:{name:data.name,mobile:data.mobile,email:data.email,address:data.address,city:data.city,pincode:data.pincode,preferredDate:data.preferredDate,preferredSlot:data.preferredSlot,urgency:data.urgency,requestType:data.requestType,frequency:data.frequency||'',hours:data.hours||'',brand:data.brand||'',model:data.model||'',acType:data.acType||'',details:data.details},liveLocation:loc,details:`${def.title} hyperlocal service request submitted`});
     tx.paymentStage='No Upfront Payment';tx.status='Service Request Submitted / Assignment Pending';if(typeof save==='function')save();
     try{await window.DBEST_SERVICE_REQUEST_LIVE?.sendRequest?.(tx,false)}catch(syncErr){console.warn('Hyperlocal service request sync',syncErr)}
+    try{dispatch=await syncLiveDispatch(tx,loc)}catch(dispatchErr){console.warn('Hyperlocal partner dispatch sync',dispatchErr)}
   }catch(err){console.error('DBest hyperlocal submit',err);return notify('Service request could not be created. Please retry.')}
-  if(typeof sectionScreen==='function'&&typeof sectionTopBar==='function')sectionScreen(`${sectionTopBar('✅ Request Submitted',tx.id,`openService('${JOB_ID}')`)}<div class="sectionContent"><div class="paymentSuccessBox"><div class="successIcon">✅</div><h2>${esc(def.title)} Request Received</h2><p>Your request has been recorded for local assignment.</p><div class="refGrid"><div class="refCell"><small>DBest Transaction ID</small><b>${esc(tx.id)}</b></div><div class="refCell"><small>Status</small><b>Assignment Pending</b></div><div class="refCell"><small>Preferred Visit</small><b>${esc(data.preferredDate)} • ${esc(data.preferredSlot)}</b></div><div class="refCell"><small>Payment</small><b>No Upfront Payment</b></div></div><div class="notice">DBest Operations will confirm the assigned professional, timing and applicable visit/service charge before work begins.</div><button class="btn" onclick="backHome()">Back to Home</button></div></div>`);
+  const status=dispatch?.matched?'Service Partner Matched':'Assignment Pending';
+  if(typeof sectionScreen==='function'&&typeof sectionTopBar==='function')sectionScreen(`${sectionTopBar('✅ Request Submitted',tx.id,`openService('${JOB_ID}')`)}<div class="sectionContent"><div class="paymentSuccessBox"><div class="successIcon">✅</div><h2>${esc(def.title)} Request Received</h2><p>Your request has been recorded for local assignment.</p><div class="refGrid"><div class="refCell"><small>DBest Transaction ID</small><b>${esc(tx.id)}</b></div><div class="refCell"><small>Status</small><b>${esc(status)}</b></div><div class="refCell"><small>Preferred Visit</small><b>${esc(data.preferredDate)} • ${esc(data.preferredSlot)}</b></div><div class="refCell"><small>Payment</small><b>No Upfront Payment</b></div></div><div class="notice">${dispatch?.matched?'A nearby approved Service Partner has been assigned. The partner can now Accept → Start → Complete the job from the Service Partner Portal.':'DBest Operations will confirm the assigned professional, timing and applicable visit/service charge before work begins.'}</div><button class="btn" onclick="backHome()">Back to Home</button></div></div>`);
 }
 function captureLocation(index){
   if(!navigator.geolocation)return notify('Location is not supported on this device.');
@@ -98,5 +107,5 @@ function install(){
   }
 }
 [0,120,350,800,1600,3200,6000].forEach(ms=>setTimeout(install,ms));
-window.DBEST_HYPERLOCAL_HOME={version:VERSION,services:HYPER.map(x=>x.title),open:openHyper,submit,captureLocation,refresh:applyStructure};
+window.DBEST_HYPERLOCAL_HOME={version:VERSION,services:HYPER.map(x=>x.title),open:openHyper,submit,captureLocation,refresh:applyStructure,syncLiveDispatch};
 })();
