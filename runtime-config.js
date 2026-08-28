@@ -6,7 +6,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
 });
 
 (function(){
-  const V='20260828-1415-vaahak-photo-visual';
+  const V='20260828-1615-stakeholder-readiness';
 
   const installLogoClarity=()=>{
     if(document.getElementById('dbestLogoClarityStyle')) return;
@@ -82,6 +82,9 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
     loadScript('/customer-active-vaahak-visual.js?v='+V,'data-dbest-customer-vaahak-visual');
     loadScript('/ride-live-ui-finalizer.js?v='+V,'data-dbest-ride-live-ui-finalizer-v2');
     loadScript('/home-jobs-hyperlocal.js?v='+V,'data-dbest-home-jobs-hyperlocal');
+    loadScript('/service-partner-free-account.js?v='+V,'data-dbest-service-partner-free-account');
+    loadScript('/service-partner-standalone-route.js?v='+V,'data-dbest-service-partner-standalone-route');
+    loadScript('/service-partner-job-execution.js?v='+V,'data-dbest-service-partner-job-execution');
     loadScript('/platform-concise-ui.js?v='+V,'data-dbest-platform-concise-ui');
 
     try{await loadScriptAsync('/cab-location-production-v9.js?v='+V,'data-dbest-cab-location-v9');await loadScriptAsync('/mappls-cab-production.js?v='+V,'data-dbest-mappls-cab');await loadScriptAsync('/cab-mappls-rental-v2.js?v='+V,'data-dbest-cab-mappls-rental-v2');await loadScriptAsync('/cab-booking-step-fix.js?v='+V,'data-dbest-cab-booking-step-fix')}catch(e){console.warn('DBest final cab layer load warning',e)}
