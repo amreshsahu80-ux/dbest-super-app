@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='1.1.0';
+const VERSION='1.2.0';
 const SHORT_TITLES={
   'Top Health Insurance Companies':'Health Insurance',
   'Top Life Insurance Companies':'Life Insurance',
@@ -31,31 +31,31 @@ function installStyle(){
   s.id='dbestVisualFirstPartnerTilesStyle';
   s.textContent=`
   .buildBadge{display:none!important}
-  .dbestShowcase{margin-top:10px!important}
-  .dbestShowIntro{margin-bottom:8px!important}
-  .dbestShowIntro h2{margin:0 0 2px!important;font-size:22px!important}
+  .dbestShowcase{margin-top:8px!important}
+  .dbestShowIntro{margin-bottom:7px!important}
+  .dbestShowIntro h2{margin:0!important;font-size:22px!important}
   .dbestShowIntro p{display:none!important}
-  .dbestShowGrid{gap:10px!important;align-items:stretch!important}
-  .dbestShowCard{position:relative;display:flex!important;flex-direction:column!important;overflow:hidden!important;border-radius:20px!important;background:#fff!important;border:1px solid #e8edf7!important;box-shadow:0 10px 24px rgba(20,50,100,.08)!important;transition:transform .16s ease,box-shadow .16s ease!important}
+  .dbestShowGrid{gap:9px!important;align-items:stretch!important}
+  .dbestShowCard{position:relative!important;display:block!important;overflow:hidden!important;border-radius:19px!important;background:#fff!important;border:1px solid #e5ebf5!important;box-shadow:0 8px 20px rgba(20,50,100,.08)!important;transition:transform .16s ease,box-shadow .16s ease!important;isolation:isolate!important}
   .dbestShowCard:active{transform:scale(.985)}
-  .dbestShowCard img{display:block!important;width:100%!important;height:clamp(190px,38vw,300px)!important;object-fit:cover!important;object-position:center!important;background:#fff!important}
+  .dbestShowCard img{display:block!important;width:100%!important;height:clamp(220px,43vw,330px)!important;object-fit:cover!important;object-position:center!important;background:#fff!important;border-radius:inherit!important}
   [data-dbest-showcase="insurance"] .dbestShowCard img,
-  [data-dbest-showcase="mutual_fund"] .dbestShowCard img{object-fit:contain!important;padding:3px!important;box-sizing:border-box!important;background:#fff!important}
-  .dbestShowBody{position:relative!important;display:flex!important;align-items:center!important;min-height:42px!important;padding:7px 38px 7px 10px!important;background:#fff!important}
-  .dbestShowBody h3{margin:0!important;width:100%!important;color:#13213a!important;font-size:13px!important;line-height:1.12!important;font-weight:850!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;letter-spacing:-.1px!important}
+  [data-dbest-showcase="mutual_fund"] .dbestShowCard img{object-fit:contain!important;padding:0!important;box-sizing:border-box!important;background:#fff!important}
+  .dbestShowBody{position:absolute!important;left:0!important;right:0!important;bottom:0!important;z-index:2!important;display:flex!important;align-items:flex-end!important;min-height:34px!important;padding:12px 32px 7px 9px!important;background:linear-gradient(to bottom,rgba(255,255,255,0),rgba(255,255,255,.82) 36%,rgba(255,255,255,.97) 68%,#fff 100%)!important;pointer-events:none!important}
+  .dbestShowBody h3{margin:0!important;width:100%!important;color:#13213a!important;font-size:12px!important;line-height:1.05!important;font-weight:850!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;letter-spacing:-.08px!important;text-shadow:0 1px 0 rgba(255,255,255,.9)!important}
   .dbestShowBody b,.dbestShowBody p,.dbestShowBody small{display:none!important}
-  .dbestShowBody::after{content:'›';position:absolute;right:8px;top:50%;transform:translateY(-50%);display:grid;place-items:center;width:22px;height:22px;border-radius:999px;background:#edf3ff;color:#175cff;font-size:18px;font-weight:800;line-height:1}
+  .dbestShowBody::after{content:'›';position:absolute!important;right:6px!important;bottom:5px!important;display:grid!important;place-items:center!important;width:18px!important;height:18px!important;border-radius:999px!important;background:rgba(237,243,255,.94)!important;color:#175cff!important;font-size:15px!important;font-weight:900!important;line-height:1!important;box-shadow:0 1px 5px rgba(30,70,150,.08)!important}
   @media(max-width:520px){
-    .dbestShowGrid{gap:10px!important}
-    .dbestShowCard{border-radius:19px!important}
-    .dbestShowCard img{height:190px!important}
-    .dbestShowBody{min-height:40px!important;padding:7px 36px 7px 10px!important}
-    .dbestShowBody h3{font-size:12.5px!important}
-    .dbestShowBody::after{width:21px;height:21px;right:8px;font-size:17px}
+    .dbestShowGrid{gap:8px!important}
+    .dbestShowCard{border-radius:18px!important}
+    .dbestShowCard img{height:218px!important}
+    .dbestShowBody{min-height:32px!important;padding:11px 29px 6px 8px!important}
+    .dbestShowBody h3{font-size:11.5px!important}
+    .dbestShowBody::after{width:17px!important;height:17px!important;right:5px!important;bottom:4px!important;font-size:14px!important}
   }
   @media(max-width:390px){
-    .dbestShowCard img{height:178px!important}
-    .dbestShowBody h3{font-size:12px!important}
+    .dbestShowCard img{height:205px!important}
+    .dbestShowBody h3{font-size:11px!important}
   }
   `;
   document.head.appendChild(s);
