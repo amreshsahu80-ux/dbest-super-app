@@ -6,7 +6,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
 });
 
 (function(){
-  const V='20260828-1345-vaahak-90sec-offer';
+  const V='20260828-1355-vaahak-single-controller';
 
   const installLogoClarity=()=>{
     if(document.getElementById('dbestLogoClarityStyle')) return;
