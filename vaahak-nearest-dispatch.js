@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='2.0.0',DISPATCH=BASE+'/functions/v1/vaahak-dispatch-live',POLL_MS=2500;
+const VERSION='2.1.0',DISPATCH=BASE+'/functions/v1/vaahak-dispatch-live',POLL_MS=2500;
 let hardStop=false,lastKey='',stickyOffer=null,countTimer=null;
 async function dispatchCall(action,body={}){const r=await fetch(DISPATCH,{method:'POST',cache:'no-store',headers:headers(true),body:JSON.stringify({action,...body})});const d=await r.json().catch(()=>({}));if(!r.ok){const e=new Error(d.error||'dispatch_failed');e.data=d;throw e}return d}
 function liveOffer(j){return !!(j&&j.status==='Open'&&j.offer_expires_at&&new Date(j.offer_expires_at).getTime()>Date.now())}
@@ -18,7 +18,7 @@ const nativeRender=window.renderJob;
 window.renderJob=function(j){const r=nativeRender?.apply(this,arguments);try{const card=document.querySelector('#jobs .job');if(card&&liveOffer(j)){const km=j.dispatch_distance_km==null?'':` • ${Number(j.dispatch_distance_km).toFixed(1)} km from pickup`;card.insertAdjacentHTML('afterbegin',`<div style="padding:11px;margin-bottom:10px;border-radius:12px;background:#fff5df;border:1px solid #f0d79b;color:#79530a;font-weight:850">📍 New request${km}<br><small>This request is reserved for you while the timer runs. <b id="dbestOfferCountdown"></b></small></div>`);startCountdown(j)}if(!j&&typeof current!=='undefined'&&current?.available){const host=document.getElementById('jobs');if(host)host.innerHTML='<div class="gps">📍 ONLINE • Ready for the nearest eligible Ride / Delivery request.</div>'}}catch(e){}return r};
 try{renderJob=window.renderJob}catch(e){}
 
-function renderStable(j,force=false){if(liveOffer(j))stickyOffer=j;else if(j&&['Accepted','Trip Started'].includes(String(j.status)))stickyOffer=null;else if(!j&&stickyOffer&&!liveOffer(stickyOffer))stickyOffer=null;const show=j||((stickyOffer&&liveOffer(stickyOffer))?stickyOffer:null);const k=key(show);if(force||k!==lastKey||!document.querySelector('#jobs .job')&&show){lastKey=k;renderJob(show)}else if(!show&&lastKey!=='none'){lastKey='none';renderJob(null)}}
+function renderStable(j,force=false){if(liveOffer(j))stickyOffer=j;else if(j&&['Accepted','Trip Started'].includes(String(j.status)))stickyOffer=null;else if(!j&&stickyOffer&&!liveOffer(stickyOffer))stickyOffer=null;const show=j||((stickyOffer&&liveOffer(stickyOffer))?stickyOffer:null);const k=key(show);if(force||k!==lastKey||(!document.querySelector('#jobs .job')&&show)){lastKey=k;renderJob(show)}else if(!show&&lastKey!=='none'){lastKey='none';renderJob(null)}}
 
 window.loadStatus=async function(force=false){
  clearTimeout(timer);if(!token())return show('login');if(pinModalOpen&&!force){timer=setTimeout(()=>loadStatus(false),POLL_MS);return}
@@ -36,5 +36,5 @@ window.jobAction=async function(id,action){if(busy)return;busy=true;const button
 try{jobAction=window.jobAction}catch(e){}
 
 clearTimeout(timer);if(token())setTimeout(()=>loadStatus(true),80);
-window.DBEST_VAAHAK_NEAREST_DISPATCH={version:VERSION,offerSeconds:60};
+window.DBEST_VAAHAK_NEAREST_DISPATCH={version:VERSION,offerSeconds:90};
 })();
