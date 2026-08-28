@@ -6,7 +6,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
 });
 
 (function(){
-  const V='20260826-2205-platform-concise-ui';
+  const V='20260828-0725-vaahak-agreement-entry';
 
   const installLogoClarity=()=>{
     if(document.getElementById('dbestLogoClarityStyle')) return;
@@ -42,6 +42,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
     loadScript('/vaahak-completed-dashboard-final.js?v='+V,'data-dbest-completed-final');
     loadScript('/vaahak-nearest-dispatch.js?v='+V,'data-dbest-nearest-dispatch');
     loadScript('/vaahak-marketplace-sync-ui.js?v='+V,'data-dbest-marketplace-sync-ui');
+    loadScript('/vaahak-agreement-dashboard-entry.js?v='+V,'data-dbest-vaahak-agreement-dashboard-entry');
   }
 
   const lockFinalCab=()=>{const finalCab=window.DBEST_CAB_MAPPLS_RENTAL;if(finalCab&&typeof finalCab.open==='function'){window.openRidePlatform=finalCab.open;window.DBEST_ACTIVE_CAB_VERSION='MAPPLS_RENTAL_V2';return true}return false};
