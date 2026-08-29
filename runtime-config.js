@@ -6,7 +6,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
 });
 
 (function(){
-  const V='20260829-1145-cab-visual-ui';
+  const V='20260829-1455-cab-text-lite';
 
   const installLogoClarity=()=>{
     if(document.getElementById('dbestLogoClarityStyle')) return;
@@ -93,6 +93,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
 
     try{await loadScriptAsync('/cab-location-production-v9.js?v='+V,'data-dbest-cab-location-v9');await loadScriptAsync('/mappls-cab-production.js?v='+V,'data-dbest-mappls-cab');await loadScriptAsync('/cab-mappls-rental-v2.js?v='+V,'data-dbest-cab-mappls-rental-v2');await loadScriptAsync('/cab-booking-step-fix.js?v='+V,'data-dbest-cab-booking-step-fix')}catch(e){console.warn('DBest final cab layer load warning',e)}
     loadScript('/cab-visual-ui-final.js?v='+V,'data-dbest-cab-visual-ui-final');
+    loadScript('/cab-text-lite-final.js?v='+V,'data-dbest-cab-text-lite-final');
 
     lockFinalCab();let attempts=0;const guard=setInterval(()=>{attempts++;lockFinalCab();if(attempts>=30) clearInterval(guard)},500);
   };
