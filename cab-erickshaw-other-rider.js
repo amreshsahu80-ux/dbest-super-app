@@ -1,98 +1,33 @@
 (function(){
 'use strict';
-const VERSION='1.0.0';
-if(window.DBEST_CAB_OTHER_RIDER?.version===VERSION)return;
+const VERSION='2.0.0';
 const VEHICLE={id:'erickshaw',name:'E-Rickshaw',icon:'🛺',base:28,perKm:10,minFare:40,eta:4,seats:3};
-const q=s=>document.querySelector(s);
+const q=s=>document.querySelector(s),qa=s=>Array.from(document.querySelectorAll(s));
 const msg=m=>{try{typeof toast==='function'?toast(m):alert(m)}catch(e){alert(m)}};
-function txById(id){try{if(Array.isArray(window.txs))return window.txs.find(x=>String(x.id)===String(id));if(typeof txs!=='undefined'&&Array.isArray(txs))return txs.find(x=>String(x.id)===String(id))}catch(e){}return null}
-function riderFromTx(id){const x=txById(id),r=x?.ride||x?.meta?.ride||{};return r?.riderFor==='other'&&r?.riderName&&r?.riderMobile?{name:String(r.riderName),mobile:String(r.riderMobile)}:null}
-function ensureVehicle(){
-  try{
-    if(typeof rideConfig==='undefined'||!rideConfig||!Array.isArray(rideConfig.vehicles))return false;
-    if(!rideConfig.vehicles.some(v=>String(v.id).toLowerCase()==='erickshaw')){
-      const autoIndex=rideConfig.vehicles.findIndex(v=>String(v.id).toLowerCase()==='auto');
-      if(autoIndex>=0)rideConfig.vehicles.splice(autoIndex,0,{...VEHICLE});else rideConfig.vehicles.push({...VEHICLE});
-      try{localStorage.setItem('d2_ride_config',JSON.stringify(rideConfig))}catch(e){}
-      try{typeof save==='function'&&save()}catch(e){}
-    }
-    return true;
-  }catch(e){return false}
-}
-function css(){if(q('#dbest-other-rider-css'))return;const s=document.createElement('style');s.id='dbest-other-rider-css';s.textContent=`
-.dbestRiderCard{margin:12px 0;padding:11px;border:1px solid #dfe7f2;border-radius:15px;background:#f8faff}.dbestRiderTop{display:flex;justify-content:space-between;align-items:center;gap:8px}.dbestRiderTop b{font-size:13px}.dbestRiderToggle{display:flex;gap:5px}.dbestRiderToggle button{border:1px solid #dbe4f1;background:#fff;color:#52627a;border-radius:999px;padding:7px 10px;font-size:11px;font-weight:900}.dbestRiderToggle button.on{background:#175cff;color:#fff;border-color:#175cff}.dbestRiderFields{display:none;grid-template-columns:1fr 1fr;gap:8px;margin-top:9px}.dbestRiderFields.show{display:grid}.dbestRiderFields input{width:100%;border:1px solid #d7e1ef;border-radius:11px;padding:10px 11px;font-size:13px;background:#fff}.dbestRiderHint{display:none;margin-top:7px;font-size:10px;color:#657389}.dbestRiderHint.show{display:block}@media(max-width:520px){.dbestRiderTop{align-items:flex-start;flex-direction:column}.dbestRiderToggle{width:100%}.dbestRiderToggle button{flex:1}.dbestRiderFields{grid-template-columns:1fr}}
-`;document.head.appendChild(s)}
-function setMode(card,mode){
-  card.dataset.riderMode=mode;
-  card.querySelectorAll('[data-rider-mode]').forEach(b=>b.classList.toggle('on',b.dataset.riderMode===mode));
-  card.querySelector('.dbestRiderFields')?.classList.toggle('show',mode==='other');
-  card.querySelector('.dbestRiderHint')?.classList.toggle('show',mode==='other');
-  const m=card.querySelector('input[name="riderMode"]');if(m)m.value=mode;
-}
-function injectRider(){
-  css();
-  const form=q('.ridePage form[onsubmit*="bookRide"]');if(!form||form.querySelector('.dbestRiderCard'))return false;
-  const card=document.createElement('div');card.className='dbestRiderCard';card.dataset.riderMode='self';
-  let prev={};try{if(typeof rideDraft!=='undefined')prev=rideDraft||{}}catch(e){}
-  card.innerHTML=`<input type="hidden" name="riderMode" value="${prev.riderFor==='other'?'other':'self'}"><div class="dbestRiderTop"><b>👤 Who is riding?</b><div class="dbestRiderToggle"><button type="button" data-rider-mode="self">Myself</button><button type="button" data-rider-mode="other">Someone else</button></div></div><div class="dbestRiderFields"><input name="riderName" autocomplete="name" placeholder="Rider name" value="${String(prev.riderName||'').replace(/"/g,'&quot;')}"><input name="riderMobile" inputmode="numeric" autocomplete="tel" placeholder="Rider mobile" value="${String(prev.riderMobile||'').replace(/"/g,'&quot;')}"></div><div class="dbestRiderHint">Share the Ride PIN with the rider after booking.</div>`;
-  const payment=form.querySelector('.paymentChoice');form.insertBefore(card,payment||form.firstChild);
-  card.querySelectorAll('[data-rider-mode]').forEach(b=>b.onclick=()=>setMode(card,b.dataset.riderMode));
-  setMode(card,prev.riderFor==='other'?'other':'self');return true;
-}
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function normalizeMobile(v){let d=String(v||'').replace(/\D/g,'');if(d.length===12&&d.startsWith('91'))d=d.slice(2);return d}
-let baseConfirm=null,baseBook=null,baseCreateJob=null;
-function patchConfirm(){
-  if(typeof window.confirmRide!=='function')return false;
-  if(window.confirmRide.__dbestOtherRider)return true;
-  baseConfirm=window.confirmRide;
-  const wrap=function(){const out=baseConfirm.apply(this,arguments);[0,30,100].forEach(ms=>setTimeout(injectRider,ms));return out};
-  wrap.__dbestOtherRider=true;window.confirmRide=wrap;return true;
-}
-function patchBook(){
-  if(typeof window.bookRide!=='function')return false;
-  if(window.bookRide.__dbestOtherRider)return true;
-  baseBook=window.bookRide;
-  const wrap=function(e,vehicleId){
-    const form=e?.target,fd=form?new FormData(form):new FormData(),mode=String(fd.get('riderMode')||'self');
-    let name='',mobile='';
-    if(mode==='other'){
-      name=String(fd.get('riderName')||'').trim();mobile=normalizeMobile(fd.get('riderMobile'));
-      if(!name){e?.preventDefault?.();msg('Please enter the rider name.');return}
-      if(mobile.length!==10){e?.preventDefault?.();msg('Please enter a valid 10-digit rider mobile number.');return}
-    }
-    try{if(typeof rideDraft!=='undefined'){rideDraft.riderFor=mode;rideDraft.riderName=name;rideDraft.riderMobile=mobile;rideDraft.bookedForOther=mode==='other'}}catch(err){}
-    const oldAdd=window.addTx;
-    if(typeof oldAdd==='function'){
-      window.addTx=function(userId,service,item,amount,status,reference,meta){
-        if(meta&&meta.flow==='ride')meta={...meta,ride:{...(meta.ride||{}),riderFor:mode,riderName:name,riderMobile:mobile,bookedForOther:mode==='other'}};
-        return oldAdd.call(this,userId,service,item,amount,status,reference,meta);
-      };
-    }
-    try{return baseBook.apply(this,arguments)}finally{if(typeof oldAdd==='function')window.addTx=oldAdd}
-  };
-  wrap.__dbestOtherRider=true;window.bookRide=wrap;return true;
-}
-function patchLocalJob(){
-  if(typeof window.createVaahakJobFromTx!=='function')return false;
-  if(window.createVaahakJobFromTx.__dbestOtherRider)return true;
-  baseCreateJob=window.createVaahakJobFromTx;
-  const wrap=function(txId,kind){const job=baseCreateJob.apply(this,arguments);try{const r=riderFromTx(txId);if(job&&r){job.customerName=r.name;job.customerMobile=r.mobile;typeof save==='function'&&save()}}catch(e){}return job};
-  wrap.__dbestOtherRider=true;window.createVaahakJobFromTx=wrap;return true;
-}
-function patchFetch(){
-  if(window.fetch.__dbestOtherRider)return;
-  const raw=window.fetch.bind(window);
-  const wrap=async function(input,init){
-    try{
-      const method=String(init?.method||'GET').toUpperCase();
-      if(method==='POST'&&init?.body){const body=JSON.parse(String(init.body));if(body?.action==='create_ride'&&body?.txId){const r=riderFromTx(body.txId);if(r){body.customerName=r.name;body.customerMobile=r.mobile;body.bookedForOther=true;init={...init,body:JSON.stringify(body)}}}}
-    }catch(e){}
-    return raw(input,init);
-  };
-  wrap.__dbestOtherRider=true;window.fetch=wrap;
-}
-function mount(){ensureVehicle();patchConfirm();patchBook();patchLocalJob();patchFetch();injectRider()}
-[0,100,300,700,1400,2600].forEach(ms=>setTimeout(mount,ms));setInterval(()=>{ensureVehicle();patchConfirm();patchBook();patchLocalJob()},2500);
-new MutationObserver(()=>{if(q('.ridePage'))setTimeout(injectRider,0)}).observe(document.documentElement,{childList:true,subtree:true});
-window.DBEST_CAB_OTHER_RIDER={version:VERSION,vehicle:VEHICLE,mount};
+function riderDraft(){try{if(typeof rideDraft!=='undefined'&&rideDraft)return rideDraft}catch(e){}return {}}
+function config(){try{if(typeof rideConfig!=='undefined')return rideConfig}catch(e){}return null}
+function rideVehicle(id){const c=config();return c?.vehicles?.find(v=>String(v.id)===String(id))||null}
+function rideAmount(v){const d=riderDraft(),km=Number(d.distance||0);try{return typeof rideFare==='function'?rideFare(v,km):Math.round(Math.max(v.minFare||0,(v.base||45)+(v.perKm||14)*km))}catch(e){return Math.round(Math.max(v.minFare||0,(v.base||45)+(v.perKm||14)*km))}}
+function txById(id){try{if(Array.isArray(window.txs))return window.txs.find(x=>String(x.id)===String(id));if(typeof txs!=='undefined'&&Array.isArray(txs))return txs.find(x=>String(x.id)===String(id))}catch(e){}return null}
+function riderFromTx(id){const x=txById(id),r=x?.ride||x?.meta?.ride||{};if(r?.riderFor==='other'&&r?.riderName&&r?.riderMobile)return{name:String(r.riderName),mobile:String(r.riderMobile)};try{const z=JSON.parse(localStorage.getItem('dbest_cab_rider_'+id)||'null');if(z?.name&&z?.mobile)return z}catch(e){}return null}
+function ensureVehicle(){try{const c=config();if(!c||!Array.isArray(c.vehicles))return false;if(!c.vehicles.some(v=>String(v.id).toLowerCase()==='erickshaw')){const i=c.vehicles.findIndex(v=>String(v.id).toLowerCase()==='auto');c.vehicles.splice(i>=0?i+1:c.vehicles.length,0,{...VEHICLE});try{localStorage.setItem('d2_ride_config',JSON.stringify(c))}catch(e){}try{typeof save==='function'&&save()}catch(e){}}return true}catch(e){return false}}
+function css(){if(q('#dbest-cab-final-fix-css'))return;const s=document.createElement('style');s.id='dbest-cab-final-fix-css';s.textContent=`
+.dbestCabHistoryTabs{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin:0 8px 10px}.dbestCabHistoryTabs button{border:1px solid #dce5f2;background:#fff;color:#42536f;border-radius:13px;padding:10px 5px;font-size:10.5px;font-weight:900;box-shadow:0 5px 14px rgba(28,57,103,.05)}.dbestCabHistoryTabs button.on{background:#175cff;color:#fff;border-color:#175cff}.dbestCabConfirm{max-width:760px;margin:auto}.dbestCabConfirmCard{background:#fff;border:1px solid #dfe7f4;border-radius:20px;padding:15px;box-shadow:0 10px 28px rgba(20,50,100,.08)}.dbestCabSummary{display:grid;grid-template-columns:1fr 1fr;gap:8px}.dbestCabSummary div{background:#f7faff;border:1px solid #e2e9f3;border-radius:13px;padding:10px}.dbestCabSummary small{display:block;color:#718096;font-size:10px}.dbestCabSummary b{display:block;margin-top:3px;font-size:13px}.dbestRiderCard{margin:13px 0;padding:11px;border:1px solid #dfe7f2;border-radius:15px;background:#f8faff}.dbestRiderTop{display:flex;justify-content:space-between;align-items:center;gap:8px}.dbestRiderToggle{display:flex;gap:5px}.dbestRiderToggle button{border:1px solid #dbe4f1;background:#fff;color:#52627a;border-radius:999px;padding:8px 11px;font-size:11px;font-weight:900}.dbestRiderToggle button.on{background:#175cff;color:#fff;border-color:#175cff}.dbestRiderFields{display:none;grid-template-columns:1fr 1fr;gap:8px;margin-top:9px}.dbestRiderFields.show{display:grid}.dbestRiderFields input{width:100%;border:1px solid #d7e1ef;border-radius:11px;padding:11px;font-size:13px;background:#fff}.dbestPaymentChoice{display:grid;gap:8px;margin:10px 0}.dbestPaymentChoice label{display:flex;align-items:center;gap:8px;border:1px solid #dfe7f4;border-radius:13px;padding:10px;background:#fff}.dbestCabBookBtn{width:100%;min-height:54px;border:0;border-radius:16px;background:linear-gradient(135deg,#0868ff,#264df1);color:#fff;font-size:15px;font-weight:950}.cabxPanel .cabxNote,.dcxPanel>.dcxHint,.c9Panel>.c9Hint,.mcPanel>.mcHint,#dbestRentalPackages .dbestRentalNote{display:none!important}.dcxPowered,.mcPowered{display:none!important}
+@media(max-width:560px){.dbestCabHistoryTabs{margin-left:3px;margin-right:3px}.dbestCabHistoryTabs button{font-size:9.5px;padding:9px 3px}.dbestCabSummary{grid-template-columns:1fr}.dbestRiderTop{align-items:flex-start;flex-direction:column}.dbestRiderToggle{width:100%}.dbestRiderToggle button{flex:1}.dbestRiderFields{grid-template-columns:1fr}}
+`;document.head.appendChild(s)}
+function cleanupText(){const phrases=['Exact pickup/drop:','Better small-place search:','Zero-SMS ride security:','Search by house/shop name, landmark, road, area, PIN code or city.'];qa('div,p,small,span').forEach(el=>{if(el.dataset.dbestKeep==='1')return;const t=(el.textContent||'').trim();if(t.length<520&&phrases.some(x=>t.startsWith(x))){if(el.children.length<=3)el.style.display='none'}})}
+function historyTabs(){const root=q('.dcx,.cabx,.c9,.mc');if(!root||q('#dbestCabHistoryTabs'))return;const bar=document.createElement('div');bar.id='dbestCabHistoryTabs';bar.className='dbestCabHistoryTabs';bar.innerHTML='<button type="button" class="on" data-h="book">🚕 Book Ride</button><button type="button" data-h="rides">🧾 Ride History</button><button type="button" data-h="delivery">📦 Delivery History</button>';root.insertAdjacentElement('beforebegin',bar);bar.querySelector('[data-h="book"]').onclick=()=>{try{window.openRidePlatform?.()}catch(e){}};bar.querySelector('[data-h="rides"]').onclick=()=>{try{if(typeof window.openMyRides==='function')return window.openMyRides();if(window.DBEST_MEMBER_RIDE_HISTORY?.openMyRides)return window.DBEST_MEMBER_RIDE_HISTORY.openMyRides();msg('Please login to view ride history.')}catch(e){msg('Ride history is temporarily unavailable.')}};bar.querySelector('[data-h="delivery"]').onclick=()=>{try{if(window.DBEST_CUSTOMER_ORDERS?.open)return window.DBEST_CUSTOMER_ORDERS.open();if(typeof openCommerceHub==='function')return openCommerceHub();msg('Please login to view delivery history.')}catch(e){msg('Delivery history is temporarily unavailable.')}}}
+function setRiderMode(mode){const c=q('#dbestRiderCard');if(!c)return;c.dataset.mode=mode;c.querySelectorAll('[data-rider-mode]').forEach(b=>b.classList.toggle('on',b.dataset.riderMode===mode));c.querySelector('.dbestRiderFields')?.classList.toggle('show',mode==='other');const h=c.querySelector('input[name="riderMode"]');if(h)h.value=mode}
+function paymentRows(){const c=config()||{},rows=[];if(c.payu)rows.push(['payu','PayU']);if(c.cash)rows.push(['cash','Cash']);if(c.upiDriver)rows.push(['upi-driver','UPI to Driver']);if(!rows.length)rows.push(['cash','Cash']);return rows}
+function showConfirm(vehicleId){try{if(typeof requireMember==='function'&&!requireMember())return}catch(e){}const v=rideVehicle(vehicleId);if(!v)return msg('Vehicle option is unavailable. Please retry.');const d=riderDraft(),fare=rideAmount(v);try{d.selected=vehicleId}catch(e){}const methods=paymentRows();if(typeof sectionScreen!=='function'||typeof sectionTopBar!=='function')return msg('Booking screen is unavailable. Please retry.');sectionScreen(`${sectionTopBar(`${esc(v.icon||'🚕')} Confirm ${esc(v.name)}`,`${Number(d.distance||0).toFixed(1)} km • ₹${fare}`,'openRidePlatform()')}<div class="sectionContent"><div class="dbestCabConfirm"><div class="dbestCabConfirmCard"><div class="dbestCabSummary"><div><small>Pickup</small><b>${esc(d.pickup||'')}</b></div><div><small>Drop</small><b>${esc(d.drop||'')}</b></div><div><small>Vehicle</small><b>${esc(v.name)}</b></div><div><small>Estimated Fare</small><b>₹${fare}</b></div></div><form id="dbestCabFinalBookingForm"><div id="dbestRiderCard" class="dbestRiderCard" data-mode="self"><input type="hidden" name="riderMode" value="self"><div class="dbestRiderTop"><b>👤 Who is riding?</b><div class="dbestRiderToggle"><button type="button" class="on" data-rider-mode="self">Myself</button><button type="button" data-rider-mode="other">Someone else</button></div></div><div class="dbestRiderFields"><input name="riderName" autocomplete="name" placeholder="Rider name"><input name="riderMobile" inputmode="numeric" autocomplete="tel" placeholder="10-digit mobile"></div></div><div class="dbestPaymentChoice">${methods.map((x,i)=>`<label><input type="radio" name="payment" value="${x[0]}" ${i===0?'checked':''}><b>${x[1]}</b></label>`).join('')}</div><button class="dbestCabBookBtn" type="submit">Confirm Ride • ₹${fare}</button></form></div></div></div>`);const f=q('#dbestCabFinalBookingForm');if(!f)return;f.querySelectorAll('[data-rider-mode]').forEach(b=>b.onclick=()=>setRiderMode(b.dataset.riderMode));f.onsubmit=e=>submitBooking(e,vehicleId)}
+function attachVehicleClicks(){qa('.cabxVeh[data-v],.dcxVeh[data-v],.c9Veh[data-v],.mcVeh[data-v],[data-step-v],[data-fallback-v]').forEach(b=>{const id=b.dataset.v||b.dataset.stepV||b.dataset.fallbackV;if(!id||b.dataset.dbestFinalBook==='1')return;b.dataset.dbestFinalBook='1';b.onclick=e=>{e.preventDefault();e.stopPropagation();showConfirm(id)}})}
+function patchAddTx(){let original=null;try{if(typeof addTx==='function')original=addTx}catch(e){}if(!original||original.__dbestCabFinal)return;const wrap=function(userId,service,item,amount,status,reference,meta){const d=riderDraft();if(meta&&meta.flow==='ride'){meta={...meta,ride:{...(meta.ride||{}),riderFor:d.riderFor||'self',riderName:d.riderName||'',riderMobile:d.riderMobile||'',bookedForOther:d.riderFor==='other'}}}const x=original.call(this,userId,service,item,amount,status,reference,meta);try{if(x&&d.riderFor==='other'){const r={name:d.riderName,mobile:d.riderMobile};localStorage.setItem('dbest_cab_rider_'+x.id,JSON.stringify(r));x.ride=x.ride||x.meta?.ride||{};Object.assign(x.ride,{riderFor:'other',riderName:r.name,riderMobile:r.mobile,bookedForOther:true});x.meta={...(x.meta||{}),ride:x.ride};typeof save==='function'&&save()}}catch(e){}return x};wrap.__dbestCabFinal=true;try{window.addTx=wrap}catch(e){}try{addTx=wrap}catch(e){}}
+function patchLocalJob(){let original=null;try{if(typeof createVaahakJobFromTx==='function')original=createVaahakJobFromTx}catch(e){}if(!original||original.__dbestCabFinal)return;const wrap=function(txId,kind){const job=original.apply(this,arguments);try{const r=riderFromTx(txId);if(job&&r){job.customerName=r.name;job.customerMobile=r.mobile;typeof save==='function'&&save()}}catch(e){}return job};wrap.__dbestCabFinal=true;try{window.createVaahakJobFromTx=wrap}catch(e){}try{createVaahakJobFromTx=wrap}catch(e){}}
+function patchFetch(){if(window.fetch.__dbestCabFinal)return;const raw=window.fetch.bind(window);const wrap=async function(input,init){try{if(String(init?.method||'GET').toUpperCase()==='POST'&&init?.body){const body=JSON.parse(String(init.body));if(body?.action==='create_ride'&&body?.txId){const r=riderFromTx(body.txId);if(r){body.customerName=r.name;body.customerMobile=r.mobile;body.bookedForOther=true;init={...init,body:JSON.stringify(body)}}}}}catch(e){}return raw(input,init)};wrap.__dbestCabFinal=true;window.fetch=wrap}
+function submitBooking(e,vehicleId){e.preventDefault();const fd=new FormData(e.target),mode=String(fd.get('riderMode')||'self');let name='',mobile='';if(mode==='other'){name=String(fd.get('riderName')||'').trim();mobile=normalizeMobile(fd.get('riderMobile'));if(!name)return msg('Please enter the rider name.');if(mobile.length!==10)return msg('Please enter a valid 10-digit rider mobile number.')}const d=riderDraft();try{d.riderFor=mode;d.riderName=name;d.riderMobile=mobile;d.bookedForOther=mode==='other'}catch(err){}patchAddTx();patchLocalJob();try{if(typeof bookRide==='function')return bookRide(e,vehicleId)}catch(err){console.warn('DBest cab booking',err)}try{if(typeof window.bookRide==='function')return window.bookRide(e,vehicleId)}catch(err){}msg('Booking could not start. Please refresh once and try again.')}
+function mount(){css();ensureVehicle();cleanupText();historyTabs();attachVehicleClicks();patchAddTx();patchLocalJob();patchFetch()}
+[0,100,250,500,900,1500,2500,4000].forEach(ms=>setTimeout(mount,ms));setInterval(mount,1200);new MutationObserver(()=>setTimeout(mount,0)).observe(document.documentElement,{childList:true,subtree:true});
+window.DBEST_CAB_BOOKING_FINAL={version:VERSION,vehicle:VEHICLE,mount,showConfirm,submitBooking,setRiderMode};
 })();
