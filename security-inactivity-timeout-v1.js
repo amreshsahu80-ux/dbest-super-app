@@ -75,7 +75,7 @@
   try{
     if(!document.querySelector('script[data-dbest-platform-ux]')){
       var s=document.createElement('script');
-      s.src='./platform-navigation-camera-upi-v1.js?v=20260830-2316';
+      s.src='./platform-navigation-camera-upi-v1.js?v=20260830-2333-payment-pending';
       s.setAttribute('data-dbest-platform-ux','1');
       (document.body||document.documentElement).appendChild(s);
     }
