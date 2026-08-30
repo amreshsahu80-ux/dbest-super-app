@@ -5,85 +5,11 @@
   var lastActivity=Date.now();
   var warned=false;
   var busy=false;
-
-  function hasLogin(){
-    try{
-      if(window.currentUser||window.currentMember||window.loggedInUser||window.ownerSession||window.vendorSession||window.vaahakSession) return true;
-      var keys=['dbest_user','dbestUser','dbest_member','dbestMember','currentUser','loggedInUser','ownerSession','vendorSession','vaahakSession','sb-access-token','supabase.auth.token'];
-      for(var i=0;i<keys.length;i++) if(localStorage.getItem(keys[i])||sessionStorage.getItem(keys[i])) return true;
-      for(var j=0;j<localStorage.length;j++){
-        var k=String(localStorage.key(j)||'').toLowerCase();
-        if((k.indexOf('session')>=0||k.indexOf('login')>=0||k.indexOf('auth')>=0||k.indexOf('member')>=0||k.indexOf('owner')>=0||k.indexOf('vendor')>=0||k.indexOf('vaahak')>=0)&&localStorage.getItem(localStorage.key(j))) return true;
-      }
-    }catch(e){}
-    return false;
-  }
-
-  function reset(){ lastActivity=Date.now(); warned=false; }
-  ['pointerdown','mousedown','keydown','touchstart','scroll','wheel'].forEach(function(ev){document.addEventListener(ev,reset,{passive:true,capture:true});});
-  document.addEventListener('visibilitychange',function(){ if(!document.hidden) check(); });
-
-  function clearLikelySessions(){
-    try{
-      var preserve=['dbest_payout_reset_v2','dbest_language','language','lang'];
-      [localStorage,sessionStorage].forEach(function(store){
-        var del=[];
-        for(var i=0;i<store.length;i++){
-          var key=store.key(i), low=String(key||'').toLowerCase();
-          if(preserve.indexOf(key)>=0) continue;
-          if(low.indexOf('auth')>=0||low.indexOf('session')>=0||low.indexOf('login')>=0||low.indexOf('currentuser')>=0||low.indexOf('member')>=0||low.indexOf('owner')>=0||low.indexOf('vendor')>=0||low.indexOf('vaahak')>=0||low.indexOf('partner')>=0||low.indexOf('supabase')>=0) del.push(key);
-        }
-        del.forEach(function(k){try{store.removeItem(k);}catch(e){}});
-      });
-    }catch(e){}
-  }
-
-  async function logout(){
-    if(busy) return; busy=true;
-    try{
-      var sb=window.supabaseClient||window.supabase||window.sb;
-      if(sb&&sb.auth&&typeof sb.auth.signOut==='function') await sb.auth.signOut();
-    }catch(e){}
-    try{ if(typeof window.logout==='function') window.logout(); }catch(e){}
-    try{ if(typeof window.doLogout==='function') window.doLogout(); }catch(e){}
-    clearLikelySessions();
-    try{ sessionStorage.setItem('dbest_inactivity_logout','1'); }catch(e){}
-    var path=(location.pathname||'/').toLowerCase();
-    if(path.indexOf('/vaahak')===0) location.replace('/Vaahak/?reason=inactive');
-    else location.replace('/?reason=inactive');
-  }
-
-  function check(){
-    if(!hasLogin()) { lastActivity=Date.now(); warned=false; return; }
-    var idle=Date.now()-lastActivity;
-    if(idle>=TIMEOUT_MS){ logout(); return; }
-    if(idle>=WARNING_MS&&!warned){
-      warned=true;
-      try{
-        var d=document.createElement('div');
-        d.id='dbestIdleWarning';
-        d.style.cssText='position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:2147483647;background:#172033;color:#fff;padding:10px 14px;border-radius:12px;font:600 13px system-ui;box-shadow:0 8px 28px #0004';
-        d.textContent='For your security, you will be logged out after 5 minutes of inactivity. Tap or press any key to stay signed in.';
-        document.body.appendChild(d);
-        setTimeout(function(){if(d.parentNode)d.parentNode.removeChild(d);},12000);
-      }catch(e){}
-    }
-  }
-  setInterval(check,5000);
-  window.DBEST_SECURITY={inactivityTimeoutMinutes:5,resetActivity:reset,logoutForInactivity:logout};
-
-  try{
-    if(!document.querySelector('script[data-dbest-platform-ux]')){
-      var s=document.createElement('script');
-      s.src='./platform-navigation-camera-upi-v1.js?v=20260830-2333-payment-pending';
-      s.setAttribute('data-dbest-platform-ux','1');
-      (document.body||document.documentElement).appendChild(s);
-    }
-    if(!document.querySelector('script[data-dbest-internal-upi]')){
-      var p=document.createElement('script');
-      p.src='./internal-upi-payments-v1.js?v=20260830-2324';
-      p.setAttribute('data-dbest-internal-upi','1');
-      (document.body||document.documentElement).appendChild(p);
-    }
-  }catch(e){console.warn('DBest enhancement loader',e)}
+  function hasLogin(){try{if(window.currentUser||window.currentMember||window.loggedInUser||window.ownerSession||window.vendorSession||window.vaahakSession)return true;var keys=['dbest_user','dbestUser','dbest_member','dbestMember','currentUser','loggedInUser','ownerSession','vendorSession','vaahakSession','sb-access-token','supabase.auth.token'];for(var i=0;i<keys.length;i++)if(localStorage.getItem(keys[i])||sessionStorage.getItem(keys[i]))return true;for(var j=0;j<localStorage.length;j++){var k=String(localStorage.key(j)||'').toLowerCase();if((k.indexOf('session')>=0||k.indexOf('login')>=0||k.indexOf('auth')>=0||k.indexOf('member')>=0||k.indexOf('owner')>=0||k.indexOf('vendor')>=0||k.indexOf('vaahak')>=0)&&localStorage.getItem(localStorage.key(j)))return true}}catch(e){}return false}
+  function reset(){lastActivity=Date.now();warned=false}['pointerdown','mousedown','keydown','touchstart','scroll','wheel'].forEach(function(ev){document.addEventListener(ev,reset,{passive:true,capture:true})});document.addEventListener('visibilitychange',function(){if(!document.hidden)check()});
+  function clearLikelySessions(){try{var preserve=['dbest_payout_reset_v2','dbest_language','language','lang'];[localStorage,sessionStorage].forEach(function(store){var del=[];for(var i=0;i<store.length;i++){var key=store.key(i),low=String(key||'').toLowerCase();if(preserve.indexOf(key)>=0)continue;if(low.indexOf('auth')>=0||low.indexOf('session')>=0||low.indexOf('login')>=0||low.indexOf('currentuser')>=0||low.indexOf('member')>=0||low.indexOf('owner')>=0||low.indexOf('vendor')>=0||low.indexOf('vaahak')>=0||low.indexOf('partner')>=0||low.indexOf('supabase')>=0)del.push(key)}del.forEach(function(k){try{store.removeItem(k)}catch(e){}})})}catch(e){}}
+  async function logout(){if(busy)return;busy=true;try{var sb=window.supabaseClient||window.supabase||window.sb;if(sb&&sb.auth&&typeof sb.auth.signOut==='function')await sb.auth.signOut()}catch(e){}try{if(typeof window.logout==='function')window.logout()}catch(e){}try{if(typeof window.doLogout==='function')window.doLogout()}catch(e){}clearLikelySessions();try{sessionStorage.setItem('dbest_inactivity_logout','1')}catch(e){}var path=(location.pathname||'/').toLowerCase();if(path.indexOf('/vaahak')===0)location.replace('/Vaahak/?reason=inactive');else location.replace('/?reason=inactive')}
+  function check(){if(!hasLogin()){lastActivity=Date.now();warned=false;return}var idle=Date.now()-lastActivity;if(idle>=TIMEOUT_MS){logout();return}if(idle>=WARNING_MS&&!warned){warned=true;try{var d=document.createElement('div');d.id='dbestIdleWarning';d.style.cssText='position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:2147483647;background:#172033;color:#fff;padding:10px 14px;border-radius:12px;font:600 13px system-ui;box-shadow:0 8px 28px #0004';d.textContent='For your security, you will be logged out after 5 minutes of inactivity. Tap or press any key to stay signed in.';document.body.appendChild(d);setTimeout(function(){if(d.parentNode)d.parentNode.removeChild(d)},12000)}catch(e){}}}
+  setInterval(check,5000);window.DBEST_SECURITY={inactivityTimeoutMinutes:5,resetActivity:reset,logoutForInactivity:logout};
+  try{if(!document.querySelector('script[data-dbest-platform-ux]')){var s=document.createElement('script');s.src='./platform-navigation-camera-upi-v1.js?v=20260830-2344-registration-fix';s.setAttribute('data-dbest-platform-ux','1');(document.body||document.documentElement).appendChild(s)}if(!document.querySelector('script[data-dbest-internal-upi]')){var p=document.createElement('script');p.src='./internal-upi-payments-v1.js?v=20260830-2324';p.setAttribute('data-dbest-internal-upi','1');(document.body||document.documentElement).appendChild(p)}}catch(e){console.warn('DBest enhancement loader',e)}
 })();
