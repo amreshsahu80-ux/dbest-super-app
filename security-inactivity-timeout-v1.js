@@ -71,4 +71,13 @@
   }
   setInterval(check,5000);
   window.DBEST_SECURITY={inactivityTimeoutMinutes:5,resetActivity:reset,logoutForInactivity:logout};
+
+  try{
+    if(!document.querySelector('script[data-dbest-platform-ux]')){
+      var s=document.createElement('script');
+      s.src='./platform-navigation-camera-upi-v1.js?v=20260830-2316';
+      s.setAttribute('data-dbest-platform-ux','1');
+      (document.body||document.documentElement).appendChild(s);
+    }
+  }catch(e){console.warn('DBest platform UX loader',e)}
 })();
