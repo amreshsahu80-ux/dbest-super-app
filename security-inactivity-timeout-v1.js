@@ -79,5 +79,11 @@
       s.setAttribute('data-dbest-platform-ux','1');
       (document.body||document.documentElement).appendChild(s);
     }
-  }catch(e){console.warn('DBest platform UX loader',e)}
+    if(!document.querySelector('script[data-dbest-internal-upi]')){
+      var p=document.createElement('script');
+      p.src='./internal-upi-payments-v1.js?v=20260830-2324';
+      p.setAttribute('data-dbest-internal-upi','1');
+      (document.body||document.documentElement).appendChild(p);
+    }
+  }catch(e){console.warn('DBest enhancement loader',e)}
 })();
