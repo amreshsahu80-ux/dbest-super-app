@@ -13,7 +13,7 @@
   <script>
     (async function(){
       try{
-        const BUILD='20260831-1542-mappls-consolidated-preview';
+        const BUILD='20260831-1554-mappls-authority-fix';
         const r=await fetch('./index-26.html?v='+BUILD,{cache:'no-store'});
         if(!r.ok) throw new Error('Unable to load application');
         let html=await r.text();
@@ -44,7 +44,7 @@
           'home-jobs-section-finalizer.js','service-partner-job-execution.js','platform-concise-ui.js','super-admin-command-center.js',
           'vendor-direct-catalog-finalizer.js','vendor-delivery-location.js','vendor-mobile-image-upload-fix.js','vaahak-owner-approval-final.js',
           'security-inactivity-timeout-v1.js','platform-navigation-camera-upi-v1.js','internal-upi-payments-v1.js',
-          'cab-clean-ux-v1.js','dbest-critical-ux-v2.js','cab-stable-final-v1.js','cab-mappls-consolidated-v1.js'
+          'cab-clean-ux-v1.js','dbest-critical-ux-v2.js','cab-stable-final-v1.js','cab-mappls-consolidated-v1.js','cab-mappls-authority-v1.js'
         ];
         html=html.replace('</head>','<script src="./runtime-config-clean-v2.js?v='+BUILD+'"><\/script></head>');
         const tags=scripts.map(function(src){return '<script src="./'+src+'?v='+BUILD+'"><\/script>';}).join('');
