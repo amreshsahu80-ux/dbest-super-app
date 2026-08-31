@@ -13,7 +13,7 @@
   <script>
     (async function(){
       try{
-        const BUILD='20260831-1525-cab-schedule-performance';
+        const BUILD='20260831-1542-mappls-consolidated-preview';
         const r=await fetch('./index-26.html?v='+BUILD,{cache:'no-store'});
         if(!r.ok) throw new Error('Unable to load application');
         let html=await r.text();
@@ -26,21 +26,27 @@
           'member-ride-history-bridge.js','ride-coordinate-persistence-fix.js','finance-insurance-showcase.js','showcase-live-admin.js',
           'visual-first-partner-tiles.js','owner-clean-controls.js','owner-report-center.js','owner-core-fix.js',
           'owner-report-launcher-fix.js','owner-partner-onboarding-fix.js','owner-report-visibility-v2.js','owner-master-excel-download-fix.js',
+          'owner-control-live.js','owner-payout-percentage-matrix.js','payout-subsection-labels.js','payout-engine-production-hardening.js',
+          'owner-payout-entry-visible.js','owner-deeplink-all-sections.js','transaction-capture-universal.js','transaction-final-cleanup.js',
+          'owner-section-visibility-control.js','external-success-claims.js','member-id-card-production-final.js',
+          'vendor-agreement-email-otp.js','vaahak-agreement-email-otp.js','partner-kyc-owner-signing.js','partner-kyc-self-service.js',
+          'owner-partner-kyc-center.js','partner-kyc-owner-display-v2.js','partner-kyc-registration-upload-v2.js',
           'onboarding-contact-policy.js','multilingual-ui-v2.js','language-selector-fix.js','vaahak-live-dashboard-stable.js',
           'vaahak-pin-focus-guard.js','ride-contact-call-buttons.js','vaahak-ride-interaction-final.js','marketplace-vaahak-live-v2.js',
           'nearest-vaahak-dispatch.js','vaahak-live-rate-bridge.js','vendor-existing-live-upgrade.js','production-demo-auth-guard.js',
           'marketplace-live-catalog-authority.js','marketplace-minimum-order-ux.js','marketplace-live-order-submit-final.js','marketplace-cart-quantity-v1.js',
           'marketplace-customer-stage-wording-fix.js','customer-marketplace-my-orders.js','marketplace-completion-green.js','marketplace-delivery-rules.js',
-          'marketplace-delivery-order-display.js','payout-rules-v1.js','payout-reset-v2.js','payout-engine-v2.js',
-          'transaction-ledger-live.js','member-transaction-excel-download.js',
-          'platform-footer-legal.js','service-request-live-bridge.js','service-document-upload-bridge.js','service-payment-sync-bridge.js',
-          'dual-payment-options-live.js','top-live-location-bridge.js','owner-partner-section-visuals-link.js','clean-member-flow.js',
-          'plain-language-ui.js','service-partner-hyperlocal.js','hyperlocal-backend-live.js','home-jobs-section-finalizer.js',
-          'super-admin-command-center.js','vendor-direct-catalog-finalizer.js','vendor-delivery-location.js','vendor-mobile-image-upload-fix.js',
-          'vaahak-owner-approval-final.js','security-inactivity-timeout-v1.js',
-          'platform-navigation-camera-upi-v1.js','internal-upi-payments-v1.js','cab-clean-ux-v1.js','dbest-critical-ux-v2.js','cab-stable-final-v1.js'
+          'marketplace-delivery-order-display.js','marketplace-master-cart.js','marketplace-master-ui-fix.js','customer-active-vaahak-visual.js',
+          'payout-rules-v1.js','payout-reset-v2.js','payout-engine-v2.js','transaction-ledger-live.js',
+          'member-transaction-excel-download.js','platform-footer-legal.js','service-request-live-bridge.js','service-document-upload-bridge.js',
+          'service-payment-sync-bridge.js','dual-payment-options-live.js','top-live-location-bridge.js','owner-partner-section-visuals-link.js',
+          'clean-member-flow.js','plain-language-ui.js','service-partner-hyperlocal.js','hyperlocal-backend-live.js',
+          'home-jobs-section-finalizer.js','service-partner-job-execution.js','platform-concise-ui.js','super-admin-command-center.js',
+          'vendor-direct-catalog-finalizer.js','vendor-delivery-location.js','vendor-mobile-image-upload-fix.js','vaahak-owner-approval-final.js',
+          'security-inactivity-timeout-v1.js','platform-navigation-camera-upi-v1.js','internal-upi-payments-v1.js',
+          'cab-clean-ux-v1.js','dbest-critical-ux-v2.js','cab-stable-final-v1.js','cab-mappls-consolidated-v1.js'
         ];
-        html=html.replace('</head>','<script src="./runtime-config.js?v='+BUILD+'"><\/script></head>');
+        html=html.replace('</head>','<script src="./runtime-config-clean-v2.js?v='+BUILD+'"><\/script></head>');
         const tags=scripts.map(function(src){return '<script src="./'+src+'?v='+BUILD+'"><\/script>';}).join('');
         html=html.replace('</body>',tags+'</body>');
         document.open();document.write(html);document.close();
