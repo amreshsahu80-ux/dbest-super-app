@@ -1,31 +1,46 @@
 (function(){
-  const BUILD='20260831-1812-preview-speed-v3';
+  const BUILD='20260901-0205-preview-speed-v4';
   const groups={
+    payout:['payout-rules-v1.js','payout-reset-v2.js','payout-engine-v2.js','transaction-ledger-live.js','member-transaction-ledger-visible.js','member-transaction-excel-download.js','member-earnings-visible.js'],
+    payment:['service-request-live-bridge.js','service-document-upload-bridge.js','service-payment-sync-bridge.js','dual-payment-options-live.js','platform-footer-legal.js'],
     showcase:['finance-insurance-showcase.js','showcase-live-admin.js','visual-first-partner-tiles.js'],
-    owner:['owner-clean-controls.js','owner-report-center.js','owner-core-fix.js','owner-report-launcher-fix.js','owner-partner-onboarding-fix.js','owner-report-visibility-v2.js','owner-master-excel-download-fix.js','owner-partner-section-visuals-link.js','super-admin-command-center.js'],
+    owner:['owner-auth-bridge.js','owner-portal-route.js','owner-live-network-bridge.js','owner-clean-controls.js','owner-report-center.js','owner-core-fix.js','owner-report-launcher-fix.js','owner-partner-onboarding-fix.js','owner-report-visibility-v2.js','owner-master-excel-download-fix.js','owner-partner-section-visuals-link.js','super-admin-command-center.js'],
     marketplace:['marketplace-live-catalog-authority.js','marketplace-minimum-order-ux.js','marketplace-live-order-submit-final.js','marketplace-cart-quantity-v1.js','marketplace-customer-stage-wording-fix.js','customer-marketplace-my-orders.js','marketplace-completion-green.js','marketplace-delivery-rules.js','marketplace-delivery-order-display.js'],
     hyperlocal:['top-live-location-bridge.js','clean-member-flow.js','plain-language-ui.js','service-partner-hyperlocal.js','hyperlocal-backend-live.js','home-jobs-section-finalizer.js'],
     vendor:['vendor-existing-live-upgrade.js','vendor-direct-catalog-finalizer.js','vendor-delivery-location.js','vendor-mobile-image-upload-fix.js'],
     vaahak:['vaahak-portal-bridge.js','vaahak-live-bridge.js','vaahak-legacy-login-bridge.js','vaahak-entry-fix.js','vaahak-floating-button-hide.js','vaahak-standalone-route.js','partner-pin-reset-bridge.js','partner-self-pin-bridge.js','vaahak-owner-live-unify.js','vaahak-security-patch.js','vaahak-live-dashboard-stable.js','vaahak-pin-focus-guard.js','vaahak-ride-interaction-final.js','marketplace-vaahak-live-v2.js','nearest-vaahak-dispatch.js','vaahak-live-rate-bridge.js','vaahak-owner-approval-final.js']
   };
-  const loaded=new Set();
+  const loaded=new Set(),loading=new Map();
   function loadOne(file){return new Promise(resolve=>{const s=document.createElement('script');s.src='./'+file+'?v='+BUILD;s.async=true;s.onload=s.onerror=resolve;document.body.appendChild(s)})}
-  async function loadGroup(name){if(!groups[name]||loaded.has(name))return;loaded.add(name);for(const file of groups[name]){await loadOne(file);await new Promise(r=>setTimeout(r,80))}window.dispatchEvent(new CustomEvent('dbest:optional-ready',{detail:{group:name}}))}
-  function optimizeMedia(){
-    document.querySelectorAll('video.tileVideo').forEach(v=>{try{v.pause()}catch(e){}v.removeAttribute('autoplay');v.preload='none';if(v.src){v.removeAttribute('src');try{v.load()}catch(e){}}});
-    document.querySelectorAll('img').forEach(img=>{if(img.classList.contains('dbestTopLogo')){img.loading='eager';img.decoding='async';try{img.fetchPriority='high'}catch(e){}}else{img.loading='lazy';img.decoding='async';try{img.fetchPriority='low'}catch(e){}}});
+  async function loadGroup(name){
+    if(!groups[name])return;
+    if(loaded.has(name))return;
+    if(loading.has(name))return loading.get(name);
+    const p=(async()=>{for(const file of groups[name])await loadOne(file);loaded.add(name);loading.delete(name);tuneMedia();window.dispatchEvent(new CustomEvent('dbest:optional-ready',{detail:{group:name}}))})();
+    loading.set(name,p);return p;
   }
-  optimizeMedia();
+  function tuneMedia(){
+    const logo=document.querySelector('.dbestTopLogo');
+    if(logo){logo.loading='eager';logo.decoding='sync';try{logo.fetchPriority='high'}catch(e){}}
+    document.querySelectorAll('video.tileVideo').forEach(v=>{try{v.pause()}catch(e){}v.removeAttribute('autoplay');v.preload='none';if(v.getAttribute('src')){v.removeAttribute('src');try{v.load()}catch(e){}}});
+    const imgs=[...document.querySelectorAll('img')];
+    imgs.forEach((img,i)=>{if(img===logo)return;img.decoding='async';const visible=i<8;img.loading=visible?'eager':'lazy';try{img.fetchPriority=visible?'auto':'low'}catch(e){}});
+  }
+  tuneMedia();
+  const nativeCab=typeof window.openRidePlatform==='function'?window.openRidePlatform:null;
   window.DBEST_LOAD_OPTIONAL=loadGroup;
-  window.DBEST_PREVIEW_PERF={build:BUILD,mode:'event-lazy',cabEnhancementsLoaded:false,backgroundAutoload:false};
+  window.DBEST_PREVIEW_PERF={build:BUILD,mode:'minimum-core-event-lazy',cabEnhancementsLoaded:false,backgroundAutoload:false};
   document.addEventListener('click',function(e){
     const t=e.target.closest&&e.target.closest('button,.tile,a');if(!t)return;
-    if(t.closest('.service-store'))setTimeout(()=>loadGroup('marketplace'),250);
-    else if(t.closest('.service-insurance')||t.closest('.service-travel')||t.closest('.service-flights'))setTimeout(()=>loadGroup('showcase'),250);
-    else if(t.closest('.service-jobs')||t.closest('.service-repair'))setTimeout(()=>loadGroup('hyperlocal'),250);
+    if(t.closest('.service-car')&&nativeCab){e.preventDefault();e.stopImmediatePropagation();nativeCab();return;}
+    if(t.closest('.service-store'))setTimeout(()=>loadGroup('marketplace'),80);
+    else if(t.closest('.service-insurance')||t.closest('.service-travel')||t.closest('.service-flights'))setTimeout(()=>loadGroup('showcase'),80);
+    else if(t.closest('.service-jobs')||t.closest('.service-repair'))setTimeout(()=>loadGroup('hyperlocal'),80);
     const txt=(t.textContent||'').toLowerCase();
-    if(txt.includes('owner')||txt.includes('super admin'))setTimeout(()=>loadGroup('owner'),250);
-    if(txt.includes('vendor'))setTimeout(()=>loadGroup('vendor'),250);
-    if(txt.includes('vaahak'))setTimeout(()=>loadGroup('vaahak'),250);
+    if(txt.includes('owner')||txt.includes('super admin'))setTimeout(()=>loadGroup('owner'),80);
+    if(txt.includes('vendor'))setTimeout(()=>loadGroup('vendor'),80);
+    if(txt.includes('vaahak'))setTimeout(()=>loadGroup('vaahak'),80);
+    if(txt.includes('earn')||txt.includes('transaction')||txt.includes('payout')||txt.includes('dashboard')||txt.includes('membership'))setTimeout(()=>loadGroup('payout'),80);
+    if(txt.includes('register')||txt.includes('payment')||txt.includes('apply')||txt.includes('upload'))setTimeout(()=>loadGroup('payment'),80);
   },true);
 })();
