@@ -14,6 +14,6 @@
   try{
     if(!document.querySelector('script[data-dbest-platform-ux]')){var s=document.createElement('script');s.src='./platform-navigation-camera-upi-v1.js?v=20260831-0012-required-spinner';s.setAttribute('data-dbest-platform-ux','1');(document.body||document.documentElement).appendChild(s)}
     if(!document.querySelector('script[data-dbest-internal-upi]')){var p=document.createElement('script');p.src='./internal-upi-payments-v1.js?v=20260830-2324';p.setAttribute('data-dbest-internal-upi','1');(document.body||document.documentElement).appendChild(p)}
-    if(!document.querySelector('script[data-dbest-cab-clean-ux]')){var c=document.createElement('script');c.src='./cab-clean-ux-v1.js?v=20260831-0859-hard-hide-utility-chips';c.setAttribute('data-dbest-cab-clean-ux','1');(document.body||document.documentElement).appendChild(c)}
+    if(!document.querySelector('script[data-dbest-cab-clean-ux]')){var c=document.createElement('script');c.src='./cab-clean-ux-v1.js?v=20260831-0920-consolidated-first-screen';c.setAttribute('data-dbest-cab-clean-ux','1');(document.body||document.documentElement).appendChild(c)}
   }catch(e){console.warn('DBest enhancement loader',e)}
 })();
