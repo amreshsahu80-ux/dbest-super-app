@@ -13,7 +13,7 @@
   <script>
     (async function(){
       try{
-        const BUILD='20260831-1438-stabilize-preview';
+        const BUILD='20260831-1525-cab-schedule-performance';
         const r=await fetch('./index-26.html?v='+BUILD,{cache:'no-store'});
         if(!r.ok) throw new Error('Unable to load application');
         let html=await r.text();
@@ -32,7 +32,7 @@
           'marketplace-live-catalog-authority.js','marketplace-minimum-order-ux.js','marketplace-live-order-submit-final.js','marketplace-cart-quantity-v1.js',
           'marketplace-customer-stage-wording-fix.js','customer-marketplace-my-orders.js','marketplace-completion-green.js','marketplace-delivery-rules.js',
           'marketplace-delivery-order-display.js','payout-rules-v1.js','payout-reset-v2.js','payout-engine-v2.js',
-          'transaction-ledger-live.js','member-transaction-ledger-visible.js','member-transaction-excel-download.js','member-earnings-visible.js',
+          'transaction-ledger-live.js','member-transaction-excel-download.js',
           'platform-footer-legal.js','service-request-live-bridge.js','service-document-upload-bridge.js','service-payment-sync-bridge.js',
           'dual-payment-options-live.js','top-live-location-bridge.js','owner-partner-section-visuals-link.js','clean-member-flow.js',
           'plain-language-ui.js','service-partner-hyperlocal.js','hyperlocal-backend-live.js','home-jobs-section-finalizer.js',
