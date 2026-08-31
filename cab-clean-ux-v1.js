@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='1.0.0';
+const VERSION='1.0.1';
 const KEY='dbest_cab_initial_rider_v1';
 const q=s=>document.querySelector(s),qa=s=>Array.from(document.querySelectorAll(s));
 function css(){if(q('#dbest-cab-clean-ux-css'))return;const s=document.createElement('style');s.id='dbest-cab-clean-ux-css';s.textContent=`
@@ -28,8 +28,9 @@ function save(v){try{sessionStorage.setItem(KEY,JSON.stringify(v))}catch(e){}try
 function setMode(card,mode){const s=getSaved();s.mode=mode;save(s);card.querySelectorAll('[data-first-rider]').forEach(b=>b.classList.toggle('on',b.dataset.firstRider===mode));card.querySelector('.dbestCabFirstRiderFields')?.classList.toggle('show',mode==='other')}
 function addRiderChoice(){const panel=q('.dcx .dcxPanel');if(!panel||q('#dbestCabFirstRider'))return;const action=q('.dcx .dcxActions');if(!action)return;const s=getSaved(),card=document.createElement('div');card.id='dbestCabFirstRider';card.className='dbestCabFirstRider';card.innerHTML=`<div class="dbestCabFirstRiderTop"><b>👤 Booking for</b><div class="dbestCabFirstRiderToggle"><button type="button" data-first-rider="self">Myself</button><button type="button" data-first-rider="other">Someone else</button></div></div><div class="dbestCabFirstRiderFields"><input id="dbestFirstRiderName" placeholder="Rider name" value="${String(s.name||'').replace(/"/g,'&quot;')}"><input id="dbestFirstRiderMobile" inputmode="numeric" maxlength="10" placeholder="10-digit mobile" value="${String(s.mobile||'').replace(/"/g,'&quot;')}"></div>`;action.insertAdjacentElement('beforebegin',card);card.querySelectorAll('[data-first-rider]').forEach(b=>b.onclick=()=>setMode(card,b.dataset.firstRider));const n=card.querySelector('#dbestFirstRiderName'),m=card.querySelector('#dbestFirstRiderMobile');const sync=()=>{const z=getSaved();z.name=n.value.trim();z.mobile=m.value.replace(/\D/g,'').slice(0,10);save(z)};n.oninput=sync;m.oninput=sync;setMode(card,s.mode||'self')}
 function removeDuplicateContinue(){const btns=qa('.dcx button').filter(b=>/continue\s*.*choose vehicle/i.test((b.textContent||'').trim()));btns.forEach((b,i)=>{if(i>0)b.style.display='none'})}
+function hideUtilityChips(){const labels=['gps on','easy pin','smart search'];qa('.dcx button,.dcx div').forEach(el=>{const t=(el.textContent||'').trim().replace(/\s+/g,' ').toLowerCase();if(!t)return;const hits=labels.filter(x=>t.includes(x)).length;if(hits>=2){el.style.display='none';return}if(el.tagName==='BUTTON'&&labels.some(x=>t===x||t.endsWith(x))){const p=el.parentElement;if(p&&labels.filter(x=>(p.textContent||'').toLowerCase().includes(x)).length>=2)p.style.display='none';else el.style.display='none'}})}
 function syncConfirm(){const card=q('#dbestRiderCard');if(!card||card.dataset.dbestInitialSynced==='1')return;card.dataset.dbestInitialSynced='1';const s=getSaved();if(s.mode!=='other')return;const other=card.querySelector('[data-rider-mode="other"]');if(other)other.click();const name=card.querySelector('input[name="riderName"]'),mobile=card.querySelector('input[name="riderMobile"]');if(name)name.value=s.name||'';if(mobile)mobile.value=s.mobile||'';try{if(typeof rideDraft!=='undefined'&&rideDraft){rideDraft.riderFor='other';rideDraft.riderName=s.name||'';rideDraft.riderMobile=s.mobile||'';rideDraft.bookedForOther=true}}catch(e){}}
-function mount(){css();addRiderChoice();removeDuplicateContinue();syncConfirm()}
+function mount(){css();hideUtilityChips();addRiderChoice();removeDuplicateContinue();syncConfirm()}
 [0,120,350,700,1200,2200].forEach(ms=>setTimeout(mount,ms));document.addEventListener('click',()=>setTimeout(mount,30),true);window.addEventListener('pageshow',()=>setTimeout(mount,50));
 window.DBEST_CAB_CLEAN_UX={version:VERSION,mount};
 })();
