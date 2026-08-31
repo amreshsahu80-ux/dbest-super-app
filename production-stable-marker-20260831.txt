@@ -1,0 +1,1 @@
+Production restored to the pre-Cab stable baseline on 2026-08-31. Further Cab/UPI/navigation work is isolated on preview branches until validated.
