@@ -1,11 +1,11 @@
 (function(){
 'use strict';
-const VERSION='1.0.0';
+const VERSION='1.1.0';
 function enforce(){
   const c=window.DBEST_CAB_MAPPLS_CONSOLIDATED;
   if(!c||typeof c.open!=='function')return false;
   window.openRidePlatform=c.open;
-  window.DBEST_ACTIVE_CAB_VERSION='MAPPLS_CONSOLIDATED_V1';
+  window.DBEST_ACTIVE_CAB_VERSION='MAPPLS_CONSOLIDATED_V2';
   return true;
 }
 [0,150,1300,3200,5200].forEach(ms=>setTimeout(enforce,ms));
