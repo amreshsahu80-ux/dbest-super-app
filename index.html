@@ -13,11 +13,11 @@
   <script>
     (async function(){
       try{
-        const BUILD='20260901-0205-preview-speed-v4';
+        const BUILD='20260901-0220-preview-mappls-v5';
         const r=await fetch('./index-26.html?v='+BUILD,{cache:'no-store'});
         if(!r.ok)throw new Error('Unable to load application');
         let html=await r.text();
-        const scriptOpen='<scr'+'ipt src="./runtime-config.js?v='+BUILD+'">';
+        const scriptOpen='<scr'+'ipt src="./runtime-config-preview-clean.js?v='+BUILD+'">';
         const scriptClose='</scr'+'ipt>';
         html=html.replace('</head>',scriptOpen+scriptClose+'<style>html,body{max-width:100%;overflow-x:hidden}img,video,canvas,iframe{max-width:100%;height:auto}input,select,textarea,button{max-width:100%}@media(max-width:700px){.w{width:100%!important;max-width:100%!important}.sectionPage,.sectionOverlay{max-width:100%!important}.form,.serviceFormGrid{grid-template-columns:1fr!important}.full{grid-column:1!important}}</style></head>');
         const core=['member-id-collision-fix.js','backend-bridge.js','member-live-login-bridge.js','production-demo-auth-guard.js','onboarding-contact-policy.js','multilingual-ui-v2.js','language-selector-fix.js','security-inactivity-timeout-v1.js'];
