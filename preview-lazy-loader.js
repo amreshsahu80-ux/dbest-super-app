@@ -1,7 +1,7 @@
 (function(){
-  const BUILD='20260901-0220-preview-mappls-v5';
+  const BUILD='20260901-0235-preview-mappls-v5b';
   const groups={
-    cab:['cab-mappls-consolidated-v2.js'],
+    cab:['cab-booking-vehicle-bridge-v1.js','cab-mappls-consolidated-v2.js'],
     payout:['payout-rules-v1.js','payout-reset-v2.js','payout-engine-v2.js','transaction-ledger-live.js','member-transaction-ledger-visible.js','member-transaction-excel-download.js','member-earnings-visible.js'],
     payment:['service-request-live-bridge.js','service-document-upload-bridge.js','service-payment-sync-bridge.js','dual-payment-options-live.js','platform-footer-legal.js'],
     showcase:['finance-insurance-showcase.js','showcase-live-admin.js','visual-first-partner-tiles.js'],
@@ -20,12 +20,7 @@
     document.querySelectorAll('video.tileVideo').forEach(v=>{try{v.pause()}catch(e){}v.removeAttribute('autoplay');v.preload='none';if(v.getAttribute('src')){v.removeAttribute('src');try{v.load()}catch(e){}}});
     const imgs=[...document.querySelectorAll('img')];imgs.forEach((img,i)=>{if(img===logo)return;img.decoding='async';const visible=i<8;img.loading=visible?'eager':'lazy';try{img.fetchPriority=visible?'auto':'low'}catch(e){}});
   }
-  function installCabVehicleBridge(){
-    if(window.DBEST_CAB_STABLE&&typeof window.DBEST_CAB_STABLE.renderVehicles==='function')return;
-    window.DBEST_CAB_STABLE={version:'preview-native-vehicle-bridge',renderVehicles:function(){if(typeof window.showRideOptions==='function')return window.showRideOptions();if(typeof window.openRidePlatform==='function')return window.openRidePlatform();}};
-  }
   async function enhanceCab(){
-    installCabVehicleBridge();
     await loadGroup('cab');
     if(window.DBEST_PREVIEW_PERF)window.DBEST_PREVIEW_PERF.cabEnhancementsLoaded=true;
     const c=window.DBEST_CAB_MAPPLS_CONSOLIDATED;
@@ -36,7 +31,7 @@
   }
   tuneMedia();
   window.DBEST_LOAD_OPTIONAL=loadGroup;
-  window.DBEST_PREVIEW_PERF={build:BUILD,mode:'minimum-core-event-lazy-mappls',cabEnhancementsLoaded:false,backgroundAutoload:false};
+  window.DBEST_PREVIEW_PERF={build:BUILD,mode:'minimum-core-event-lazy-mappls-booking',cabEnhancementsLoaded:false,backgroundAutoload:false};
   document.addEventListener('click',function(e){
     const t=e.target.closest&&e.target.closest('button,.tile,a');if(!t)return;
     if(t.closest('.service-car')){setTimeout(enhanceCab,20);return;}
