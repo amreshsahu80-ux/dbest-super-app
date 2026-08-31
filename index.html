@@ -13,14 +13,14 @@
   <script>
     (async function(){
       try{
-        const BUILD='20260831-1800-preview-lazyload-v2';
+        const BUILD='20260831-1812-preview-speed-v3';
         const r=await fetch('./index-26.html?v='+BUILD,{cache:'no-store'});
         if(!r.ok)throw new Error('Unable to load application');
         let html=await r.text();
         const scriptOpen='<scr'+'ipt src="./runtime-config.js?v='+BUILD+'">';
         const scriptClose='</scr'+'ipt>';
         html=html.replace('</head>',scriptOpen+scriptClose+'<style>html,body{max-width:100%;overflow-x:hidden}img,video,canvas,iframe{max-width:100%;height:auto}input,select,textarea,button{max-width:100%}@media(max-width:700px){.w{width:100%!important;max-width:100%!important}.sectionPage,.sectionOverlay{max-width:100%!important}.form,.serviceFormGrid{grid-template-columns:1fr!important}.full{grid-column:1!important}}</style></head>');
-        const core=['member-id-collision-fix.js','backend-bridge.js','member-live-login-bridge.js','owner-auth-bridge.js','owner-portal-route.js','owner-live-network-bridge.js','ux-performance-bridge.js','production-demo-auth-guard.js','onboarding-contact-policy.js','multilingual-ui-v2.js','language-selector-fix.js','payout-rules-v1.js','payout-reset-v2.js','payout-engine-v2.js','transaction-ledger-live.js','member-transaction-ledger-visible.js','member-transaction-excel-download.js','member-earnings-visible.js','service-request-live-bridge.js','service-document-upload-bridge.js','service-payment-sync-bridge.js','dual-payment-options-live.js','platform-footer-legal.js','security-inactivity-timeout-v1.js'];
+        const core=['member-id-collision-fix.js','backend-bridge.js','member-live-login-bridge.js','owner-auth-bridge.js','owner-portal-route.js','owner-live-network-bridge.js','production-demo-auth-guard.js','onboarding-contact-policy.js','multilingual-ui-v2.js','language-selector-fix.js','payout-rules-v1.js','payout-reset-v2.js','payout-engine-v2.js','transaction-ledger-live.js','member-transaction-ledger-visible.js','member-transaction-excel-download.js','member-earnings-visible.js','service-request-live-bridge.js','service-document-upload-bridge.js','service-payment-sync-bridge.js','dual-payment-options-live.js','platform-footer-legal.js','security-inactivity-timeout-v1.js'];
         const tags=core.map(f=>'<scr'+'ipt src="./'+f+'?v='+BUILD+'"></scr'+'ipt>').join('');
         html=html.replace('</body>',tags+'<scr'+'ipt src="./preview-lazy-loader.js?v='+BUILD+'"></scr'+'ipt></body>');
         document.open();document.write(html);document.close();
