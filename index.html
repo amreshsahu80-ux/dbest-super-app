@@ -13,36 +13,21 @@
   <script>
     (async function(){
       try{
-        const BUILD='20260831-1634-preview-lazyload-v2';
+        const BUILD='20260831-1800-preview-lazyload-v2';
         const r=await fetch('./index-26.html?v='+BUILD,{cache:'no-store'});
         if(!r.ok)throw new Error('Unable to load application');
         let html=await r.text();
         const scriptOpen='<scr'+'ipt src="./runtime-config.js?v='+BUILD+'">';
         const scriptClose='</scr'+'ipt>';
         html=html.replace('</head>',scriptOpen+scriptClose+'<style>html,body{max-width:100%;overflow-x:hidden}img,video,canvas,iframe{max-width:100%;height:auto}input,select,textarea,button{max-width:100%}@media(max-width:700px){.w{width:100%!important;max-width:100%!important}.sectionPage,.sectionOverlay{max-width:100%!important}.form,.serviceFormGrid{grid-template-columns:1fr!important}.full{grid-column:1!important}}</style></head>');
-
-        const core=[
-          'member-id-collision-fix.js','backend-bridge.js','member-live-login-bridge.js','owner-auth-bridge.js','owner-portal-route.js','owner-live-network-bridge.js','ux-performance-bridge.js',
-          'production-demo-auth-guard.js','onboarding-contact-policy.js','multilingual-ui-v2.js','language-selector-fix.js',
-          'payout-rules-v1.js','payout-reset-v2.js','payout-engine-v2.js','transaction-ledger-live.js','member-transaction-ledger-visible.js','member-transaction-excel-download.js','member-earnings-visible.js',
-          'service-request-live-bridge.js','service-document-upload-bridge.js','service-payment-sync-bridge.js','dual-payment-options-live.js','platform-footer-legal.js','security-inactivity-timeout-v1.js'
-        ];
-
-        const optional=[
-          'finance-insurance-showcase.js','showcase-live-admin.js','visual-first-partner-tiles.js',
-          'owner-clean-controls.js','owner-report-center.js','owner-core-fix.js','owner-report-launcher-fix.js','owner-partner-onboarding-fix.js','owner-report-visibility-v2.js','owner-master-excel-download-fix.js','owner-partner-section-visuals-link.js','super-admin-command-center.js',
-          'marketplace-live-catalog-authority.js','marketplace-minimum-order-ux.js','marketplace-live-order-submit-final.js','marketplace-cart-quantity-v1.js','marketplace-customer-stage-wording-fix.js','customer-marketplace-my-orders.js','marketplace-completion-green.js','marketplace-delivery-rules.js','marketplace-delivery-order-display.js',
-          'top-live-location-bridge.js','clean-member-flow.js','plain-language-ui.js','service-partner-hyperlocal.js','hyperlocal-backend-live.js','home-jobs-section-finalizer.js',
-          'vendor-existing-live-upgrade.js','vendor-direct-catalog-finalizer.js','vendor-delivery-location.js','vendor-mobile-image-upload-fix.js',
-          'vaahak-portal-bridge.js','vaahak-live-bridge.js','vaahak-legacy-login-bridge.js','vaahak-entry-fix.js','vaahak-floating-button-hide.js','vaahak-standalone-route.js','partner-pin-reset-bridge.js','partner-self-pin-bridge.js','vaahak-owner-live-unify.js','vaahak-security-patch.js','vaahak-live-dashboard-stable.js','vaahak-pin-focus-guard.js','vaahak-ride-interaction-final.js','marketplace-vaahak-live-v2.js','nearest-vaahak-dispatch.js','vaahak-live-rate-bridge.js','vaahak-owner-approval-final.js'
-        ];
-
-        function tags(list){return list.map(f=>'<scr'+'ipt src="./'+f+'?v='+BUILD+'"></scr'+'ipt>').join('')}
-        const lazyCode="(function(){const B='"+BUILD+"',L="+JSON.stringify(optional)+";function one(f){return new Promise(r=>{const s=document.createElement('script');s.src='./'+f+'?v='+B;s.onload=s.onerror=()=>r();document.body.appendChild(s)})}async function go(){for(const f of L)await one(f);window.DBEST_OPTIONAL_READY=true}if('requestIdleCallback'in window)requestIdleCallback(go,{timeout:1800});else setTimeout(go,900);window.DBEST_PREVIEW_PERF={build:B,mode:'lazy-noncab',cabEnhancementsLoaded:false}})();";
-        const lazy='<scr'+'ipt>'+lazyCode+'</scr'+'ipt>';
-        html=html.replace('</body>',tags(core)+lazy+'</body>');
+        const core=['member-id-collision-fix.js','backend-bridge.js','member-live-login-bridge.js','owner-auth-bridge.js','owner-portal-route.js','owner-live-network-bridge.js','ux-performance-bridge.js','production-demo-auth-guard.js','onboarding-contact-policy.js','multilingual-ui-v2.js','language-selector-fix.js','payout-rules-v1.js','payout-reset-v2.js','payout-engine-v2.js','transaction-ledger-live.js','member-transaction-ledger-visible.js','member-transaction-excel-download.js','member-earnings-visible.js','service-request-live-bridge.js','service-document-upload-bridge.js','service-payment-sync-bridge.js','dual-payment-options-live.js','platform-footer-legal.js','security-inactivity-timeout-v1.js'];
+        const tags=core.map(f=>'<scr'+'ipt src="./'+f+'?v='+BUILD+'"></scr'+'ipt>').join('');
+        html=html.replace('</body>',tags+'<scr'+'ipt src="./preview-lazy-loader.js?v='+BUILD+'"></scr'+'ipt></body>');
         document.open();document.write(html);document.close();
-      }catch(err){document.body.innerHTML='<div style="font-family:system-ui,Arial;padding:24px"><h2>DBest Super App</h2><p>Application loading error. Please refresh.</p></div>';console.error(err)}
+      }catch(err){
+        document.body.innerHTML='<div style="font-family:system-ui,Arial;padding:24px"><h2>DBest Super App</h2><p>Application loading error. Please refresh.</p></div>';
+        console.error(err);
+      }
     })();
   </script>
 </body>
