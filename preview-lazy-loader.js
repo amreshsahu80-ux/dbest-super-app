@@ -1,5 +1,5 @@
 (function(){
-  const BUILD='20260901-0205-preview-speed-v4';
+  const BUILD='20260901-0210-preview-speed-v4b';
   const groups={
     payout:['payout-rules-v1.js','payout-reset-v2.js','payout-engine-v2.js','transaction-ledger-live.js','member-transaction-ledger-visible.js','member-transaction-excel-download.js','member-earnings-visible.js'],
     payment:['service-request-live-bridge.js','service-document-upload-bridge.js','service-payment-sync-bridge.js','dual-payment-options-live.js','platform-footer-legal.js'],
@@ -12,27 +12,19 @@
   };
   const loaded=new Set(),loading=new Map();
   function loadOne(file){return new Promise(resolve=>{const s=document.createElement('script');s.src='./'+file+'?v='+BUILD;s.async=true;s.onload=s.onerror=resolve;document.body.appendChild(s)})}
-  async function loadGroup(name){
-    if(!groups[name])return;
-    if(loaded.has(name))return;
-    if(loading.has(name))return loading.get(name);
-    const p=(async()=>{for(const file of groups[name])await loadOne(file);loaded.add(name);loading.delete(name);tuneMedia();window.dispatchEvent(new CustomEvent('dbest:optional-ready',{detail:{group:name}}))})();
-    loading.set(name,p);return p;
-  }
+  async function loadGroup(name){if(!groups[name])return;if(loaded.has(name))return;if(loading.has(name))return loading.get(name);const p=(async()=>{for(const file of groups[name])await loadOne(file);loaded.add(name);loading.delete(name);tuneMedia();window.dispatchEvent(new CustomEvent('dbest:optional-ready',{detail:{group:name}}))})();loading.set(name,p);return p;}
   function tuneMedia(){
     const logo=document.querySelector('.dbestTopLogo');
     if(logo){logo.loading='eager';logo.decoding='sync';try{logo.fetchPriority='high'}catch(e){}}
     document.querySelectorAll('video.tileVideo').forEach(v=>{try{v.pause()}catch(e){}v.removeAttribute('autoplay');v.preload='none';if(v.getAttribute('src')){v.removeAttribute('src');try{v.load()}catch(e){}}});
-    const imgs=[...document.querySelectorAll('img')];
-    imgs.forEach((img,i)=>{if(img===logo)return;img.decoding='async';const visible=i<8;img.loading=visible?'eager':'lazy';try{img.fetchPriority=visible?'auto':'low'}catch(e){}});
+    const imgs=[...document.querySelectorAll('img')];imgs.forEach((img,i)=>{if(img===logo)return;img.decoding='async';const visible=i<8;img.loading=visible?'eager':'lazy';try{img.fetchPriority=visible?'auto':'low'}catch(e){}});
   }
   tuneMedia();
-  const nativeCab=typeof window.openRidePlatform==='function'?window.openRidePlatform:null;
   window.DBEST_LOAD_OPTIONAL=loadGroup;
   window.DBEST_PREVIEW_PERF={build:BUILD,mode:'minimum-core-event-lazy',cabEnhancementsLoaded:false,backgroundAutoload:false};
   document.addEventListener('click',function(e){
     const t=e.target.closest&&e.target.closest('button,.tile,a');if(!t)return;
-    if(t.closest('.service-car')&&nativeCab){e.preventDefault();e.stopImmediatePropagation();nativeCab();return;}
+    /* IMPORTANT: do not intercept Car/Cab clicks here. The base app's native onclick/openService('car') must run untouched. */
     if(t.closest('.service-store'))setTimeout(()=>loadGroup('marketplace'),80);
     else if(t.closest('.service-insurance')||t.closest('.service-travel')||t.closest('.service-flights'))setTimeout(()=>loadGroup('showcase'),80);
     else if(t.closest('.service-jobs')||t.closest('.service-repair'))setTimeout(()=>loadGroup('hyperlocal'),80);
