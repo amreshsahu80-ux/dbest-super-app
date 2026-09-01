@@ -13,7 +13,7 @@
   <script>
     (async function(){
       try{
-        const BUILD='20260901-1542-preview-mappls-v6';
+        const BUILD='20260901-1603-preview-mappls-v6-2';
         const r=await fetch('./index-26.html?v='+BUILD,{cache:'no-store'});
         if(!r.ok)throw new Error('Unable to load application');
         let html=await r.text();
