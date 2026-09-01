@@ -1,5 +1,5 @@
 (function(){
-  const BUILD='20260901-1547-preview-mappls-v6-1';
+  const BUILD='20260901-1603-preview-mappls-v6-2';
   const groups={
     cab:['cab-stable-final-v1.js','cab-mappls-consolidated-v2.js','cab-preview-booking-bridge-v6.js'],
     payout:['payout-rules-v1.js','payout-reset-v2.js','payout-engine-v2.js','transaction-ledger-live.js','member-transaction-ledger-visible.js','member-transaction-excel-download.js','member-earnings-visible.js'],
@@ -14,40 +14,8 @@
   const loaded=new Set(),loading=new Map();
   function loadOne(file){return new Promise(resolve=>{const s=document.createElement('script');s.src='./'+file+'?v='+BUILD;s.async=true;s.onload=s.onerror=resolve;document.body.appendChild(s)})}
   async function loadGroup(name){if(!groups[name])return;if(loaded.has(name))return;if(loading.has(name))return loading.get(name);const p=(async()=>{for(const file of groups[name])await loadOne(file);loaded.add(name);loading.delete(name);tuneMedia();window.dispatchEvent(new CustomEvent('dbest:optional-ready',{detail:{group:name}}))})();loading.set(name,p);return p;}
-  function tuneMedia(){
-    const logo=document.querySelector('.dbestTopLogo');
-    if(logo){logo.loading='eager';logo.decoding='sync';try{logo.fetchPriority='high'}catch(e){}}
-    document.querySelectorAll('video.tileVideo').forEach(v=>{try{v.pause()}catch(e){}v.removeAttribute('autoplay');v.preload='none';if(v.getAttribute('src')){v.removeAttribute('src');try{v.load()}catch(e){}}});
-    const imgs=[...document.querySelectorAll('img')];imgs.forEach((img,i)=>{if(img===logo)return;img.decoding='async';const visible=i<8;img.loading=visible?'eager':'lazy';try{img.fetchPriority=visible?'auto':'low'}catch(e){}});
-  }
-  async function enhanceCab(){
-    await loadGroup('cab');
-    if(window.DBEST_PREVIEW_PERF)window.DBEST_PREVIEW_PERF.cabEnhancementsLoaded=true;
-    const c=window.DBEST_CAB_MAPPLS_CONSOLIDATED;
-    if(c&&typeof c.open==='function'){
-      window.openRidePlatform=c.open;
-      c.open();
-      return;
-    }
-    if(window.DBEST_CAB_STABLE&&typeof window.DBEST_CAB_STABLE.open==='function'){
-      window.openRidePlatform=window.DBEST_CAB_STABLE.open;
-      window.DBEST_CAB_STABLE.open();
-    }
-  }
-  tuneMedia();
-  window.DBEST_LOAD_OPTIONAL=loadGroup;
-  window.DBEST_PREVIEW_PERF={build:BUILD,mode:'minimum-core-event-lazy-mappls-route-booking',cabEnhancementsLoaded:false,backgroundAutoload:false};
-  document.addEventListener('click',function(e){
-    const t=e.target.closest&&e.target.closest('button,.tile,a');if(!t)return;
-    if(t.closest('.service-car')){setTimeout(enhanceCab,20);return;}
-    if(t.closest('.service-store'))setTimeout(()=>loadGroup('marketplace'),80);
-    else if(t.closest('.service-insurance')||t.closest('.service-travel')||t.closest('.service-flights'))setTimeout(()=>loadGroup('showcase'),80);
-    else if(t.closest('.service-jobs')||t.closest('.service-repair'))setTimeout(()=>loadGroup('hyperlocal'),80);
-    const txt=(t.textContent||'').toLowerCase();
-    if(txt.includes('owner')||txt.includes('super admin'))setTimeout(()=>loadGroup('owner'),80);
-    if(txt.includes('vendor'))setTimeout(()=>loadGroup('vendor'),80);
-    if(txt.includes('vaahak'))setTimeout(()=>loadGroup('vaahak'),80);
-    if(txt.includes('earn')||txt.includes('transaction')||txt.includes('payout')||txt.includes('dashboard')||txt.includes('membership'))setTimeout(()=>loadGroup('payout'),80);
-    if(txt.includes('register')||txt.includes('payment')||txt.includes('apply')||txt.includes('upload'))setTimeout(()=>loadGroup('payment'),80);
-  },true);
+  function tuneMedia(){const logo=document.querySelector('.dbestTopLogo');if(logo){logo.loading='eager';logo.decoding='sync';try{logo.fetchPriority='high'}catch(e){}}document.querySelectorAll('video.tileVideo').forEach(v=>{try{v.pause()}catch(e){}v.removeAttribute('autoplay');v.preload='none';if(v.getAttribute('src')){v.removeAttribute('src');try{v.load()}catch(e){}}});const imgs=[...document.querySelectorAll('img')];imgs.forEach((img,i)=>{if(img===logo)return;img.decoding='async';const visible=i<8;img.loading=visible?'eager':'lazy';try{img.fetchPriority=visible?'auto':'low'}catch(e){}})}
+  async function enhanceCab(){await loadGroup('cab');if(window.DBEST_PREVIEW_PERF)window.DBEST_PREVIEW_PERF.cabEnhancementsLoaded=true;const c=window.DBEST_CAB_MAPPLS_CONSOLIDATED;if(c&&typeof c.open==='function'){window.openRidePlatform=c.open;c.open();return}if(window.DBEST_CAB_STABLE&&typeof window.DBEST_CAB_STABLE.open==='function'){window.openRidePlatform=window.DBEST_CAB_STABLE.open;window.DBEST_CAB_STABLE.open()}}
+  tuneMedia();window.DBEST_LOAD_OPTIONAL=loadGroup;window.DBEST_PREVIEW_PERF={build:BUILD,mode:'minimum-core-event-lazy-mappls-verified-route',cabEnhancementsLoaded:false,backgroundAutoload:false};
+  document.addEventListener('click',function(e){const t=e.target.closest&&e.target.closest('button,.tile,a');if(!t)return;if(t.closest('.service-car')){setTimeout(enhanceCab,20);return}if(t.closest('.service-store'))setTimeout(()=>loadGroup('marketplace'),80);else if(t.closest('.service-insurance')||t.closest('.service-travel')||t.closest('.service-flights'))setTimeout(()=>loadGroup('showcase'),80);else if(t.closest('.service-jobs')||t.closest('.service-repair'))setTimeout(()=>loadGroup('hyperlocal'),80);const txt=(t.textContent||'').toLowerCase();if(txt.includes('owner')||txt.includes('super admin'))setTimeout(()=>loadGroup('owner'),80);if(txt.includes('vendor'))setTimeout(()=>loadGroup('vendor'),80);if(txt.includes('vaahak'))setTimeout(()=>loadGroup('vaahak'),80);if(txt.includes('earn')||txt.includes('transaction')||txt.includes('payout')||txt.includes('dashboard')||txt.includes('membership'))setTimeout(()=>loadGroup('payout'),80);if(txt.includes('register')||txt.includes('payment')||txt.includes('apply')||txt.includes('upload'))setTimeout(()=>loadGroup('payment'),80)},true);
 })();
