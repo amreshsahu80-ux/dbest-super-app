@@ -1,5 +1,5 @@
 (function(){
-  const BUILD='20260901-1542-preview-mappls-v6';
+  const BUILD='20260901-1547-preview-mappls-v6-1';
   const groups={
     cab:['cab-stable-final-v1.js','cab-mappls-consolidated-v2.js','cab-preview-booking-bridge-v6.js'],
     payout:['payout-rules-v1.js','payout-reset-v2.js','payout-engine-v2.js','transaction-ledger-live.js','member-transaction-ledger-visible.js','member-transaction-excel-download.js','member-earnings-visible.js'],
@@ -36,7 +36,7 @@
   }
   tuneMedia();
   window.DBEST_LOAD_OPTIONAL=loadGroup;
-  window.DBEST_PREVIEW_PERF={build:BUILD,mode:'minimum-core-event-lazy-mappls-direct-booking',cabEnhancementsLoaded:false,backgroundAutoload:false};
+  window.DBEST_PREVIEW_PERF={build:BUILD,mode:'minimum-core-event-lazy-mappls-route-booking',cabEnhancementsLoaded:false,backgroundAutoload:false};
   document.addEventListener('click',function(e){
     const t=e.target.closest&&e.target.closest('button,.tile,a');if(!t)return;
     if(t.closest('.service-car')){setTimeout(enhanceCab,20);return;}
