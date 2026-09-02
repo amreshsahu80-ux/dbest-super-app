@@ -33,6 +33,36 @@
       ]
     },
     {
+      "source": "/",
+      "headers": [
+        {"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}
+      ]
+    },
+    {
+      "source": "/index.html",
+      "headers": [
+        {"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}
+      ]
+    },
+    {
+      "source": "/index-26.html",
+      "headers": [
+        {"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}
+      ]
+    },
+    {
+      "source": "/(.*).js",
+      "headers": [
+        {"key": "Cache-Control", "value": "no-cache, max-age=0, must-revalidate"}
+      ]
+    },
+    {
+      "source": "/(.*).css",
+      "headers": [
+        {"key": "Cache-Control", "value": "no-cache, max-age=0, must-revalidate"}
+      ]
+    },
+    {
       "source": "/owner",
       "headers": [
         {"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"},
