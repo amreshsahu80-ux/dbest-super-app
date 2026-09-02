@@ -19,6 +19,7 @@
     if(!controlPortal){
       if(!document.querySelector('script[data-dbest-membership-explainer]')){var m=document.createElement('script');m.src='./membership-plan-explainer-v1.js?v=20260902-membership-explainer-i18n-v2';m.setAttribute('data-dbest-membership-explainer','1');(document.body||document.documentElement).appendChild(m)}
       if(!document.querySelector('script[data-dbest-membership-action-fix]')){var f=document.createElement('script');f.src='./membership-explainer-action-fix-v1.js?v=20260902-action-fix-v2';f.setAttribute('data-dbest-membership-action-fix','1');(document.body||document.documentElement).appendChild(f)}
+      if(!document.querySelector('script[data-dbest-membership-single-screen]')){var c=document.createElement('script');c.src='./membership-explainer-single-screen-v3.js?v=20260902-single-screen-v3';c.setAttribute('data-dbest-membership-single-screen','1');(document.body||document.documentElement).appendChild(c)}
     }else{
       try{document.getElementById('dbestMembershipPlanModal')?.remove()}catch(_){ }
     }
