@@ -17,7 +17,8 @@
     if(!document.querySelector('script[data-dbest-platform-ux]')){var s=document.createElement('script');s.src='./platform-navigation-camera-upi-v1.js?v=20260902-owner-route-v2';s.setAttribute('data-dbest-platform-ux','1');(document.body||document.documentElement).appendChild(s)}
     if(!document.querySelector('script[data-dbest-internal-upi]')){var p=document.createElement('script');p.src='./internal-upi-payments-v1.js?v=20260830-2324';p.setAttribute('data-dbest-internal-upi','1');(document.body||document.documentElement).appendChild(p)}
     if(!controlPortal){
-      if(!document.querySelector('script[data-dbest-membership-explainer]')){var m=document.createElement('script');m.src='./membership-plan-explainer-v1.js?v=20260902-membership-modal-v5';m.setAttribute('data-dbest-membership-explainer','1');(document.body||document.documentElement).appendChild(m)}
+      if(!document.querySelector('script[data-dbest-membership-explainer]')){var m=document.createElement('script');m.src='./membership-plan-explainer-v1.js?v=20260902-membership-modal-v6-reference';m.setAttribute('data-dbest-membership-explainer','1');(document.body||document.documentElement).appendChild(m)}
+      if(!document.querySelector('script[data-dbest-membership-close-guard]')){var g=document.createElement('script');g.src='./membership-close-guard-v7.js?v=20260902-close-guard-v7';g.setAttribute('data-dbest-membership-close-guard','1');(document.body||document.documentElement).appendChild(g)}
     }else{try{document.getElementById('dbestMembershipPlanModal')?.remove()}catch(_){ }}
   }catch(e){console.warn('DBest enhancement loader',e)}
 })();
