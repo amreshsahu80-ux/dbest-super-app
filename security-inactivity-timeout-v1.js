@@ -18,7 +18,7 @@
     if(!document.querySelector('script[data-dbest-internal-upi]')){var p=document.createElement('script');p.src='./internal-upi-payments-v1.js?v=20260830-2324';p.setAttribute('data-dbest-internal-upi','1');(document.body||document.documentElement).appendChild(p)}
     if(!controlPortal){
       if(!document.querySelector('script[data-dbest-membership-explainer]')){var m=document.createElement('script');m.src='./membership-plan-explainer-v1.js?v=20260902-membership-modal-v6-reference';m.setAttribute('data-dbest-membership-explainer','1');(document.body||document.documentElement).appendChild(m)}
-      if(!document.querySelector('script[data-dbest-membership-close-guard]')){var g=document.createElement('script');g.src='./membership-close-guard-v7.js?v=20260903-registration-safe-v8';g.setAttribute('data-dbest-membership-close-guard','1');(document.body||document.documentElement).appendChild(g)}
+      if(!document.querySelector('script[data-dbest-membership-close-guard]')){var g=document.createElement('script');g.src='./membership-close-guard-v7.js?v=20260903-registration-interactions-v9';g.setAttribute('data-dbest-membership-close-guard','1');(document.body||document.documentElement).appendChild(g)}
     }else{try{document.getElementById('dbestMembershipPlanModal')?.remove()}catch(_){ }}
   }catch(e){console.warn('DBest enhancement loader',e)}
 })();
