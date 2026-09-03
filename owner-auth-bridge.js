@@ -15,7 +15,16 @@
   function saveOwnerToken(token){try{sessionStorage.setItem(OWNER_TOKEN_KEY,String(token||''));}catch(e){}}
   function getOwnerToken(){try{return String(sessionStorage.getItem(OWNER_TOKEN_KEY)||'');}catch(e){return '';}}
   function clearOwnerToken(){try{sessionStorage.removeItem(OWNER_TOKEN_KEY);}catch(e){}}
-  function upsertUser(u){try{if(!Array.isArray(users)||!u)return;const i=users.findIndex(x=>String(x.id||'')===String(u.id||''));if(i>=0)users[i]={...users[i],...u};else users.push(u);}catch(e){}}
+  function normEmail(v){return String(v||'').trim().toLowerCase()}
+  function normMobile(v){let s=String(v||'').replace(/\D/g,'');return s.length>10?s.slice(-10):s}
+  function upsertUser(u){
+    try{
+      if(!Array.isArray(users)||!u)return;
+      const uid=String(u.id||''),ue=normEmail(u.email),um=normMobile(u.mobile);
+      const i=users.findIndex(x=>String(x.id||'')===uid||(ue&&um&&normEmail(x.email)===ue&&normMobile(x.mobile)===um));
+      if(i>=0)users[i]={...users[i],...u};else users.push(u);
+    }catch(e){}
+  }
   async function hydrateOwnerLiveData(){
     const ownerToken=getOwnerToken(); if(!ownerToken)return;
     try{
@@ -84,13 +93,17 @@
       if(!session||session.role!=='owner')return originalApprovePayment(id);
       const ownerToken=getOwnerToken();
       if(!ownerToken){toast('Owner security session expired. Please log in again.');return ownerLogin();}
-      const u=typeof users!=='undefined'&&Array.isArray(users)?users.find(x=>String(x.id||'')===String(id||'')):null;
+      const requestedId=String(id||'');
+      const u=typeof users!=='undefined'&&Array.isArray(users)?users.find(x=>String(x.id||'')===requestedId):null;
       if(!u)return toast('Member not found');
       try{
         toast('Approving membership and sending Welcome Mail…');
-        const data=await request('/functions/v1/approve-member-and-welcome',{memberId:String(id||'')},{'x-dbest-owner-token':ownerToken});
-        originalApprovePayment(id);
+        const data=await request('/functions/v1/approve-member-and-welcome',{memberId:requestedId},{'x-dbest-owner-token':ownerToken});
+        const canonicalId=String(data?.memberId||requestedId);
+        if(u&&canonicalId&&canonicalId!==requestedId)u.id=canonicalId;
+        try{originalApprovePayment(canonicalId||requestedId)}catch(e){console.warn('Local approval mirror failed',e)}
         await hydrateOwnerLiveData();
+        try{if(typeof save==='function')save();if(typeof render==='function')render()}catch(e){}
         if(data.emailSent)toast('Membership activated. Welcome Mail sent successfully.');
         else if(data.alreadySent)toast('Membership activated. Welcome Mail had already been sent.');
         else toast('Membership activated, but Welcome Mail could not be sent. Please retry later.');
@@ -123,5 +136,5 @@
     };
   }
 
-  window.DBEST_OWNER_AUTH_BRIDGE={version:'1.5.0',getOwnerToken,hydrateOwnerLiveData,openOwnerConsole};
+  window.DBEST_OWNER_AUTH_BRIDGE={version:'1.6.0',getOwnerToken,hydrateOwnerLiveData,openOwnerConsole};
 })();
