@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='1.0.0';
+const VERSION='1.0.1-login-guard';
 const MEMBER_ROLES=['guest','promoter','prime','leader'];
 function appSession(){try{return typeof session!=='undefined'?session:null}catch(e){return null}}
 function isMember(){const s=appSession();return !!(s&&MEMBER_ROLES.includes(String(s.role||'').toLowerCase()))}
@@ -46,10 +46,15 @@ function installStyle(){if(document.getElementById('dbestCleanFlowStyle'))return
  .sectionContent.dbestCleanFlow .dbestShowGrid{gap:9px!important}
 }
 `;document.head.appendChild(s)}
-function apply(){installStyle();if(!isMember())return;trimText(currentRoot())}
+function loadLoginGuard(){
+ if(window.DBEST_USER_LOGIN_OVERLAY_GUARD||document.querySelector('script[data-dbest-user-login-overlay-guard]'))return;
+ const s=document.createElement('script');s.src='/user-login-overlay-guard-v1.js?v=20260903-login-guard-v1';s.setAttribute('data-dbest-user-login-overlay-guard','1');(document.head||document.documentElement).appendChild(s);
+}
+function apply(){installStyle();loadLoginGuard();if(!isMember())return;trimText(currentRoot())}
 let timer=null;const schedule=()=>{clearTimeout(timer);timer=setTimeout(apply,40)};
 new MutationObserver(schedule).observe(document.documentElement,{childList:true,subtree:true});
 document.addEventListener('click',()=>setTimeout(apply,70),true);
 [0,120,500,1200].forEach(ms=>setTimeout(apply,ms));
+loadLoginGuard();
 window.DBEST_CLEAN_MEMBER_FLOW={version:VERSION,apply};
 })();
