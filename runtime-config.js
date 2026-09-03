@@ -7,7 +7,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
 });
 
 (function(){
-  const V='20260903-google-route-bridge-v4';
+  const V='20260903-google-logistics-v5';
 
   const applyRuntimeSecrets=()=>{
     const sec=window.DBEST_RUNTIME_SECRETS||{};
@@ -139,7 +139,10 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
       try{
         await loadScriptAsync('/cab-google-resilient-v1.js?v='+V,'data-dbest-cab-google-resilient-v1');
         await loadScriptAsync('/cab-google-route-selection-bridge-v1.js?v='+V,'data-dbest-cab-google-route-selection-bridge-v1');
-      }catch(e){console.warn('DBest Google cab layer load warning',e)}
+        await loadScriptAsync('/customer-google-live-tracking-v1.js?v='+V,'data-dbest-customer-google-live-tracking-v1');
+        await loadScriptAsync('/vendor-google-location-v1.js?v='+V,'data-dbest-vendor-google-location-v1');
+        if(/\/vaahak(?:\.html)?\/?$/i.test(location.pathname)) await loadScriptAsync('/vaahak-google-live-map-v1.js?v='+V,'data-dbest-vaahak-google-live-map-v1');
+      }catch(e){console.warn('DBest Google logistics layer load warning',e)}
     }
 
     try{await loadScriptAsync('/cab-location-production-v9.js?v='+V,'data-dbest-cab-location-v9');await loadScriptAsync('/mappls-cab-production.js?v='+V,'data-dbest-mappls-cab');await loadScriptAsync('/cab-mappls-rental-v2.js?v='+V,'data-dbest-cab-mappls-rental-v2');await loadScriptAsync('/cab-booking-step-fix.js?v='+V,'data-dbest-cab-booking-step-fix')}catch(e){console.warn('DBest final cab layer load warning',e)}
