@@ -7,7 +7,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
 });
 
 (function(){
-  const V='20260903-google-logistics-v5';
+  const V='20260903-google-booking-handoff-v6';
 
   const applyRuntimeSecrets=()=>{
     const sec=window.DBEST_RUNTIME_SECRETS||{};
