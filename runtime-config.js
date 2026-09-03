@@ -2,11 +2,39 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
   supabaseUrl: "https://ydedmotbacnllkijzmvp.supabase.co",
   supabasePublishableKey: "sb_publishable_qWqQExdtL5ddWcK_yLCcNA__-ZUBtox",
   mapplsStaticKey: "yukntloynujcqkanhyuzmvnksznhvwvndcdg",
+  googleMapsApiKey: "",
   integrationBranch: "backend-integration"
 });
 
 (function(){
-  const V='20260829-2359-erickshaw-other-rider';
+  const V='20260903-google-first-v2';
+
+  const applyRuntimeSecrets=()=>{
+    const sec=window.DBEST_RUNTIME_SECRETS||{};
+    const googleMapsApiKey=String(sec.googleMapsApiKey||'').trim();
+    window.DBEST_RUNTIME_CONFIG=Object.freeze(Object.assign({},window.DBEST_RUNTIME_CONFIG||{}, {googleMapsApiKey}));
+  };
+
+  const loadRuntimeSecrets=()=>new Promise(resolve=>{
+    const finish=()=>{try{applyRuntimeSecrets()}catch(_){}resolve()};
+    const existing=document.querySelector('script[data-dbest-runtime-secrets]');
+    if(existing){
+      if(existing.dataset.loaded==='1') return finish();
+      existing.addEventListener('load',finish,{once:true});
+      existing.addEventListener('error',finish,{once:true});
+      setTimeout(finish,1800);
+      return;
+    }
+    const s=document.createElement('script');
+    s.src='/api/runtime-config?v='+encodeURIComponent(V);
+    s.setAttribute('data-dbest-runtime-secrets','1');
+    s.onload=()=>{s.dataset.loaded='1';finish()};
+    s.onerror=finish;
+    (document.head||document.documentElement).appendChild(s);
+    setTimeout(finish,2200);
+  });
+
+  const googleConfigured=()=>String(window.DBEST_RUNTIME_CONFIG?.googleMapsApiKey||'').trim().length>0;
 
   const installLogoClarity=()=>{
     if(document.getElementById('dbestLogoClarityStyle')) return;
@@ -51,7 +79,23 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
     loadScript('/vendor-clean-catalog-tools.js?v='+V,'data-dbest-vendor-clean-catalog-tools');
   }
 
-  const lockFinalCab=()=>{const finalCab=window.DBEST_CAB_MAPPLS_RENTAL;if(finalCab&&typeof finalCab.open==='function'){window.openRidePlatform=finalCab.open;window.DBEST_ACTIVE_CAB_VERSION='MAPPLS_RENTAL_V2';return true}return false};
+  const lockFinalCab=()=>{
+    if(googleConfigured()){
+      const googleCab=window.DBEST_CAB_GOOGLE;
+      if(googleCab&&typeof googleCab.open==='function'){
+        window.openRidePlatform=googleCab.open;
+        window.DBEST_ACTIVE_CAB_VERSION='GOOGLE_RESILIENT_V1';
+        return true;
+      }
+    }
+    const finalCab=window.DBEST_CAB_MAPPLS_RENTAL;
+    if(finalCab&&typeof finalCab.open==='function'){
+      window.openRidePlatform=finalCab.open;
+      window.DBEST_ACTIVE_CAB_VERSION='MAPPLS_RENTAL_V2';
+      return true;
+    }
+    return false;
+  };
 
   const loadFinalLayers=async()=>{
     installLogoClarity();
@@ -91,6 +135,12 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
     loadScript('/service-partner-job-execution.js?v='+V,'data-dbest-service-partner-job-execution');
     loadScript('/platform-concise-ui.js?v='+V,'data-dbest-platform-concise-ui');
 
+    if(googleConfigured()){
+      try{
+        await loadScriptAsync('/cab-google-resilient-v1.js?v='+V,'data-dbest-cab-google-resilient-v1');
+      }catch(e){console.warn('DBest Google cab layer load warning',e)}
+    }
+
     try{await loadScriptAsync('/cab-location-production-v9.js?v='+V,'data-dbest-cab-location-v9');await loadScriptAsync('/mappls-cab-production.js?v='+V,'data-dbest-mappls-cab');await loadScriptAsync('/cab-mappls-rental-v2.js?v='+V,'data-dbest-cab-mappls-rental-v2');await loadScriptAsync('/cab-booking-step-fix.js?v='+V,'data-dbest-cab-booking-step-fix')}catch(e){console.warn('DBest final cab layer load warning',e)}
     loadScript('/cab-visual-ui-final.js?v='+V,'data-dbest-cab-visual-ui-final');
     loadScript('/cab-text-lite-final.js?v='+V,'data-dbest-cab-text-lite-final');
@@ -99,5 +149,10 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
     lockFinalCab();let attempts=0;const guard=setInterval(()=>{attempts++;lockFinalCab();if(attempts>=30) clearInterval(guard)},500);
   };
 
-  if(document.readyState==='complete') loadFinalLayers();else window.addEventListener('load',loadFinalLayers,{once:true});
+  const boot=async()=>{
+    await loadRuntimeSecrets();
+    if(document.readyState==='complete') loadFinalLayers();
+    else window.addEventListener('load',loadFinalLayers,{once:true});
+  };
+  boot();
 })();
