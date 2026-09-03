@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='1.2.0';
+const VERSION='1.3.0';
 const cfg=window.DBEST_RUNTIME_CONFIG||{};
 const BASE=String(cfg.supabaseUrl||'').replace(/\/$/,'');
 const KEY=cfg.supabasePublishableKey||'';
@@ -8,20 +8,19 @@ const ALLOC=BASE?BASE+'/functions/v1/allocate-member-id':'';
 function localUsers(){try{return typeof users!=='undefined'&&Array.isArray(users)?users:(Array.isArray(window.users)?window.users:[])}catch(e){return Array.isArray(window.users)?window.users:[]}}
 function fallbackSuffix(){
   try{
-    const a=new Uint32Array(2);crypto.getRandomValues(a);
-    const n=((BigInt(a[0])<<32n)|BigInt(a[1]))%1000000000n;
-    return n.toString().padStart(9,'0');
-  }catch(e){return String(Date.now()).slice(-7)+String(Math.floor(Math.random()*100)).padStart(2,'0')}
+    const a=new Uint32Array(1);crypto.getRandomValues(a);
+    const n=1+(a[0]%9999999);
+    return String(n).padStart(7,'0');
+  }catch(e){return String((Date.now()%9999999)||1).padStart(7,'0')}
 }
 function fallbackIdentity(tier){
   const isGuest=String(tier||'').toLowerCase()==='guest';
-  const taken=new Set(localUsers().map(u=>String(u?.id||'')));
-  let id='',ref='';
-  for(let tries=0;tries<30;tries++){
-    const s=fallbackSuffix();id=(isGuest?'CU':'PR')+s;ref=isGuest?'':'DB'+s;
+  const taken=new Set(localUsers().map(u=>String(u?.id||'').toUpperCase()));
+  for(let tries=0;tries<40;tries++){
+    const s=fallbackSuffix(),id=(isGuest?'CU':'PR')+s,ref=isGuest?'':'DB'+s;
     if(!taken.has(id))return {id,ref};
   }
-  const s=String(Date.now());return {id:(isGuest?'CU':'PR')+s,ref:isGuest?'':'DB'+s};
+  throw new Error('member_id_allocation_failed');
 }
 async function allocateIdentity(tier){
   if(!ALLOC||!KEY)return fallbackIdentity(tier);
@@ -31,11 +30,12 @@ async function allocateIdentity(tier){
       const d=await r.json().catch(()=>({}));
       if(!r.ok||!d?.id)throw new Error(d?.error||'member_id_allocation_failed');
       const id=String(d.id||'').trim().toUpperCase(),ref=String(d.ref||'').trim().toUpperCase();
-      if(!/^(PR|CU)\d{4,8}$/.test(id))throw new Error('invalid_member_id');
+      if(!/^(PR|CU)\d{7}$/.test(id))throw new Error('invalid_member_id');
+      if(ref&&!/^DB\d{7}$/.test(ref))throw new Error('invalid_referral_id');
       const taken=new Set(localUsers().map(u=>String(u?.id||'').toUpperCase()));
       if(!taken.has(id))return {id,ref};
     }
-  }catch(e){console.warn('DBest compact member ID allocation fallback',e?.message||e)}
+  }catch(e){console.warn('DBest seven-digit member ID allocation fallback',e?.message||e)}
   return fallbackIdentity(tier);
 }
 function install(){
