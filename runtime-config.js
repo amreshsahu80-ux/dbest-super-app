@@ -7,7 +7,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
 });
 
 (function(){
-  const V='20260903-google-first-v2';
+  const V='20260903-google-route-bridge-v4';
 
   const applyRuntimeSecrets=()=>{
     const sec=window.DBEST_RUNTIME_SECRETS||{};
@@ -138,6 +138,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
     if(googleConfigured()){
       try{
         await loadScriptAsync('/cab-google-resilient-v1.js?v='+V,'data-dbest-cab-google-resilient-v1');
+        await loadScriptAsync('/cab-google-route-selection-bridge-v1.js?v='+V,'data-dbest-cab-google-route-selection-bridge-v1');
       }catch(e){console.warn('DBest Google cab layer load warning',e)}
     }
 
