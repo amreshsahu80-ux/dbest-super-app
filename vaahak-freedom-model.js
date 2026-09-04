@@ -4,19 +4,19 @@ const VERSION='1.0.0';
 const cfg=window.DBEST_RUNTIME_CONFIG||{};
 const BASE=String(cfg.supabaseUrl||'').replace(/\/$/,'');
 const KEY=cfg.supabasePublishableKey||'';
-const REST=BASE+'/rest/v1/rpc/';
+const API=BASE+'/functions/v1/vaahak-economy-live';
 const TK='dbest_vaahak_live_token';
 if(!BASE||!KEY)return;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const money=v=>'₹'+Math.round(Number(v||0)).toLocaleString('en-IN');
 function token(){try{return localStorage.getItem(TK)||''}catch(e){return''}}
 function ownerToken(){try{return window.DBEST_OWNER_AUTH_BRIDGE?.getOwnerToken?.()||''}catch(e){return''}}
-function headers(){const h={'apikey':KEY,'Content-Type':'application/json'};if(String(KEY).startsWith('eyJ'))h.Authorization='Bearer '+KEY;return h}
-async function rpc(name,body={}){const r=await fetch(REST+name,{method:'POST',cache:'no-store',headers:headers(),body:JSON.stringify(body)});let d={};try{d=await r.json()}catch(e){}if(!r.ok){const msg=String(d.message||d.error||'request_failed');throw new Error(msg.includes('vaahak_session_invalid')?'vaahak_session_invalid':msg.includes('owner_session_invalid')?'owner_session_invalid':msg)}return d}
+function headers(auth){const h={'apikey':KEY,'Content-Type':'application/json'};if(String(KEY).startsWith('eyJ'))h.Authorization='Bearer '+KEY;if(auth==='vaahak'&&token())h['x-vaahak-token']=token();if(auth==='owner'&&ownerToken())h['x-dbest-owner-token']=ownerToken();return h}
+async function api(action,body={},auth=''){const r=await fetch(API,{method:'POST',cache:'no-store',headers:headers(auth),body:JSON.stringify({action,...body})});let d={};try{d=await r.json()}catch(e){}if(!r.ok){const msg=String(d.message||d.error||'request_failed');throw new Error(msg.includes('vaahak_session_invalid')||msg.includes('vaahak_session_required')?'vaahak_session_invalid':msg.includes('owner_session_invalid')||msg.includes('owner_session_required')?'owner_session_invalid':msg)}return d.data}
 function notify(m){try{typeof toast==='function'?toast(m):alert(m)}catch(e){alert(m)}}
 
-async function getStatus(){const t=token();if(!t)throw new Error('vaahak_session_invalid');return rpc('get_vaahak_freedom_status',{p_token:t})}
-async function getModel(){return rpc('get_vaahak_economy_model',{})}
+async function getStatus(){if(!token())throw new Error('vaahak_session_invalid');return api('status',{},'vaahak')}
+async function getModel(){return api('model')}
 
 function driverHost(){
   const standalone=document.querySelector('#dash:not(.hidden)');
@@ -33,11 +33,11 @@ function driverCard(d){const p=d.partner||{},t=d.today||{},s=d.services||{},m=d.
   <small style="display:block;margin-top:9px;color:#64748b">One Vaahak account can work across rides and deliveries. Delivery payout remains separate from customer order value.</small>
 </div>`}
 async function injectDriver(force=false){const host=driverHost();if(!host||!token())return;let old=document.getElementById('dbestFreedomCard');if(old&&!force)return;try{const d=await getStatus();old?.remove();const wrap=document.createElement('div');wrap.innerHTML=driverCard(d);const card=wrap.firstElementChild;const anchor=host.querySelector('.vhStatus,.stat,.vhCard,.card');if(anchor&&anchor.parentElement===host)anchor.insertAdjacentElement('afterend',card);else host.prepend(card)}catch(e){if(e.message==='vaahak_session_invalid')document.getElementById('dbestFreedomCard')?.remove()}}
-window.saveDBestVaahakWorkModes=async function(){const rides=!!document.getElementById('dbestModeRides')?.checked,delivery=!!document.getElementById('dbestModeDelivery')?.checked;try{await rpc('update_vaahak_work_modes',{p_token:token(),p_rides:rides,p_delivery:delivery});notify('Vaahak work mode saved.');await injectDriver(true)}catch(e){notify(e.message==='vaahak_session_invalid'?'Please login again.':'Unable to save work mode: '+e.message)}};
+window.saveDBestVaahakWorkModes=async function(){const rides=!!document.getElementById('dbestModeRides')?.checked,delivery=!!document.getElementById('dbestModeDelivery')?.checked;try{await api('work_modes',{rides,delivery},'vaahak');notify('Vaahak work mode saved.');await injectDriver(true)}catch(e){notify(e.message==='vaahak_session_invalid'?'Please login again.':'Unable to save work mode: '+e.message)}};
 
 function ownerForm(model){const f=model.dailyFees||{};const field=(label,key,val)=>`<div class="f"><label>${esc(label)}</label><input name="${key}" type="number" min="0" max="1000" step="1" value="${Number(val||0)}"></div>`;return `<div id="dbestFreedomOwnerCard" class="ownerPanelCard" style="margin-bottom:14px"><h3>🚕 DBest Vaahak Freedom Model</h3><div class="notice" style="margin-bottom:10px"><b>100% ride fare goes to Vaahak.</b> DBest charges only one active-day fee after the first completed Ride/Delivery. If there is no completed job, platform fee is ₹0.</div><form class="form" onsubmit="saveDBestVaahakFreedomEconomy(event)"><div class="grid">${field('Bike / Scooty ₹ per active day','bike',f.bike)}${field('E-Rickshaw ₹ per active day','e_rickshaw',f.e_rickshaw)}${field('Auto ₹ per active day','auto',f.auto)}${field('Car / Cab ₹ per active day','car',f.car)}${field('SUV ₹ per active day','suv',f.suv)}<div class="f full"><button class="btn">Save Active-Day Fees</button></div></div></form><small style="display:block;margin-top:8px;color:#64748b">Ride commission is locked at 0%. Marketplace delivery payout is controlled separately in the existing Delivery Payout setting.</small></div>`}
 async function injectOwner(force=false){const host=document.querySelector('.sectionContent.ownerMasterPage');if(!host||!ownerToken())return;let old=document.getElementById('dbestFreedomOwnerCard');if(old&&!force)return;try{const model=await getModel();old?.remove();const wrap=document.createElement('div');wrap.innerHTML=ownerForm(model);const card=wrap.firstElementChild;const anchor=document.getElementById('liveVaahakOwnerList')||host.firstElementChild;if(anchor)host.insertBefore(card,anchor);else host.prepend(card)}catch(e){console.warn('DBest freedom owner UI',e)}}
-window.saveDBestVaahakFreedomEconomy=async function(e){e.preventDefault();const f=new FormData(e.target),fees={};for(const k of ['bike','e_rickshaw','auto','car','suv'])fees[k]=Number(f.get(k)||0);try{await rpc('owner_update_vaahak_economy',{p_owner_token:ownerToken(),p_daily_fees:fees});notify('DBest Vaahak active-day fees saved.');await injectOwner(true)}catch(err){notify(err.message==='owner_session_invalid'?'Owner security session expired. Please verify OTP.':'Unable to save Vaahak economy: '+err.message)}};
+window.saveDBestVaahakFreedomEconomy=async function(e){e.preventDefault();const f=new FormData(e.target),fees={};for(const k of ['bike','e_rickshaw','auto','car','suv'])fees[k]=Number(f.get(k)||0);try{await api('owner_update',{dailyFees:fees},'owner');notify('DBest Vaahak active-day fees saved.');await injectOwner(true)}catch(err){notify(err.message==='owner_session_invalid'?'Owner security session expired. Please verify OTP.':'Unable to save Vaahak economy: '+err.message)}};
 
 let wrappedOwner=null;
 function wrapOwner(){const fn=window.ownerVaahakControl;if(typeof fn!=='function'||fn===wrappedOwner||fn.__dbestFreedomWrapped)return;const base=fn;const next=function(){const r=base.apply(this,arguments);Promise.resolve(r).finally(()=>setTimeout(()=>injectOwner(true),120));return r};next.__dbestFreedomWrapped=true;window.ownerVaahakControl=next;try{ownerVaahakControl=next}catch(e){}wrappedOwner=next;}
