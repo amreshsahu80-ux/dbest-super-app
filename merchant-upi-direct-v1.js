@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='1.0.0';
+const VERSION='1.0.1';
 const FALLBACK_VPA='sarwashresthservicesopcprivatelimited.ibz@icici';
 const PAYEE='Sarwashresth Services OPC Pvt. Ltd.';
 const cfg=window.DBEST_RUNTIME_CONFIG||{};
@@ -33,7 +33,7 @@ async function launch(amount,ref,note){
   const c=await getConfig();
   location.href=upiUrl(c,amount,ref,note);
 }
-function txById(id){try{return (Array.isArray(window.txs)?window.txs:[]).find(x=>String(x.id||'')===String(id||''))||null}catch(e){return null}}
+function txById(id){try{return (Array.isArray(txs)?txs:[]).find(x=>String(x.id||'')===String(id||''))||null}catch(e){return null}}
 function safeId(id){return String(id||'').replace(/[^A-Za-z0-9_-]/g,'_')}
 function hidePayU(root=document){
   root.querySelectorAll('.dbestDualPayCard').forEach(card=>{
@@ -81,13 +81,14 @@ async function enhanceRegistration(){
   const firstNotice=form.querySelector('.notice');if(firstNotice)firstNotice.insertAdjacentElement('afterend',box);else form.prepend(box);
   document.getElementById('dbestRegistrationUPILaunch').onclick=()=>launch(registrationAmount(),'DBEST-MEMBERSHIP-'+Date.now().toString().slice(-8),'DBest Membership');
 }
-function patchOldVpa(){
+function patchRegistrationOldVpa(){
+  const page=document.querySelector('.registrationPage');if(!page)return;
   const old='7004630311@icici';
-  document.querySelectorAll('body *').forEach(el=>{
+  page.querySelectorAll('*').forEach(el=>{
     if(el.children.length===0&&String(el.textContent||'').includes(old))el.textContent=String(el.textContent).replaceAll(old,FALLBACK_VPA);
   });
 }
-function run(){hidePayU();enhanceRegistration();patchOldVpa();}
+function run(){hidePayU();enhanceRegistration();patchRegistrationOldVpa();}
 new MutationObserver(()=>run()).observe(document.documentElement,{childList:true,subtree:true});
 setInterval(run,1800);
 setTimeout(run,50);
