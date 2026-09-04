@@ -7,7 +7,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
 });
 
 (function(){
-  const V='20260903-google-booking-handoff-v6';
+  const V='20260904-live-vehicle-marker-v7';
 
   const applyRuntimeSecrets=()=>{
     const sec=window.DBEST_RUNTIME_SECRETS||{};
@@ -140,6 +140,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
         await loadScriptAsync('/cab-google-resilient-v1.js?v='+V,'data-dbest-cab-google-resilient-v1');
         await loadScriptAsync('/cab-google-route-selection-bridge-v1.js?v='+V,'data-dbest-cab-google-route-selection-bridge-v1');
         await loadScriptAsync('/customer-google-live-tracking-v1.js?v='+V,'data-dbest-customer-google-live-tracking-v1');
+        await loadScriptAsync('/customer-google-vehicle-marker-fix-v1.js?v='+V,'data-dbest-customer-google-vehicle-marker-fix-v1');
         await loadScriptAsync('/vendor-google-location-v1.js?v='+V,'data-dbest-vendor-google-location-v1');
         if(/\/vaahak(?:\.html)?\/?$/i.test(location.pathname)) await loadScriptAsync('/vaahak-google-live-map-v1.js?v='+V,'data-dbest-vaahak-google-live-map-v1');
       }catch(e){console.warn('DBest Google logistics layer load warning',e)}
