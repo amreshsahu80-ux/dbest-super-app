@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='1.1.0';
+const VERSION='1.2.0';
 function cleanRegistrationPayments(){
   const page=document.querySelector('.registrationPage');
   if(!page)return;
@@ -8,17 +8,20 @@ function cleanRegistrationPayments(){
   if(merchant.length>1)merchant.slice(1).forEach(x=>x.remove());
   const keep=page.querySelector('#dbestRegistrationMerchantUPI');
   if(keep){
-    page.querySelectorAll('.dbestUpiBox').forEach(x=>x.remove());
-    const buttons=[...page.querySelectorAll('button')].filter(b=>/Pay\s*₹?[0-9,]+.*UPI|Pay Membership Fee via DBest Merchant UPI/i.test(String(b.textContent||'')));
-    buttons.forEach(b=>{if(!keep.contains(b))b.closest('.dbestUpiBox')?.remove();});
+    const legacy=[...page.querySelectorAll('.dbestUpiBox')];
+    if(legacy.length>1)legacy.slice(1).forEach(x=>x.remove());
   }
+  try{window.DBEST_ICICI_MERCHANT_QR?.wireRegistration?.()}catch(e){}
 }
 function loadMerchantQrIntent(){
-  if(document.getElementById('dbestICICIMerchantQrIntentV1'))return;
+  if(window.DBEST_ICICI_MERCHANT_QR){cleanRegistrationPayments();return;}
+  const old=document.getElementById('dbestICICIMerchantQrIntentV1');
+  if(old)return;
   const s=document.createElement('script');
   s.id='dbestICICIMerchantQrIntentV1';
-  s.src='./icici-merchant-qr-intent-v1.js?v=20260905-0040-icici-merchant-qr';
+  s.src='./icici-merchant-qr-intent-v1.js?v=20260905-0110-direct-upi-link';
   s.async=false;
+  s.onload=cleanRegistrationPayments;
   document.head.appendChild(s);
 }
 let scheduled=false;
@@ -28,10 +31,9 @@ function schedule(){
   requestAnimationFrame(()=>{scheduled=false;cleanRegistrationPayments();});
 }
 new MutationObserver(schedule).observe(document.documentElement,{childList:true,subtree:true});
-document.addEventListener('click',schedule,true);
 window.addEventListener('pageshow',schedule);
-setInterval(cleanRegistrationPayments,1200);
 setTimeout(cleanRegistrationPayments,30);
+setTimeout(cleanRegistrationPayments,300);
 loadMerchantQrIntent();
 window.DBEST_REGISTRATION_PAYMENT_DEDUPE={version:VERSION,run:cleanRegistrationPayments};
 })();
