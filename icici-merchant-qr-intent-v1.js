@@ -1,13 +1,14 @@
 (function(){
 'use strict';
-const VERSION='1.0.0';
+const VERSION='1.1.0';
 const VPA='7004630311@icici';
 const QR_PAYEE='MSSARWASHRESTHSERVICESPRIVATELIMITED';
 const DISPLAY_PAYEE='Sarwashresth Services OPC Pvt. Ltd.';
 const MERCHANT_REF='EZYS7004630311';
 const MCC='1520';
+const HANDOFF='dbest_external_handoff_until';
 
-function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]))}
 function amountNumber(v){const n=Number(v||0);return Number.isFinite(n)&&n>0?n:0}
 function buildUri(amount,note,dbestRef){
   const q=new URLSearchParams();
@@ -21,29 +22,64 @@ function buildUri(amount,note,dbestRef){
   if(tn)q.set('tn',tn);
   return 'upi://pay?'+q.toString();
 }
-function launch(amount,note,dbestRef){location.href=buildUri(amount,note,dbestRef)}
-function registrationAmount(){
-  const x=document.querySelector('.registrationPage input[name="paidAmount"]');
+function hideBlockingUi(){
+  const spinner=document.getElementById('dbestSpinnerLayer');
+  if(spinner){spinner.style.display='none';spinner.style.pointerEvents='none';}
+  document.querySelectorAll('.dbestSpinnerLayer').forEach(x=>{x.style.display='none';x.style.pointerEvents='none';});
+}
+function markHandoff(){try{sessionStorage.setItem(HANDOFF,String(Date.now()+10*60*1000))}catch(e){} hideBlockingUi();}
+function launch(amount,note,dbestRef){markHandoff();window.location.assign(buildUri(amount,note,dbestRef))}
+function registrationAmount(page=document.querySelector('.registrationPage')){
+  if(!page)return 0;
+  const x=page.querySelector('input[name="paidAmount"]');
   const n=amountNumber(x?.value);if(n)return n;
-  const t=String(document.querySelector('.registrationPage')?.textContent||'');
+  const t=String(page.textContent||'');
   const m=t.match(/(?:Membership Fee|Pay)\s*₹\s*([0-9,]+)/i);return m?amountNumber(m[1].replace(/,/g,'')):0;
+}
+function registrationHref(page){
+  const a=registrationAmount(page);
+  if(!(a>0))return '';
+  return buildUri(a,'DBest Membership','MEM-'+String(a));
+}
+function styleAsPayLink(a){
+  a.style.textDecoration='none';
+  a.style.cursor='pointer';
+  a.style.boxSizing='border-box';
+  if(a.classList.contains('dbestUpiBtn')){a.style.display='flex';a.style.alignItems='center';a.style.justifyContent='center';}
+}
+function replaceButtonWithAnchor(btn,href){
+  const a=document.createElement('a');
+  [...btn.attributes].forEach(at=>{if(!['type','onclick'].includes(at.name.toLowerCase()))a.setAttribute(at.name,at.value)});
+  a.className=btn.className;
+  a.id=btn.id;
+  a.innerHTML=btn.innerHTML;
+  a.href=href;
+  a.setAttribute('role','button');
+  a.dataset.dbestMerchantUpi='1';
+  styleAsPayLink(a);
+  a.addEventListener('click',markHandoff,{passive:true});
+  btn.replaceWith(a);
+  return a;
+}
+function wireRegistration(){
+  const page=document.querySelector('.registrationPage');
+  if(!page)return;
+  hideBlockingUi();
+  const href=registrationHref(page);
+  if(!href)return;
+  page.querySelectorAll('#dbestRegistrationUPILaunch,.dbestUpiBtn').forEach(el=>{
+    if(el.tagName==='A'){
+      el.href=href;el.removeAttribute('onclick');el.dataset.dbestMerchantUpi='1';styleAsPayLink(el);
+      if(el.dataset.dbestHandoffBound!=='1'){el.dataset.dbestHandoffBound='1';el.addEventListener('click',markHandoff,{passive:true});}
+    }else replaceButtonWithAnchor(el,href);
+  });
+  page.querySelectorAll('*').forEach(el=>{
+    if(el.children.length===0){const s=String(el.textContent||'');if(s.includes('sarwashresthservicesopcprivatelimited.ibz@icici'))el.textContent=s.replaceAll('sarwashresthservicesopcprivatelimited.ibz@icici',VPA);}
+  });
 }
 function txById(id){try{return (typeof txs!=='undefined'&&Array.isArray(txs)?txs:[]).find(x=>String(x.id||'')===String(id||''))||null}catch(e){return null}}
 function safeId(id){return String(id||'').replace(/[^A-Za-z0-9_-]/g,'_')}
 
-// The merchant script periodically rewires its membership handler. Capture the click first,
-// so the ICICI QR-compatible URI always wins regardless of legacy handlers or restored screens.
-document.addEventListener('click',function(e){
-  const b=e.target.closest?.('#dbestRegistrationUPILaunch,.dbestUpiBtn');
-  if(!b||!b.closest('.registrationPage'))return;
-  e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
-  const a=registrationAmount();
-  if(!(a>0)){alert('Membership amount could not be loaded. Please reopen the registration screen.');return;}
-  try{sessionStorage.setItem('dbest_external_handoff_until',String(Date.now()+10*60*1000))}catch(err){}
-  launch(a,'DBest Membership','MEM-'+Date.now().toString().slice(-10));
-},true);
-
-// Replace the internal DBest direct-payment screen with the same ICICI merchant QR semantics.
 window.openICICIDirectPayment=function(txId){
   const tx=txById(txId),host=document.getElementById('dbestPayChoiceBody_'+safeId(txId));
   if(!tx||!host)return;
@@ -58,28 +94,24 @@ window.openICICIDirectPayment=function(txId){
       <div class="txDetailCell"><small>DBest Reference</small><b>${esc(tx.id)}</b></div>
     </div>
     <div style="margin:12px 0"><a class="btn dbestICICIMerchantPay" style="display:block;text-align:center;text-decoration:none" href="${esc(href)}">📲 Open UPI App & Pay</a></div>
-    <div class="notice" style="margin:10px 0">This payment link mirrors your ICICI merchant QR. After successful payment, return here and enter the UTR / UPI reference for verification.</div>
+    <div class="notice" style="margin:10px 0">This payment link mirrors the ICICI merchant QR. After successful payment, return here and enter the UTR / UPI reference for verification.</div>
     <form class="form" onsubmit="submitICICIDirectClaim(event,'${esc(tx.id)}')">
       <div class="f"><label>UTR / UPI Reference Number</label><input name="utr" minlength="6" maxlength="60" autocomplete="off" required placeholder="Enter payment reference"></div>
       <div class="f"><label>Note (optional)</label><input name="note" maxlength="500" placeholder="Paid via ICICI Merchant UPI"></div>
       <div class="f full"><button class="btn">Submit Payment for Verification</button></div>
     </form>
   </div>`;
+  host.querySelector('.dbestICICIMerchantPay')?.addEventListener('click',markHandoff,{passive:true});
 };
 
-// Keep the visible registration/company payment identity aligned with the QR.
-function patchVisible(){
-  document.querySelectorAll('.registrationPage,.paymentPage,.dbestDualPayCard').forEach(root=>{
-    root.querySelectorAll('*').forEach(el=>{
-      if(el.children.length===0){
-        const s=String(el.textContent||'');
-        if(s.includes('sarwashresthservicesopcprivatelimited.ibz@icici'))el.textContent=s.replaceAll('sarwashresthservicesopcprivatelimited.ibz@icici',VPA);
-      }
-    });
-  });
-}
-new MutationObserver(patchVisible).observe(document.documentElement,{childList:true,subtree:true});
-setTimeout(patchVisible,40);
+let scheduled=false;
+function scheduleWire(){if(scheduled)return;scheduled=true;requestAnimationFrame(()=>{scheduled=false;wireRegistration();});}
+const observer=new MutationObserver(scheduleWire);
+observer.observe(document.documentElement,{childList:true,subtree:true});
+document.addEventListener('focusin',e=>{if(e.target?.closest?.('.registrationPage'))scheduleWire()},true);
+window.addEventListener('pageshow',scheduleWire);
+setTimeout(wireRegistration,20);
+setTimeout(wireRegistration,250);
 
-window.DBEST_ICICI_MERCHANT_QR={version:VERSION,vpa:VPA,payee:QR_PAYEE,merchantReference:MERCHANT_REF,mcc:MCC,buildUri,launch};
+window.DBEST_ICICI_MERCHANT_QR={version:VERSION,vpa:VPA,payee:QR_PAYEE,merchantReference:MERCHANT_REF,mcc:MCC,buildUri,launch,wireRegistration};
 })();
