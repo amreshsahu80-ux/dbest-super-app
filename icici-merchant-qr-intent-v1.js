@@ -1,78 +1,40 @@
 (function(){
 'use strict';
-const VERSION='1.2.0';
+const VERSION='1.3.0';
 const VPA='7004630311@icici';
 const DISPLAY_PAYEE='MS SARWASHRESTH SERVICES PRIVATE LIMITED';
-const HANDOFF='dbest_external_handoff_until';
-
+const QR_DATA='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAeoAAAHqAQAAAADjFjCXAAAD0UlEQVR42u2dy43jMBBEq5cCfKQycChUZoMJaTMQQ3EAC1BHAzJqD/zJ3tuQp0XxMIA08y6NQje7mtQYMbDiLwwt4cKFCxcuXLhw4XNxK2uBbXgZgJcBh1l5PBaUx6P+6abQCR/EA0kyAYhZegDinUS0BUWEeTmSJBU64eP4UdIXd0/ye3VEeCxZZll/8CdqYlwUOuETcft6mPXkxh0AQnqZ2arQCZ+DLx/PxAEAx40GOCDwZQi/VxDHUn+r0Amfgnsy57W4OtrmTyDwaXVf5wh4Mhdh8lTohI/j0SzXUPtKQNnSHTfaV3K5c7DtKH2FmZkpdMJHK+xlLBZXGOIKY7w/q7j8M78DPBU64ZP8uu0wQzQzMrVqetzI79pDcPcnsnMX15f8OuHDOL+zN0Ii3p+GkF6GkAArLvGNPesVwSl0wscqrIWHgeGxnAbcaDhWMN5PEMeaO1cLCUQ0R8ujCkVe+I9XHjUwlUYWIQEIyRGBZ/PrHLn7E2RqBEnuirzwH6sOgCvOCfxZdLXnd65KLLl/3kl1wkdVR57XiWxTYn4MyRXpMWdCqU74jApbE1kprp4XhRWZ1XfKdcKHVde1xqqwvMODvw7+q69Sc6JUJ3ygwoZUJRVYZZZVB6BoMgEIuQhLdcKn7Oveelj4UmEvWrtkOK8eVviMfR2rLbJXwfUffcPXuwmpTvh4rmvpK0sPQN/c5UZ271W3myuKvPCBfR1bv5pdElRHODUjD5BLLHxqD+tP1EN21aXbUQ45lQ6j9rDy64TPUl3V1Y52btP3JNgEV3tY5Trhc5yT1jkUXeW8huYXf0hPqhM+o8L24tq84Tal6A3HFVPkhY9W2Hqq5G0i4a6+ipwT4TN72LPNJupVnDYRe+sw5JwInzf9byfo2hwiF1zfPTz3lhOlOuEz8PBYgGg3ko+lXZQwQ1zd9ZJOOdqu0Akf3NfVG689w9WxhLtu+PqoQrlO+Lhz4i7eSD1ucs1wtaUolVjOifBRnLt/mm2etM0/rQiuiiuLMK6OiGutxAqd8B+vop+4AcCxlrwWVwfiMDCuf5Z8RwxYTiuf3XGnKXTCR/HQTbt699U21A9QoDW3JfW99MUJ4eP7urJqS3E5vI7rSZPLlUV1E8KHu4l+0qlfnkjvfkm7UCG/TvikHha4NrK9X22Ca6lPuU747G91bsD148RlQNY2ctXSy79V6IQP9LB9xTthAEDgBOLmaHFNBPAqnx2L5k6FTvi8fd1nccXbFyeu59tVYYXP62FrI/t58K5fwG6YVCf8R8v03+uECxcuXLhw4cL/C/wvVfNEHB3ifukAAAAASUVORK5CYII=';
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function amountNumber(v){const n=Number(v||0);return Number.isFinite(n)&&n>0?n:0}
-function enc(v){return encodeURIComponent(String(v??'')).replace(/%20/g,'%20')}
-function buildUri(amount,note){
-  const parts=['pa='+enc(VPA),'pn='+enc(DISPLAY_PAYEE)];
-  const a=amountNumber(amount);if(a>0)parts.push('am='+enc(a.toFixed(2)));
-  parts.push('cu=INR');
-  if(note)parts.push('tn='+enc(String(note).slice(0,60)));
-  return 'upi://pay?'+parts.join('&');
+function hideBlockingUi(){const s=document.getElementById('dbestSpinnerLayer');if(s){s.style.display='none';s.style.pointerEvents='none';}document.querySelectorAll('.dbestSpinnerLayer').forEach(x=>{x.style.display='none';x.style.pointerEvents='none';});}
+function toast(msg){try{if(typeof window.toast==='function')return window.toast(msg)}catch(e){}const n=document.createElement('div');n.textContent=msg;n.style.cssText='position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#111827;color:white;padding:10px 14px;border-radius:10px;z-index:2147483647;font:600 14px system-ui;box-shadow:0 8px 24px #0004';document.body.appendChild(n);setTimeout(()=>n.remove(),1600)}
+async function copyText(text,msg){try{await navigator.clipboard.writeText(String(text));toast(msg||'Copied')}catch(e){const t=document.createElement('textarea');t.value=String(text);document.body.appendChild(t);t.select();try{document.execCommand('copy');toast(msg||'Copied')}catch(_){alert(String(text))}t.remove();}}
+function closeSheet(){const o=document.getElementById('dbestUpiPaymentSheet');if(o)o.remove();document.body.style.overflow='';}
+function focusPaymentSection(){closeSheet();const page=document.querySelector('.registrationPage');if(!page)return;const els=[...page.querySelectorAll('label,div,p,span')];const target=els.find(x=>/payment completed|utr|reference/i.test(String(x.textContent||'')));if(target)target.scrollIntoView({behavior:'smooth',block:'center'});}
+function showPaymentSheet(amount,label){
+  hideBlockingUi();closeSheet();const a=amountNumber(amount);if(!(a>0))return alert('Payment amount could not be loaded. Please reopen this screen.');
+  const o=document.createElement('div');o.id='dbestUpiPaymentSheet';o.style.cssText='position:fixed;inset:0;background:rgba(15,23,42,.68);z-index:2147483000;display:flex;align-items:flex-end;justify-content:center;padding:0';
+  o.innerHTML=`<div style="width:min(100%,520px);max-height:94vh;overflow:auto;background:#fff;border-radius:24px 24px 0 0;padding:18px 18px 24px;font-family:system-ui;color:#111827;box-shadow:0 -20px 60px #0005">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><div><div style="font-size:12px;font-weight:800;color:#2563eb">DBEST UPI PAYMENT</div><h3 style="margin:4px 0 0">Pay ₹${a.toLocaleString('en-IN')}</h3></div><button type="button" id="dbestPaySheetClose" style="border:0;background:#eef2ff;border-radius:12px;padding:9px 12px;font-weight:800">✕</button></div>
+    <div style="text-align:center;margin:14px 0 10px"><img src="${QR_DATA}" alt="DBest ICICI merchant QR" style="width:min(68vw,260px);max-width:260px;background:white;padding:8px;border:1px solid #e5e7eb;border-radius:16px"></div>
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;padding:12px"><div style="font-size:12px;color:#64748b">Payee</div><b>${esc(DISPLAY_PAYEE)}</b><div style="font-size:12px;color:#64748b;margin-top:8px">UPI ID</div><b style="word-break:break-all">${esc(VPA)}</b><div style="font-size:12px;color:#64748b;margin-top:8px">Exact Amount</div><b>₹${a.toLocaleString('en-IN')}</b></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px"><button type="button" id="dbestCopyUpi" style="border:0;border-radius:12px;padding:13px;background:#2563eb;color:#fff;font-weight:800">Copy UPI ID</button><button type="button" id="dbestCopyAmount" style="border:0;border-radius:12px;padding:13px;background:#eef2ff;color:#1e40af;font-weight:800">Copy ₹${a.toLocaleString('en-IN')}</button></div>
+    <div style="margin-top:12px;padding:12px;border-radius:12px;background:#fff7ed;border:1px solid #fed7aa;font-size:13px;line-height:1.45"><b>On this phone:</b> Copy the UPI ID, open your preferred UPI app, choose Pay to UPI ID, paste it and pay exactly ₹${a.toLocaleString('en-IN')}.<br><b>With another phone:</b> scan the QR above.</div>
+    <button type="button" id="dbestPaidDone" style="width:100%;border:0;border-radius:13px;padding:14px;margin-top:14px;background:#16a34a;color:#fff;font-weight:900;font-size:15px">✓ I Have Paid — Enter UTR</button>
+    <div style="font-size:12px;color:#64748b;text-align:center;margin-top:9px">${esc(label||'DBest Payment')} • DBest will confirm only after UTR/payment proof verification.</div>
+  </div>`;
+  document.body.appendChild(o);document.body.style.overflow='hidden';
+  o.querySelector('#dbestPaySheetClose').onclick=closeSheet;o.addEventListener('click',e=>{if(e.target===o)closeSheet()});
+  o.querySelector('#dbestCopyUpi').onclick=()=>copyText(VPA,'UPI ID copied');o.querySelector('#dbestCopyAmount').onclick=()=>copyText(a.toFixed(2),'Amount copied');o.querySelector('#dbestPaidDone').onclick=focusPaymentSection;
 }
-function hideBlockingUi(){
-  const spinner=document.getElementById('dbestSpinnerLayer');
-  if(spinner){spinner.style.display='none';spinner.style.pointerEvents='none';}
-  document.querySelectorAll('.dbestSpinnerLayer').forEach(x=>{x.style.display='none';x.style.pointerEvents='none';});
-}
-function markHandoff(){try{sessionStorage.setItem(HANDOFF,String(Date.now()+10*60*1000))}catch(e){}hideBlockingUi();}
-function launch(amount,note){markHandoff();window.location.assign(buildUri(amount,note))}
-function registrationAmount(page=document.querySelector('.registrationPage')){
-  if(!page)return 0;
-  const x=page.querySelector('input[name="paidAmount"]');
-  const n=amountNumber(x?.value);if(n)return n;
-  const t=String(page.textContent||'');
-  const m=t.match(/(?:Membership Fee|Pay)\s*₹\s*([0-9,]+)/i);return m?amountNumber(m[1].replace(/,/g,'')):0;
-}
-function registrationHref(page){
-  const a=registrationAmount(page);
-  if(!(a>0))return '';
-  return buildUri(a,'DBest Membership');
-}
-function styleAsPayLink(a){
-  a.style.textDecoration='none';a.style.cursor='pointer';a.style.boxSizing='border-box';
-  if(a.classList.contains('dbestUpiBtn')){a.style.display='flex';a.style.alignItems='center';a.style.justifyContent='center';}
-}
-function replaceButtonWithAnchor(btn,href){
-  const a=document.createElement('a');
-  [...btn.attributes].forEach(at=>{if(!['type','onclick'].includes(at.name.toLowerCase()))a.setAttribute(at.name,at.value)});
-  a.className=btn.className;a.id=btn.id;a.innerHTML=btn.innerHTML;a.href=href;a.setAttribute('role','button');a.dataset.dbestMerchantUpi='1';
-  styleAsPayLink(a);a.addEventListener('click',markHandoff,{passive:true});btn.replaceWith(a);return a;
-}
-function wireRegistration(){
-  const page=document.querySelector('.registrationPage');if(!page)return;
-  hideBlockingUi();const href=registrationHref(page);if(!href)return;
-  page.querySelectorAll('#dbestRegistrationUPILaunch,.dbestUpiBtn').forEach(el=>{
-    if(el.tagName==='A'){
-      el.href=href;el.removeAttribute('onclick');el.dataset.dbestMerchantUpi='1';styleAsPayLink(el);
-      if(el.dataset.dbestHandoffBound!=='1'){el.dataset.dbestHandoffBound='1';el.addEventListener('click',markHandoff,{passive:true});}
-    }else replaceButtonWithAnchor(el,href);
-  });
-}
+function launch(amount,note){showPaymentSheet(amount,note||'DBest Payment');return true;}
+function registrationAmount(page=document.querySelector('.registrationPage')){if(!page)return 0;const x=page.querySelector('input[name="paidAmount"]');const n=amountNumber(x?.value);if(n)return n;const t=String(page.textContent||'');const m=t.match(/(?:Membership Fee|Pay)\s*₹\s*([0-9,]+)/i);return m?amountNumber(m[1].replace(/,/g,'')):0;}
+function bindRegistrationButton(el,page){el.removeAttribute('onclick');if(el.tagName==='A')el.setAttribute('href','#');el.dataset.dbestMerchantUpi='1';if(el.dataset.dbestQrBound==='1')return;el.dataset.dbestQrBound='1';el.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();showPaymentSheet(registrationAmount(page),'DBest Membership');},true);}
+function wireRegistration(){const page=document.querySelector('.registrationPage');if(!page)return;hideBlockingUi();page.querySelectorAll('#dbestRegistrationUPILaunch,.dbestUpiBtn').forEach(el=>bindRegistrationButton(el,page));}
 function txById(id){try{return (typeof txs!=='undefined'&&Array.isArray(txs)?txs:[]).find(x=>String(x.id||'')===String(id||''))||null}catch(e){return null}}
 function safeId(id){return String(id||'').replace(/[^A-Za-z0-9_-]/g,'_')}
-window.openICICIDirectPayment=function(txId){
-  const tx=txById(txId),host=document.getElementById('dbestPayChoiceBody_'+safeId(txId));if(!tx||!host)return;
-  const amount=amountNumber(tx.amount||tx.meta?.amount||tx.order?.total||tx.meta?.order?.total);
-  const href=buildUri(amount,'DBest '+String(tx.section||tx.sub||'Payment'));
-  host.innerHTML=`<div class="payCard" style="border:1px solid #dbe6f8">
-    <span class="payuBadge">📲 UPI • Direct to DBest</span>
-    <h3 style="margin:10px 0 4px">Pay ₹${Number(amount||0).toLocaleString('en-IN')}</h3>
-    <div class="txDetailGrid"><div class="txDetailCell"><small>Payee</small><b>${esc(DISPLAY_PAYEE)}</b></div><div class="txDetailCell"><small>UPI ID</small><b>${esc(VPA)}</b></div><div class="txDetailCell"><small>DBest Reference</small><b>${esc(tx.id)}</b></div></div>
-    <div style="margin:12px 0"><a class="btn dbestICICIMerchantPay" style="display:block;text-align:center;text-decoration:none" href="${esc(href)}">📲 Open UPI App & Pay</a></div>
-    <div class="notice" style="margin:10px 0">This uses a standard UPI-ID payment intent, matching manual UPI payment. After successful payment, return here and enter the UTR / UPI reference for verification.</div>
-    <form class="form" onsubmit="submitICICIDirectClaim(event,'${esc(tx.id)}')"><div class="f"><label>UTR / UPI Reference Number</label><input name="utr" minlength="6" maxlength="60" autocomplete="off" required placeholder="Enter payment reference"></div><div class="f full"><button class="btn">Submit Payment for Verification</button></div></form>
-  </div>`;
-  host.querySelector('.dbestICICIMerchantPay')?.addEventListener('click',markHandoff,{passive:true});
-};
+window.openICICIDirectPayment=function(txId){const tx=txById(txId),host=document.getElementById('dbestPayChoiceBody_'+safeId(txId));if(!tx||!host)return;const amount=amountNumber(tx.amount||tx.meta?.amount||tx.order?.total||tx.meta?.order?.total);host.innerHTML=`<div class="payCard" style="border:1px solid #dbe6f8"><span class="payuBadge">📲 DBest UPI • QR / Manual</span><h3 style="margin:10px 0 4px">Pay ₹${Number(amount||0).toLocaleString('en-IN')}</h3><div style="text-align:center;margin:12px 0"><img src="${QR_DATA}" alt="DBest ICICI merchant QR" style="width:220px;max-width:70vw;background:white;padding:8px;border:1px solid #e5e7eb;border-radius:14px"></div><div class="txDetailGrid"><div class="txDetailCell"><small>Payee</small><b>${esc(DISPLAY_PAYEE)}</b></div><div class="txDetailCell"><small>UPI ID</small><b>${esc(VPA)}</b></div><div class="txDetailCell"><small>DBest Reference</small><b>${esc(tx.id)}</b></div></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0"><button type="button" class="btn" onclick="navigator.clipboard.writeText('${esc(VPA)}')">Copy UPI ID</button><button type="button" class="btn" onclick="navigator.clipboard.writeText('${Number(amount||0).toFixed(2)}')">Copy Amount</button></div><div class="notice" style="margin:10px 0">Pay manually to the UPI ID above or scan the QR. Then enter the UTR / UPI reference below.</div><form class="form" onsubmit="submitICICIDirectClaim(event,'${esc(tx.id)}')"><div class="f"><label>UTR / UPI Reference Number</label><input name="utr" minlength="6" maxlength="60" autocomplete="off" required placeholder="Enter payment reference"></div><div class="f full"><button class="btn">Submit Payment for Verification</button></div></form></div>`;};
 let scheduled=false;function scheduleWire(){if(scheduled)return;scheduled=true;requestAnimationFrame(()=>{scheduled=false;wireRegistration();});}
-new MutationObserver(scheduleWire).observe(document.documentElement,{childList:true,subtree:true});
-document.addEventListener('focusin',e=>{if(e.target?.closest?.('.registrationPage'))scheduleWire()},true);
-window.addEventListener('pageshow',scheduleWire);setTimeout(wireRegistration,20);setTimeout(wireRegistration,250);
-window.DBEST_ICICI_MERCHANT_QR={version:VERSION,vpa:VPA,payee:DISPLAY_PAYEE,buildUri,launch,wireRegistration};
+new MutationObserver(scheduleWire).observe(document.documentElement,{childList:true,subtree:true});window.addEventListener('pageshow',scheduleWire);setTimeout(wireRegistration,20);setTimeout(wireRegistration,250);
+window.DBEST_ICICI_MERCHANT_QR={version:VERSION,vpa:VPA,payee:DISPLAY_PAYEE,qrData:QR_DATA,launch,showPaymentSheet,wireRegistration,copyUpi:()=>copyText(VPA,'UPI ID copied')};
 })();
