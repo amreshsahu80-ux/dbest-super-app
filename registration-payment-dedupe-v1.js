@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='1.0.0';
+const VERSION='1.1.0';
 function cleanRegistrationPayments(){
   const page=document.querySelector('.registrationPage');
   if(!page)return;
@@ -13,6 +13,14 @@ function cleanRegistrationPayments(){
     buttons.forEach(b=>{if(!keep.contains(b))b.closest('.dbestUpiBox')?.remove();});
   }
 }
+function loadMerchantQrIntent(){
+  if(document.getElementById('dbestICICIMerchantQrIntentV1'))return;
+  const s=document.createElement('script');
+  s.id='dbestICICIMerchantQrIntentV1';
+  s.src='./icici-merchant-qr-intent-v1.js?v=20260905-0040-icici-merchant-qr';
+  s.async=false;
+  document.head.appendChild(s);
+}
 let scheduled=false;
 function schedule(){
   if(scheduled)return;
@@ -24,5 +32,6 @@ document.addEventListener('click',schedule,true);
 window.addEventListener('pageshow',schedule);
 setInterval(cleanRegistrationPayments,1200);
 setTimeout(cleanRegistrationPayments,30);
+loadMerchantQrIntent();
 window.DBEST_REGISTRATION_PAYMENT_DEDUPE={version:VERSION,run:cleanRegistrationPayments};
 })();
