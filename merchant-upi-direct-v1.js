@@ -1,7 +1,8 @@
 (function(){
 'use strict';
-const VERSION='1.0.1';
+const VERSION='1.1.0';
 const FALLBACK_VPA='sarwashresthservicesopcprivatelimited.ibz@icici';
+const OLD_VPA='7004630311@icici';
 const PAYEE='Sarwashresth Services OPC Pvt. Ltd.';
 const cfg=window.DBEST_RUNTIME_CONFIG||{};
 const BASE=String(cfg.supabaseUrl||'').replace(/\/$/,'');
@@ -35,6 +36,42 @@ async function launch(amount,ref,note){
 }
 function txById(id){try{return (Array.isArray(txs)?txs:[]).find(x=>String(x.id||'')===String(id||''))||null}catch(e){return null}}
 function safeId(id){return String(id||'').replace(/[^A-Za-z0-9_-]/g,'_')}
+function internalTx(x){if(!x)return false;const hints=['membership','marketplace','grocery','cab','ride','form','home job','homejob','service request','repair','local service'];const s=[x.section,x.sub,x.source,x.meta?.source,x.meta?.flow,x.meta?.marketType].filter(Boolean).join(' ').toLowerCase();return hints.some(h=>s.includes(h))}
+function amountFor(x){return Number(x?.amount||x?.meta?.amount||x?.order?.total||x?.meta?.order?.total||0)}
+function forceMerchantConfig(){
+  try{
+    if(typeof paymentSettings!=='undefined'&&paymentSettings){
+      const changed=String(paymentSettings.upiId||'')!==FALLBACK_VPA||String(paymentSettings.payeeName||'')!==PAYEE||String(paymentSettings.mobile||'')!=='';
+      paymentSettings.upiId=FALLBACK_VPA;
+      paymentSettings.payeeName=PAYEE;
+      paymentSettings.mobile='';
+      paymentSettings.instructions='Tap Pay via UPI and pay the exact amount to the DBest ICICI Merchant UPI. After payment, enter the UTR / UPI reference for verification.';
+      if(changed)localStorage.setItem('d2_payment_settings',JSON.stringify(paymentSettings));
+    }
+  }catch(e){}
+}
+function overrideLegacyHandlers(){
+  window.dbestStartMembershipUPI=function(tier,amount,name){
+    const amt=Number(amount||registrationAmount()||0);
+    if(!(amt>0))return alert('Membership amount could not be loaded. Please reopen the registration screen.');
+    try{sessionStorage.setItem('dbest_external_handoff_until',String(Date.now()+10*60*1000))}catch(e){}
+    return launch(amt,'DBEST-MEMBERSHIP-'+Date.now().toString().slice(-8),'DBest '+String(name||tier||'Membership'));
+  };
+  window.DBEST_DIRECT_UPI={
+    version:VERSION,
+    upiId:FALLBACK_VPA,
+    buildUri:(amount,note,ref)=>upiUrl({upiId:FALLBACK_VPA,payeeName:PAYEE},amount,ref,note),
+    pay:function(txId){
+      const x=txById(txId);if(!x)return false;
+      if(!internalTx(x)){try{if(typeof toast==='function')toast('Direct UPI is available only for DBest internal payments.')}catch(e){}return false}
+      const a=amountFor(x);if(!(a>0)){try{if(typeof toast==='function')toast('Payment amount is not available.')}catch(e){}return false}
+      try{sessionStorage.setItem('dbest_pending_upi_tx',JSON.stringify({txId:x.id,amount:a,at:Date.now()}))}catch(e){}
+      launch(a,'DBEST-'+String(x.id||Date.now()).slice(-24),'DBest '+String(x.sub||x.section||'Payment'));
+      return true;
+    },
+    copy:function(){navigator.clipboard?.writeText(FALLBACK_VPA).then(()=>{try{if(typeof toast==='function')toast('Merchant UPI ID copied')}catch(e){}})}
+  };
+}
 function hidePayU(root=document){
   root.querySelectorAll('.dbestDualPayCard').forEach(card=>{
     card.querySelectorAll('button').forEach(b=>{
@@ -79,18 +116,18 @@ async function enhanceRegistration(){
   const box=document.createElement('div');box.id='dbestRegistrationMerchantUPI';box.className='notice';box.style.margin='0 0 14px';
   box.innerHTML=`<b>📲 Pay Membership Fee via DBest Merchant UPI</b><br><small>${esc(c.payeeName||PAYEE)}</small><br><b>${esc(c.upiId||FALLBACK_VPA)}</b><div style="margin-top:10px"><button type="button" class="btn" id="dbestRegistrationUPILaunch">Pay ${amount>0?'₹'+amount.toLocaleString('en-IN'):'via UPI'}</button></div><small style="display:block;margin-top:8px">After payment, enter the UTR/reference in the registration form and upload payment proof for verification.</small>`;
   const firstNotice=form.querySelector('.notice');if(firstNotice)firstNotice.insertAdjacentElement('afterend',box);else form.prepend(box);
-  document.getElementById('dbestRegistrationUPILaunch').onclick=()=>launch(registrationAmount(),'DBEST-MEMBERSHIP-'+Date.now().toString().slice(-8),'DBest Membership');
+  document.getElementById('dbestRegistrationUPILaunch').onclick=()=>window.dbestStartMembershipUPI('membership',registrationAmount(),'Membership');
 }
-function patchRegistrationOldVpa(){
-  const page=document.querySelector('.registrationPage');if(!page)return;
-  const old='7004630311@icici';
-  page.querySelectorAll('*').forEach(el=>{
-    if(el.children.length===0&&String(el.textContent||'').includes(old))el.textContent=String(el.textContent).replaceAll(old,FALLBACK_VPA);
+function patchVisibleOldVpa(){
+  document.querySelectorAll('.registrationPage,.paymentPage,.dbestInternalUpiBox,.dbestDualPayCard').forEach(root=>{
+    root.querySelectorAll('*').forEach(el=>{
+      if(el.children.length===0&&String(el.textContent||'').includes(OLD_VPA))el.textContent=String(el.textContent).replaceAll(OLD_VPA,FALLBACK_VPA);
+    });
   });
 }
-function run(){hidePayU();enhanceRegistration();patchRegistrationOldVpa();}
+function run(){forceMerchantConfig();overrideLegacyHandlers();hidePayU();enhanceRegistration();patchVisibleOldVpa();}
 new MutationObserver(()=>run()).observe(document.documentElement,{childList:true,subtree:true});
 setInterval(run,1800);
-setTimeout(run,50);
+setTimeout(run,30);
 window.DBEST_COMPANY_UPI={version:VERSION,getConfig,launch,upiUrl,fallbackVpa:FALLBACK_VPA};
 })();
