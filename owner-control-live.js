@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='1.1.0';
+const VERSION='1.2.0';
 const cfg=window.DBEST_RUNTIME_CONFIG||{},base=String(cfg.supabaseUrl||'').replace(/\/$/,''),key=cfg.supabasePublishableKey||'';
 if(!base||!key)return;
 const API=base+'/functions/v1/owner-control-live';
@@ -55,8 +55,13 @@ function installSaveHook(){
     save=function(){const out=raw.apply(this,arguments);try{if(typeof session!=='undefined'&&session?.role==='owner')scheduleSync()}catch(e){}return out};
   }catch(e){}
 }
+function loadControlDeployment(){
+  if(document.querySelector('script[data-dbest-owner-control-deployment]'))return;
+  const s=document.createElement('script');s.src='/owner-control-deployment-v1.js?v=20260905-owner-control-deployment-v1';s.setAttribute('data-dbest-owner-control-deployment','1');(document.body||document.documentElement).appendChild(s);
+}
 [0,500,1500].forEach(ms=>setTimeout(installSaveHook,ms));
 setTimeout(refreshPublic,120);
+setTimeout(loadControlDeployment,180);
 window.addEventListener('focus',()=>refreshPublic());
 window.DBEST_OWNER_CONTROL_LIVE={version:VERSION,syncOwnerSettings,refreshPublic,snapshot};
 })();
