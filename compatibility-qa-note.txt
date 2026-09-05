@@ -1,0 +1,2 @@
+DBest cross-device/location compatibility hardening QA marker - 2026-09-06
+Main shell, owner/superadmin/servicepartner routes and Vaahak route return successfully on preview. Device guard v1.1 standardizes viewport, mobile form sizing, safe-area spacing, wide table scrolling and orientation handling. Location helper uses live/cached GPS without a hardcoded city default.
