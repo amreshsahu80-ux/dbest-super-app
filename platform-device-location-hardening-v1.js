@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='1.0.0';
+const VERSION='1.1.0';
 const STYLE_ID='dbest-platform-device-location-hardening-v1';
 const LOCATION_CACHE='dbest_platform_location_compat_v1';
 
@@ -15,10 +15,9 @@ function injectStyle(){
   const s=document.createElement('style');
   s.id=STYLE_ID;
   s.textContent=`
-  html{width:100%;max-width:100%;-webkit-text-size-adjust:100%;text-size-adjust:100%;scroll-behavior:smooth}
+  html{width:100%;max-width:100%;-webkit-text-size-adjust:100%;text-size-adjust:100%}
   body{width:100%;max-width:100%;min-height:100vh;min-height:100dvh;overflow-x:hidden;overscroll-behavior-x:none}
-  img,video,svg,canvas{max-width:100%}
-  iframe{max-width:100%;border:0}
+  img,video,svg,canvas,iframe{max-width:100%}
   button,a,input,select,textarea{touch-action:manipulation}
   input,select,textarea{max-width:100%}
   .w,.sectionContent,.owner55,.serviceFormPage,.cab6Page,.cab6Wrap{max-width:100%}
@@ -26,28 +25,20 @@ function injectStyle(){
   .table{width:100%;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
   .table table{max-width:none}
   .tileVisual img,.tileVisual video{max-width:100%;max-height:100%}
-  .idcard,.ownerPanelCard,.serviceFormCard{max-width:100%}
+  .idcard,.ownerPanelCard,.serviceFormCard{max-width:100%;overflow-wrap:anywhere}
+  .notice,.sectionHero,.card,.sub{overflow-wrap:anywhere}
   [data-dbest-responsive-scroll]{overflow-x:auto;-webkit-overflow-scrolling:touch}
-  @supports(padding:max(0px)){
-    body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
-  }
   @media(max-width:720px){
     input,select,textarea{font-size:16px!important}
     .w{padding-left:12px!important;padding-right:12px!important}
-    .sectionContent{padding-left:max(12px,env(safe-area-inset-left));padding-right:max(12px,env(safe-area-inset-right))}
+    .sectionContent{padding-left:max(12px,env(safe-area-inset-left));padding-right:max(12px,env(safe-area-inset-right));padding-bottom:max(12px,env(safe-area-inset-bottom))}
     .grid.side .tileIn{grid-template-columns:minmax(0,1fr)!important}
     .idtop,.idbody{flex-wrap:wrap}
-    .tabs{overflow-x:auto;-webkit-overflow-scrolling:touch;flex-wrap:nowrap!important;padding-bottom:3px}
-    .tabs button{flex:0 0 auto}
     .toast{left:12px!important;right:12px!important;bottom:max(12px,env(safe-area-inset-bottom))!important;text-align:center}
     #dbestPlatformInfoModal{padding:max(10px,env(safe-area-inset-top)) 10px max(10px,env(safe-area-inset-bottom))!important}
   }
-  @media(max-width:340px){
-    .grid{grid-template-columns:1fr!important}
-  }
+  @media(max-width:340px){.grid{grid-template-columns:1fr!important}}
   @media(orientation:landscape) and (max-height:520px){
-    .hero{padding-top:12px!important;padding-bottom:12px!important}
-    .heroBox{padding:18px!important}
     #dbestPlatformInfoModal{align-items:flex-start!important;overflow:auto}
   }
   `;
@@ -65,10 +56,9 @@ function setViewportVars(){
 function normalizeScrollableTables(root=document){
   root.querySelectorAll('table').forEach(t=>{
     const p=t.parentElement;
-    if(!p)return;
-    if(p.classList.contains('table'))return;
-    const wide=t.scrollWidth>(p.clientWidth||window.innerWidth)+4;
-    if(wide){p.setAttribute('data-dbest-responsive-scroll','1')}
+    if(!p||p.classList.contains('table'))return;
+    const available=p.clientWidth||window.innerWidth;
+    if(t.scrollWidth>available+4)p.setAttribute('data-dbest-responsive-scroll','1');
   });
 }
 
@@ -90,7 +80,11 @@ function getLocation(opts={}){
     let done=false;
     const finish=x=>{if(done)return;done=true;clearTimeout(timer);if(x)cacheLocation(x);resolve(x)};
     const timer=setTimeout(()=>{const c=cachedLocation();finish(c?{...c,source:'cache'}:null)},timeout+500);
-    navigator.geolocation.getCurrentPosition(p=>finish({lat:Number(p.coords.latitude),lng:Number(p.coords.longitude),accuracy:Number(p.coords.accuracy||0),label:'',source:'gps'}),()=>{const c=cachedLocation();finish(c?{...c,source:'cache'}:null)},{enableHighAccuracy:!!opts.highAccuracy,timeout,maximumAge:Number(opts.maximumAge??300000)});
+    navigator.geolocation.getCurrentPosition(
+      p=>finish({lat:Number(p.coords.latitude),lng:Number(p.coords.longitude),accuracy:Number(p.coords.accuracy||0),label:'',source:'gps'}),
+      ()=>{const c=cachedLocation();finish(c?{...c,source:'cache'}:null)},
+      {enableHighAccuracy:!!opts.highAccuracy,timeout,maximumAge:Number(opts.maximumAge??300000)}
+    );
   });
 }
 
@@ -104,12 +98,13 @@ function publishDevice(){
 }
 function init(){ensureViewport();injectStyle();setViewportVars();publishDevice();normalizeScrollableTables();}
 
-let resizeTimer=0;
-window.addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>{setViewportVars();publishDevice();normalizeScrollableTables()},100)},{passive:true});
-window.addEventListener('orientationchange',()=>setTimeout(()=>{setViewportVars();publishDevice();normalizeScrollableTables()},180),{passive:true});
+let timer=0;
+function scheduleSync(){clearTimeout(timer);timer=setTimeout(()=>{setViewportVars();publishDevice();normalizeScrollableTables()},140)}
+window.addEventListener('resize',scheduleSync,{passive:true});
+window.addEventListener('orientationchange',()=>setTimeout(scheduleSync,180),{passive:true});
 window.addEventListener('online',publishDevice);window.addEventListener('offline',publishDevice);
 window.addEventListener('dbest-location-changed',e=>cacheLocation(e.detail||{}));
-const mo=new MutationObserver(m=>{if(!m.some(x=>x.addedNodes&&x.addedNodes.length))return;clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>normalizeScrollableTables(),120)});
+const mo=new MutationObserver(m=>{if(m.some(x=>x.addedNodes&&x.addedNodes.length))scheduleSync()});
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{init();mo.observe(document.body,{childList:true,subtree:true})},{once:true});else{init();mo.observe(document.body,{childList:true,subtree:true})}
 window.DBEST_PLATFORM_COMPAT={version:VERSION,getLocation,cachedLocation,refresh:()=>{init();return window.DBEST_DEVICE_PROFILE}};
 })();
