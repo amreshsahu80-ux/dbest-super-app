@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='20260906-membership-modal-navigation-v1';
+const VERSION='20260906-membership-modal-navigation-v2-selectsafe';
 if(window.DBEST_MEMBERSHIP_MODAL_NAV?.version===VERSION)return;
 const STATE_KEY='dbestMembershipExplainer';
 let sx=0,sy=0,st=0;
@@ -22,6 +22,10 @@ function pushMarker(){
   if(hasMarker())return;
   try{history.pushState(Object.assign({},history.state||{}, {[STATE_KEY]:true}),'',location.href)}catch(e){}
 }
+function clearMarker(){
+  if(!hasMarker())return;
+  try{const s=Object.assign({},history.state||{});delete s[STATE_KEY];history.replaceState(s,'',location.href)}catch(e){}
+}
 function dismiss(){
   const m=modal();
   if(hasMarker()){
@@ -36,12 +40,15 @@ function wrapAuthority(){
   a.openMembershipCard=function(plan){pushMarker();return original.call(this,plan)};
   a.__dbestNavWrapped=true;
 }
+/* Back/back-swipe dismiss the explainer. Selecting a plan must NOT navigate
+   backward; it only removes the temporary marker so registration can open. */
 window.addEventListener('click',function(e){
   const m=modal();
   if(m){
     const close=e.target.closest?.('.dbsafeClose');
     const select=e.target.closest?.('.dbsafeSelect');
-    if(close||select||e.target===m){if(hasMarker())setTimeout(function(){try{history.back()}catch(_){}},0);return}
+    if(select){clearMarker();return}
+    if(close||e.target===m){if(hasMarker())setTimeout(function(){try{history.back()}catch(_){}},0);return}
   }
   if(isPlanTrigger(e.target))pushMarker();
 },true);
@@ -61,5 +68,5 @@ window.addEventListener('touchend',function(e){
 setTimeout(wrapAuthority,0);
 setTimeout(wrapAuthority,700);
 window.addEventListener('load',wrapAuthority,{once:true});
-window.DBEST_MEMBERSHIP_MODAL_NAV={version:VERSION,dismiss:dismiss,pushState:pushMarker};
+window.DBEST_MEMBERSHIP_MODAL_NAV={version:VERSION,dismiss:dismiss,pushState:pushMarker,clearState:clearMarker};
 })();
