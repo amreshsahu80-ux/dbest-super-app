@@ -18,6 +18,7 @@
     if(!document.querySelector('script[data-dbest-internal-upi]')){var p=document.createElement('script');p.src='./internal-upi-payments-v1.js?v=20260830-2324';p.setAttribute('data-dbest-internal-upi','1');(document.body||document.documentElement).appendChild(p)}
     if(!document.querySelector('script[data-dbest-platform-compat]')){var c=document.createElement('script');c.src='./platform-device-location-hardening-v1.js?v=20260906-compat-v1';c.setAttribute('data-dbest-platform-compat','1');(document.body||document.documentElement).appendChild(c)}
     if(!document.querySelector('script[data-dbest-member-registration-authority]')){var ra=document.createElement('script');ra.src='./member-registration-authority-v1.js?v=20260906-member-registration-authority-v3-direct';ra.setAttribute('data-dbest-member-registration-authority','1');(document.body||document.documentElement).appendChild(ra)}
+    if(!document.querySelector('script[data-dbest-final-ui-authority]')){var fa=document.createElement('script');fa.src='./dbest-final-ui-authority-v1.js?v=20260906-final-ui-authority-v1';fa.setAttribute('data-dbest-final-ui-authority','1');(document.body||document.documentElement).appendChild(fa)}
     try{document.getElementById('dbestMembershipPlanModal')?.remove()}catch(_){ }
   }catch(e){console.warn('DBest enhancement loader',e)}
 })();
