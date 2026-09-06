@@ -1,10 +1,10 @@
 (function(){
 'use strict';
-const VERSION='20260906-final-ui-authority-v1';
+const VERSION='20260906-final-ui-authority-v1.1';
 if(window.DBEST_FINAL_UI_AUTHORITY?.version===VERSION)return;
 
-/* Final Cab entry: keep the approved cab6/V16 experience authoritative even when
-   legacy logistics modules are still present for booking/tracking compatibility. */
+/* Final Cab entry: keep the approved cab6/V16 experience authoritative while
+   allowing legacy background booking/tracking APIs to load for compatibility. */
 const CAB_BASE='20260905-selected-realmap-v6';
 let cabLoad=null;
 function selectedCab(){const u=window.DBEST_CAB_SELECTED_UI;return u&&typeof u.open==='function'?u:null}
@@ -12,10 +12,11 @@ function ensureSelected(){
   const ready=selectedCab();if(ready)return Promise.resolve(ready);
   if(cabLoad)return cabLoad;
   cabLoad=new Promise(resolve=>{
-    const finish=()=>resolve(selectedCab());
+    let settled=false,tries=0;
+    const finish=()=>{const u=selectedCab();if(u||++tries>=25){if(!settled){settled=true;resolve(u||null)}return}setTimeout(finish,80)};
     let s=Array.from(document.scripts||[]).find(x=>/cab-selected-ui-v3\.js/i.test(String(x.src||'')));
-    if(s){setTimeout(finish,180);setTimeout(finish,650);return}
-    s=document.createElement('script');s.src='/cab-selected-ui-v3.js?v='+CAB_BASE+'&finalAuthority=1';s.async=false;s.onload=finish;s.onerror=()=>resolve(null);(document.body||document.documentElement).appendChild(s);
+    if(!s){s=document.createElement('script');s.src='/cab-selected-ui-v3.js?v='+CAB_BASE+'&finalAuthority=1';s.async=false;s.onerror=()=>{if(!settled){settled=true;resolve(null)}};(document.body||document.documentElement).appendChild(s)}
+    finish();
   }).finally(()=>{cabLoad=null});
   return cabLoad;
 }
@@ -24,13 +25,9 @@ async function openApprovedCab(){
   if(u&&typeof u.open==='function'){u.open();return}
   try{typeof toast==='function'?toast('Cab booking is loading. Please tap Cab once more.'):alert('Cab booking is loading. Please tap Cab once more.')}catch(e){}
 }
-const cabProxy={version:'SELECTED_REALMAP_V16_FINAL',open:openApprovedCab,vehicles(){const u=selectedCab();return u?.vehicles?.()||openApprovedCab()},confirmRide(id){const u=selectedCab(),f=u&&(u.confirmRide||u.confirm);return typeof f==='function'?f.call(u,id):openApprovedCab()},confirm(id){return this.confirmRide(id)}};
 function lockCab(){
   try{Object.defineProperty(window,'openRidePlatform',{configurable:false,enumerable:true,get(){return openApprovedCab},set(){}})}catch(e){try{window.openRidePlatform=openApprovedCab}catch(_){}}
   try{Object.defineProperty(window,'DBEST_ACTIVE_CAB_VERSION',{configurable:false,enumerable:true,get(){return'SELECTED_REALMAP_V16_FINAL'},set(){}})}catch(e){try{window.DBEST_ACTIVE_CAB_VERSION='SELECTED_REALMAP_V16_FINAL'}catch(_){}}
-  /* Legacy globals remain readable through the approved proxy, so late legacy
-     scripts cannot reopen their old customer-facing search screens. */
-  ['DBEST_CAB_GOOGLE','DBEST_CAB_MAPPLS_RENTAL'].forEach(name=>{try{Object.defineProperty(window,name,{configurable:false,enumerable:true,get(){return cabProxy},set(){}})}catch(e){}});
 }
 
 /* Safe explanatory membership card. It only intercepts plan-choice clicks and
