@@ -1,6 +1,8 @@
 (function(){
 'use strict';
 const STYLE_ID='dbest-cab-colored-map-layout-fix-v1';
+const AUTH_VERSION='1.1.0';
+let selectedWait=null,replacing=false;
 function css(){
   if(document.getElementById(STYLE_ID))return;
   const s=document.createElement('style');
@@ -40,7 +42,80 @@ function watchLeafletScript(){
   });
   mo.observe(document.documentElement,{childList:true,subtree:true});
 }
-function init(){css();patchLeaflet();watchLeafletScript();}
+function selected(){
+  const u=window.DBEST_CAB_SELECTED_UI;
+  return u&&typeof u.open==='function'?u:null;
+}
+function waitForSelected(){
+  const ready=selected();
+  if(ready)return Promise.resolve(ready);
+  if(selectedWait)return selectedWait;
+  selectedWait=new Promise(resolve=>{
+    let tries=0;
+    const tick=()=>{
+      const u=selected();
+      if(u)return resolve(u);
+      if(++tries<35)return setTimeout(tick,80);
+      resolve(null);
+    };
+    tick();
+  }).then(u=>{
+    if(u)return u;
+    return new Promise(resolve=>{
+      const done=()=>resolve(selected());
+      const existing=Array.from(document.scripts||[]).find(x=>/cab-selected-ui-v3\.js/i.test(String(x.src||'')));
+      if(existing){setTimeout(done,350);return;}
+      const s=document.createElement('script');
+      s.src='/cab-selected-ui-v3.js?v=20260905-selected-realmap-v6&authority='+Date.now();
+      s.async=false;s.onload=done;s.onerror=()=>resolve(null);
+      (document.body||document.documentElement).appendChild(s);
+    });
+  }).finally(()=>{selectedWait=null});
+  return selectedWait;
+}
+function notifyUnavailable(){
+  try{typeof toast==='function'?toast('Cab booking is loading. Please tap Cab once more.'):alert('Cab booking is loading. Please tap Cab once more.')}catch(e){}
+}
+function openSelected(){
+  return waitForSelected().then(u=>{
+    if(!u||typeof u.open!=='function'){notifyUnavailable();return;}
+    u.open();
+  }).catch(()=>notifyUnavailable());
+}
+const proxy={
+  version:'UNIFIED_SELECTED_CAB_'+AUTH_VERSION,
+  open:openSelected,
+  vehicles(){const u=selected();return u&&typeof u.vehicles==='function'?u.vehicles():openSelected();},
+  confirmRide(id){const u=selected(),fn=u&&(u.confirmRide||u.confirm);return typeof fn==='function'?fn.call(u,id):openSelected();},
+  confirm(id){return this.confirmRide(id);}
+};
+function lockGlobal(name,getter){
+  try{
+    Object.defineProperty(window,name,{configurable:true,enumerable:true,get:getter,set(){}});
+    return true;
+  }catch(e){return false;}
+}
+function lockCabEntries(){
+  lockGlobal('openRidePlatform',()=>openSelected);
+  lockGlobal('DBEST_CAB_GOOGLE',()=>proxy);
+  lockGlobal('DBEST_CAB_MAPPLS_RENTAL',()=>proxy);
+  window.DBEST_CAB_UNIFIED_ENTRY={version:AUTH_VERSION,open:openSelected,proxy};
+}
+function legacyCabVisible(){
+  return !!(document.querySelector('.dbcg')||document.querySelector('.cabx')||document.getElementById('mcMap')||document.querySelector('.ridePage .rideSearchCard'));
+}
+function replaceLegacyCab(){
+  if(replacing||document.querySelector('.cab6Page')||!legacyCabVisible())return;
+  replacing=true;
+  openSelected().finally(()=>setTimeout(()=>{replacing=false},450));
+}
+function watchLegacyCab(){
+  const mo=new MutationObserver(()=>replaceLegacyCab());
+  if(document.body)mo.observe(document.body,{childList:true,subtree:true});
+  else document.addEventListener('DOMContentLoaded',()=>mo.observe(document.body,{childList:true,subtree:true}),{once:true});
+  setTimeout(replaceLegacyCab,0);
+}
+function init(){css();patchLeaflet();watchLeafletScript();lockCabEntries();watchLegacyCab();}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
-window.DBEST_CAB_MAP_LAYOUT_FIX={version:'1.0.0',refresh:()=>{css();patchLeaflet()}};
+window.DBEST_CAB_MAP_LAYOUT_FIX={version:AUTH_VERSION,refresh:()=>{css();patchLeaflet();lockCabEntries();replaceLegacyCab()}};
 })();
