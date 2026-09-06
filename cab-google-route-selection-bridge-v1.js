@@ -1,23 +1,32 @@
 (function(){
 'use strict';
-const V='20260906-google-primary-selected-cab-v4-distance-eta';
+const V='20260906-google-primary-selected-cab-v5-exact-route';
 if(window.DBEST_GOOGLE_PRIMARY_BRIDGE?.version===V)return;
-let lastDirections=null,directionsRevision=0,lastRequestKey='',patchedDirections=false,googleLoadPromise=null,refreshTimer=null;
+let lastDirections=null,directionsRevision=0,lastRequestKey='',patchedDirections=false,patchedPlaces=false,patchedGeocoder=false,patchedXhr=false,googleLoadPromise=null,refreshTimer=null,pendingPlaceSlot='';
 let searchState={el:null,map:null,marker:null,gpsRequested:false};
 let routeState={el:null,map:null,renderer:null,marker:null,gpsRequested:false,appliedRevision:-1};
+const exact=window.DBEST_CAB_EXACT_SELECTIONS=window.DBEST_CAB_EXACT_SELECTIONS||{p:null,d:null};
 const getCfg=()=>window.DBEST_RUNTIME_CONFIG||{};
 const googleKey=()=>String(getCfg().googleMapsApiKey||'').trim();
 const googleReady=()=>!!(window.google&&window.google.maps&&window.google.maps.Map&&window.google.maps.DirectionsService);
 const cabActive=()=>!!document.querySelector('.cab6Page');
+const norm=s=>String(s||'').trim().replace(/\s+/g,' ').toLowerCase();
 function selectedCabCaller(){try{return String(new Error().stack||'').includes('cab-planned-ui-v2.js')}catch(e){return false}}
 function installConfigProxy(){
   const current=window.DBEST_RUNTIME_CONFIG;
   if(!current||current.__dbestGooglePrimaryProxy)return;
-  try{window.DBEST_RUNTIME_CONFIG=new Proxy(current,{get(target,prop,receiver){if(prop==='__dbestGooglePrimaryProxy')return true;if(prop==='mapplsStaticKey'&&googleReady()&&(cabActive()||selectedCabCaller()))return '';return Reflect.get(target,prop,receiver)}})}catch(e){console.warn('DBest Google primary config bridge warning',e)}
+  try{window.DBEST_RUNTIME_CONFIG=new Proxy(current,{get(target,prop,receiver){if(prop==='__dbestGooglePrimaryProxy')return true;if(prop==='mapplsStaticKey'&&(cabActive()||selectedCabCaller()))return '';return Reflect.get(target,prop,receiver)}})}catch(e){console.warn('DBest Google primary config bridge warning',e)}
+}
+function blockMapplsCabXhr(){
+  if(patchedXhr||!window.XMLHttpRequest)return;patchedXhr=true;
+  const op=XMLHttpRequest.prototype.open,os=XMLHttpRequest.prototype.send;
+  XMLHttpRequest.prototype.open=function(method,url){this.__dbestCabMappls=!!(cabActive()&&/https:\/\/(?:search|place|route)\.mappls\.com\//i.test(String(url||'')));return op.apply(this,arguments)};
+  XMLHttpRequest.prototype.send=function(){if(this.__dbestCabMappls&&cabActive())throw new Error('DBest Cab uses Google routing');return os.apply(this,arguments)};
 }
 function triggerResize(map){try{if(map&&google.maps.event)google.maps.event.trigger(map,'resize')}catch(e){}}
 function gpsPosition(timeout=6500){return new Promise(resolve=>{if(!navigator.geolocation)return resolve(null);navigator.geolocation.getCurrentPosition(p=>resolve({lat:Number(p.coords.latitude),lng:Number(p.coords.longitude)}),()=>resolve(null),{enableHighAccuracy:true,timeout,maximumAge:30000})})}
 async function updateSearchGps(){const state=searchState;if(!state.map)return;const pos=await gpsPosition(7000);if(!pos||state!==searchState||!state.map)return;try{state.map.setCenter(pos);state.map.setZoom(15);if(state.marker)state.marker.setPosition(pos);else state.marker=new google.maps.Marker({map:state.map,position:pos})}catch(e){}}
+async function rememberGps(){const pos=await gpsPosition(8000);if(!pos)return;setTimeout(()=>{const label=String(document.getElementById('cab6P')?.value||'').trim();exact.p={lat:pos.lat,lng:pos.lng,label:label||'Current location',source:'gps'}},500)}
 function paintSearchMap(){
   if(!googleReady())return;const el=document.getElementById('cab13SearchMap');if(!el)return;
   try{if(searchState.el!==el||!searchState.map){searchState={el,map:null,marker:null,gpsRequested:false};el.dataset.ready='1';el.dataset.dbestGoogleMap='1';el.innerHTML='';searchState.map=new google.maps.Map(el,{center:{lat:22.5937,lng:78.9629},zoom:5,streetViewControl:false,mapTypeControl:false,fullscreenControl:false,gestureHandling:'greedy'});window.DBEST_CAB_GOOGLE_SEARCH_MAP=searchState.map}else triggerResize(searchState.map);if(!searchState.gpsRequested){searchState.gpsRequested=true;updateSearchGps()}}catch(e){console.warn('DBest Google pickup map warning',e)}
@@ -35,20 +44,36 @@ function refreshMaps(){paintSearchMap();paintRouteMap()}
 function requestPart(v){if(!v)return'';try{if(typeof v==='string')return v;if(typeof v.lat==='function'&&typeof v.lng==='function')return v.lat().toFixed(6)+','+v.lng().toFixed(6);if(Number.isFinite(Number(v.lat))&&Number.isFinite(Number(v.lng)))return Number(v.lat).toFixed(6)+','+Number(v.lng).toFixed(6);if(v.placeId)return String(v.placeId)}catch(e){}return String(v||'')}
 function routeRequestKey(r){return requestPart(r?.origin)+'>'+requestPart(r?.destination)+'|'+String(r?.travelMode||'')}
 function routeStarting(request){const key=routeRequestKey(request);if(key&&key!==lastRequestKey){lastRequestKey=key;lastDirections=null;directionsRevision++;try{routeState.renderer?.set('directions',null)}catch(e){}routeState.appliedRevision=-1}}
-function withTraffic(request){try{if(!request||request.drivingOptions)return request;const driving=google.maps.TravelMode?.DRIVING;if(request.travelMode!==driving&&String(request.travelMode).toUpperCase()!=='DRIVING')return request;const opts={departureTime:new Date()};if(google.maps.TrafficModel?.BEST_GUESS)opts.trafficModel=google.maps.TrafficModel.BEST_GUESS;return {...request,drivingOptions:opts}}catch(e){return request}}
+function withTraffic(request){try{if(!request)return request;const driving=google.maps.TravelMode?.DRIVING;if(request.travelMode!==driving&&String(request.travelMode).toUpperCase()!=='DRIVING')return request;const opts={departureTime:new Date()};if(google.maps.TrafficModel?.BEST_GUESS)opts.trafficModel=google.maps.TrafficModel.BEST_GUESS;return {...request,drivingOptions:opts}}catch(e){return request}}
 function normalizeTraffic(res){try{for(const route of res?.routes||[])for(const leg of route?.legs||[]){if(Number(leg?.duration_in_traffic?.value)>0)leg.duration=leg.duration_in_traffic}}catch(e){}return res}
-function routeSucceeded(res){res=normalizeTraffic(res);if(!res?.routes?.[0])return;lastDirections=res;directionsRevision++;setTimeout(paintRouteMap,60);setTimeout(paintRouteMap,320);setTimeout(paintRouteMap,850)}
+function routeSucceeded(res){res=normalizeTraffic(res);if(!res?.routes?.[0])return;lastDirections=res;directionsRevision++;setTimeout(paintRouteMap,40);setTimeout(paintRouteMap,220);setTimeout(paintRouteMap,650)}
 function patchDirections(){
   if(patchedDirections||!googleReady())return;const proto=google.maps.DirectionsService?.prototype;if(!proto||typeof proto.route!=='function')return;const original=proto.route;
   proto.route=function(request,callback){const req=withTraffic(request);routeStarting(req);if(typeof callback==='function')return original.call(this,req,(res,status)=>{res=normalizeTraffic(res);try{if(status==='OK')routeSucceeded(res)}catch(e){}return callback(res,status)});const out=original.call(this,req);if(out&&typeof out.then==='function')return out.then(res=>{res=normalizeTraffic(res);try{routeSucceeded(res)}catch(e){}return res});return out};patchedDirections=true;
 }
-function ensureGoogle(){
-  installConfigProxy();const key=googleKey();if(!key)return Promise.resolve(false);if(googleReady()){patchDirections();refreshMaps();return Promise.resolve(true)}if(googleLoadPromise)return googleLoadPromise;
-  googleLoadPromise=new Promise(resolve=>{const existing=Array.from(document.scripts||[]).find(s=>String(s.src||'').includes('maps.googleapis.com/maps/api/js'));let settled=false;const done=()=>{if(settled)return;settled=true;installConfigProxy();patchDirections();refreshMaps();resolve(googleReady())};if(existing){existing.addEventListener('load',done,{once:true});existing.addEventListener('error',done,{once:true});setTimeout(done,3500);return}const s=document.createElement('script');s.src='https://maps.googleapis.com/maps/api/js?key='+encodeURIComponent(key)+'&libraries=places&v=weekly';s.async=true;s.defer=true;s.onload=done;s.onerror=done;(document.head||document.documentElement).appendChild(s);setTimeout(done,4500)}).finally(()=>{googleLoadPromise=null});return googleLoadPromise;
+function patchPlaces(){
+  if(patchedPlaces||!window.google?.maps?.places?.PlacesService)return;const proto=google.maps.places.PlacesService.prototype;if(typeof proto.getDetails!=='function')return;const original=proto.getDetails;
+  proto.getDetails=function(req,cb){const slot=pendingPlaceSlot;return original.call(this,req,(place,status)=>{try{if(slot&&(status===google.maps.places.PlacesServiceStatus.OK||status==='OK')&&place?.geometry?.location){const lat=place.geometry.location.lat(),lng=place.geometry.location.lng(),label=place.formatted_address||place.name||'';exact[slot]={lat,lng,label,placeId:req?.placeId||'',source:'google-place'}}}catch(e){}return cb&&cb(place,status)})};patchedPlaces=true;
 }
-function scheduleRefresh(){clearTimeout(refreshTimer);refreshTimer=setTimeout(()=>{ensureGoogle().then(ok=>{if(ok)refreshMaps()})},80)}
+function matchExact(address){const a=norm(address);if(!a)return null;for(const slot of ['p','d']){const x=exact[slot];if(x&&Number.isFinite(x.lat)&&Number.isFinite(x.lng)&&norm(x.label)===a)return x}return null}
+function patchGeocoder(){
+  if(patchedGeocoder||!window.google?.maps?.Geocoder)return;const proto=google.maps.Geocoder.prototype;if(typeof proto.geocode!=='function')return;const original=proto.geocode;
+  proto.geocode=function(req,cb){const x=req?.address&&cabActive()?matchExact(req.address):null;if(x&&typeof cb==='function'){const row={formatted_address:x.label,geometry:{location:new google.maps.LatLng(x.lat,x.lng)}};setTimeout(()=>cb([row],'OK'),0);return}return original.apply(this,arguments)};patchedGeocoder=true;
+}
+function patchGoogleServices(){patchDirections();patchPlaces();patchGeocoder()}
+function ensureGoogle(){
+  installConfigProxy();blockMapplsCabXhr();const key=googleKey();if(!key)return Promise.resolve(false);if(googleReady()){patchGoogleServices();refreshMaps();return Promise.resolve(true)}if(googleLoadPromise)return googleLoadPromise;
+  googleLoadPromise=new Promise(resolve=>{const existing=Array.from(document.scripts||[]).find(s=>String(s.src||'').includes('maps.googleapis.com/maps/api/js'));let settled=false;const done=()=>{if(settled)return;settled=true;installConfigProxy();blockMapplsCabXhr();patchGoogleServices();refreshMaps();resolve(googleReady())};if(existing){existing.addEventListener('load',done,{once:true});existing.addEventListener('error',done,{once:true});setTimeout(done,3500);return}const s=document.createElement('script');s.src='https://maps.googleapis.com/maps/api/js?key='+encodeURIComponent(key)+'&libraries=places&v=weekly';s.async=true;s.defer=true;s.onload=done;s.onerror=done;(document.head||document.documentElement).appendChild(s);setTimeout(done,4500)}).finally(()=>{googleLoadPromise=null});return googleLoadPromise;
+}
+function scheduleRefresh(){clearTimeout(refreshTimer);refreshTimer=setTimeout(()=>{ensureGoogle().then(ok=>{if(ok)refreshMaps()})},60)}
 function observeCabDom(){const mo=new MutationObserver(muts=>{for(const m of muts){if(m.addedNodes?.length||m.removedNodes?.length){scheduleRefresh();break}}});const start=()=>{if(document.body)mo.observe(document.body,{childList:true,subtree:true})};if(document.body)start();else document.addEventListener('DOMContentLoaded',start,{once:true})}
-document.addEventListener('click',e=>{scheduleRefresh();if(e.target?.closest?.('#cab6Gps'))setTimeout(updateSearchGps,80)},true);
-window.addEventListener('pageshow',scheduleRefresh);window.addEventListener('resize',scheduleRefresh,{passive:true});window.addEventListener('orientationchange',scheduleRefresh,{passive:true});observeCabDom();ensureGoogle();window.DBEST_CAB_PRIMARY_ROUTER='GOOGLE';
-window.DBEST_GOOGLE_PRIMARY_BRIDGE={version:V,ensureGoogle,refreshMaps,status:()=>({primary:'Google Maps',googleConfigured:!!googleKey(),googleReady:googleReady(),distance:'Google Directions',eta:'Google traffic ETA',visualMap:'Google Maps',fallback:'Mappls / OSM'})};
+document.addEventListener('input',e=>{if(e.target?.id==='cab6P')exact.p=null;if(e.target?.id==='cab6D')exact.d=null},true);
+document.addEventListener('click',e=>{
+  scheduleRefresh();const t=e.target;
+  if(t?.closest?.('#cab6PS button'))pendingPlaceSlot='p';else if(t?.closest?.('#cab6DS button'))pendingPlaceSlot='d';
+  if(t?.closest?.('#cab6Gps')){exact.p=null;rememberGps();setTimeout(updateSearchGps,80)}
+  if(t?.closest?.('#cab6Swap'))setTimeout(()=>{const z=exact.p;exact.p=exact.d;exact.d=z},0);
+},true);
+window.addEventListener('pageshow',scheduleRefresh);window.addEventListener('resize',scheduleRefresh,{passive:true});window.addEventListener('orientationchange',scheduleRefresh,{passive:true});observeCabDom();blockMapplsCabXhr();ensureGoogle();window.DBEST_CAB_PRIMARY_ROUTER='GOOGLE';
+window.DBEST_GOOGLE_PRIMARY_BRIDGE={version:V,ensureGoogle,refreshMaps,exactSelections:exact,status:()=>({primary:'Google Maps',googleConfigured:!!googleKey(),googleReady:googleReady(),distance:'Google Directions',eta:'Google traffic ETA',places:'Google exact selection',visualMap:'Google Maps',fallback:'Mappls / OSM'})};
 })();
