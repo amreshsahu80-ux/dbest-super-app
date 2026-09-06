@@ -1,40 +1,14 @@
 (function(){
 'use strict';
-if(window.DBEST_MEMBER_REG_AUTHORITY?.version==='20260906-member-registration-authority-v2')return;
-const V='20260906-member-registration-authority-v2';
-let loading=null,bankLoading=null;
-const $=s=>document.querySelector(s);
-function waitFor(check,ms=2600){return new Promise((resolve,reject)=>{const end=Date.now()+ms;(function tick(){let v=null;try{v=check()}catch(e){}if(v)return resolve(v);if(Date.now()>=end)return reject(new Error('timeout'));setTimeout(tick,60)})()})}
-function inject(src,id){return new Promise((resolve,reject)=>{try{document.getElementById(id)?.remove()}catch(e){}const s=document.createElement('script');s.id=id;s.src=src+(src.includes('?')?'&':'?')+'authorityTs='+Date.now();s.async=true;let done=false;const finish=(ok)=>{if(done)return;done=true;ok?resolve():reject(new Error('script_load_failed'))};s.onload=()=>finish(true);s.onerror=()=>finish(false);(document.body||document.documentElement).appendChild(s);setTimeout(()=>finish(false),4500)})}
-async function ensure(){
-  if(window.DBEST_MEMBER_REG_STREAMLINE?.open)return window.DBEST_MEMBER_REG_STREAMLINE;
-  if(loading)return loading;
-  loading=(async()=>{
-    try{return await waitFor(()=>window.DBEST_MEMBER_REG_STREAMLINE?.open&&window.DBEST_MEMBER_REG_STREAMLINE,700)}catch(e){}
-    await inject('/member-registration-streamline-v1.js?v=20260906-streamlined-registration-v2-aadhaar','dbest-member-registration-authority-core-v2');
-    return await waitFor(()=>window.DBEST_MEMBER_REG_STREAMLINE?.open&&window.DBEST_MEMBER_REG_STREAMLINE,2400);
-  })().finally(()=>{loading=null});
-  return loading;
-}
-async function ensureBank(){
-  if(window.DBEST_MEMBER_PAYOUT_ACCOUNT_REG?.scan){try{window.DBEST_MEMBER_PAYOUT_ACCOUNT_REG.scan()}catch(e){}return window.DBEST_MEMBER_PAYOUT_ACCOUNT_REG}
-  if(bankLoading)return bankLoading;
-  bankLoading=(async()=>{
-    try{return await waitFor(()=>window.DBEST_MEMBER_PAYOUT_ACCOUNT_REG?.scan&&window.DBEST_MEMBER_PAYOUT_ACCOUNT_REG,500)}catch(e){}
-    await inject('/member-payout-account-registration-v1.js?v=20260906-member-payout-account-v1.1','dbest-member-payout-account-authority-v2');
-    const api=await waitFor(()=>window.DBEST_MEMBER_PAYOUT_ACCOUNT_REG?.scan&&window.DBEST_MEMBER_PAYOUT_ACCOUNT_REG,2200);try{api.scan()}catch(e){}return api;
-  })().finally(()=>{bankLoading=null});
-  return bankLoading;
-}
-async function open(tier){
-  tier=String(tier||'').toLowerCase();
-  try{const api=await ensure();if(!api?.open)throw new Error('Registration unavailable');api.open(tier);setTimeout(()=>ensureBank().catch(()=>{}),0);setTimeout(()=>ensureBank().catch(()=>{}),180);setTimeout(()=>ensureBank().catch(()=>{}),520)}catch(e){console.error('DBest member registration open',e);try{typeof toast==='function'?toast('Registration could not open. Please tap Register again.'):alert('Registration could not open. Please tap Register again.')}catch(_){}}
-}
-async function ownerAdd(){try{const api=await ensure();if(!api?.ownerAdd)throw new Error('Owner onboarding unavailable');api.ownerAdd();setTimeout(()=>ensureBank().catch(()=>{}),0);setTimeout(()=>ensureBank().catch(()=>{}),180)}catch(e){console.error('DBest owner member onboarding',e)}}
-function lock(){
-  try{const d=Object.getOwnPropertyDescriptor(window,'reg');if(!d||d.configurable!==false)Object.defineProperty(window,'reg',{configurable:false,enumerable:true,get(){return open},set(){}})}catch(e){try{window.reg=open}catch(_){}}
-  try{const d=Object.getOwnPropertyDescriptor(window,'ownerQuickAddUser');if(!d||d.configurable!==false)Object.defineProperty(window,'ownerQuickAddUser',{configurable:false,enumerable:true,get(){return ownerAdd},set(){}})}catch(e){try{window.ownerQuickAddUser=ownerAdd}catch(_){}}
-}
-function heal(){lock();if($('#dbestSimpleMemberForm')||$('#dbestOwnerSimpleMemberForm'))ensureBank().catch(()=>{})}
-lock();const mo=new MutationObserver(()=>heal());if(document.documentElement)mo.observe(document.documentElement,{childList:true,subtree:true});[0,80,220,500,1000,1800,3200,6000].forEach(ms=>setTimeout(heal,ms));window.addEventListener('pageshow',heal);window.DBEST_MEMBER_REG_AUTHORITY={version:V,open,ownerAdd,heal,ensure,ensureBank};
+const V='20260906-member-registration-authority-v3-direct';
+if(window.DBEST_MEMBER_REG_AUTHORITY?.version===V)return;
+let corePromise=null,bankPromise=null;
+function load(src,id){return new Promise((resolve,reject)=>{let s=document.getElementById(id);if(s){if(s.dataset.loaded==='1')return resolve();s.addEventListener('load',resolve,{once:true});s.addEventListener('error',reject,{once:true});return}s=document.createElement('script');s.id=id;s.src=src;s.async=true;s.onload=()=>{s.dataset.loaded='1';resolve()};s.onerror=reject;(document.body||document.documentElement).appendChild(s)})}
+async function core(){if(window.DBEST_MEMBER_REG_STREAMLINE?.open)return window.DBEST_MEMBER_REG_STREAMLINE;if(!corePromise)corePromise=load('/member-registration-streamline-v1.js?v=20260906-registration-core-v3','dbest-member-registration-core-v3').then(()=>window.DBEST_MEMBER_REG_STREAMLINE).finally(()=>{corePromise=null});const api=await corePromise;if(!api?.open)throw new Error('Registration unavailable');return api}
+async function bank(){if(window.DBEST_MEMBER_PAYOUT_ACCOUNT_REG?.scan)return window.DBEST_MEMBER_PAYOUT_ACCOUNT_REG;if(!bankPromise)bankPromise=load('/member-payout-account-registration-v1.js?v=20260906-bank-direct-v2','dbest-member-bank-direct-v2').then(()=>window.DBEST_MEMBER_PAYOUT_ACCOUNT_REG).finally(()=>{bankPromise=null});return await bankPromise}
+async function open(tier){try{const api=await core();api.open(String(tier||'').toLowerCase());const b=await bank();requestAnimationFrame(()=>{try{b?.scan?.()}catch(e){}})}catch(e){console.error('DBest registration',e);try{typeof toast==='function'?toast('Registration could not open. Please retry.'):alert('Registration could not open. Please retry.')}catch(_){}}}
+async function ownerAdd(){try{const api=await core();api.ownerAdd();const b=await bank();requestAnimationFrame(()=>{try{b?.scan?.()}catch(e){}})}catch(e){console.error('DBest owner onboarding',e)}}
+function install(){try{window.reg=open}catch(e){}try{window.ownerQuickAddUser=ownerAdd}catch(e){}}
+install();setTimeout(install,600);setTimeout(install,1800);setTimeout(install,3200);
+window.DBEST_MEMBER_REG_AUTHORITY={version:V,open,ownerAdd,ensure:core,ensureBank:bank};
 })();
