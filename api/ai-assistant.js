@@ -8,47 +8,90 @@ module.exports = async function handler(req, res) {
   }
 
   const token = String(process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN || '').trim();
-  if (!token) {
-    return res.status(503).json({ error: 'AI gateway authentication unavailable' });
-  }
+  if (!token) return res.status(503).json({ error: 'AI gateway authentication unavailable' });
 
   const body = req.body && typeof req.body === 'object' ? req.body : {};
   const message = String(body.message || '').trim().slice(0, 2000);
   const locale = String(body.locale || 'auto').trim().slice(0, 20);
+  const detectedLocaleRaw = String(body.detectedLocale || '').trim().toLowerCase().slice(0, 40);
   const history = Array.isArray(body.history) ? body.history.slice(-6) : [];
-
   if (!message) return res.status(400).json({ error: 'Message is required' });
+
+  const LOCALES = {
+    en:'en-IN', english:'en-IN', hi:'hi-IN', hindi:'hi-IN', bn:'bn-IN', bengali:'bn-IN', bangla:'bn-IN',
+    mr:'mr-IN', marathi:'mr-IN', te:'te-IN', telugu:'te-IN', ta:'ta-IN', tamil:'ta-IN', gu:'gu-IN', gujarati:'gu-IN',
+    ur:'ur-IN', urdu:'ur-IN', kn:'kn-IN', kannada:'kn-IN', or:'or-IN', od:'or-IN', odia:'or-IN', ori:'or-IN',
+    ml:'ml-IN', malayalam:'ml-IN', pa:'pa-IN', punjabi:'pa-IN', as:'as-IN', assamese:'as-IN', ne:'ne-IN', nepali:'ne-IN',
+    kok:'kok-IN', konkani:'kok-IN', ks:'ks-IN', kashmiri:'ks-IN', mni:'mni-IN', manipuri:'mni-IN', maithili:'mai-IN', mai:'mai-IN',
+    sd:'sd-IN', sindhi:'sd-IN', doi:'doi-IN', dogri:'doi-IN', brx:'brx-IN', bodo:'brx-IN', sat:'sat-IN', santali:'sat-IN',
+    sa:'sa-IN', sanskrit:'sa-IN'
+  };
+  const NAMES = {
+    'en-IN':'English','hi-IN':'Hindi','bn-IN':'Bengali','mr-IN':'Marathi','te-IN':'Telugu','ta-IN':'Tamil','gu-IN':'Gujarati',
+    'ur-IN':'Urdu','kn-IN':'Kannada','or-IN':'Odia','ml-IN':'Malayalam','pa-IN':'Punjabi','as-IN':'Assamese','ne-IN':'Nepali',
+    'kok-IN':'Konkani','ks-IN':'Kashmiri','mni-IN':'Manipuri','mai-IN':'Maithili','sd-IN':'Sindhi','doi-IN':'Dogri',
+    'brx-IN':'Bodo','sat-IN':'Santali','sa-IN':'Sanskrit'
+  };
+
+  function normalizeLocale(v) {
+    const x = String(v || '').trim().toLowerCase();
+    if (!x) return '';
+    const direct = Object.keys(NAMES).find(k => k.toLowerCase() === x);
+    if (direct) return direct;
+    const base = x.split('-')[0];
+    return LOCALES[x] || LOCALES[base] || '';
+  }
+  function inferFromScript(text) {
+    if (/[\u0B80-\u0BFF]/.test(text)) return 'ta-IN';
+    if (/[\u0C00-\u0C7F]/.test(text)) return 'te-IN';
+    if (/[\u0C80-\u0CFF]/.test(text)) return 'kn-IN';
+    if (/[\u0D00-\u0D7F]/.test(text)) return 'ml-IN';
+    if (/[\u0A80-\u0AFF]/.test(text)) return 'gu-IN';
+    if (/[\u0A00-\u0A7F]/.test(text)) return 'pa-IN';
+    if (/[\u0B00-\u0B7F]/.test(text)) return 'or-IN';
+    if (/[\u0980-\u09FF]/.test(text)) return 'bn-IN';
+    if (/[\u0600-\u06FF]/.test(text)) return 'ur-IN';
+    if (/[\u1C50-\u1C7F]/.test(text)) return 'sat-IN';
+    if (/[\u0900-\u097F]/.test(text)) return 'hi-IN';
+    return '';
+  }
+
+  const explicitlySelected = locale !== 'auto' ? normalizeLocale(locale) : '';
+  const detectedLocale = normalizeLocale(detectedLocaleRaw);
+  const scriptLocale = inferFromScript(message);
+  const targetLocale = explicitlySelected || detectedLocale || scriptLocale || '';
+  const targetLanguage = targetLocale ? NAMES[targetLocale] : '';
 
   const safeHistory = history
     .filter(x => x && (x.role === 'user' || x.role === 'assistant'))
     .map(x => ({ role: x.role, content: String(x.content || '').slice(0, 1200) }));
 
+  const languageRule = targetLanguage
+    ? `MANDATORY LANGUAGE RULE: Reply ONLY in ${targetLanguage} (${targetLocale}). Do not answer in English unless the user's message itself is English or the user explicitly asks for English. Preserve common product/place names such as DBest, Goa, hotel, cab, SIP, etc. when natural.`
+    : 'MANDATORY LANGUAGE RULE: Identify the language of the user message and reply only in that same language. If the message is Hinglish or another natural mixed-language style, mirror that mix. Do not default to English.';
+
   const system = [
     'You are DBest AI Assistant running only in a TEST ENVIRONMENT.',
-    'Your job is to understand Indian users naturally across English, Hinglish and major Indian languages.',
-    'Always reply in the same language the user is using. If the user mixes languages, reply naturally in the same mix.',
-    locale !== 'auto' ? `The user selected locale ${locale}; prefer that language.` : 'Automatically infer the user language.',
+    languageRule,
+    'The language rule is higher priority than style or convenience.',
     'Current demo scope: Travel, Insurance, Cab and Marketplace.',
     'Do not claim live prices, availability, booking, payment, policy issuance, investment execution or cab allocation. Clearly say estimates/sample results when relevant.',
     'For travel, ask only the most useful missing details such as origin, dates, travellers and budget, and give concise indicative options when possible.',
     'For insurance, provide only general factual guidance and needs-analysis questions; do not give regulated suitability advice or promise acceptance/claims.',
     'For cab and marketplace, do not confirm a real transaction.',
     'Keep replies concise, friendly and useful, usually 2-5 short sentences.',
-    'Return JSON only in this exact shape: {"reply":"...","languageCode":"...","intent":"travel|insurance|cab|marketplace|account|general"}.'
+    `Return JSON only in this exact shape: {"reply":"...","languageCode":"${targetLocale || 'detected-language-code'}","intent":"travel|insurance|cab|marketplace|account|general"}.`
   ].join(' ');
 
   try {
     const upstream = await fetch('https://ai-gateway.vercel.sh/v1/chat/completions', {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: 'openai/gpt-5.6-luna',
         messages: [{ role: 'system', content: system }, ...safeHistory, { role: 'user', content: message }],
-        max_tokens: 320,
-        temperature: 0.4
+        max_tokens: 360,
+        temperature: 0.2
       })
     });
 
@@ -62,14 +105,14 @@ module.exports = async function handler(req, res) {
     let content = String(data?.choices?.[0]?.message?.content || '').trim();
     content = content.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
     let parsed;
-    try { parsed = JSON.parse(content); } catch { parsed = { reply: content, languageCode: locale === 'auto' ? 'auto' : locale, intent: 'general' }; }
+    try { parsed = JSON.parse(content); } catch { parsed = { reply: content, languageCode: targetLocale || 'auto', intent: 'general' }; }
 
     const reply = String(parsed.reply || '').trim().slice(0, 1800);
     if (!reply) return res.status(502).json({ error: 'Empty AI response' });
 
     return res.status(200).json({
       reply,
-      languageCode: String(parsed.languageCode || (locale === 'auto' ? 'auto' : locale)).slice(0, 20),
+      languageCode: targetLocale || normalizeLocale(parsed.languageCode) || String(parsed.languageCode || 'auto').slice(0, 20),
       intent: String(parsed.intent || 'general').slice(0, 30),
       demo: true
     });
