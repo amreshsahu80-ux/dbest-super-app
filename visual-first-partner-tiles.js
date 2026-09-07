@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='1.2.0';
+const VERSION='1.3.0-live-current-root-restore';
 const SHORT_TITLES={
   'Top Health Insurance Companies':'Health Insurance',
   'Top Life Insurance Companies':'Life Insurance',
@@ -13,69 +13,31 @@ const SHORT_TITLES={
   'Top Mutual Fund Houses':'Mutual Funds',
   'Mutual Fund Companies':'Mutual Funds',
   'Holiday Packages':'Packages',
+  'Domestic Tour Packages':'Packages',
+  'Best Hotel Chains':'Hotels',
   'International Holidays':'International',
   'Domestic Holidays':'Domestic',
   'Visa & Travel Assistance':'Visa'
 };
-function removeVersionBadge(){
-  try{if(/V5\.5/i.test(document.title)||!document.title.trim())document.title='DBest Super Platform'}catch(_){}
-  document.querySelectorAll('.buildBadge').forEach(el=>el.remove());
-  document.querySelectorAll('body *').forEach(el=>{
-    if(/^(SCRIPT|STYLE|TEXTAREA|OPTION)$/i.test(el.tagName))return;
-    if(el.childElementCount===0&&/^\s*V5\.5\s*$/i.test(el.textContent||''))el.remove();
-  });
-}
-function installStyle(){
-  if(document.getElementById('dbestVisualFirstPartnerTilesStyle'))return;
-  const s=document.createElement('style');
-  s.id='dbestVisualFirstPartnerTilesStyle';
-  s.textContent=`
-  .buildBadge{display:none!important}
-  .dbestShowcase{margin-top:8px!important}
-  .dbestShowIntro{margin-bottom:7px!important}
-  .dbestShowIntro h2{margin:0!important;font-size:22px!important}
-  .dbestShowIntro p{display:none!important}
-  .dbestShowGrid{gap:9px!important;align-items:stretch!important}
-  .dbestShowCard{position:relative!important;display:block!important;overflow:hidden!important;border-radius:19px!important;background:#fff!important;border:1px solid #e5ebf5!important;box-shadow:0 8px 20px rgba(20,50,100,.08)!important;transition:transform .16s ease,box-shadow .16s ease!important;isolation:isolate!important}
-  .dbestShowCard:active{transform:scale(.985)}
-  .dbestShowCard img{display:block!important;width:100%!important;height:clamp(220px,43vw,330px)!important;object-fit:cover!important;object-position:center!important;background:#fff!important;border-radius:inherit!important}
-  [data-dbest-showcase="insurance"] .dbestShowCard img,
-  [data-dbest-showcase="mutual_fund"] .dbestShowCard img{object-fit:contain!important;padding:0!important;box-sizing:border-box!important;background:#fff!important}
-  .dbestShowBody{position:absolute!important;left:0!important;right:0!important;bottom:0!important;z-index:2!important;display:flex!important;align-items:flex-end!important;min-height:34px!important;padding:12px 32px 7px 9px!important;background:linear-gradient(to bottom,rgba(255,255,255,0),rgba(255,255,255,.82) 36%,rgba(255,255,255,.97) 68%,#fff 100%)!important;pointer-events:none!important}
-  .dbestShowBody h3{margin:0!important;width:100%!important;color:#13213a!important;font-size:12px!important;line-height:1.05!important;font-weight:850!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;letter-spacing:-.08px!important;text-shadow:0 1px 0 rgba(255,255,255,.9)!important}
-  .dbestShowBody b,.dbestShowBody p,.dbestShowBody small{display:none!important}
-  .dbestShowBody::after{content:'›';position:absolute!important;right:6px!important;bottom:5px!important;display:grid!important;place-items:center!important;width:18px!important;height:18px!important;border-radius:999px!important;background:rgba(237,243,255,.94)!important;color:#175cff!important;font-size:15px!important;font-weight:900!important;line-height:1!important;box-shadow:0 1px 5px rgba(30,70,150,.08)!important}
-  @media(max-width:520px){
-    .dbestShowGrid{gap:8px!important}
-    .dbestShowCard{border-radius:18px!important}
-    .dbestShowCard img{height:218px!important}
-    .dbestShowBody{min-height:32px!important;padding:11px 29px 6px 8px!important}
-    .dbestShowBody h3{font-size:11.5px!important}
-    .dbestShowBody::after{width:17px!important;height:17px!important;right:5px!important;bottom:4px!important;font-size:14px!important}
-  }
-  @media(max-width:390px){
-    .dbestShowCard img{height:205px!important}
-    .dbestShowBody h3{font-size:11px!important}
-  }
-  `;
-  document.head.appendChild(s);
-}
-function compactTitles(root=document){
-  root.querySelectorAll?.('.dbestShowCard .dbestShowBody h3').forEach(h=>{
-    const original=h.dataset.dbestFullTitle||String(h.textContent||'').trim();
-    if(!original)return;
-    if(!h.dataset.dbestFullTitle)h.dataset.dbestFullTitle=original;
-    let short=SHORT_TITLES[original]||original;
-    short=short.replace(/^Top\s+/i,'').replace(/\s+Companies$/i,'').replace(/^Sample\s+/i,'').replace(/\s+Table$/i,'');
-    if(h.textContent!==short)h.textContent=short;
-    h.title=original;
-  });
-}
-function apply(){installStyle();removeVersionBadge();compactTitles(document);removeVersionBadge()}
-let timer;
-function schedule(){clearTimeout(timer);timer=setTimeout(apply,55)}
-new MutationObserver(schedule).observe(document.documentElement,{childList:true,subtree:true});
-document.addEventListener('click',()=>setTimeout(apply,80),true);
-[0,120,350,800,1600,3200,6000].forEach(ms=>setTimeout(apply,ms));
-window.DBEST_VISUAL_FIRST_PARTNER_TILES={version:VERSION,apply};
+const SECTIONS=['insurance','travel','mutual_fund'];
+let cards=[];
+let loading=null;
+let lastLoaded=0;
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function removeVersionBadge(){try{if(/V5\.5/i.test(document.title)||!document.title.trim())document.title='DBest Super Platform'}catch(_){}document.querySelectorAll('.buildBadge').forEach(el=>el.remove());document.querySelectorAll('body *').forEach(el=>{if(/^(SCRIPT|STYLE|TEXTAREA|OPTION)$/i.test(el.tagName))return;if(el.childElementCount===0&&/^\s*V5\.5\s*$/i.test(el.textContent||''))el.remove()})}
+function visible(el){if(!el)return false;try{const s=getComputedStyle(el);if(s.display==='none'||s.visibility==='hidden'||Number(s.opacity)===0)return false;const r=el.getBoundingClientRect();return !!(r.width||r.height)}catch(_){return false}}
+function isOwnerContent(root){try{return !!root?.matches?.('.owner55,.ownerStudio,.dbestFinanceOwnerControl')||!!root?.querySelector?.('.owner55,.ownerStudio,.dbestFinanceOwnerControl')}catch(_){return false}}
+function currentRoot(){const roots=[...document.querySelectorAll('.sectionContent')];return roots.filter(r=>visible(r)&&!isOwnerContent(r)).pop()||null}
+function detectKind(root){if(!root||isOwnerContent(root))return'';const d=root.querySelector?.('[data-dbest-showcase]')?.getAttribute('data-dbest-showcase');if(SECTIONS.includes(d))return d;try{const x=window.DBEST_VISUAL_ONLY_SECTIONS?.detectKind?.(root);if(SECTIONS.includes(x))return x}catch(_){}const hero=String(root.querySelector?.('.sectionHero b')?.textContent||'').trim().toLowerCase().replace(/[,&/|•]+/g,' ').replace(/\s+/g,' ');if(/flights? hotels? packages?/.test(hero))return'travel';if(/all insurance/.test(hero))return'insurance';if(/mutual funds?/.test(hero))return'mutual_fund';return''}
+function fallback(name,section,category){const icon=section==='travel'?'✈️':section==='mutual_fund'?'📈':'🛡️',label=section==='travel'?'TRAVEL':section==='mutual_fund'?'MUTUAL FUND':'INSURANCE';const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="760" height="520"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#10264d"/><stop offset=".55" stop-color="#175cff"/><stop offset="1" stop-color="#745cff"/></linearGradient></defs><rect width="100%" height="100%" rx="34" fill="url(#g)"/><circle cx="655" cy="75" r="165" fill="#ffffff18"/><text x="52" y="180" font-family="Arial" font-size="82">${icon}</text><text x="52" y="285" font-family="Arial" font-size="48" font-weight="700" fill="white">${String(name||label).slice(0,24)}</text><text x="54" y="342" font-family="Arial" font-size="23" fill="#eaf1ff">${String(category||label).slice(0,38)}</text><text x="54" y="430" font-family="Arial" font-size="19" fill="#dbe7ff">${label}</text></svg>`;return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`}
+function installStyle(){let s=document.getElementById('dbestVisualFirstPartnerTilesStyle');if(!s){s=document.createElement('style');s.id='dbestVisualFirstPartnerTilesStyle'}s.textContent=`.buildBadge{display:none!important}.sectionContent [data-dbest-showcase]{margin-top:8px!important}.sectionContent [data-dbest-showcase] .dbestShowIntro{margin-bottom:7px!important}.sectionContent [data-dbest-showcase] .dbestShowIntro h2{margin:0!important;font-size:22px!important}.sectionContent [data-dbest-showcase] .dbestShowIntro p{display:none!important}.sectionContent [data-dbest-showcase] .dbestShowGrid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:9px!important;align-items:stretch!important}.sectionContent [data-dbest-showcase] .dbestShowCard{position:relative!important;display:block!important;overflow:hidden!important;border-radius:19px!important;background:#fff!important;border:1px solid #e5ebf5!important;box-shadow:0 8px 20px rgba(20,50,100,.08)!important;transition:transform .16s ease,box-shadow .16s ease!important;isolation:isolate!important;padding:0!important;min-height:0!important}.sectionContent [data-dbest-showcase] .dbestShowCard:active{transform:scale(.985)!important}.sectionContent [data-dbest-showcase] .dbestShowCard img{display:block!important;width:100%!important;height:clamp(220px,43vw,330px)!important;object-fit:cover!important;object-position:center!important;background:#fff!important;border-radius:inherit!important;margin:0!important;padding:0!important}.sectionContent [data-dbest-showcase="insurance"] .dbestShowCard img,.sectionContent [data-dbest-showcase="mutual_fund"] .dbestShowCard img{object-fit:contain!important;box-sizing:border-box!important;background:#fff!important}.sectionContent [data-dbest-showcase] .dbestShowBody{position:absolute!important;left:0!important;right:0!important;bottom:0!important;z-index:2!important;display:flex!important;align-items:flex-end!important;min-height:34px!important;padding:12px 32px 7px 9px!important;background:linear-gradient(to bottom,rgba(255,255,255,0),rgba(255,255,255,.82) 36%,rgba(255,255,255,.97) 68%,#fff 100%)!important;pointer-events:none!important}.sectionContent [data-dbest-showcase] .dbestShowBody h3{margin:0!important;width:100%!important;color:#13213a!important;font-size:12px!important;line-height:1.05!important;font-weight:850!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;letter-spacing:-.08px!important;text-shadow:0 1px 0 rgba(255,255,255,.9)!important}.sectionContent [data-dbest-showcase] .dbestShowBody b,.sectionContent [data-dbest-showcase] .dbestShowBody p,.sectionContent [data-dbest-showcase] .dbestShowBody small{display:none!important}.sectionContent [data-dbest-showcase] .dbestShowBody::after{content:'›';position:absolute!important;right:6px!important;bottom:5px!important;display:grid!important;place-items:center!important;width:18px!important;height:18px!important;border-radius:999px!important;background:rgba(237,243,255,.94)!important;color:#175cff!important;font-size:15px!important;font-weight:900!important;line-height:1!important;box-shadow:0 1px 5px rgba(30,70,150,.08)!important}@media(max-width:520px){.sectionContent [data-dbest-showcase] .dbestShowGrid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important}.sectionContent [data-dbest-showcase] .dbestShowCard{border-radius:18px!important}.sectionContent [data-dbest-showcase] .dbestShowCard img{height:218px!important}.sectionContent [data-dbest-showcase] .dbestShowBody{min-height:32px!important;padding:11px 29px 6px 8px!important}.sectionContent [data-dbest-showcase] .dbestShowBody h3{font-size:11.5px!important}.sectionContent [data-dbest-showcase] .dbestShowBody::after{width:17px!important;height:17px!important;right:5px!important;bottom:4px!important;font-size:14px!important}}@media(max-width:390px){.sectionContent [data-dbest-showcase] .dbestShowCard img{height:205px!important}.sectionContent [data-dbest-showcase] .dbestShowBody h3{font-size:11px!important}}`;if(!s.parentNode)document.head.appendChild(s);else if(document.head.lastElementChild!==s)document.head.appendChild(s)}
+function shortTitle(original){let x=SHORT_TITLES[original]||original;return x.replace(/^Top\s+/i,'').replace(/\s+Companies$/i,'').replace(/^Sample\s+/i,'').replace(/\s+Table$/i,'')}
+function compactTitles(root=document){root.querySelectorAll?.('.dbestShowCard .dbestShowBody h3').forEach(h=>{const original=h.dataset.dbestFullTitle||String(h.textContent||'').trim();if(!original)return;if(!h.dataset.dbestFullTitle)h.dataset.dbestFullTitle=original;const x=shortTitle(original);if(h.textContent!==x)h.textContent=x;h.title=original})}
+async function loadCards(force=false){if(loading)return loading;if(!force&&cards.length&&Date.now()-lastLoaded<30000)return cards;const cfg=window.DBEST_RUNTIME_CONFIG||{},base=String(cfg.supabaseUrl||'').replace(/\/$/,''),key=String(cfg.supabasePublishableKey||cfg.supabaseAnonKey||'');if(!base||!key)return cards;loading=fetch(base+'/functions/v1/manage-showcase-cards',{method:'POST',headers:{apikey:key,Authorization:'Bearer '+key,'Content-Type':'application/json'},body:JSON.stringify({action:'list'})}).then(async r=>{const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'showcase_load_failed');cards=Array.isArray(d.cards)?d.cards:[];lastLoaded=Date.now();return cards}).catch(()=>cards).finally(()=>{loading=null});return loading}
+function openPartner(kind){try{if(typeof window.DBEST_SHOWCASE_ADMIN?.openPartner==='function')return window.DBEST_SHOWCASE_ADMIN.openPartner(kind)}catch(_){}try{const s=window.DBEST_VISUAL_ONLY_SECTIONS?.serviceFor?.(kind);if(s&&typeof window.dbestUniversalExternalGo==='function')return window.dbestUniversalExternalGo(String(s[0]))}catch(_){}}
+function renderLive(root,kind){if(!root||!kind||!cards.length)return false;const show=root.querySelector(`[data-dbest-showcase="${kind}"]`);if(!show)return false;const list=cards.filter(c=>c&&c.section===kind&&c.is_visible!==false).sort((a,b)=>Number(a.sort_order||0)-Number(b.sort_order||0));if(!list.length)return false;const grid=show.querySelector('.dbestShowGrid');if(!grid)return false;const sig=list.map(c=>[c.id,c.name,c.category,c.description,c.image_url,c.sort_order,c.is_visible].join('|')).join('~');if(grid.dataset.dbestRestoredSig===sig){compactTitles(show);return true}grid.dataset.dbestRestoredSig=sig;grid.innerHTML=list.map(c=>{const full=String(c.name||'').trim()||'DBest Partner',img=String(c.image_url||'').trim()||fallback(full,kind,c.category);return `<article class="dbestShowCard" data-card-id="${esc(c.id)}" role="button" tabindex="0"><img src="${esc(img)}" alt="${esc(full)}"><div class="dbestShowBody"><h3 data-dbest-full-title="${esc(full)}">${esc(shortTitle(full))}</h3><b>${esc(c.category||'')}</b><p>${esc(c.description||'')}</p></div></article>`}).join('');grid.querySelectorAll('.dbestShowCard').forEach(el=>{el.onclick=()=>openPartner(kind);el.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openPartner(kind)}}});return true}
+function ensureCurrentVisual(){const root=currentRoot();if(!root)return;const kind=detectKind(root);if(!kind)return;let show=root.querySelector(`[data-dbest-showcase="${kind}"]`);if(!show){try{delete root.dataset.dbestVisualOnly;window.DBEST_VISUAL_ONLY_SECTIONS?.apply?.()}catch(_){}show=root.querySelector(`[data-dbest-showcase="${kind}"]`)}if(!show)return;if(!cards.length){loadCards().then(()=>{const r=currentRoot(),k=detectKind(r);if(r&&k)renderLive(r,k)});return}renderLive(root,kind)}
+function apply(){installStyle();removeVersionBadge();compactTitles(document);ensureCurrentVisual();removeVersionBadge()}
+let timer;function schedule(){clearTimeout(timer);timer=setTimeout(apply,55)}
+new MutationObserver(schedule).observe(document.documentElement,{childList:true,subtree:true});document.addEventListener('click',()=>setTimeout(apply,80),true);window.addEventListener('pageshow',()=>{loadCards(true).then(apply)});[0,120,350,800,1600,3200,6000,10000].forEach(ms=>setTimeout(apply,ms));loadCards(true).then(apply);window.DBEST_VISUAL_FIRST_PARTNER_TILES={version:VERSION,apply,refresh:()=>loadCards(true).then(apply),currentRoot,detectKind};
 })();
