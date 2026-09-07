@@ -9,17 +9,9 @@ module.exports = async function handler(req, res) {
     ta: { message: 'எனக்கு 15000 ரூபாய்க்குள் கோவா பேக்கேஜ் வேண்டும்', locale: 'auto', detectedLocale: 'ta-IN', history: [] }
   };
   let body;
-  if (req.method === 'GET' && req.query && smokeCases[String(req.query.smoke || '')]) {
-    body = smokeCases[String(req.query.smoke)];
-  } else if (req.method === 'POST') {
-    body = req.body && typeof req.body === 'object' ? req.body : {};
-  } else {
-    res.setHeader('Allow', 'POST, GET');
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  const token = String(process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN || '').trim();
-  if (!token) return res.status(503).json({ error: 'AI gateway authentication unavailable' });
+  if (req.method === 'GET' && req.query && smokeCases[String(req.query.smoke || '')]) body = smokeCases[String(req.query.smoke)];
+  else if (req.method === 'POST') body = req.body && typeof req.body === 'object' ? req.body : {};
+  else { res.setHeader('Allow', 'POST, GET'); return res.status(405).json({ error: 'Method not allowed' }); }
 
   const message = String(body.message || '').trim().slice(0, 2000);
   const locale = String(body.locale || 'auto').trim().slice(0, 20);
@@ -42,7 +34,6 @@ module.exports = async function handler(req, res) {
     'kok-IN':'Konkani','ks-IN':'Kashmiri','mni-IN':'Manipuri','mai-IN':'Maithili','sd-IN':'Sindhi','doi-IN':'Dogri',
     'brx-IN':'Bodo','sat-IN':'Santali','sa-IN':'Sanskrit'
   };
-
   function normalizeLocale(v) {
     const x = String(v || '').trim().toLowerCase();
     if (!x) return '';
@@ -71,18 +62,13 @@ module.exports = async function handler(req, res) {
   const scriptLocale = inferFromScript(message);
   const targetLocale = explicitlySelected || detectedLocale || scriptLocale || '';
   const targetLanguage = targetLocale ? NAMES[targetLocale] : '';
-
-  const safeHistory = history
-    .filter(x => x && (x.role === 'user' || x.role === 'assistant'))
-    .map(x => ({ role: x.role, content: String(x.content || '').slice(0, 1200) }));
+  const safeHistory = history.filter(x => x && (x.role === 'user' || x.role === 'assistant')).map(x => ({ role: x.role, content: String(x.content || '').slice(0, 1200) }));
 
   const languageRule = targetLanguage
     ? `MANDATORY LANGUAGE RULE: Reply ONLY in ${targetLanguage} (${targetLocale}). Do not answer in English unless the user's message itself is English or the user explicitly asks for English. Preserve common product/place names such as DBest, Goa, hotel, cab, SIP, etc. when natural.`
     : 'MANDATORY LANGUAGE RULE: Identify the language of the user message and reply only in that same language. If the message is Hinglish or another natural mixed-language style, mirror that mix. Do not default to English.';
-
   const system = [
-    'You are DBest AI Assistant running only in a TEST ENVIRONMENT.',
-    languageRule,
+    'You are DBest AI Assistant running only in a TEST ENVIRONMENT.', languageRule,
     'The language rule is higher priority than style or convenience.',
     'Current demo scope: Travel, Insurance, Cab and Marketplace.',
     'Do not claim live prices, availability, booking, payment, policy issuance, investment execution or cab allocation. Clearly say estimates/sample results when relevant.',
@@ -94,32 +80,18 @@ module.exports = async function handler(req, res) {
   ].join(' ');
 
   try {
-    const upstream = await fetch('https://ai-gateway.vercel.sh/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'openai/gpt-5.6-luna',
-        messages: [{ role: 'system', content: system }, ...safeHistory, { role: 'user', content: message }],
-        max_tokens: 360,
-        temperature: 0.2
-      })
+    const { generateText } = await import('ai');
+    const result = await generateText({
+      model: 'openai/gpt-5.6-luna',
+      system,
+      messages: [...safeHistory, { role: 'user', content: message }]
     });
-
-    const raw = await upstream.text();
-    if (!upstream.ok) {
-      console.error('DBest AI gateway error', upstream.status, raw.slice(0, 500));
-      return res.status(502).json({ error: 'AI response unavailable' });
-    }
-
-    const data = JSON.parse(raw);
-    let content = String(data?.choices?.[0]?.message?.content || '').trim();
+    let content = String(result.text || '').trim();
     content = content.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
     let parsed;
     try { parsed = JSON.parse(content); } catch { parsed = { reply: content, languageCode: targetLocale || 'auto', intent: 'general' }; }
-
     const reply = String(parsed.reply || '').trim().slice(0, 1800);
     if (!reply) return res.status(502).json({ error: 'Empty AI response' });
-
     return res.status(200).json({
       reply,
       languageCode: targetLocale || normalizeLocale(parsed.languageCode) || String(parsed.languageCode || 'auto').slice(0, 20),
