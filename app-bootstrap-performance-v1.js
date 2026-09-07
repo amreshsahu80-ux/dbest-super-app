@@ -1,18 +1,18 @@
 (function(){
 'use strict';
-const V='20260907-uniform-performance-v1';
+const V='20260907-uniform-performance-v2';
 if(window.DBEST_PERFORMANCE_BOOTSTRAP?.version===V)return;
 
+const EARLY=['cab-entry-capture-final-v1.js','ux-performance-bridge.js'];
 const CORE=[
   'member-id-collision-fix.js','backend-bridge.js','member-live-login-bridge.js',
   'owner-auth-bridge.js','owner-portal-route.js','owner-live-network-bridge.js',
-  'ux-performance-bridge.js','production-demo-auth-guard.js','onboarding-contact-policy.js',
+  'production-demo-auth-guard.js','onboarding-contact-policy.js',
   'multilingual-ui-v2.js','language-selector-fix.js','payout-rules-v1.js','payout-reset-v2.js',
   'payout-engine-v2.js','transaction-ledger-live.js','member-transaction-ledger-visible.js',
   'member-earnings-visible.js','platform-footer-legal.js','top-live-location-bridge.js',
   'clean-member-flow.js','plain-language-ui.js','finance-insurance-showcase.js',
-  'showcase-live-admin.js','visual-first-partner-tiles.js','cab-entry-capture-final-v1.js',
-  'security-inactivity-timeout-v1.js'
+  'showcase-live-admin.js','visual-first-partner-tiles.js','security-inactivity-timeout-v1.js'
 ];
 
 const GROUPS={
@@ -75,7 +75,11 @@ async function loadSequence(list){for(const name of list)await loadOne(name)}
 
 let corePromise=null,featuresPromise=null;
 function startCore(){
-  if(!corePromise)corePromise=loadSequence(CORE).catch(e=>console.warn('DBest core bootstrap warning',e));
+  if(!corePromise)corePromise=(async()=>{
+    const early=Promise.all(EARLY.map(loadOne));
+    await loadSequence(CORE);
+    await early;
+  })().catch(e=>console.warn('DBest core bootstrap warning',e));
   return corePromise
 }
 function startFeatures(){
