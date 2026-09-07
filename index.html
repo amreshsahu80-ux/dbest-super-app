@@ -17,7 +17,7 @@
   <script>
     (async function(){
       try{
-        const BUILD='20260907-ai-assistant-test-v2-multilingual-neural';
+        const BUILD='20260907-ai-assistant-test-v3-audio-language-detection';
         const r=await fetch('./index-26.html?v='+BUILD,{cache:'default'});
         if(!r.ok)throw new Error('Unable to load application');
         let html=await r.text();
