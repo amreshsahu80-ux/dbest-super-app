@@ -7,40 +7,25 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
 });
 
 (function(){
-  const V='20260904-realistic-3d-vehicle-v8';
+  const V='20260907-performance-cab-single-authority-v1';
 
   const applyRuntimeSecrets=()=>{
     const sec=window.DBEST_RUNTIME_SECRETS||{};
     const googleMapsApiKey=String(sec.googleMapsApiKey||'').trim();
     window.DBEST_RUNTIME_CONFIG=Object.freeze(Object.assign({},window.DBEST_RUNTIME_CONFIG||{}, {googleMapsApiKey}));
   };
-
   const loadRuntimeSecrets=()=>new Promise(resolve=>{
-    const finish=()=>{try{applyRuntimeSecrets()}catch(_){}resolve()};
+    let finished=false;
+    const finish=()=>{if(finished)return;finished=true;try{applyRuntimeSecrets()}catch(_){}resolve()};
     const existing=document.querySelector('script[data-dbest-runtime-secrets]');
-    if(existing){
-      if(existing.dataset.loaded==='1') return finish();
-      existing.addEventListener('load',finish,{once:true});
-      existing.addEventListener('error',finish,{once:true});
-      setTimeout(finish,1800);
-      return;
-    }
-    const s=document.createElement('script');
-    s.src='/api/runtime-config?v='+encodeURIComponent(V);
-    s.setAttribute('data-dbest-runtime-secrets','1');
-    s.onload=()=>{s.dataset.loaded='1';finish()};
-    s.onerror=finish;
-    (document.head||document.documentElement).appendChild(s);
-    setTimeout(finish,2200);
+    if(existing){if(existing.dataset.loaded==='1')return finish();existing.addEventListener('load',finish,{once:true});existing.addEventListener('error',finish,{once:true});setTimeout(finish,1800);return}
+    const s=document.createElement('script');s.src='/api/runtime-config?v='+encodeURIComponent(V);s.setAttribute('data-dbest-runtime-secrets','1');s.onload=()=>{s.dataset.loaded='1';finish()};s.onerror=finish;(document.head||document.documentElement).appendChild(s);setTimeout(finish,2200)
   });
-
   const googleConfigured=()=>String(window.DBEST_RUNTIME_CONFIG?.googleMapsApiKey||'').trim().length>0;
 
   const installLogoClarity=()=>{
     if(document.getElementById('dbestLogoClarityStyle')) return;
-    const s=document.createElement('style');
-    s.id='dbestLogoClarityStyle';
-    s.textContent=`
+    const s=document.createElement('style');s.id='dbestLogoClarityStyle';s.textContent=`
       img[src*="dbest-logo.png"],.dbestTopLogo,.dbestFinalLogo{image-rendering:auto!important;object-fit:contain!important;opacity:1!important;filter:contrast(1.08) saturate(1.08) drop-shadow(0 3px 7px rgba(21,72,165,.16))!important;transform:none!important}
       .brand{background:#fff!important;border:1px solid #e1e8f3!important;border-radius:16px!important;padding:3px 9px!important;box-shadow:0 5px 14px rgba(22,51,99,.08)!important;overflow:visible!important}
       .dbestTopLogo{width:225px!important;height:70px!important;max-width:none!important;display:block!important;object-position:left center!important}
@@ -48,23 +33,19 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
       .dbestFinalLogo{width:210px!important;height:58px!important;max-height:58px!important;display:block!important;object-position:left center!important}
       @media(max-width:700px){.brand{padding:2px 7px!important;border-radius:13px!important}.dbestTopLogo{width:168px!important;height:54px!important}.dbestFinalLogoBox{min-width:160px!important;min-height:54px!important;padding:2px 7px!important}.dbestFinalLogo{width:154px!important;height:48px!important;max-height:48px!important}}
       @media print{.dbestFinalLogoBox{box-shadow:none!important;border:1px solid #d7e0ef!important}.dbestFinalLogo{filter:contrast(1.08) saturate(1.08)!important}}
-    `;
-    document.head.appendChild(s);
+    `;document.head.appendChild(s)
   };
   installLogoClarity();
 
   const loadScript=(src,attr)=>{
-    const load=()=>{if(document.querySelector('script['+attr+']')) return;const s=document.createElement('script');s.src=src;s.setAttribute(attr,'1');document.body.appendChild(s)};
-    if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',load,{once:true}); else load();
+    const load=()=>{if(document.querySelector('script['+attr+']'))return;const s=document.createElement('script');s.src=src;s.async=true;s.setAttribute(attr,'1');(document.body||document.documentElement).appendChild(s)};
+    if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',load,{once:true});else load()
   };
   const loadScriptAsync=(src,attr)=>new Promise((resolve,reject)=>{
     const existing=document.querySelector('script['+attr+']');
-    if(existing){if(existing.dataset.loaded==='1') return resolve();existing.addEventListener('load',()=>resolve(),{once:true});existing.addEventListener('error',reject,{once:true});setTimeout(resolve,1200);return}
-    const s=document.createElement('script');s.src=src;s.setAttribute(attr,'1');s.onload=()=>{s.dataset.loaded='1';resolve()};s.onerror=reject;document.body.appendChild(s);
+    if(existing){if(existing.dataset.loaded==='1')return resolve();existing.addEventListener('load',resolve,{once:true});existing.addEventListener('error',reject,{once:true});return}
+    const s=document.createElement('script');s.src=src;s.async=true;s.setAttribute(attr,'1');s.onload=()=>{s.dataset.loaded='1';resolve()};s.onerror=reject;(document.body||document.documentElement).appendChild(s)
   });
-
-  loadScript('/cab-rental-legacy-bridge.js?v='+V,'data-dbest-rental-legacy-bridge');
-  loadScript('/cab-booking-flow-fix.js?v='+V,'data-dbest-cab-booking-flow-fix');
 
   if(/\/vaahak(?:\.html)?\/?$/i.test(location.pathname)){
     loadScript('/vaahak-registration-photo.js?v='+V,'data-dbest-vaahak-registration-photo');
@@ -74,28 +55,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
     loadScript('/vaahak-agreement-dashboard-entry.js?v='+V,'data-dbest-vaahak-agreement-dashboard-entry');
     loadScript('/vaahak-visual-profile-ui.js?v='+V,'data-dbest-vaahak-visual-profile');
   }
-
-  if(/\/vendor(?:\.html)?\/?$/i.test(location.pathname)){
-    loadScript('/vendor-clean-catalog-tools.js?v='+V,'data-dbest-vendor-clean-catalog-tools');
-  }
-
-  const lockFinalCab=()=>{
-    if(googleConfigured()){
-      const googleCab=window.DBEST_CAB_GOOGLE;
-      if(googleCab&&typeof googleCab.open==='function'){
-        window.openRidePlatform=googleCab.open;
-        window.DBEST_ACTIVE_CAB_VERSION='GOOGLE_RESILIENT_V1';
-        return true;
-      }
-    }
-    const finalCab=window.DBEST_CAB_MAPPLS_RENTAL;
-    if(finalCab&&typeof finalCab.open==='function'){
-      window.openRidePlatform=finalCab.open;
-      window.DBEST_ACTIVE_CAB_VERSION='MAPPLS_RENTAL_V2';
-      return true;
-    }
-    return false;
-  };
+  if(/\/vendor(?:\.html)?\/?$/i.test(location.pathname))loadScript('/vendor-clean-catalog-tools.js?v='+V,'data-dbest-vendor-clean-catalog-tools');
 
   const loadFinalLayers=async()=>{
     installLogoClarity();
@@ -135,30 +95,21 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
     loadScript('/service-partner-job-execution.js?v='+V,'data-dbest-service-partner-job-execution');
     loadScript('/platform-concise-ui.js?v='+V,'data-dbest-platform-concise-ui');
 
-    if(googleConfigured()){
-      try{
-        await loadScriptAsync('/cab-google-resilient-v1.js?v='+V,'data-dbest-cab-google-resilient-v1');
-        await loadScriptAsync('/cab-google-route-selection-bridge-v1.js?v='+V,'data-dbest-cab-google-route-selection-bridge-v1');
-        await loadScriptAsync('/customer-google-live-tracking-v1.js?v='+V,'data-dbest-customer-google-live-tracking-v1');
-        await loadScriptAsync('/customer-google-vehicle-marker-fix-v1.js?v='+V,'data-dbest-customer-google-vehicle-marker-fix-v1');
-        await loadScriptAsync('/customer-google-terminal-status-fix-v1.js?v='+V,'data-dbest-customer-google-terminal-status-fix-v1');
-        await loadScriptAsync('/vendor-google-location-v1.js?v='+V,'data-dbest-vendor-google-location-v1');
-        if(/\/vaahak(?:\.html)?\/?$/i.test(location.pathname)) await loadScriptAsync('/vaahak-google-live-map-v1.js?v='+V,'data-dbest-vaahak-google-live-map-v1');
-      }catch(e){console.warn('DBest Google logistics layer load warning',e)}
+    // Cab UI is deliberately NOT loaded here. The approved selected Cab UI is now
+    // warmed and loaded on demand by cab-entry-capture-final-v1.js. This prevents
+    // legacy Google/Mappls/text/visual Cab stacks from competing on every page.
+    // Route-specific logistics helpers remain available where they are actually needed.
+    if(googleConfigured()&&/\/vendor(?:\.html)?\/?$/i.test(location.pathname)){
+      try{await loadScriptAsync('/vendor-google-location-v1.js?v='+V,'data-dbest-vendor-google-location-v1')}catch(e){console.warn('DBest vendor Google location warning',e)}
     }
-
-    try{await loadScriptAsync('/cab-location-production-v9.js?v='+V,'data-dbest-cab-location-v9');await loadScriptAsync('/mappls-cab-production.js?v='+V,'data-dbest-mappls-cab');await loadScriptAsync('/cab-mappls-rental-v2.js?v='+V,'data-dbest-cab-mappls-rental-v2');await loadScriptAsync('/cab-booking-step-fix.js?v='+V,'data-dbest-cab-booking-step-fix')}catch(e){console.warn('DBest final cab layer load warning',e)}
-    loadScript('/cab-visual-ui-final.js?v='+V,'data-dbest-cab-visual-ui-final');
-    loadScript('/cab-text-lite-final.js?v='+V,'data-dbest-cab-text-lite-final');
-    loadScript('/cab-erickshaw-other-rider.js?v='+V,'data-dbest-cab-erickshaw-other-rider');
-
-    lockFinalCab();let attempts=0;const guard=setInterval(()=>{attempts++;lockFinalCab();if(attempts>=30) clearInterval(guard)},500);
+    if(googleConfigured()&&/\/vaahak(?:\.html)?\/?$/i.test(location.pathname)){
+      try{await loadScriptAsync('/vaahak-google-live-map-v1.js?v='+V,'data-dbest-vaahak-google-live-map-v1')}catch(e){console.warn('DBest Vaahak Google map warning',e)}
+    }
   };
 
   const boot=async()=>{
     await loadRuntimeSecrets();
-    if(document.readyState==='complete') loadFinalLayers();
-    else window.addEventListener('load',loadFinalLayers,{once:true});
+    if(document.readyState==='complete')loadFinalLayers();else window.addEventListener('load',loadFinalLayers,{once:true})
   };
   boot();
 })();
