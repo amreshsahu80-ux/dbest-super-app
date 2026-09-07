@@ -7,7 +7,8 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
 });
 
 (function(){
-  const V='20260904-realistic-3d-vehicle-v8';
+  'use strict';
+  const V='20260907-performance-cab-lazy-v1';
 
   const applyRuntimeSecrets=()=>{
     const sec=window.DBEST_RUNTIME_SECRETS||{};
@@ -16,22 +17,24 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
   };
 
   const loadRuntimeSecrets=()=>new Promise(resolve=>{
-    const finish=()=>{try{applyRuntimeSecrets()}catch(_){}resolve()};
+    let finished=false;
+    const finish=()=>{if(finished)return;finished=true;try{applyRuntimeSecrets()}catch(_){}resolve()};
     const existing=document.querySelector('script[data-dbest-runtime-secrets]');
     if(existing){
       if(existing.dataset.loaded==='1') return finish();
       existing.addEventListener('load',finish,{once:true});
       existing.addEventListener('error',finish,{once:true});
-      setTimeout(finish,1800);
+      setTimeout(finish,1400);
       return;
     }
     const s=document.createElement('script');
     s.src='/api/runtime-config?v='+encodeURIComponent(V);
     s.setAttribute('data-dbest-runtime-secrets','1');
+    s.async=true;
     s.onload=()=>{s.dataset.loaded='1';finish()};
     s.onerror=finish;
     (document.head||document.documentElement).appendChild(s);
-    setTimeout(finish,2200);
+    setTimeout(finish,1600);
   });
 
   const googleConfigured=()=>String(window.DBEST_RUNTIME_CONFIG?.googleMapsApiKey||'').trim().length>0;
@@ -54,17 +57,59 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
   installLogoClarity();
 
   const loadScript=(src,attr)=>{
-    const load=()=>{if(document.querySelector('script['+attr+']')) return;const s=document.createElement('script');s.src=src;s.setAttribute(attr,'1');document.body.appendChild(s)};
+    const load=()=>{
+      if(document.querySelector('script['+attr+']')) return;
+      const s=document.createElement('script');s.src=src;s.async=true;s.setAttribute(attr,'1');(document.body||document.documentElement).appendChild(s);
+    };
     if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',load,{once:true}); else load();
   };
-  const loadScriptAsync=(src,attr)=>new Promise((resolve,reject)=>{
+
+  const loadScriptAsync=(src,attr,timeout=2600)=>new Promise(resolve=>{
+    let done=false;
+    const finish=()=>{if(done)return;done=true;resolve(true)};
     const existing=document.querySelector('script['+attr+']');
-    if(existing){if(existing.dataset.loaded==='1') return resolve();existing.addEventListener('load',()=>resolve(),{once:true});existing.addEventListener('error',reject,{once:true});setTimeout(resolve,1200);return}
-    const s=document.createElement('script');s.src=src;s.setAttribute(attr,'1');s.onload=()=>{s.dataset.loaded='1';resolve()};s.onerror=reject;document.body.appendChild(s);
+    if(existing){
+      if(existing.dataset.loaded==='1') return finish();
+      existing.addEventListener('load',finish,{once:true});
+      existing.addEventListener('error',finish,{once:true});
+      setTimeout(finish,timeout);
+      return;
+    }
+    const s=document.createElement('script');s.src=src;s.async=true;s.setAttribute(attr,'1');
+    s.onload=()=>{s.dataset.loaded='1';finish()};s.onerror=finish;
+    (document.body||document.documentElement).appendChild(s);
+    setTimeout(finish,timeout);
   });
 
-  loadScript('/cab-rental-legacy-bridge.js?v='+V,'data-dbest-rental-legacy-bridge');
-  loadScript('/cab-booking-flow-fix.js?v='+V,'data-dbest-cab-booking-flow-fix');
+  let cabCorePromise=null,cabTrackingPromise=null;
+  const loadCabCore=()=>{
+    if(cabCorePromise)return cabCorePromise;
+    cabCorePromise=Promise.allSettled([
+      loadScriptAsync('/cab-rental-legacy-bridge.js?v='+V,'data-dbest-rental-legacy-bridge'),
+      loadScriptAsync('/cab-booking-flow-fix.js?v='+V,'data-dbest-cab-booking-flow-fix'),
+      loadScriptAsync('/cab-booking-step-fix.js?v='+V,'data-dbest-cab-booking-step-fix'),
+      loadScriptAsync('/cab-erickshaw-other-rider.js?v='+V,'data-dbest-cab-erickshaw-other-rider')
+    ]).then(()=>true);
+    return cabCorePromise;
+  };
+  const loadCabTracking=()=>{
+    if(cabTrackingPromise)return cabTrackingPromise;
+    cabTrackingPromise=loadCabCore().then(async()=>{
+      const jobs=[
+        loadScriptAsync('/customer-active-vaahak-visual.js?v='+V,'data-dbest-customer-vaahak-visual'),
+        loadScriptAsync('/ride-live-ui-finalizer.js?v='+V,'data-dbest-ride-live-ui-finalizer-v2')
+      ];
+      if(googleConfigured()){
+        jobs.push(loadScriptAsync('/customer-google-live-tracking-v1.js?v='+V,'data-dbest-customer-google-live-tracking-v1'));
+        jobs.push(loadScriptAsync('/customer-google-vehicle-marker-fix-v1.js?v='+V,'data-dbest-customer-google-vehicle-marker-fix-v1'));
+        jobs.push(loadScriptAsync('/customer-google-terminal-status-fix-v1.js?v='+V,'data-dbest-customer-google-terminal-status-fix-v1'));
+      }
+      await Promise.allSettled(jobs);return true;
+    });
+    return cabTrackingPromise;
+  };
+  window.DBEST_CAB_COMPAT_LOADER=loadCabCore;
+  window.DBEST_CAB_TRACKING_LOADER=loadCabTracking;
 
   if(/\/vaahak(?:\.html)?\/?$/i.test(location.pathname)){
     loadScript('/vaahak-registration-photo.js?v='+V,'data-dbest-vaahak-registration-photo');
@@ -73,31 +118,15 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
     loadScript('/vaahak-marketplace-sync-ui.js?v='+V,'data-dbest-marketplace-sync-ui');
     loadScript('/vaahak-agreement-dashboard-entry.js?v='+V,'data-dbest-vaahak-agreement-dashboard-entry');
     loadScript('/vaahak-visual-profile-ui.js?v='+V,'data-dbest-vaahak-visual-profile');
+    if(googleConfigured()) loadScript('/vaahak-google-live-map-v1.js?v='+V,'data-dbest-vaahak-google-live-map-v1');
   }
 
   if(/\/vendor(?:\.html)?\/?$/i.test(location.pathname)){
     loadScript('/vendor-clean-catalog-tools.js?v='+V,'data-dbest-vendor-clean-catalog-tools');
+    if(googleConfigured()) loadScript('/vendor-google-location-v1.js?v='+V,'data-dbest-vendor-google-location-v1');
   }
 
-  const lockFinalCab=()=>{
-    if(googleConfigured()){
-      const googleCab=window.DBEST_CAB_GOOGLE;
-      if(googleCab&&typeof googleCab.open==='function'){
-        window.openRidePlatform=googleCab.open;
-        window.DBEST_ACTIVE_CAB_VERSION='GOOGLE_RESILIENT_V1';
-        return true;
-      }
-    }
-    const finalCab=window.DBEST_CAB_MAPPLS_RENTAL;
-    if(finalCab&&typeof finalCab.open==='function'){
-      window.openRidePlatform=finalCab.open;
-      window.DBEST_ACTIVE_CAB_VERSION='MAPPLS_RENTAL_V2';
-      return true;
-    }
-    return false;
-  };
-
-  const loadFinalLayers=async()=>{
+  const loadFinalLayers=()=>{
     installLogoClarity();
     loadScript('/owner-control-live.js?v='+V,'data-dbest-owner-control-live');
     loadScript('/owner-payout-percentage-matrix.js?v='+V,'data-dbest-owner-payout-percentage-matrix');
@@ -127,38 +156,20 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
     loadScript('/vendor-promotion-store-scope-fix.js?v='+V,'data-dbest-vendor-promotion-store-scope-fix');
     loadScript('/marketplace-master-cart.js?v='+V,'data-dbest-marketplace-master-cart');
     loadScript('/marketplace-master-ui-fix.js?v='+V,'data-dbest-marketplace-master-ui-fix');
-    loadScript('/customer-active-vaahak-visual.js?v='+V,'data-dbest-customer-vaahak-visual');
-    loadScript('/ride-live-ui-finalizer.js?v='+V,'data-dbest-ride-live-ui-finalizer-v2');
     loadScript('/home-jobs-hyperlocal.js?v='+V,'data-dbest-home-jobs-hyperlocal');
     loadScript('/service-partner-free-account.js?v='+V,'data-dbest-service-partner-free-account');
     loadScript('/service-partner-standalone-route.js?v='+V,'data-dbest-service-partner-standalone-route');
     loadScript('/service-partner-job-execution.js?v='+V,'data-dbest-service-partner-job-execution');
     loadScript('/platform-concise-ui.js?v='+V,'data-dbest-platform-concise-ui');
-
-    if(googleConfigured()){
-      try{
-        await loadScriptAsync('/cab-google-resilient-v1.js?v='+V,'data-dbest-cab-google-resilient-v1');
-        await loadScriptAsync('/cab-google-route-selection-bridge-v1.js?v='+V,'data-dbest-cab-google-route-selection-bridge-v1');
-        await loadScriptAsync('/customer-google-live-tracking-v1.js?v='+V,'data-dbest-customer-google-live-tracking-v1');
-        await loadScriptAsync('/customer-google-vehicle-marker-fix-v1.js?v='+V,'data-dbest-customer-google-vehicle-marker-fix-v1');
-        await loadScriptAsync('/customer-google-terminal-status-fix-v1.js?v='+V,'data-dbest-customer-google-terminal-status-fix-v1');
-        await loadScriptAsync('/vendor-google-location-v1.js?v='+V,'data-dbest-vendor-google-location-v1');
-        if(/\/vaahak(?:\.html)?\/?$/i.test(location.pathname)) await loadScriptAsync('/vaahak-google-live-map-v1.js?v='+V,'data-dbest-vaahak-google-live-map-v1');
-      }catch(e){console.warn('DBest Google logistics layer load warning',e)}
-    }
-
-    try{await loadScriptAsync('/cab-location-production-v9.js?v='+V,'data-dbest-cab-location-v9');await loadScriptAsync('/mappls-cab-production.js?v='+V,'data-dbest-mappls-cab');await loadScriptAsync('/cab-mappls-rental-v2.js?v='+V,'data-dbest-cab-mappls-rental-v2');await loadScriptAsync('/cab-booking-step-fix.js?v='+V,'data-dbest-cab-booking-step-fix')}catch(e){console.warn('DBest final cab layer load warning',e)}
-    loadScript('/cab-visual-ui-final.js?v='+V,'data-dbest-cab-visual-ui-final');
-    loadScript('/cab-text-lite-final.js?v='+V,'data-dbest-cab-text-lite-final');
-    loadScript('/cab-erickshaw-other-rider.js?v='+V,'data-dbest-cab-erickshaw-other-rider');
-
-    lockFinalCab();let attempts=0;const guard=setInterval(()=>{attempts++;lockFinalCab();if(attempts>=30) clearInterval(guard)},500);
   };
 
-  const boot=async()=>{
-    await loadRuntimeSecrets();
+  const startLayers=()=>{
     if(document.readyState==='complete') loadFinalLayers();
     else window.addEventListener('load',loadFinalLayers,{once:true});
   };
-  boot();
+
+  // Do not block the platform on the remote runtime-config request. Cab/Map code
+  // reads the key when it is actually needed and falls back safely if unavailable.
+  loadRuntimeSecrets().catch(()=>{});
+  startLayers();
 })();
