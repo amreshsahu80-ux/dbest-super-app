@@ -1,22 +1,34 @@
 (function(){
 'use strict';
-const VERSION='3.1.0';
+const VERSION='3.2.0-language-safe-visuals';
 const defaults={
  insurance:[['ManipalCigna','Health Insurance','Health plans, family floater and protection solutions'],['Star Health','Health Insurance','Retail health and family protection plans'],['Care Health','Health Insurance','Health cover and wellness-focused insurance'],['HDFC ERGO','General Insurance','Motor, health and general insurance solutions'],['ICICI Lombard','General Insurance','Motor, travel and general insurance solutions'],['SBI Life','Life Insurance','Life protection and long-term savings solutions']],
  mutual_fund:[['HDFC Mutual Fund','Mutual Fund House','Equity, debt, hybrid and index fund options'],['SBI Mutual Fund','Mutual Fund House','SIP and diversified mutual fund solutions'],['ICICI Prudential MF','Mutual Fund House','Equity, debt, hybrid and passive solutions'],['Nippon India MF','Mutual Fund House','Retail mutual funds, ETFs and index solutions'],['Axis Mutual Fund','Mutual Fund House','SIP, equity, debt and hybrid schemes'],['Kotak Mutual Fund','Mutual Fund House','Mutual fund and systematic investment options']],
  travel:[['Flights','Air Travel','Domestic and international flight booking options'],['Hotels','Hotel Stays','Hotels and accommodation options for your trip'],['Holiday Packages','Packages','Complete holiday packages with travel and stay'],['International Holidays','International Travel','Popular international destinations and holiday ideas'],['Domestic Holidays','India Travel','Popular destinations across India'],['Visa & Travel Assistance','Travel Support','Visa guidance and travel support from DBest']]
 };
-const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
 function isOwnerScreen(root){try{if(root?.matches?.('.owner55,.ownerStudio,.dbestFinanceOwnerControl'))return true;if(root?.querySelector?.('.owner55,.ownerStudio,.dbestFinanceOwnerControl'))return true;const text=(root?.innerText||'').toLowerCase();return /owner operations|project owner console|master control|tile media studio|deeplink integration studio|payout studio/.test(text)}catch(e){return false}}
 function visible(el){if(!el)return false;const s=getComputedStyle(el);if(s.display==='none'||s.visibility==='hidden')return false;const r=el.getBoundingClientRect();return !!(r.width||r.height)}
 function currentRoot(){const roots=[...document.querySelectorAll('.sectionContent')];return roots.filter(visible).pop()||roots.pop()||null}
+const normalizeHero=s=>String(s||'').trim().toLowerCase().replace(/[,&/|•]+/g,' ').replace(/\s+/g,' ');
+const HEROES={
+ travel:new Set([
+  'Flights Hotels Packages','फ्लाइट, होटल और पैकेज','ফ্লাইট, হোটেল ও প্যাকেজ','ଫ୍ଲାଇଟ୍, ହୋଟେଲ ଓ ପ୍ୟାକେଜ','ఫ్లైట్స్, హోటళ్లు & ప్యాకేజీలు','விமானங்கள், ஹோட்டல்கள் & பேக்கேஜ்கள்'
+ ].map(normalizeHero)),
+ insurance:new Set([
+  'All Insurance','सभी बीमा','সব বীমা','ସମସ୍ତ ବୀମା','అన్ని బీమాలు','அனைத்து காப்பீடு'
+ ].map(normalizeHero)),
+ mutual_fund:new Set([
+  'Mutual Funds','म्यूचुअल फंड','মিউচুয়াল ফান্ড','ମ୍ୟୁଚୁଆଲ୍ ଫଣ୍ଡ','మ్యూచువల్ ఫండ్స్','மியூச்சுவல் ஃபண்ட்ஸ்'
+ ].map(normalizeHero))
+};
 function detectKind(root){
  if(!root||isOwnerScreen(root))return'';
  if(root.matches?.('.classicDash')||root.querySelector?.('.memberMiniHead,.earnGrid,.levelGrid,.directSummary,.businessPage'))return'';
- const hero=String(root.querySelector?.('.sectionHero b')?.textContent||'').trim().toLowerCase().replace(/\s+/g,' ');
- if(/^flights hotels packages$/.test(hero))return'travel';
- if(/^all insurance$/.test(hero))return'insurance';
- if(/^mutual funds?$/.test(hero))return'mutual_fund';
+ const hero=normalizeHero(root.querySelector?.('.sectionHero b')?.textContent||'');
+ if(HEROES.travel.has(hero))return'travel';
+ if(HEROES.insurance.has(hero))return'insurance';
+ if(HEROES.mutual_fund.has(hero))return'mutual_fund';
  return'';
 }
 function serviceFor(kind){try{const rows=Array.isArray(services)?services:[];if(kind==='travel')return rows.find(s=>/flights.*hotel.*package/i.test(String(s?.[1]||'')))||null;if(kind==='mutual_fund')return rows.find(s=>/^mutual funds?$/i.test(String(s?.[1]||'')))||null;return rows.find(s=>/^all insurance$/i.test(String(s?.[1]||'')))||null}catch(e){return null}}
@@ -24,7 +36,7 @@ function meta(kind){const fallback={insurance:{title:'Insurance Partners',intro:
 function art(name,kind,category){const icon=kind==='travel'?'✈️':kind==='mutual_fund'?'📈':'🛡️';const label=kind==='travel'?'TRAVEL':kind==='mutual_fund'?'MUTUAL FUND':'INSURANCE';return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="760" height="380"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#10264d"/><stop offset=".55" stop-color="#175cff"/><stop offset="1" stop-color="#745cff"/></linearGradient></defs><rect width="100%" height="100%" rx="34" fill="url(#g)"/><circle cx="650" cy="60" r="150" fill="#ffffff18"/><text x="52" y="150" font-family="Arial" font-size="72">${icon}</text><text x="52" y="225" font-family="Arial" font-size="42" font-weight="700" fill="white">${String(name).slice(0,24)}</text><text x="54" y="274" font-family="Arial" font-size="22" fill="#eaf1ff">${String(category||label).slice(0,36)}</text><text x="54" y="324" font-family="Arial" font-size="18" fill="#dbe7ff">${label}</text></svg>`)}`}
 function deeplink(kind){const s=serviceFor(kind);if(!s)return'';const id=String(s[0]);let l=null;try{l=window.DBEST_UNIVERSAL_DEEPLINKS?.linkFor?.(id)||links?.[id]||null}catch(e){};if(!l?.url||l.enabled===false)return `<div data-dbest-universal-deeplink="1" class="dbestOnlyDeeplink"><small>🔗 DBest Partner Deeplink</small><b>${esc(s[1])}</b><p>Partner destination is not configured yet.</p></div>`;return `<div data-dbest-universal-deeplink="1" class="dbestOnlyDeeplink"><small>🔗 DBest Partner Deeplink</small><b>${esc(l.partner||s[1]||'DBest Partner')}</b><p>Tracked with a DBest Internal Transaction ID.</p><button class="btn" onclick="dbestUniversalExternalGo('${esc(id)}')">${esc(l.buttonLabel||'Continue to Partner')} ↗</button></div>`}
 function build(kind){const m=meta(kind),rows=defaults[kind]||[];return `${deeplink(kind)}<section class="dbestShowcase" data-dbest-showcase="${kind}"><div class="dbestShowIntro"><h2>${esc(m.title)}</h2><p>${esc(m.intro)}</p></div><div class="dbestShowGrid">${rows.map(([n,t,d])=>`<article class="dbestShowCard" role="button" tabindex="0" onclick="window.DBEST_SHOWCASE_ADMIN?.openPartner?.('${kind}')"><img src="${art(n,kind,t)}" alt="${esc(n)}"><div class="dbestShowBody"><h3>${esc(n)}</h3><b>${esc(t)}</b><p>${esc(d)}</p></div></article>`).join('')}</div></section>`}
-function apply(){const root=currentRoot();if(!root||isOwnerScreen(root))return;if(root.dataset.dbestVisualOnly)return;const kind=detectKind(root);if(!kind)return;root.dataset.dbestVisualOnly=kind;root.innerHTML=build(kind);setTimeout(()=>window.DBEST_SHOWCASE_ADMIN?.refresh?.(),20)}
+function apply(){const root=currentRoot();if(!root||isOwnerScreen(root))return;if(root.dataset.dbestVisualOnly)return;const kind=detectKind(root);if(!kind)return;root.dataset.dbestVisualOnly=kind;root.innerHTML=build(kind);setTimeout(()=>{try{const r=window.DBEST_SHOWCASE_ADMIN?.refresh?.();Promise.resolve(r).finally(()=>window.DBEST_VISUAL_FIRST_PARTNER_TILES?.apply?.())}catch(e){window.DBEST_VISUAL_FIRST_PARTNER_TILES?.apply?.()}},20)}
 function installStyle(){if(document.getElementById('dbestFinShowStyle'))return;const style=document.createElement('style');style.id='dbestFinShowStyle';style.textContent=`.dbestOnlyDeeplink{margin:2px 0 18px;padding:18px;border:1px solid #cfe0ff;background:linear-gradient(135deg,#f7faff,#eef4ff);border-radius:22px;box-shadow:0 10px 28px rgba(20,50,100,.06)}.dbestOnlyDeeplink small{display:block;color:#687386;font-size:12px}.dbestOnlyDeeplink b{display:block;font-size:22px;margin:6px 0;color:#13213a}.dbestOnlyDeeplink p{margin:0 0 12px;color:#687386}.dbestOnlyDeeplink .btn{width:auto;min-width:220px}.dbestShowcase{margin:20px 0 30px}.dbestShowIntro{margin-bottom:14px}.dbestShowIntro h2{margin:0 0 6px;font-size:24px;color:#13213a}.dbestShowIntro p{margin:0;color:#687386;line-height:1.5}.dbestShowGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.dbestShowCard{overflow:hidden;background:#fff;border:1px solid #e2e8f2;border-radius:20px;box-shadow:0 10px 24px rgba(20,50,100,.07);cursor:pointer}.dbestShowCard img{display:block;width:100%;height:150px;object-fit:cover}.dbestShowBody{padding:14px}.dbestShowBody h3{margin:0 0 5px;font-size:18px;color:#13213a}.dbestShowBody b{display:block;font-size:12px;color:#175cff}.dbestShowBody p{margin:7px 0 0;color:#687386;font-size:13px;line-height:1.45}@media(max-width:520px){.dbestOnlyDeeplink{padding:15px;border-radius:18px}.dbestOnlyDeeplink b{font-size:19px}.dbestOnlyDeeplink .btn{width:100%;min-width:0}.dbestShowGrid{grid-template-columns:1fr 1fr;gap:10px}.dbestShowCard img{height:105px}.dbestShowBody{padding:11px}.dbestShowBody h3{font-size:15px}.dbestShowBody p{font-size:11px}}`;document.head.appendChild(style)}
-installStyle();let t=null;const schedule=()=>{clearTimeout(t);t=setTimeout(apply,45)};new MutationObserver(schedule).observe(document.body,{childList:true,subtree:true});document.addEventListener('click',()=>setTimeout(apply,70),true);setTimeout(apply,120);setTimeout(apply,450);window.DBEST_VISUAL_ONLY_SECTIONS={version:VERSION,apply,serviceFor,meta};
+installStyle();let t=null;const schedule=()=>{clearTimeout(t);t=setTimeout(apply,45)};new MutationObserver(schedule).observe(document.body,{childList:true,subtree:true});document.addEventListener('click',()=>setTimeout(apply,70),true);setTimeout(apply,120);setTimeout(apply,450);window.DBEST_VISUAL_ONLY_SECTIONS={version:VERSION,apply,serviceFor,meta,detectKind};
 })();
