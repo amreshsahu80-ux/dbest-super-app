@@ -7,7 +7,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
 });
 
 (function(){
-  const V='20260907-performance-cab-single-authority-v1';
+  const V='20260907-runtime-idle-v2';
 
   const applyRuntimeSecrets=()=>{
     const sec=window.DBEST_RUNTIME_SECRETS||{};
@@ -16,10 +16,10 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
   };
   const loadRuntimeSecrets=()=>new Promise(resolve=>{
     let finished=false;
-    const finish=()=>{if(finished)return;finished=true;try{applyRuntimeSecrets()}catch(_){}resolve()};
+    const finish=()=>{if(finished)return;finished=true;try{applyRuntimeSecrets()}catch(_){}resolve(window.DBEST_RUNTIME_CONFIG)};
     const existing=document.querySelector('script[data-dbest-runtime-secrets]');
-    if(existing){if(existing.dataset.loaded==='1')return finish();existing.addEventListener('load',finish,{once:true});existing.addEventListener('error',finish,{once:true});setTimeout(finish,1800);return}
-    const s=document.createElement('script');s.src='/api/runtime-config?v='+encodeURIComponent(V);s.setAttribute('data-dbest-runtime-secrets','1');s.onload=()=>{s.dataset.loaded='1';finish()};s.onerror=finish;(document.head||document.documentElement).appendChild(s);setTimeout(finish,2200)
+    if(existing){if(existing.dataset.loaded==='1')return finish();existing.addEventListener('load',finish,{once:true});existing.addEventListener('error',finish,{once:true});setTimeout(finish,1200);return}
+    const s=document.createElement('script');s.src='/api/runtime-config?v='+encodeURIComponent(V);s.async=true;s.setAttribute('data-dbest-runtime-secrets','1');s.onload=()=>{s.dataset.loaded='1';finish()};s.onerror=finish;(document.head||document.documentElement).appendChild(s);setTimeout(finish,1600)
   });
   const googleConfigured=()=>String(window.DBEST_RUNTIME_CONFIG?.googleMapsApiKey||'').trim().length>0;
 
@@ -95,10 +95,6 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
     loadScript('/service-partner-job-execution.js?v='+V,'data-dbest-service-partner-job-execution');
     loadScript('/platform-concise-ui.js?v='+V,'data-dbest-platform-concise-ui');
 
-    // Cab UI is deliberately NOT loaded here. The approved selected Cab UI is now
-    // warmed and loaded on demand by cab-entry-capture-final-v1.js. This prevents
-    // legacy Google/Mappls/text/visual Cab stacks from competing on every page.
-    // Route-specific logistics helpers remain available where they are actually needed.
     if(googleConfigured()&&/\/vendor(?:\.html)?\/?$/i.test(location.pathname)){
       try{await loadScriptAsync('/vendor-google-location-v1.js?v='+V,'data-dbest-vendor-google-location-v1')}catch(e){console.warn('DBest vendor Google location warning',e)}
     }
@@ -107,9 +103,18 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
     }
   };
 
-  const boot=async()=>{
-    await loadRuntimeSecrets();
-    if(document.readyState==='complete')loadFinalLayers();else window.addEventListener('load',loadFinalLayers,{once:true})
+  let finalStarted=false;
+  const startFinalLayers=()=>{if(finalStarted)return;finalStarted=true;loadFinalLayers().catch(e=>console.warn('DBest final layer warning',e))};
+  const scheduleFinalLayers=()=>{
+    if('requestIdleCallback' in window)requestIdleCallback(startFinalLayers,{timeout:1000});
+    else setTimeout(startFinalLayers,550)
   };
-  boot();
+
+  const runtimeReady=loadRuntimeSecrets();
+  window.DBEST_RUNTIME_READY=runtimeReady;
+  runtimeReady.finally(()=>{
+    if(document.readyState==='complete')scheduleFinalLayers();
+    else window.addEventListener('load',scheduleFinalLayers,{once:true})
+  });
+  window.addEventListener('dbest:need-runtime-layers',startFinalLayers);
 })();
