@@ -2,15 +2,25 @@ module.exports = async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store, max-age=0, must-revalidate');
   res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive');
 
-  if (req.method !== 'POST') {
-    res.setHeader('Allow', 'POST');
+  const smokeCases = {
+    hi: { message: 'मुझे 15000 रुपये में गोवा पैकेज चाहिए', locale: 'auto', detectedLocale: 'hi-IN', history: [] },
+    bn: { message: 'আমার ১৫ হাজার টাকার মধ্যে গোয়া প্যাকেজ চাই', locale: 'auto', detectedLocale: 'bn-IN', history: [] },
+    or: { message: 'ମୋତେ ୧୫ ହଜାର ଟଙ୍କା ଭିତରେ ଗୋଆ ପ୍ୟାକେଜ ଦରକାର', locale: 'auto', detectedLocale: 'or-IN', history: [] },
+    ta: { message: 'எனக்கு 15000 ரூபாய்க்குள் கோவா பேக்கேஜ் வேண்டும்', locale: 'auto', detectedLocale: 'ta-IN', history: [] }
+  };
+  let body;
+  if (req.method === 'GET' && req.query && smokeCases[String(req.query.smoke || '')]) {
+    body = smokeCases[String(req.query.smoke)];
+  } else if (req.method === 'POST') {
+    body = req.body && typeof req.body === 'object' ? req.body : {};
+  } else {
+    res.setHeader('Allow', 'POST, GET');
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   const token = String(process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN || '').trim();
   if (!token) return res.status(503).json({ error: 'AI gateway authentication unavailable' });
 
-  const body = req.body && typeof req.body === 'object' ? req.body : {};
   const message = String(body.message || '').trim().slice(0, 2000);
   const locale = String(body.locale || 'auto').trim().slice(0, 20);
   const detectedLocaleRaw = String(body.detectedLocale || '').trim().toLowerCase().slice(0, 40);
@@ -114,7 +124,8 @@ module.exports = async function handler(req, res) {
       reply,
       languageCode: targetLocale || normalizeLocale(parsed.languageCode) || String(parsed.languageCode || 'auto').slice(0, 20),
       intent: String(parsed.intent || 'general').slice(0, 30),
-      demo: true
+      demo: true,
+      smoke: req.method === 'GET'
     });
   } catch (err) {
     console.error('DBest AI assistant error', err);
