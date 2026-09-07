@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=5">
-  <title>DBest Super Platform</title>
+  <title>DBest Super Platform — AI Test</title>
   <style>
     html{-webkit-text-size-adjust:100%;text-size-adjust:100%;background:#f5f7fb}
     body{margin:0;min-width:320px;max-width:100%;overflow-x:hidden}
@@ -13,17 +13,17 @@
   </style>
 </head>
 <body>
-  <div id="dbestBoot">Opening DBest Super Platform…</div>
+  <div id="dbestBoot">Opening DBest Super Platform AI Test…</div>
   <script>
     (async function(){
       try{
-        const BUILD='20260907-uniform-performance-v2';
+        const BUILD='20260907-ai-assistant-test-v1';
         const r=await fetch('./index-26.html?v='+BUILD,{cache:'default'});
         if(!r.ok)throw new Error('Unable to load application');
         let html=await r.text();
         const uniform='<style id="dbest-device-uniformity">html{-webkit-text-size-adjust:100%;text-size-adjust:100%}body{margin:0;max-width:100%;overflow-x:hidden}*,*:before,*:after{box-sizing:border-box}button,input,select,textarea{font:inherit}@media(max-width:480px){input,select,textarea{font-size:16px}}</style>';
         html=html.replace('</head>',uniform+'<script src="./runtime-config.js?v='+BUILD+'"><\/script></head>');
-        html=html.replace('</body>','<script defer src="./app-bootstrap-performance-v1.js?v='+BUILD+'"><\/script></body>');
+        html=html.replace('</body>','<script defer src="./app-bootstrap-performance-v1.js?v='+BUILD+'"><\/script><script defer src="./ai-assistant-test.js?v='+BUILD+'"><\/script></body>');
         document.open();
         document.write(html);
         document.close();
