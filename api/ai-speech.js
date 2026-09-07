@@ -7,38 +7,23 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const token = String(process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN || '').trim();
-  if (!token) return res.status(503).json({ error: 'AI gateway authentication unavailable' });
-
   const body = req.body && typeof req.body === 'object' ? req.body : {};
   const text = String(body.text || '').trim().slice(0, 1400);
   const voice = ['alloy','echo','fable','onyx','nova','shimmer'].includes(body.voice) ? body.voice : 'nova';
   if (!text) return res.status(400).json({ error: 'Text is required' });
 
   try {
-    const upstream = await fetch('https://ai-gateway.vercel.sh/v1/audio/speech', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: 'openai/tts-1',
-        input: text,
-        voice,
-        response_format: 'mp3',
-        speed: 0.98
-      })
+    const [{ experimental_generateSpeech: generateSpeech }, { gateway }] = await Promise.all([
+      import('ai'),
+      import('@ai-sdk/gateway')
+    ]);
+    const result = await generateSpeech({
+      model: gateway.speechModel('openai/tts-1'),
+      text,
+      voice
     });
-
-    if (!upstream.ok) {
-      const detail = await upstream.text();
-      console.error('DBest AI speech gateway error', upstream.status, detail.slice(0, 500));
-      return res.status(502).json({ error: 'Neural voice unavailable' });
-    }
-
-    const buf = Buffer.from(await upstream.arrayBuffer());
-    res.setHeader('Content-Type', 'audio/mpeg');
+    const buf = Buffer.from(result.audio.uint8Array);
+    res.setHeader('Content-Type', result.audio.mediaType || 'audio/mpeg');
     res.setHeader('Content-Length', String(buf.length));
     return res.status(200).send(buf);
   } catch (err) {
