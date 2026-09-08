@@ -82,7 +82,7 @@ module.exports = async function handler(req, res) {
   try {
     const { generateText } = await import('ai');
     const result = await generateText({
-      model: 'openai/gpt-5.6-luna',
+      model: 'inclusionai/ling-3.0-tiny-free',
       system,
       messages: [...safeHistory, { role: 'user', content: message }]
     });
