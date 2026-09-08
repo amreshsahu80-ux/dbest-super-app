@@ -17,41 +17,34 @@ function pcm16ToWav(pcm, sampleRate = 24000, channels = 1) {
   return Buffer.concat([header, pcm]);
 }
 
-async function geminiSpeech(text, locale) {
+const LOCALE_NAME = {
+  'hi-IN':'Hindi','bn-IN':'Bengali','mr-IN':'Marathi','te-IN':'Telugu','ta-IN':'Tamil','gu-IN':'Gujarati','ur-IN':'Urdu',
+  'kn-IN':'Kannada','or-IN':'Odia','ml-IN':'Malayalam','pa-IN':'Punjabi','as-IN':'Assamese','ne-IN':'Nepali','kok-IN':'Konkani',
+  'ks-IN':'Kashmiri','mni-IN':'Manipuri','mai-IN':'Maithili','sd-IN':'Sindhi','doi-IN':'Dogri','brx-IN':'Bodo','sat-IN':'Santali','sa-IN':'Sanskrit',
+  'en-IN':'English'
+};
+
+async function geminiSpeechWithModel(text, locale, model) {
   const key = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY || '';
   if (!key) return null;
-
-  const localeName = {
-    'hi-IN':'Hindi','bn-IN':'Bengali','mr-IN':'Marathi','te-IN':'Telugu','ta-IN':'Tamil','gu-IN':'Gujarati','ur-IN':'Urdu',
-    'kn-IN':'Kannada','or-IN':'Odia','ml-IN':'Malayalam','pa-IN':'Punjabi','as-IN':'Assamese','ne-IN':'Nepali','kok-IN':'Konkani',
-    'ks-IN':'Kashmiri','mni-IN':'Manipuri','mai-IN':'Maithili','sd-IN':'Sindhi','doi-IN':'Dogri','brx-IN':'Bodo','sat-IN':'Santali','sa-IN':'Sanskrit',
-    'en-IN':'English'
-  }[locale] || 'the language of the supplied text';
-
+  const localeName = LOCALE_NAME[locale] || 'the language of the supplied text';
   const prompt = `Speak exactly the following text in ${localeName}. Use a soft, warm, calm, friendly Indian female voice with natural conversational pacing and clear native pronunciation. Do not translate, summarize, explain, or add any words. Text to speak:\n${text}`;
 
-  const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-tts-preview:generateContent', {
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
     method: 'POST',
-    headers: {
-      'x-goog-api-key': key,
-      'Content-Type': 'application/json'
-    },
+    headers: {'x-goog-api-key': key, 'Content-Type': 'application/json'},
     body: JSON.stringify({
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: {
         responseModalities: ['AUDIO'],
-        speechConfig: {
-          voiceConfig: {
-            prebuiltVoiceConfig: { voiceName: 'Achernar' }
-          }
-        }
+        speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Achernar' } } }
       }
     })
   });
 
   if (!response.ok) {
     const body = await response.text().catch(() => '');
-    const err = new Error(`Gemini TTS ${response.status}: ${body.slice(0, 240)}`);
+    const err = new Error(`Gemini TTS ${model} ${response.status}: ${body.slice(0, 240)}`);
     err.statusCode = response.status;
     throw err;
   }
@@ -59,9 +52,24 @@ async function geminiSpeech(text, locale) {
   const json = await response.json();
   const part = json?.candidates?.[0]?.content?.parts?.find(p => p?.inlineData?.data);
   const b64 = part?.inlineData?.data;
-  if (!b64) throw new Error('Gemini TTS returned no audio');
+  if (!b64) throw new Error(`Gemini TTS ${model} returned no audio`);
   const pcm = Buffer.from(b64, 'base64');
-  return { buffer: pcm16ToWav(pcm), mediaType: 'audio/wav', model: 'gemini-3.1-flash-tts-preview/Achernar' };
+  return { buffer: pcm16ToWav(pcm), mediaType: 'audio/wav', model: `${model}/Achernar` };
+}
+
+async function geminiSpeech(text, locale) {
+  let lastError = null;
+  for (const model of ['gemini-3.1-flash-tts-preview','gemini-2.5-flash-preview-tts']) {
+    try {
+      const out = await geminiSpeechWithModel(text, locale, model);
+      if (out) return out;
+    } catch (err) {
+      lastError = err;
+      console.warn('DBest direct Gemini TTS fallback', model, String(err?.message || err).slice(0, 260));
+    }
+  }
+  if (lastError) throw lastError;
+  return null;
 }
 
 module.exports = async function handler(req, res) {
@@ -91,36 +99,32 @@ module.exports = async function handler(req, res) {
   if (!text) return res.status(400).json({ error: 'Text is required' });
 
   const base = locale && locale !== 'auto' ? locale.toLowerCase().split('-')[0] : '';
-  const indianLanguages = new Set([
-    'hi','bn','mr','te','ta','gu','ur','kn','or','ml','pa','as','ne','kok','ks','mni','mai','sd','doi','brx','sat','sa'
-  ]);
+  const indianLanguages = new Set(['hi','bn','mr','te','ta','gu','ur','kn','or','ml','pa','as','ne','kok','ks','mni','mai','sd','doi','brx','sat','sa']);
   const useIndianVoice = indianLanguages.has(base);
 
   try {
-    // Preferred route: Gemini 3.1 TTS explicitly covers Odia and the wider Indian-language set.
     if (useIndianVoice) {
       try {
         const googleAudio = await geminiSpeech(text, locale);
         if (googleAudio) {
           if (smoke) return res.status(200).json({ ok:true, locale, modelUsed:googleAudio.model, bytes:googleAudio.buffer.length, googleConfigured:true });
           res.setHeader('X-DBest-Voice-Model', googleAudio.model);
+          res.setHeader('X-DBest-Voice-Locale', locale);
           res.setHeader('Content-Type', googleAudio.mediaType);
           res.setHeader('Content-Length', String(googleAudio.buffer.length));
           return res.status(200).send(googleAudio.buffer);
         }
       } catch (err) {
-        console.warn('DBest Gemini TTS fallback', String(err && err.message || err).slice(0, 260));
+        console.warn('DBest Gemini TTS exhausted', String(err?.message || err).slice(0, 260));
       }
     }
 
     const [{ experimental_generateSpeech: generateSpeech, experimental_transcribe: transcribe }, { gateway }] = await Promise.all([
-      import('ai'),
-      import('@ai-sdk/gateway')
+      import('ai'), import('@ai-sdk/gateway')
     ]);
 
     let result;
     let modelUsed = '';
-
     if (useIndianVoice) {
       result = await generateSpeech({
         model: gateway.speechModel('fish-audio/s2.1-pro-free'),
@@ -140,15 +144,13 @@ module.exports = async function handler(req, res) {
         try {
           const opts = { model: gateway.speechModel(modelId), text, voice, speed: 0.94, maxRetries: 0 };
           if (language !== 'auto') opts.language = language;
-          if (modelId === 'openai/gpt-4o-mini-tts') {
-            opts.instructions = 'Speak in a soft, warm, calm, friendly feminine voice. Use gentle pacing and clear pronunciation. Speak in exactly the language and script of the supplied text. Do not translate it.';
-          }
+          if (modelId === 'openai/gpt-4o-mini-tts') opts.instructions = 'Speak in a soft, warm, calm, friendly feminine voice. Use gentle pacing and clear pronunciation. Speak in exactly the language and script of the supplied text. Do not translate it.';
           result = await generateSpeech(opts);
           modelUsed = modelId;
           break;
         } catch (err) {
           lastError = err;
-          console.warn('DBest speech model fallback', modelId, String(err && err.message || err).slice(0, 180));
+          console.warn('DBest speech model fallback', modelId, String(err?.message || err).slice(0, 180));
         }
       }
       if (!result) throw lastError || new Error('No speech model available');
@@ -156,29 +158,26 @@ module.exports = async function handler(req, res) {
 
     const buf = Buffer.from(result.audio.uint8Array);
     if (smoke) {
-      let transcript = '';
-      let transcriptionError = '';
+      let transcript = '', transcriptionError = '';
       try {
         const check = await transcribe({ model: gateway.transcriptionModel('fish-audio/transcribe-1'), audio: buf, maxRetries: 0 });
         transcript = String(check.text || '').trim();
-      } catch (err) {
-        transcriptionError = String(err && err.message || err).slice(0, 220);
-      }
+      } catch (err) { transcriptionError = String(err?.message || err).slice(0, 220); }
       return res.status(200).json({ ok:true, locale, modelUsed, bytes:buf.length, transcript, transcriptionCheck:transcriptionError?'unavailable':'completed', googleConfigured:false });
     }
 
     res.setHeader('X-DBest-Voice-Model', modelUsed);
+    res.setHeader('X-DBest-Voice-Locale', locale);
     res.setHeader('Content-Type', result.audio.mediaType || 'audio/mpeg');
     res.setHeader('Content-Length', String(buf.length));
     return res.status(200).send(buf);
   } catch (err) {
     console.error('DBest AI speech error', err);
-    const msg = String(err && err.message || err || '');
-    const rateLimited = Number(err && err.statusCode) === 429 || /rate.?limit|free tier/i.test(msg);
+    const msg = String(err?.message || err || '');
+    const rateLimited = Number(err?.statusCode) === 429 || /rate.?limit|free tier|quota/i.test(msg);
     return res.status(rateLimited ? 429 : 503).json({
       error: rateLimited ? 'Voice service busy' : 'Language voice temporarily unavailable',
-      code: rateLimited ? 'rate_limited' : 'speech_unavailable',
-      locale,
+      code: rateLimited ? 'rate_limited' : 'speech_unavailable', locale,
       needsGeminiKey: useIndianVoice && !(process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY)
     });
   }
