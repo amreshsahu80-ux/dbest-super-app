@@ -161,26 +161,50 @@
     return true;
   }
 
+  function bindContinueCapture() {
+    const host = document.getElementById('dbest-ai-test-host');
+    const root = host?.shadowRoot;
+    if (!root) return false;
+    if (root.__dbestCabContinueCaptureBound) return true;
+    root.__dbestCabContinueCaptureBound = true;
+    root.addEventListener('click', e => {
+      const btn = e.target?.closest?.('button');
+      const label = String(btn?.textContent || '');
+      if (!btn || !/Continue in DBest/i.test(label) || !/Cab/i.test(label)) return;
+      const users = [...root.querySelectorAll('.msg.user')];
+      const userText = String(users.at(-1)?.textContent || '').trim();
+      const taskData = inferCabPair(userText, window.__DBEST_LAST_AI_DATA__?.taskData || {});
+      capture({ route:'car', _userText:userText, taskData });
+      seedRideDraft();
+    }, true);
+    return true;
+  }
+
   function install() {
     const okRide = wrapRidePlatform();
     const okGps = wrapGps();
+    bindContinueCapture();
     return !!(okRide && okGps);
   }
 
   window.addEventListener('dbest-ai-routing-data', e => capture(e.detail));
   if (window.__DBEST_LAST_AI_DATA__) capture(window.__DBEST_LAST_AI_DATA__);
 
-  if (!install()) {
-    const timer = setInterval(() => { if (install()) clearInterval(timer); }, 100);
-    setTimeout(() => clearInterval(timer), 10000);
-  }
+  const timer = setInterval(() => {
+    install();
+    if (wrappedRide && wrappedGps && bindContinueCapture()) clearInterval(timer);
+  }, 100);
+  setTimeout(() => clearInterval(timer), 15000);
+
+  install();
 
   window.__DBEST_AI_CAB_AUTOFILL__ = {
     capture,
     refreshPendingFromLatest,
     seedRideDraft,
     syncVisibleFields,
+    bindContinueCapture,
     getPending: () => pending,
-    version: '0.5-open-time-refresh'
+    version: '0.6-direct-continue-capture'
   };
 })();
