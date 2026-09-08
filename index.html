@@ -17,7 +17,7 @@
   <script>
     (async function(){
       try{
-        const BUILD='20260908-ai-assistant-test-v12-cab-render-autofill';
+        const BUILD='20260908-ai-assistant-test-v13-state-first-cab';
         const r=await fetch('./index-26.html?v='+BUILD,{cache:'default'});
         if(!r.ok)throw new Error('Unable to load application');
         let html=await r.text();
