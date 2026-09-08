@@ -82,7 +82,7 @@ module.exports = async function handler(req, res) {
   try {
     const { generateText } = await import('ai');
     const result = await generateText({
-      model: 'inclusionai/ling-3.0-tiny-free',
+      model: 'poolside/laguna-s-2.1-free',
       system,
       messages: [...safeHistory, { role: 'user', content: message }]
     });
