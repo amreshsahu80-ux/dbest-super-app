@@ -29,12 +29,19 @@
   }
 
   function capture(detail) {
-    if (!detail || String(detail.route || '').toLowerCase() !== 'car') return;
+    if (!detail || String(detail.route || '').toLowerCase() !== 'car') return false;
     const userText = String(detail._userText || detail.userText || '');
     const taskData = inferCabPair(userText, detail.taskData || {});
     pending = { taskData, userText, at: Date.now() };
     touched = { pickup:false, drop:false };
     window.__DBEST_AI_CAB_PENDING__ = { ...taskData, at: pending.at };
+    return true;
+  }
+
+  function refreshPendingFromLatest() {
+    const latest = window.__DBEST_LAST_AI_DATA__;
+    if (latest && String(latest.route || '').toLowerCase() === 'car') capture(latest);
+    return pending;
   }
 
   function activePending() {
@@ -45,8 +52,6 @@
     if (!activePending()) return false;
     const d = pending.taskData || {};
     try {
-      // rideDraft is the Cab section's own state object declared by index-26.html.
-      // Using it before openRidePlatform() means the form renders already populated.
       if (typeof rideDraft !== 'undefined' && rideDraft) {
         if (d.pickup) rideDraft.pickup = String(d.pickup).trim();
         if (d.drop) rideDraft.drop = String(d.drop).trim();
@@ -122,8 +127,7 @@
     if (wrappedGps || typeof window.fetchRideLiveLocation !== 'function') return false;
     const original = window.fetchRideLiveLocation;
     window.fetchRideLiveLocation = function(silent=false) {
-      // openRidePlatform() automatically calls fetchRideLiveLocation(true) after 250 ms.
-      // Skip only that automatic overwrite when AI supplied pickup. Manual Use GPS (silent=false) still works.
+      refreshPendingFromLatest();
       if (silent === true && activePending() && pending.taskData?.pickup && !touched.pickup) {
         seedRideDraft();
         syncVisibleFields();
@@ -144,12 +148,13 @@
     if (wrappedRide || typeof window.openRidePlatform !== 'function') return false;
     const original = window.openRidePlatform;
     window.openRidePlatform = function(...args) {
+      refreshPendingFromLatest();
       seedRideDraft();
       const result = original.apply(this, args);
-      // State-first render should already show the values. These two syncs are only a safety net
-      // for browsers that re-render the section immediately after opening.
-      setTimeout(() => { syncVisibleFields(); updateGpsStatusForAiPickup(); }, 20);
-      setTimeout(() => { syncVisibleFields(); updateGpsStatusForAiPickup(); }, 350);
+      setTimeout(() => { syncVisibleFields(); updateGpsStatusForAiPickup(); }, 0);
+      setTimeout(() => { syncVisibleFields(); updateGpsStatusForAiPickup(); }, 40);
+      setTimeout(() => { syncVisibleFields(); updateGpsStatusForAiPickup(); }, 300);
+      setTimeout(() => { syncVisibleFields(); updateGpsStatusForAiPickup(); }, 900);
       return result;
     };
     wrappedRide = true;
@@ -159,8 +164,7 @@
   function install() {
     const okRide = wrapRidePlatform();
     const okGps = wrapGps();
-    if (okRide && okGps) return true;
-    return false;
+    return !!(okRide && okGps);
   }
 
   window.addEventListener('dbest-ai-routing-data', e => capture(e.detail));
@@ -173,9 +177,10 @@
 
   window.__DBEST_AI_CAB_AUTOFILL__ = {
     capture,
+    refreshPendingFromLatest,
     seedRideDraft,
     syncVisibleFields,
     getPending: () => pending,
-    version: '0.4-state-first'
+    version: '0.5-open-time-refresh'
   };
 })();
