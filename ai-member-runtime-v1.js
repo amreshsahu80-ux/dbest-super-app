@@ -1,6 +1,6 @@
 (() => {
   'use strict';
-  const VERSION='1.0-member-only-direct-partner';
+  const VERSION='1.1-member-only-direct-partner-live';
   const MEMBER_ROLES=new Set(['guest','promoter','prime','leader']);
   const EXTERNAL=new Set(['insurance','travel','flights','mf']);
   const SAFE_KEYS=new Set(['from','origin','fromCity','pickup','to','destination','destinations','drop','departure','departureDate','return','returnDate','date','startDate','checkin','checkout','adults','children','infants','rooms','budget','sumInsured','coverAmount','insuranceType','amount','investmentType','frequency','risk','goal','hotel','category','meal','transport','cabin','airline','pincode']);
@@ -53,7 +53,7 @@
   }
   function syncVisibility(){
     const s=memberSession(),host=document.getElementById('dbest-ai-test-host');
-    if(host)host.style.display=s?'':'none';
+    if(host)host.style.display=s?'block':'none';
     if(s){previousMemberId=String(s.id||'');window.__DBEST_AI_MEMBER_ID__=previousMemberId;return}
     delete window.__DBEST_AI_MEMBER_ID__;
     try{sessionStorage.removeItem('dbest_ai_last_member_task_v1');sessionStorage.removeItem('dbest_ai_pending_external_v1')}catch{}
