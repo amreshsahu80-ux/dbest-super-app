@@ -15,11 +15,13 @@ const LOCALE_NAME = {
   'en-IN':'Indian English','en-US':'English','en-GB':'English'
 };
 
+const PRIMARY_VOICE = 'Aoede';
+
 async function geminiSpeechWithModel(text, locale, model) {
   const key = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY || '';
   if (!key) return null;
   const localeName = LOCALE_NAME[locale] || 'the language of the supplied text';
-  const prompt = `Speak only the text after TEXT in ${localeName}. Use a natural, warm, conversational Indian female voice, like a helpful human travel and services assistant. Keep the pace relaxed, with realistic pauses and expressive but subtle intonation. Do not announce instructions, translate, summarize, or add words.\nTEXT:\n${text}`;
+  const prompt = `Speak only the text after TEXT in ${localeName}. Sound like a real, warm, intelligent Indian female assistant speaking one-to-one with a customer. Use natural conversational rhythm, human-like pauses, soft expressive intonation and clear pronunciation. Avoid an announcer, IVR, robotic, overly cheerful or synthetic style. Keep the delivery calm and confident. Do not announce instructions, translate, summarize, explain, or add any words.\nTEXT:\n${text}`;
   const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
     method: 'POST',
     headers: {'x-goog-api-key': key, 'Content-Type': 'application/json'},
@@ -27,7 +29,7 @@ async function geminiSpeechWithModel(text, locale, model) {
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: {
         responseModalities: ['AUDIO'],
-        speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Achernar' } } }
+        speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: PRIMARY_VOICE } } }
       }
     })
   });
@@ -40,7 +42,7 @@ async function geminiSpeechWithModel(text, locale, model) {
   const b64 = part?.inlineData?.data;
   if (!b64) throw new Error(`Gemini TTS ${model} returned no audio`);
   const pcm = Buffer.from(b64, 'base64');
-  return { buffer: pcm16ToWav(pcm), mediaType: 'audio/wav', model: `${model}/Achernar` };
+  return { buffer: pcm16ToWav(pcm), mediaType: 'audio/wav', model: `${model}/${PRIMARY_VOICE}` };
 }
 
 async function geminiSpeech(text, locale) {
@@ -70,7 +72,7 @@ module.exports = async function handler(req, res) {
       if (neural) {
         res.setHeader('X-DBest-Voice-Model', neural.model);
         res.setHeader('X-DBest-Voice-Locale', locale);
-        res.setHeader('X-DBest-Voice-Profile', 'natural-female');
+        res.setHeader('X-DBest-Voice-Profile', 'natural-female-v2');
         res.setHeader('Content-Type', neural.mediaType);
         res.setHeader('Content-Length', String(neural.buffer.length));
         return res.status(200).send(neural.buffer);
@@ -89,7 +91,7 @@ module.exports = async function handler(req, res) {
       for (const modelId of ['openai/gpt-4o-mini-tts','openai/tts-1']) {
         try {
           const opts={model:gateway.speechModel(modelId),text,voice:'shimmer',speed:0.96,maxRetries:0};
-          if(modelId==='openai/gpt-4o-mini-tts')opts.instructions='Speak naturally in a warm, conversational feminine voice with realistic pauses. Do not translate or add words.';
+          if(modelId==='openai/gpt-4o-mini-tts')opts.instructions='Speak naturally in a warm, lifelike, conversational feminine voice with realistic pauses. Avoid an announcer or robotic style. Do not translate or add words.';
           result=await generateSpeech(opts);modelUsed=modelId;break;
         } catch(err){last=err}
       }
