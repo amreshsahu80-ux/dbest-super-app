@@ -23,32 +23,41 @@ module.exports = async function handler(req, res) {
       import('@ai-sdk/gateway')
     ]);
 
-    const options = {
-      model: gateway.transcriptionModel('openai/gpt-4o-transcribe'),
-      audio
-    };
+    const models = ['openai/gpt-4o-mini-transcribe', 'openai/gpt-4o-transcribe', 'xai/grok-stt'];
+    let result = null;
+    let lastError = null;
 
-    // When the user explicitly selected a language, provide a language hint.
-    // In Auto mode, do not provide a hint so the transcription model can detect it from speech.
-    if (selectedLocale !== 'auto') {
-      options.providerOptions = {
-        openai: { language: selectedLocale.split('-')[0] }
-      };
+    for (const modelId of models) {
+      try {
+        const options = {
+          model: gateway.transcriptionModel(modelId),
+          audio,
+          maxRetries: 0
+        };
+        if (selectedLocale !== 'auto' && modelId.startsWith('openai/')) {
+          options.providerOptions = { openai: { language: selectedLocale.split('-')[0] } };
+        }
+        result = await transcribe(options);
+        if (result && String(result.text || '').trim()) break;
+      } catch (err) {
+        lastError = err;
+        console.warn('DBest transcription model fallback', modelId, String(err && err.message || err).slice(0, 180));
+      }
     }
 
-    const result = await transcribe(options);
+    if (!result) throw lastError || new Error('No transcription model available');
     const text = String(result.text || '').trim();
     const language = String(result.language || '').trim().toLowerCase();
     if (!text) return res.status(502).json({ error: 'No speech detected' });
 
-    return res.status(200).json({
-      text: text.slice(0, 2400),
-      language,
-      mimeType,
-      demo: true
-    });
+    return res.status(200).json({ text: text.slice(0, 2400), language, mimeType, demo: true });
   } catch (err) {
     console.error('DBest AI transcription error', err);
-    return res.status(500).json({ error: 'Voice transcription temporarily unavailable' });
+    const msg = String(err && err.message || err || '');
+    const rateLimited = Number(err && err.statusCode) === 429 || /rate.?limit|free tier/i.test(msg);
+    return res.status(rateLimited ? 429 : 500).json({
+      error: rateLimited ? 'Voice detection busy' : 'Voice transcription temporarily unavailable',
+      code: rateLimited ? 'rate_limited' : 'transcription_unavailable'
+    });
   }
 };
