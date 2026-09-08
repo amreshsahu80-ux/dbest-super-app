@@ -65,7 +65,7 @@ module.exports = async function handler(req, res) {
   const safeHistory = history.filter(x => x && (x.role === 'user' || x.role === 'assistant')).map(x => ({ role: x.role, content: String(x.content || '').slice(0, 1200) }));
 
   const languageRule = targetLanguage
-    ? `MANDATORY LANGUAGE RULE: Reply ONLY in ${targetLanguage} (${targetLocale}). Do not answer in English unless the user's message itself is English or the user explicitly asks for English. Preserve common product/place names such as DBest, Goa, hotel, cab, SIP, etc. when natural.`
+    ? `MANDATORY LANGUAGE RULE: Reply ONLY in ${targetLanguage} (${targetLocale}). Do not answer in English unless the user explicitly asks for English. Preserve common brand, product and place names when natural.`
     : 'MANDATORY LANGUAGE RULE: Identify the language of the user message and reply only in that same language. If the message is Hinglish or another natural mixed-language style, mirror that mix. Do not default to English.';
   const system = [
     'You are DBest AI Assistant running only in a TEST ENVIRONMENT.', languageRule,
@@ -96,7 +96,8 @@ module.exports = async function handler(req, res) {
           model,
           system,
           messages: [...safeHistory, { role: 'user', content: message }],
-          maxRetries: 0
+          maxRetries: 0,
+          maxOutputTokens: 500
         });
         modelUsed = model;
         break;
@@ -112,7 +113,7 @@ module.exports = async function handler(req, res) {
     let parsed;
     try { parsed = JSON.parse(content); } catch { parsed = { reply: content, languageCode: targetLocale || 'auto', intent: 'general' }; }
     const reply = String(parsed.reply || '').trim().slice(0, 1800);
-    if (!reply) return res.status(502).json({ error: 'Empty AI response' });
+    if (!reply) return res.status(502).json({ error: 'Empty AI response', code: 'empty_ai' });
     return res.status(200).json({
       reply,
       languageCode: targetLocale || normalizeLocale(parsed.languageCode) || String(parsed.languageCode || 'auto').slice(0, 20),
@@ -123,6 +124,12 @@ module.exports = async function handler(req, res) {
     });
   } catch (err) {
     console.error('DBest AI assistant error', err);
-    return res.status(500).json({ error: 'AI assistant temporarily unavailable' });
+    const msg = String(err && err.message || err || '');
+    const rateLimited = Number(err && err.statusCode) === 429 || /rate.?limit|free tier/i.test(msg);
+    return res.status(rateLimited ? 429 : 500).json({
+      error: rateLimited ? 'AI is busy' : 'AI assistant temporarily unavailable',
+      code: rateLimited ? 'rate_limited' : 'ai_unavailable',
+      languageCode: targetLocale || 'auto'
+    });
   }
 };
