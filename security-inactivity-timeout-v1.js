@@ -5,12 +5,79 @@
   var lastActivity=Date.now();
   var warned=false;
   var busy=false;
-  function hasLogin(){try{if(window.currentUser||window.currentMember||window.loggedInUser||window.ownerSession||window.vendorSession||window.vaahakSession)return true;var keys=['dbest_user','dbestUser','dbest_member','dbestMember','currentUser','loggedInUser','ownerSession','vendorSession','vaahakSession','sb-access-token','supabase.auth.token'];for(var i=0;i<keys.length;i++)if(localStorage.getItem(keys[i])||sessionStorage.getItem(keys[i]))return true;for(var j=0;j<localStorage.length;j++){var k=String(localStorage.key(j)||'').toLowerCase();if((k.indexOf('session')>=0||k.indexOf('login')>=0||k.indexOf('auth')>=0||k.indexOf('member')>=0||k.indexOf('owner')>=0||k.indexOf('vendor')>=0||k.indexOf('vaahak')>=0)&&localStorage.getItem(localStorage.key(j)))return true}}catch(e){}return false}
-  function reset(){lastActivity=Date.now();warned=false}['pointerdown','mousedown','keydown','touchstart','scroll','wheel'].forEach(function(ev){document.addEventListener(ev,reset,{passive:true,capture:true})});document.addEventListener('visibilitychange',function(){if(!document.hidden)check()});
-  function clearLikelySessions(){try{var preserve=['dbest_payout_reset_v2','dbest_language','language','lang'];[localStorage,sessionStorage].forEach(function(store){var del=[];for(var i=0;i<store.length;i++){var key=store.key(i),low=String(key||'').toLowerCase();if(preserve.indexOf(key)>=0)continue;if(low.indexOf('auth')>=0||low.indexOf('session')>=0||low.indexOf('login')>=0||low.indexOf('currentuser')>=0||low.indexOf('member')>=0||low.indexOf('owner')>=0||low.indexOf('vendor')>=0||low.indexOf('vaahak')>=0||low.indexOf('partner')>=0||low.indexOf('supabase')>=0)del.push(key)}del.forEach(function(k){try{store.removeItem(k)}catch(e){}})})}catch(e){}}
-  async function logout(){if(busy)return;busy=true;try{var sb=window.supabaseClient||window.supabase||window.sb;if(sb&&sb.auth&&typeof sb.auth.signOut==='function')await sb.auth.signOut()}catch(e){}try{if(typeof window.logout==='function')window.logout()}catch(e){}try{if(typeof window.doLogout==='function')window.doLogout()}catch(e){}clearLikelySessions();try{sessionStorage.setItem('dbest_inactivity_logout','1')}catch(e){}var path=(location.pathname||'/').toLowerCase();if(path.indexOf('/vaahak')===0)location.replace('/Vaahak/?reason=inactive');else if(path.indexOf('/owner')===0)location.replace('/owner?reason=inactive');else if(path.indexOf('/superadmin')===0)location.replace('/SuperAdmin?reason=inactive');else if(path.indexOf('/servicepartner')===0)location.replace('/ServicePartner?reason=inactive');else location.replace('/?reason=inactive')}
-  function check(){if(!hasLogin()){lastActivity=Date.now();warned=false;return}var idle=Date.now()-lastActivity;if(idle>=TIMEOUT_MS){logout();return}if(idle>=WARNING_MS&&!warned){warned=true;try{var d=document.createElement('div');d.id='dbestIdleWarning';d.style.cssText='position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:2147483647;background:#172033;color:#fff;padding:10px 14px;border-radius:12px;font:600 13px system-ui;box-shadow:0 8px 28px #0004';d.textContent='For your security, you will be logged out after 5 minutes of inactivity. Tap or press any key to stay signed in.';document.body.appendChild(d);setTimeout(function(){if(d.parentNode)d.parentNode.removeChild(d)},12000)}catch(e){}}}
-  setInterval(check,5000);window.DBEST_SECURITY={inactivityTimeoutMinutes:5,resetActivity:reset,logoutForInactivity:logout};
+  var appLogout=typeof window.logout==='function'?window.logout:null;
+
+  function dbestSession(){
+    try{return JSON.parse(localStorage.getItem('d2_session')||'null')||null}catch(e){return null}
+  }
+  function hasLogin(){
+    try{
+      var d=dbestSession();
+      if(d&&d.id&&['guest','promoter','prime','leader','admin','owner'].indexOf(String(d.role||''))>=0)return true;
+      if(window.currentUser||window.currentMember||window.loggedInUser||window.ownerSession||window.vendorSession||window.vaahakSession)return true;
+      var keys=['dbest_user','dbestUser','dbest_member','dbestMember','currentUser','loggedInUser','ownerSession','vendorSession','vaahakSession','sb-access-token','supabase.auth.token'];
+      for(var i=0;i<keys.length;i++)if(localStorage.getItem(keys[i])||sessionStorage.getItem(keys[i]))return true;
+    }catch(e){}
+    return false;
+  }
+  function reset(){lastActivity=Date.now();warned=false;try{document.getElementById('dbestIdleWarning')?.remove()}catch(e){}}
+  ['pointerdown','mousedown','keydown','touchstart','scroll','wheel'].forEach(function(ev){document.addEventListener(ev,reset,{passive:true,capture:true})});
+  document.addEventListener('visibilitychange',function(){if(!document.hidden)check()});
+
+  function clearSecuritySessions(){
+    try{
+      localStorage.setItem('d2_session',JSON.stringify({role:'visitor',id:''}));
+      sessionStorage.removeItem('dbest_ai_pending_external_v1');
+      sessionStorage.removeItem('dbest_ai_pending_task_v1');
+      ['dbest_user','dbestUser','dbest_member','dbestMember','currentUser','loggedInUser','ownerSession','vendorSession','vaahakSession'].forEach(function(k){try{localStorage.removeItem(k);sessionStorage.removeItem(k)}catch(e){}});
+      for(var i=localStorage.length-1;i>=0;i--){var k=String(localStorage.key(i)||''),low=k.toLowerCase();if(low.indexOf('supabase')>=0&&(low.indexOf('auth')>=0||low.indexOf('token')>=0||low.indexOf('session')>=0))try{localStorage.removeItem(k)}catch(e){}}
+      for(var j=sessionStorage.length-1;j>=0;j--){var sk=String(sessionStorage.key(j)||''),slow=sk.toLowerCase();if(slow.indexOf('supabase')>=0&&(slow.indexOf('auth')>=0||slow.indexOf('token')>=0||slow.indexOf('session')>=0))try{sessionStorage.removeItem(sk)}catch(e){}}
+    }catch(e){}
+  }
+  function remoteSignOut(){
+    try{
+      var sb=window.supabaseClient||window.supabase||window.sb;
+      if(sb&&sb.auth&&typeof sb.auth.signOut==='function'){
+        Promise.race([Promise.resolve(sb.auth.signOut()),new Promise(function(resolve){setTimeout(resolve,1500)})]).catch(function(){});
+      }
+    }catch(e){}
+  }
+  function localLogoutNow(){
+    try{if(typeof appLogout==='function')appLogout.call(window);else if(typeof window.logout==='function')window.logout()}catch(e){}
+    try{if(typeof window.doLogout==='function')window.doLogout()}catch(e){}
+    clearSecuritySessions();
+    try{window.__DBEST_AI_FORCE_HIDDEN__=true;var h=document.getElementById('dbest-ai-test-host');if(h)h.style.display='none'}catch(e){}
+  }
+  function redirectAfterLogout(){
+    var path=(location.pathname||'/').toLowerCase();
+    if(path.indexOf('/vaahak')===0)location.replace('/Vaahak/?reason=inactive');
+    else if(path.indexOf('/owner')===0)location.replace('/owner?reason=inactive');
+    else if(path.indexOf('/superadmin')===0)location.replace('/SuperAdmin?reason=inactive');
+    else if(path.indexOf('/servicepartner')===0)location.replace('/ServicePartner?reason=inactive');
+    else location.replace('/?reason=inactive');
+  }
+  function logout(){
+    if(busy)return;
+    busy=true;
+    localLogoutNow();
+    remoteSignOut();
+    try{sessionStorage.setItem('dbest_inactivity_logout','1')}catch(e){}
+    setTimeout(redirectAfterLogout,80);
+  }
+  function check(){
+    if(!hasLogin()){lastActivity=Date.now();warned=false;return}
+    var idle=Date.now()-lastActivity;
+    if(idle>=TIMEOUT_MS){logout();return}
+    if(idle>=WARNING_MS&&!warned){
+      warned=true;
+      try{
+        var d=document.createElement('div');d.id='dbestIdleWarning';d.style.cssText='position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:2147483647;background:#172033;color:#fff;padding:10px 14px;border-radius:12px;font:600 13px system-ui;box-shadow:0 8px 28px #0004';d.textContent='For your security, you will be logged out after 5 minutes of inactivity. Tap or press any key to stay signed in.';document.body.appendChild(d);setTimeout(function(){if(d.parentNode)d.parentNode.removeChild(d)},12000)
+      }catch(e){}
+    }
+  }
+  setInterval(check,5000);
+  window.DBEST_SECURITY={inactivityTimeoutMinutes:5,resetActivity:reset,logoutForInactivity:logout,version:'2.0-immediate-local-logout'};
+
   try{
     var controlPortal=/^\/(owner|superadmin|servicepartner)(?:\/|$)/i.test(location.pathname||'');
     if(controlPortal){try{sessionStorage.setItem('dbest_external_handoff_until',String(Date.now()+24*60*60*1000));sessionStorage.removeItem('dbest_screen_snapshot_v1');sessionStorage.removeItem('dbest_screen_stack_v1')}catch(_){}}
