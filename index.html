@@ -17,13 +17,13 @@
   <script>
     (async function(){
       try{
-        const BUILD='20260908-ai-safe-ui-test-v4-7';
+        const BUILD='20260909-ai-safe-ui-test-v4-8';
         const r=await fetch('./index-26.html?v='+BUILD,{cache:'default'});
         if(!r.ok)throw new Error('Unable to load application');
         let html=await r.text();
         const uniform='<style id="dbest-device-uniformity">html{-webkit-text-size-adjust:100%;text-size-adjust:100%}body{margin:0;max-width:100%;overflow-x:hidden}*,*:before,*:after{box-sizing:border-box}button,input,select,textarea{font:inherit}@media(max-width:480px){input,select,textarea{font-size:16px}}</style>';
         html=html.replace('</head>',uniform+'<script src="./runtime-config.js?v='+BUILD+'"><\/script></head>');
-        html=html.replace('</body>','<script defer src="./app-bootstrap-performance-v1.js?v='+BUILD+'"><\/script><script defer src="./ai-safe-client-v3.js?v='+BUILD+'"><\/script><script defer src="./ai-polished-multilingual-v4-7.js?v='+BUILD+'"><\/script></body>');
+        html=html.replace('</body>','<script defer src="./app-bootstrap-performance-v1.js?v='+BUILD+'"><\/script><script defer src="./ai-safe-client-v3.js?v='+BUILD+'"><\/script><script defer src="./ai-recorded-multilingual-v4-8.js?v='+BUILD+'"><\/script></body>');
         document.open();
         document.write(html);
         document.close();
