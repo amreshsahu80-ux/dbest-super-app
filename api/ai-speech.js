@@ -28,7 +28,9 @@ async function geminiSpeechWithModel(text, locale, model) {
   const key = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY || '';
   if (!key) return null;
   const localeName = LOCALE_NAME[locale] || 'the language of the supplied text';
-  const prompt = `Speak exactly the following text in ${localeName}. Use a soft, warm, calm, friendly Indian female voice with natural conversational pacing and clear native pronunciation. Do not translate, summarize, explain, or add any words. Text to speak:\n${text}`;
+  const prompt = model === 'gemini-2.5-flash-preview-tts'
+    ? text
+    : `Speak exactly the following text in ${localeName}. Use a soft, warm, calm, friendly Indian female voice with natural conversational pacing and clear native pronunciation. Do not translate, summarize, explain, or add any words. Text to speak:\n${text}`;
 
   const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
     method: 'POST',
@@ -59,7 +61,7 @@ async function geminiSpeechWithModel(text, locale, model) {
 
 async function geminiSpeech(text, locale) {
   let lastError = null;
-  for (const model of ['gemini-3.1-flash-tts-preview','gemini-2.5-flash-preview-tts']) {
+  for (const model of ['gemini-2.5-flash-preview-tts','gemini-3.1-flash-tts-preview']) {
     try {
       const out = await geminiSpeechWithModel(text, locale, model);
       if (out) return out;
