@@ -29,101 +29,23 @@
         {"key": "Referrer-Policy", "value": "strict-origin-when-cross-origin"},
         {"key": "X-Frame-Options", "value": "DENY"},
         {"key": "Content-Security-Policy", "value": "frame-ancestors 'none'; base-uri 'self'; object-src 'none'"},
-        {"key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=(self), usb=(), browsing-topics=()"}
+        {"key": "Permissions-Policy", "value": "camera=(), microphone=(self), geolocation=(self), usb=(), browsing-topics=()"}
       ]
     },
-    {
-      "source": "/",
-      "headers": [
-        {"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}
-      ]
-    },
-    {
-      "source": "/index.html",
-      "headers": [
-        {"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}
-      ]
-    },
-    {
-      "source": "/index-26.html",
-      "headers": [
-        {"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}
-      ]
-    },
-    {
-      "source": "/(.*).js",
-      "headers": [
-        {"key": "Cache-Control", "value": "no-cache, max-age=0, must-revalidate"}
-      ]
-    },
-    {
-      "source": "/(.*).css",
-      "headers": [
-        {"key": "Cache-Control", "value": "no-cache, max-age=0, must-revalidate"}
-      ]
-    },
-    {
-      "source": "/owner",
-      "headers": [
-        {"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"},
-        {"key": "X-Robots-Tag", "value": "noindex, nofollow, noarchive"}
-      ]
-    },
-    {
-      "source": "/ServicePartner",
-      "headers": [
-        {"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"},
-        {"key": "X-Robots-Tag", "value": "noindex, nofollow, noarchive"}
-      ]
-    },
-    {
-      "source": "/SuperAdmin",
-      "headers": [
-        {"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"},
-        {"key": "X-Robots-Tag", "value": "noindex, nofollow, noarchive"}
-      ]
-    },
-    {
-      "source": "/Vaahak",
-      "headers": [
-        {"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}
-      ]
-    },
-    {
-      "source": "/vaahak.html",
-      "headers": [
-        {"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}
-      ]
-    },
-    {
-      "source": "/runtime-config.js",
-      "headers": [
-        {"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}
-      ]
-    },
-    {
-      "source": "/Vaahak/runtime-config.js",
-      "headers": [
-        {"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}
-      ]
-    },
-    {
-      "source": "/vaahak-(.*).js",
-      "headers": [
-        {"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}
-      ]
-    },
-    {
-      "source": "/service-partner-(.*).js",
-      "headers": [
-        {"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}
-      ]
-    },
-    {
-      "source": "/super-admin-(.*).js",
-      "headers": [
-        {"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}
-      ]
-    }
+    {"source": "/", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}]},
+    {"source": "/index.html", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}]},
+    {"source": "/index-26.html", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}]},
+    {"source": "/(.*).js", "headers": [{"key": "Cache-Control", "value": "no-cache, max-age=0, must-revalidate"}]},
+    {"source": "/(.*).css", "headers": [{"key": "Cache-Control", "value": "no-cache, max-age=0, must-revalidate"}]},
+    {"source": "/owner", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"},{"key": "X-Robots-Tag", "value": "noindex, nofollow, noarchive"}]},
+    {"source": "/ServicePartner", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"},{"key": "X-Robots-Tag", "value": "noindex, nofollow, noarchive"}]},
+    {"source": "/SuperAdmin", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"},{"key": "X-Robots-Tag", "value": "noindex, nofollow, noarchive"}]},
+    {"source": "/Vaahak", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}]},
+    {"source": "/vaahak.html", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}]},
+    {"source": "/runtime-config.js", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}]},
+    {"source": "/Vaahak/runtime-config.js", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}]},
+    {"source": "/vaahak-(.*).js", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}]},
+    {"source": "/service-partner-(.*).js", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}]},
+    {"source": "/super-admin-(.*).js", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}]}
   ]
 }
