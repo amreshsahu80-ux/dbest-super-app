@@ -79,13 +79,34 @@ module.exports = async function handler(req, res) {
     `Return JSON only in this exact shape: {"reply":"...","languageCode":"${targetLocale || 'detected-language-code'}","intent":"travel|insurance|cab|marketplace|account|general"}.`
   ].join(' ');
 
+  const MODELS = [
+    'google/gemini-2.5-flash-lite',
+    'alibaba/qwen-3-14b',
+    'poolside/laguna-s-2.1-free'
+  ];
+
   try {
     const { generateText } = await import('ai');
-    const result = await generateText({
-      model: 'google/gemini-2.5-flash-lite',
-      system,
-      messages: [...safeHistory, { role: 'user', content: message }]
-    });
+    let lastError = null;
+    let result = null;
+    let modelUsed = '';
+    for (const model of MODELS) {
+      try {
+        result = await generateText({
+          model,
+          system,
+          messages: [...safeHistory, { role: 'user', content: message }],
+          maxRetries: 0
+        });
+        modelUsed = model;
+        break;
+      } catch (err) {
+        lastError = err;
+        console.warn('DBest AI model fallback', model, String(err && err.message || err).slice(0, 180));
+      }
+    }
+    if (!result) throw lastError || new Error('No AI model available');
+
     let content = String(result.text || '').trim();
     content = content.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
     let parsed;
@@ -97,7 +118,8 @@ module.exports = async function handler(req, res) {
       languageCode: targetLocale || normalizeLocale(parsed.languageCode) || String(parsed.languageCode || 'auto').slice(0, 20),
       intent: String(parsed.intent || 'general').slice(0, 30),
       demo: true,
-      smoke: req.method === 'GET'
+      smoke: req.method === 'GET',
+      modelUsed
     });
   } catch (err) {
     console.error('DBest AI assistant error', err);
