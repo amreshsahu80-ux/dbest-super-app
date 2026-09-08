@@ -1,8 +1,9 @@
 (() => {
   'use strict';
 
-  const NEXT_TTL = 5000;
+  const LATEST_TTL = 30000;
   let wrapped = false;
+  let lastConsumedAt = 0;
 
   function inferCabPair(text, data={}) {
     const out={...(data||{})};
@@ -25,31 +26,19 @@
     return out;
   }
 
-  function latestUserText(root){
-    const users=root?[...root.querySelectorAll('.msg.user')]:[];
-    return String(users.at(-1)?.textContent || window.__DBEST_LAST_AI_DATA__?._userText || '').trim();
-  }
-
-  function armNextCab(root){
-    const latest=window.__DBEST_LAST_AI_DATA__||{};
-    const text=latestUserText(root);
+  function latestCabPayload(){
+    const latest=window.__DBEST_LAST_AI_DATA__||null;
+    if(!latest)return null;
+    const at=Number(latest._at||0);
+    if(!at||Date.now()-at>LATEST_TTL||at===lastConsumedAt)return null;
+    const text=String(latest._userText||'').trim();
     const route=String(latest.route||'').toLowerCase();
     const looksCab=route==='car'||/\bcab\b|\btaxi\b|\bride\b|pickup|drop/i.test(text);
-    if(!looksCab)return false;
+    if(!looksCab)return null;
     const taskData=inferCabPair(text,latest.taskData||{});
-    if(!taskData.pickup&&!taskData.drop)return false;
-    window.__DBEST_CAB_AI_NEXT__={
-      taskData,
-      userText:text,
-      armedAt:Date.now()
-    };
-    window.__DBEST_NATIVE_CAB_HANDOFF__={
-      stage:'armed',
-      pickup:taskData.pickup||'',
-      drop:taskData.drop||'',
-      at:Date.now()
-    };
-    return true;
+    if(!taskData.pickup&&!taskData.drop)return null;
+    lastConsumedAt=at;
+    return {taskData,text,at};
   }
 
   function wrapNativeCab(){
@@ -57,47 +46,26 @@
     const original=window.openRidePlatform;
     window.openRidePlatform=function(aiData){
       let payload=(aiData&&typeof aiData==='object')?aiData:null;
-      const next=window.__DBEST_CAB_AI_NEXT__;
-      if(!payload&&next&&Date.now()-Number(next.armedAt||0)<=NEXT_TTL){
-        payload=next.taskData||null;
+      let source='argument';
+      if(!payload){
+        const latest=latestCabPayload();
+        if(latest){payload=latest.taskData;source='latest-ai';}
       }
-      if(next)delete window.__DBEST_CAB_AI_NEXT__;
       window.__DBEST_NATIVE_CAB_HANDOFF__={
         stage:'opening',
+        source,
         pickup:payload?.pickup||'',
         drop:payload?.drop||'',
         at:Date.now()
       };
       return original.call(this,payload||undefined);
     };
-    window.openRidePlatform.__dbestAiOneTimeWrapper=true;
+    window.openRidePlatform.__dbestAiLatestWrapper=true;
     wrapped=true;
     return true;
   }
 
-  function installShadowCapture(){
-    const root=document.querySelector('#dbest-ai-test-host')?.shadowRoot;
-    if(!root)return false;
-    if(root.__dbestNativeCabPayloadInstalled)return true;
-    root.__dbestNativeCabPayloadInstalled=true;
-    root.addEventListener('pointerdown',e=>{
-      const btn=e.target?.closest?.('button');
-      if(!btn||!/Continue in DBest/i.test(String(btn.textContent||'')))return;
-      armNextCab(root);
-    },true);
-    root.addEventListener('click',e=>{
-      const btn=e.target?.closest?.('button');
-      if(!btn||!/Continue in DBest/i.test(String(btn.textContent||'')))return;
-      armNextCab(root);
-    },true);
-    return true;
-  }
-
-  function install(){
-    const a=wrapNativeCab();
-    const b=installShadowCapture();
-    return a&&b;
-  }
+  function install(){return wrapNativeCab();}
 
   if(!install()){
     const timer=setInterval(()=>{if(install())clearInterval(timer);},100);
@@ -105,7 +73,7 @@
   }
 
   window.__DBEST_AI_NATIVE_CAB__={
-    arm:()=>armNextCab(document.querySelector('#dbest-ai-test-host')?.shadowRoot),
-    version:'0.2-one-time-native-payload'
+    getLatestCabPayload:latestCabPayload,
+    version:'0.3-latest-ai-direct'
   };
 })();
