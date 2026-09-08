@@ -10,6 +10,7 @@
     *,*:before,*:after{box-sizing:border-box}
     button,input,select,textarea{font:inherit}
     #dbestBoot{min-height:100dvh;display:grid;place-items:center;padding:24px;font:700 14px system-ui,-apple-system,Segoe UI,Arial,sans-serif;color:#33415c;text-align:center}
+    #dbest-ai-test-host{display:none}
   </style>
 </head>
 <body>
@@ -17,13 +18,32 @@
   <script>
     (async function(){
       try{
-        const BUILD='20260907-uniform-performance-v2';
+        const BUILD='20260908-live-member-ai-v1';
         const r=await fetch('./index-26.html?v='+BUILD,{cache:'default'});
         if(!r.ok)throw new Error('Unable to load application');
         let html=await r.text();
-        const uniform='<style id="dbest-device-uniformity">html{-webkit-text-size-adjust:100%;text-size-adjust:100%}body{margin:0;max-width:100%;overflow-x:hidden}*,*:before,*:after{box-sizing:border-box}button,input,select,textarea{font:inherit}@media(max-width:480px){input,select,textarea{font-size:16px}}</style>';
+
+        const cabOpenSignature='function openRidePlatform(){';
+        const cabOpenPatched=`function openRidePlatform(aiData){
+  const __dbestAiData=(aiData&&typeof aiData==="object")?aiData:null;
+  const __dbestAiPickup=!!(__dbestAiData&&__dbestAiData.pickup);
+  if(__dbestAiData){
+    if(__dbestAiData.pickup){rideDraft.pickup=String(__dbestAiData.pickup).trim();rideDraft.pickupCoords=null;}
+    if(__dbestAiData.drop)rideDraft.drop=String(__dbestAiData.drop).trim();
+    if(__dbestAiData.schedule)rideDraft.schedule=String(__dbestAiData.schedule);
+    window.__DBEST_NATIVE_CAB_AI__={pickup:rideDraft.pickup||"",drop:rideDraft.drop||"",schedule:rideDraft.schedule||"Now",receivedAt:Date.now()};
+  }`;
+        if(!html.includes(cabOpenSignature))throw new Error('Cab native opener signature not found');
+        html=html.replace(cabOpenSignature,cabOpenPatched);
+
+        const cabGpsLine='  setTimeout(()=>fetchRideLiveLocation(true),250);';
+        const cabGpsPatched='  if(!__dbestAiPickup){setTimeout(()=>fetchRideLiveLocation(true),250);}else{setTimeout(()=>{let st=$("rideLocationStatus");if(st)st.textContent="Pickup provided by DBest AI • Tap Use GPS to replace it";},250);}';
+        if(!html.includes(cabGpsLine))throw new Error('Cab GPS hook not found');
+        html=html.replace(cabGpsLine,cabGpsPatched);
+
+        const uniform='<style id="dbest-device-uniformity">html{-webkit-text-size-adjust:100%;text-size-adjust:100%}body{margin:0;max-width:100%;overflow-x:hidden}*,*:before,*:after{box-sizing:border-box}button,input,select,textarea{font:inherit}@media(max-width:480px){input,select,textarea{font-size:16px}}#dbest-ai-test-host{display:none}</style>';
         html=html.replace('</head>',uniform+'<script src="./runtime-config.js?v='+BUILD+'"><\/script></head>');
-        html=html.replace('</body>','<script defer src="./app-bootstrap-performance-v1.js?v='+BUILD+'"><\/script></body>');
+        html=html.replace('</body>','<script defer src="./app-bootstrap-performance-v1.js?v='+BUILD+'"><\/script><script src="./ai-voice-language-guard.js?v='+BUILD+'"><\/script><script defer src="./ai-assistant-test.js?v='+BUILD+'"><\/script><script defer src="./ai-live-ui-v1.js?v='+BUILD+'"><\/script><script defer src="./ai-auto-voice-v2.js?v='+BUILD+'"><\/script><script defer src="./ai-task-router.js?v='+BUILD+'"><\/script><script defer src="./ai-native-cab-handoff.js?v='+BUILD+'"><\/script><script defer src="./ai-fast-route-v1.js?v='+BUILD+'"><\/script><script defer src="./ai-member-runtime-v1.js?v='+BUILD+'"><\/script></body>');
         document.open();
         document.write(html);
         document.close();
