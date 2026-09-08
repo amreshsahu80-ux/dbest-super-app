@@ -7,46 +7,91 @@ const ALIASES={en:'en-IN',english:'en-IN',hi:'hi-IN',hindi:'hi-IN',bn:'bn-IN',be
 const ROUTES=new Set(['join','car','insurance','travel','flights','store','govt','loans','rail','repair','friends','jobs','vahan','wallet','mf','other','none']);
 function normalizeLocale(v){const x=String(v||'').trim().toLowerCase();if(!x)return'';const exact=Object.keys(NAMES).find(k=>k.toLowerCase()===x);return exact||ALIASES[x]||ALIASES[x.split('-')[0]]||'';}
 function cleanJson(text){let s=String(text||'').trim().replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/i,'').trim();try{return JSON.parse(s);}catch{}const m=s.match(/\{[\s\S]*\}/);if(m){try{return JSON.parse(m[0]);}catch{}}return{reply:s};}
-function cleanTaskData(v){if(!v||typeof v!=='object'||Array.isArray(v))return{};const out={};for(const [k,val] of Object.entries(v).slice(0,20)){if(val===null||val===undefined||val==='')continue;out[String(k).slice(0,40)]=typeof val==='string'?val.slice(0,300):val;}return out;}
+function cleanTaskData(v){if(!v||typeof v!=='object'||Array.isArray(v))return{};const out={};for(const [k,val] of Object.entries(v).slice(0,24)){if(val===null||val===undefined||val==='')continue;out[String(k).slice(0,40)]=typeof val==='string'?val.slice(0,300):val;}return out;}
 function normalizeResult(parsed,targetLocale){const route=ROUTES.has(String(parsed.route||''))?String(parsed.route):'none';return{reply:String(parsed.reply||'').trim().slice(0,1800),languageCode:targetLocale||normalizeLocale(parsed.languageCode)||String(parsed.languageCode||'auto').slice(0,20),intent:String(parsed.intent||'general').slice(0,40),route,subsection:String(parsed.subsection||'').slice(0,80),taskData:cleanTaskData(parsed.taskData)};}
 function augmentTaskData(message,result){
   const out={...result,taskData:{...(result.taskData||{})}};
-  if(out.route!=='car')return out;
-  const d=out.taskData;
-  if(d.destination&&!d.drop)d.drop=d.destination;
-  if(d.origin&&!d.pickup)d.pickup=d.origin;
-  const raw=String(message||'').replace(/\s+/g,' ').trim();
-  const fromTo=raw.match(/\bfrom\s+(.+?)\s+to\s+(.+?)(?=\s+(?:today|tomorrow|tonight|on|at|now|please|for|with)\b|[,.!?]|$)/i);
-  if(fromTo){if(!d.pickup)d.pickup=fromTo[1].trim();if(!d.drop)d.drop=fromTo[2].trim();}
-  if((!d.pickup||!d.drop)){
-    const simple=raw.match(/\bfrom\s+([^,.!?]+?)(?=\s+(?:today|tomorrow|tonight|on|at|now|please|for|with)\b|[,.!?]|$)/i);
-    if(simple){
-      const parts=simple[1].trim().split(/\s+/).filter(Boolean);
-      if(parts.length===2){if(!d.pickup)d.pickup=parts[0];if(!d.drop)d.drop=parts[1];}
+  const d=out.taskData,raw=String(message||'').replace(/\s+/g,' ').trim(),low=raw.toLowerCase();
+
+  if(/life insurance|term insurance|term plan|life cover/.test(low)){out.route='insurance';out.subsection='Life Insurance';if(!d.insuranceType)d.insuranceType='Life Insurance';}
+  else if(/health insurance|mediclaim|health cover|family floater/.test(low)){out.route='insurance';out.subsection='Health Insurance';if(!d.insuranceType)d.insuranceType='Health Insurance';}
+  else if(/motor insurance|vehicle insurance|car insurance|bike insurance/.test(low)){out.route='insurance';out.subsection='Motor Insurance';if(!d.insuranceType)d.insuranceType='Motor Insurance';}
+  else if(/travel insurance/.test(low)){out.route='insurance';out.subsection='Travel Insurance';if(!d.insuranceType)d.insuranceType='Travel Insurance';}
+  else if(/\bvisa\b/.test(low)){out.route='flights';out.subsection='Visa Assistance';}
+  else if(/flight.*hotel|hotel.*flight/.test(low)){out.route='flights';out.subsection='Flight + Hotel';}
+  else if(/\bflight\b|air ticket|airfare/.test(low)){out.route='flights';out.subsection='Flight Booking';}
+  else if(/\bhotel\b|hotel booking|room booking|stay/.test(low)){out.route='travel';out.subsection='Hotel Booking';}
+  else if(/itinerary/.test(low)){out.route='travel';out.subsection='Custom Itinerary';}
+  else if(/package|holiday|tour/.test(low)){out.route='travel';out.subsection='Tour Package';}
+  else if(/portfolio|folio|existing fund|existing investment/.test(low)){out.route='mf';out.subsection='Portfolio Assistance';}
+  else if(/mutual fund|\bsip\b|lumpsum|lump sum|bond|fixed income/.test(low)){out.route='mf';out.subsection='Mutual Fund Investment';}
+
+  if(out.route==='car'){
+    if(d.destination&&!d.drop)d.drop=d.destination;
+    if(d.origin&&!d.pickup)d.pickup=d.origin;
+    const fromTo=raw.match(/\bfrom\s+(.+?)\s+to\s+(.+?)(?=\s+(?:today|tomorrow|tonight|on|at|now|please|for|with)\b|[,.!?]|$)/i);
+    if(fromTo){if(!d.pickup)d.pickup=fromTo[1].trim();if(!d.drop)d.drop=fromTo[2].trim();}
+    if((!d.pickup||!d.drop)){
+      const simple=raw.match(/\bfrom\s+([^,.!?]+?)(?=\s+(?:today|tomorrow|tonight|on|at|now|please|for|with)\b|[,.!?]|$)/i);
+      if(simple){const parts=simple[1].trim().split(/\s+/).filter(Boolean);if(parts.length===2){if(!d.pickup)d.pickup=parts[0];if(!d.drop)d.drop=parts[1];}}
     }
+    if(d.pickup&&d.drop&&!out.subsection)out.subsection='Outstation Cab';
   }
-  if(d.pickup&&d.drop&&!out.subsection)out.subsection='Outstation Cab';
+
+  if(out.route==='insurance'){
+    if(d.coverAmount&&!d.sumInsured)d.sumInsured=d.coverAmount;
+    if(d.familyMembers&&!d.members)d.members=d.familyMembers;
+  }
+  if(out.route==='flights'){
+    if(d.origin&&!d.from)d.from=d.origin;
+    if(d.fromCity&&!d.from)d.from=d.fromCity;
+    if(d.destination&&!d.to)d.to=d.destination;
+    if(d.date&&!d.departure)d.departure=d.date;
+    if(d.departureDate&&!d.departure)d.departure=d.departureDate;
+    if(d.returnDate&&!d.return)d.return=d.returnDate;
+  }
+  if(out.route==='travel'){
+    if(d.destination&&!d.destinations)d.destinations=d.destination;
+    if(d.date&&!d.startDate)d.startDate=d.date;
+    if(d.departureDate&&!d.startDate)d.startDate=d.departureDate;
+  }
+  if(out.route==='mf'&&!d.investmentType){
+    if(/\bsip\b/.test(low))d.investmentType='SIP';
+    else if(/lump\s*sum|lumpsum/.test(low))d.investmentType='Lumpsum';
+    else if(/bond|fixed income/.test(low))d.investmentType='Bonds / Fixed Income';
+  }
   return out;
 }
 async function callGemini({key,model,system,history,message}){const contents=[];for(const item of history)contents.push({role:item.role==='assistant'?'model':'user',parts:[{text:item.content}]});contents.push({role:'user',parts:[{text:message}]});const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,{method:'POST',headers:{'x-goog-api-key':key,'Content-Type':'application/json'},body:JSON.stringify({systemInstruction:{parts:[{text:system}]},contents,generationConfig:{temperature:.15,maxOutputTokens:700,responseMimeType:'application/json'}})});if(!r.ok){const body=await r.text().catch(()=>'');const e=new Error(`Gemini ${model} ${r.status}: ${body.slice(0,260)}`);e.statusCode=r.status;throw e;}const json=await r.json();const text=(json?.candidates?.[0]?.content?.parts||[]).map(p=>p?.text||'').join('').trim();if(!text)throw new Error(`Gemini ${model} returned no text`);return{text,model};}
 module.exports=async function handler(req,res){
   res.setHeader('Cache-Control','no-store, max-age=0, must-revalidate');res.setHeader('X-Robots-Tag','noindex, nofollow, noarchive');
-  const smokeCases={hi:{message:'मुझे 15000 रुपये में गोवा पैकेज चाहिए',locale:'auto',detectedLocale:'hi-IN',history:[]},bn:{message:'আমার ১৫ হাজার টাকার মধ্যে গোয়া প্যাকেজ চাই',locale:'auto',detectedLocale:'bn-IN',history:[]},or:{message:'ମୋତେ ୧୫ ହଜାର ଟଙ୍କା ଭିତରେ ଗୋଆ ପ୍ୟାକେଜ ଦରକାର',locale:'auto',detectedLocale:'or-IN',history:[]},ta:{message:'எனக்கு 15000 ரூபாய்க்குள் கோவா பேக்கேஜ் வேண்டும்',locale:'auto',detectedLocale:'ta-IN',history:[]},cab:{message:'I want a cab from Chakradharpur Ranchi',locale:'en-IN',detectedLocale:'en-IN',history:[]}};
+  const smokeCases={
+    hi:{message:'मुझे 15000 रुपये में गोवा पैकेज चाहिए',locale:'auto',detectedLocale:'hi-IN',history:[]},
+    bn:{message:'আমার ১৫ হাজার টাকার মধ্যে গোয়া প্যাকেজ চাই',locale:'auto',detectedLocale:'bn-IN',history:[]},
+    or:{message:'ମୋତେ ୧୫ ହଜାର ଟଙ୍କା ଭିତରେ ଗୋଆ ପ୍ୟାକେଜ ଦରକାର',locale:'auto',detectedLocale:'or-IN',history:[]},
+    ta:{message:'எனக்கு 15000 ரூபாய்க்குள் கோவா பேக்கேஜ் வேண்டும்',locale:'auto',detectedLocale:'ta-IN',history:[]},
+    cab:{message:'I want a cab from Chakradharpur Ranchi',locale:'en-IN',detectedLocale:'en-IN',history:[]},
+    flight:{message:'I need a flight from Ranchi to Delhi for 2 adults',locale:'en-IN',detectedLocale:'en-IN',history:[]},
+    hotel:{message:'I need a 4 star hotel in Goa for 2 adults',locale:'en-IN',detectedLocale:'en-IN',history:[]},
+    life:{message:'I need life insurance cover of 1 crore',locale:'en-IN',detectedLocale:'en-IN',history:[]},
+    mf:{message:'I want to start a SIP of 5000 per month',locale:'en-IN',detectedLocale:'en-IN',history:[]}
+  };
   let body={};if(req.method==='GET'&&req.query&&smokeCases[String(req.query.smoke||'')])body=smokeCases[String(req.query.smoke)];else if(req.method==='POST')body=req.body&&typeof req.body==='object'?req.body:{};else{res.setHeader('Allow','POST, GET');return res.status(405).json({error:'Method not allowed'});}
   const message=String(body.message||'').trim().slice(0,2000),locale=String(body.locale||'auto').trim().slice(0,20),detectedLocale=normalizeLocale(String(body.detectedLocale||'')),selectedLocale=locale!=='auto'?normalizeLocale(locale):'',targetLocale=selectedLocale||detectedLocale||'',targetLanguage=targetLocale?NAMES[targetLocale]:'';
   const history=(Array.isArray(body.history)?body.history:[]).slice(-6).filter(x=>x&&(x.role==='user'||x.role==='assistant')).map(x=>({role:x.role,content:String(x.content||'').slice(0,1200)}));if(!message)return res.status(400).json({error:'Message is required'});
   const languageRule=targetLanguage?`MANDATORY: Answer ONLY in ${targetLanguage} (${targetLocale}), except unavoidable brand/place names. Never switch to English unless the user asks.`:'MANDATORY: Detect the latest user language and answer in that same language. Mirror Hinglish or other natural mixed-language speech. Never default to English.';
   const system=[
     'You are DBest AI Assistant in a TEST ENVIRONMENT.',languageRule,
-    'Your job is not only to answer: identify the correct DBest section, extract details the user has already supplied, and help the user continue the task there.',
+    'Your job is not only to answer: identify the exact DBest section/subsection, extract details the user has already supplied, and help the user continue the task there.',
     'Return JSON only with exactly these top-level keys: reply, languageCode, intent, route, subsection, taskData.',
     'route must be one of: join, car, insurance, travel, flights, store, govt, loans, rail, repair, friends, jobs, vahan, wallet, mf, other, none.',
-    'Use route car for local/outstation/airport cab; insurance for health/motor/travel insurance; travel for hotel/tour package/custom itinerary; flights for flight/flight+hotel/visa; store for grocery/food/digital/medicine; govt for PAN/DL/ITR/certificates; loans for banking/personal/business/home loans; rail for rail/PNR; repair for mobile/AC/appliance repair; jobs for job search/application; vahan for RC/vehicle documentation; wallet for cashback/rewards; mf for mutual funds/SIP/portfolio; join for membership/promoter/team; other for remaining DBest services; none when no platform section is relevant.',
-    'subsection should match the most relevant DBest subsection when clear, for example Health Insurance, Tour Package, Local Cab, Outstation Cab, Grocery Order, PAN Application, Personal Loan, Rail Booking, AC Service, Job Search, RC Service, Mutual Fund Investment.',
-    'taskData must contain every usable detail actually supplied or clearly implied by the user, using DBest-friendly keys such as pickup, drop, origin, destination, budget, date, travellers, passengers, marketType, insuranceType, pincode, sumInsured, adults, children, startDate, duration. Never invent missing personal details.',
+    'Use route car for local/outstation/airport cab; insurance for Life Insurance, Health Insurance, Motor Insurance and Travel Insurance; travel for Hotel Booking, Tour Package and Custom Itinerary; flights for Flight Booking, Flight + Hotel and Visa Assistance; store for grocery/food/digital/medicine; govt for PAN/DL/ITR/certificates; loans for banking/personal/business/home loans; rail for rail/PNR; repair for mobile/AC/appliance repair; jobs for job search/application; vahan for RC/vehicle documentation; wallet for cashback/rewards; mf for Mutual Fund Investment/SIP/lumpsum/bonds/Portfolio Assistance; join for membership/promoter/team; other for remaining DBest services; none when no platform section is relevant.',
+    'For external/deeplink categories, subsection MUST be exact when clear: Life Insurance, Health Insurance, Motor Insurance, Travel Insurance, Flight Booking, Flight + Hotel, Visa Assistance, Hotel Booking, Tour Package, Custom Itinerary, Mutual Fund Investment, or Portfolio Assistance.',
+    'taskData must contain every usable detail actually supplied or clearly implied by the user, using DBest-friendly keys such as pickup, drop, origin, from, destination, to, budget, date, departure, return, checkin, checkout, travellers, passengers, adults, children, infants, rooms, duration, insuranceType, pincode, sumInsured, members, investmentType, amount, frequency, risk, goal. Never invent missing personal details.',
     'For cab requests, aggressively preserve pickup and destination. Example: "cab from Chakradharpur to Ranchi" => pickup=Chakradharpur, drop=Ranchi. If a point-to-point cab request says "from Chakradharpur Ranchi" with two clear place names after from, interpret the first as pickup and the second as destination unless the sentence gives contrary meaning.',
-    'For travel/package requests, preserve destination, budget, travellers/adults/children, origin and dates whenever provided. For insurance, preserve cover amount, family members, ages and pincode when provided. For marketplace, preserve category/item/budget. For forms, do not ask again for details already present in taskData.',
-    'When a DBest route is relevant, tell the user briefly that you can continue in that section and ask only for genuinely missing required details.',
+    'For flight requests, preserve origin/from, destination/to, departure/return dates, adults/children/infants, cabin and airline when supplied. For hotel/package requests, preserve destination, check-in/check-out or dates, rooms, adults/children, hotel category, meal, budget and duration when supplied.',
+    'For insurance, preserve insurance type, cover/sum insured, family members, ages and pincode when supplied. For investments, preserve SIP/lumpsum/bonds type, amount, frequency, goal and risk when supplied. Do not ask again for details already present in taskData.',
+    'When a DBest route is relevant, tell the user briefly that you can continue in that exact section and ask only for genuinely missing details.',
     'Never claim a live price, availability, booking, payment, policy issuance, investment execution, loan approval, order placement or cab allocation unless a real DBest backend tool has actually completed it. In this test, clearly treat prices/results as sample or estimated.',
     'Insurance and investments: factual assistance and form guidance only; do not make regulated suitability decisions. Sensitive actions, payments, final booking, cancellation and submission require the user to confirm in the DBest screen.',
     'Keep replies concise, useful and conversational, normally 2 to 5 short sentences.'
