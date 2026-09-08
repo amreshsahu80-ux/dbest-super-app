@@ -82,7 +82,7 @@ module.exports = async function handler(req, res) {
   try {
     const { generateText } = await import('ai');
     const result = await generateText({
-      model: 'poolside/laguna-s-2.1-free',
+      model: 'google/gemini-2.5-flash-lite',
       system,
       messages: [...safeHistory, { role: 'user', content: message }]
     });
