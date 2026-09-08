@@ -3,9 +3,6 @@
 
   const ROUTE_LABELS={join:'Join N Earn',car:'Cab Booking',insurance:'Insurance',travel:'Hotels & Packages',flights:'Flights / Visa',store:'Marketplace',govt:'PAN / DL / ITR',loans:'Banking & Loans',rail:'Rail',repair:'Repair Services',friends:'Friendz Network',jobs:'Home Jobs',vahan:'VAHAN Services',wallet:'My Wallet',mf:'Mutual Funds',other:'Other Services'};
   const SUB_INDEX={
-    insurance:{'Health Insurance':0,'Motor Insurance':1,'Travel Insurance':2},
-    travel:{'Hotel Booking':0,'Tour Package':1,'Custom Itinerary':2},
-    flights:{'Flight Booking':0,'Flight + Hotel':1,'Visa Assistance':2},
     govt:{'PAN Application':0,'Driving Licence':1,'ITR Filing':2,'Certificates':3},
     loans:{'Personal Loan':0,'Business Loan':1,'Home Loan':2},
     rail:{'Rail Booking':0,'PNR Assistance':1},
@@ -14,10 +11,11 @@
     jobs:{'Job Search':0,'Job Application':1},
     vahan:{'RC Service':0,'Vehicle Documentation':1},
     wallet:{'Wallet History':0,'Wallet History Request':0,'Rewards':1},
-    mf:{'Mutual Fund Investment':0,'Portfolio Assistance':1},
     other:{'Add Your Business':0,'Real Estate':1,'Other Request':2}
   };
-  const SAFE_DIRECT_FORMS=new Set(['insurance','travel','flights','govt','loans','rail','repair','friends','jobs','vahan','wallet','mf','other']);
+  const EXTERNAL_GUIDED=new Set(['insurance','travel','flights','mf']);
+  const SAFE_DIRECT_FORMS=new Set(['govt','loans','rail','repair','friends','jobs','vahan','wallet','other']);
+  const SAFE_CONTEXT_KEYS=new Set(['pickup','drop','origin','from','fromCity','destination','destinations','to','budget','date','departure','departureDate','return','returnDate','startDate','checkin','checkout','dates','travellers','passengers','adults','children','infants','rooms','duration','hotel','category','meal','transport','cabin','airline','sumInsured','coverAmount','insuranceType','members','familyMembers','investmentType','amount','frequency','risk','goal','monthlyInvest','pincode']);
   let latestAI=null,latestUserText='',ctx=null,lastMediaPlayAt=0,lastSpeechRequestAt=0;
 
   const nativePlay=window.HTMLMediaElement&&HTMLMediaElement.prototype.play;
@@ -52,8 +50,8 @@
   function inferRoute(text){
     const t=String(text||'').toLowerCase();
     if(/cab|taxi|ride|pickup|drop|airport transfer/.test(t))return'car';
-    if(/insurance|policy|health cover|motor insurance|term insurance/.test(t))return'insurance';
-    if(/flight|air ticket|visa/.test(t))return'flights';
+    if(/life insurance|term insurance|health insurance|health cover|motor insurance|travel insurance|\binsurance\b|\bpolicy\b/.test(t))return'insurance';
+    if(/flight|air ticket|airfare|visa/.test(t))return'flights';
     if(/hotel|package|holiday|tour|itinerary|goa|travel/.test(t))return'travel';
     if(/grocery|food|restaurant|medicine|pharmacy|marketplace|shop|order/.test(t))return'store';
     if(/pan |itr|income tax|driving licence|certificate/.test(t))return'govt';
@@ -62,10 +60,37 @@
     if(/repair|ac service|mobile repair|appliance/.test(t))return'repair';
     if(/job|hiring|vacancy|employment/.test(t))return'jobs';
     if(/rc |vehicle document|vahan/.test(t))return'vahan';
-    if(/mutual fund|\bsip\b|portfolio|investment/.test(t))return'mf';
+    if(/mutual fund|\bsip\b|lumpsum|portfolio|investment/.test(t))return'mf';
     if(/wallet|cashback|reward/.test(t))return'wallet';
     if(/membership|promoter|join|team|referral|earn/.test(t))return'join';
     return'none';
+  }
+
+  function inferSubsection(route,text,current=''){
+    if(current)return current;
+    const t=String(text||'').toLowerCase();
+    if(route==='insurance'){
+      if(/life insurance|term insurance|term plan|life cover/.test(t))return'Life Insurance';
+      if(/motor insurance|vehicle insurance|car insurance|bike insurance/.test(t))return'Motor Insurance';
+      if(/travel insurance/.test(t))return'Travel Insurance';
+      if(/health insurance|mediclaim|health cover|family floater/.test(t))return'Health Insurance';
+      return'Insurance';
+    }
+    if(route==='flights'){
+      if(/visa/.test(t))return'Visa Assistance';
+      if(/flight\s*\+\s*hotel|flight.*hotel|hotel.*flight/.test(t))return'Flight + Hotel';
+      return'Flight Booking';
+    }
+    if(route==='travel'){
+      if(/hotel|stay|room/.test(t))return'Hotel Booking';
+      if(/itinerary/.test(t))return'Custom Itinerary';
+      return'Tour Package';
+    }
+    if(route==='mf'){
+      if(/portfolio|existing fund|existing investment|folio/.test(t))return'Portfolio Assistance';
+      return'Mutual Fund Investment';
+    }
+    return current;
   }
 
   function inferCabPair(text,data){
@@ -78,22 +103,50 @@
     return out;
   }
 
+  function normalizeTaskData(route,text,taskData){
+    const d={...(taskData||{})};
+    if(route==='car')return inferCabPair(text,d);
+    if(route==='insurance'){
+      if(d.coverAmount&&!d.sumInsured)d.sumInsured=d.coverAmount;
+      if(d.familyMembers&&!d.members)d.members=d.familyMembers;
+      const t=String(text||'').toLowerCase();
+      if(!d.insuranceType){if(/life|term/.test(t))d.insuranceType='Life Insurance';else if(/motor|vehicle|car insurance|bike insurance/.test(t))d.insuranceType='Motor Insurance';else if(/travel insurance/.test(t))d.insuranceType='Travel Insurance';else if(/health|mediclaim|family floater/.test(t))d.insuranceType='Health Insurance';}
+    }
+    if(route==='flights'){
+      if(d.origin&&!d.from)d.from=d.origin;
+      if(d.destination&&!d.to)d.to=d.destination;
+      if(d.date&&!d.departure)d.departure=d.date;
+      if(d.departureDate&&!d.departure)d.departure=d.departureDate;
+      if(d.returnDate&&!d.return)d.return=d.returnDate;
+    }
+    if(route==='travel'){
+      if(d.destination&&!d.destinations)d.destinations=d.destination;
+      if(d.date&&!d.startDate)d.startDate=d.date;
+      if(d.departureDate&&!d.startDate)d.startDate=d.departureDate;
+    }
+    if(route==='mf'){
+      const t=String(text||'').toLowerCase();
+      if(!d.investmentType){if(/\bsip\b/.test(t))d.investmentType='SIP';else if(/lump\s*sum|lumpsum/.test(t))d.investmentType='Lumpsum';else if(/bond|fixed income/.test(t))d.investmentType='Bonds / Fixed Income';}
+    }
+    return d;
+  }
+
   function prepareData(data,text){
     const route=data?.route&&data.route!=='none'?data.route:inferRoute(text);
-    const d={...(data||{}),route,taskData:{...(data?.taskData||{})}};
-    if(route==='car')d.taskData=inferCabPair(text,d.taskData);
-    return d;
+    const subsection=inferSubsection(route,text,String(data?.subsection||''));
+    return {...(data||{}),route,subsection,taskData:normalizeTaskData(route,text,data?.taskData||{})};
   }
 
   function marketType(data,text){const v=String(data?.taskData?.marketType||data?.subsection||text||'').toLowerCase();if(/medicine|pharmacy/.test(v))return'medicine';if(/restaurant|food/.test(v))return'restaurant';if(/digital/.test(v))return'digital';return'grocery';}
 
+  function safeCssEscape(v){try{return CSS.escape(v)}catch{return String(v).replace(/[^a-zA-Z0-9_-]/g,'\\$&')}}
   function setField(name,value){
     if(value===undefined||value===null||value==='')return false;
-    const el=document.querySelector(`[name="${CSS.escape(name)}"]`)||(name==='pickup'?document.querySelector('#ridePickup'):null);if(!el)return false;
+    const el=document.querySelector(`[name="${safeCssEscape(name)}"]`)||(name==='pickup'?document.querySelector('#ridePickup'):null);if(!el)return false;
     let v=String(value);
     if(el.type==='number'){const m=v.replace(/,/g,'').match(/\d+(?:\.\d+)?/);if(m)v=m[0];}
     if(el.type==='date'&&!/^\d{4}-\d{2}-\d{2}$/.test(v))return false;
-    if(el.tagName==='SELECT'){const opt=[...el.options].find(o=>o.value.toLowerCase()===v.toLowerCase()||o.text.toLowerCase()===v.toLowerCase());if(!opt)return false;v=opt.value;}
+    if(el.tagName==='SELECT'){const low=v.toLowerCase();const opt=[...el.options].find(o=>String(o.value).toLowerCase()===low||String(o.text).toLowerCase()===low||String(o.text).toLowerCase().includes(low));if(!opt)return false;v=opt.value;}
     el.value=v;el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));return true;
   }
 
@@ -101,9 +154,13 @@
     const d=data?.taskData||{};let count=0,done=new Set();
     for(const [k,v] of Object.entries(d)){if(setField(k,v)){count++;done.add(k);}}
     const aliases={
-      origin:['fromCity','from','pickup'],from:['fromCity','from','pickup'],destination:['destinations','destination','to','drop'],drop:['drop','destination','to'],pickup:['pickup','fromCity','from'],
-      budget:['budget'],travellers:['pax','travellers','adults','passengers'],passengers:['passengers','adults'],date:['startDate','travelDate','departDate','departure','date'],pincode:['pincode','pin'],
-      sumInsured:['sumInsured'],coverAmount:['sumInsured'],amount:['amount','loanAmount'],loanAmount:['loanAmount'],marketType:['marketType'],adults:['adults'],children:['children'],duration:['duration'],startDate:['startDate']
+      origin:['from','fromCity','pickup'],fromCity:['from','fromCity','pickup'],from:['from','fromCity','pickup'],
+      destination:['destination','destinations','to','drop'],destinations:['destinations','destination','to'],to:['to','destination','destinations','drop'],drop:['drop','destination','to'],pickup:['pickup','fromCity','from'],
+      budget:['budget'],travellers:['travellers','pax','adults','passengers'],passengers:['passengers','adults'],date:['departure','startDate','travelDate','departDate','date'],departureDate:['departure','departDate','startDate'],returnDate:['return','returnDate'],
+      checkin:['checkin'],checkout:['checkout'],rooms:['rooms'],adults:['adults'],children:['children'],infants:['infants'],duration:['duration'],startDate:['startDate'],
+      pincode:['pincode','pin'],sumInsured:['sumInsured'],coverAmount:['sumInsured'],members:['members'],familyMembers:['members'],
+      amount:['amount','loanAmount'],loanAmount:['loanAmount'],investmentType:['investmentType'],frequency:['frequency'],risk:['risk'],goal:['goal'],monthlyInvest:['monthlyInvest'],
+      cabin:['cabin'],airline:['airline'],hotel:['hotel','category'],category:['category','hotel'],meal:['meal'],transport:['transport'],marketType:['marketType']
     };
     for(const [k,names] of Object.entries(aliases)){if(d[k]===undefined||done.has(k))continue;for(const n of names){if(setField(n,d[k])){count++;break;}}}
     return count;
@@ -122,11 +179,78 @@
 
   function showGuide(data,text,prefilled){
     document.getElementById('dbest-ai-guide-card')?.remove();
-    const route=data.route||inferRoute(text),label=ROUTE_LABELS[route]||'DBest Service',card=document.createElement('div');card.id='dbest-ai-guide-card';
+    const route=data.route||inferRoute(text),label=data.subsection||ROUTE_LABELS[route]||'DBest Service',card=document.createElement('div');card.id='dbest-ai-guide-card';
     card.style.cssText='position:fixed;left:12px;right:12px;bottom:14px;z-index:2147481500;max-width:760px;margin:auto;background:#fff;border:1px solid #dce5f3;border-radius:18px;box-shadow:0 16px 45px rgba(13,34,74,.24);padding:12px 14px;font-family:Inter,system-ui,Arial;color:#16335f';
-    const request=String(text||'').slice(0,180),known=Object.entries(data?.taskData||{}).filter(([,v])=>v!==''&&v!=null).slice(0,6).map(([k,v])=>`${k}: ${v}`).join(' • ');
-    card.innerHTML=`<div style="display:flex;gap:10px;align-items:flex-start"><div style="font-size:22px">✨</div><div style="flex:1"><b>DBest AI Guided Mode • ${label}</b><div style="font-size:12px;margin-top:4px;color:#5e6e84">${prefilled?`${prefilled} detail${prefilled===1?'':'s'} auto-filled from your request. `:''}Please review only the remaining fields before continuing.</div>${known?`<div style="font-size:11px;margin-top:6px;padding:7px 9px;background:#eef8f3;border-radius:10px">Captured: ${known.replace(/[<>]/g,'')}</div>`:''}<div style="font-size:11px;margin-top:6px;padding:7px 9px;background:#f3f7ff;border-radius:10px">Your request: ${request.replace(/[<>]/g,'')}</div></div><button id="dbestGuideClose" style="border:0;background:#eef3ff;border-radius:10px;width:34px;height:34px">×</button></div>`;
+    const request=String(text||'').slice(0,180),known=Object.entries(data?.taskData||{}).filter(([k,v])=>SAFE_CONTEXT_KEYS.has(k)&&v!==''&&v!=null).slice(0,6).map(([k,v])=>`${k}: ${v}`).join(' • ');
+    card.innerHTML=`<div style="display:flex;gap:10px;align-items:flex-start"><div style="font-size:22px">✨</div><div style="flex:1"><b>DBest AI Guided Mode • ${label}</b><div style="font-size:12px;margin-top:4px;color:#5e6e84">${prefilled?`${prefilled} detail${prefilled===1?'':'s'} auto-filled from your request. `:''}Review the destination section and continue there.</div>${known?`<div style="font-size:11px;margin-top:6px;padding:7px 9px;background:#eef8f3;border-radius:10px">Captured: ${known.replace(/[<>]/g,'')}</div>`:''}<div style="font-size:11px;margin-top:6px;padding:7px 9px;background:#f3f7ff;border-radius:10px">Your request: ${request.replace(/[<>]/g,'')}</div></div><button id="dbestGuideClose" style="border:0;background:#eef3ff;border-radius:10px;width:34px;height:34px">×</button></div>`;
     document.body.appendChild(card);card.querySelector('#dbestGuideClose').onclick=()=>card.remove();setTimeout(()=>{if(card.isConnected)card.remove();},18000);
+  }
+
+  function externalServiceId(route){if(route==='insurance')return'insurance';if(route==='mf')return'mf';if(route==='travel'||route==='flights')return'flights';return route;}
+
+  function targetKeywords(data,text){
+    const sub=String(data?.subsection||'').toLowerCase(),t=String(text||'').toLowerCase();
+    if(data.route==='insurance'){
+      if(/life|term/.test(sub+' '+t))return['life insurance','term plan','life'];
+      if(/motor|vehicle|car insurance|bike insurance/.test(sub+' '+t))return['motor insurance','motor','general insurance'];
+      if(/travel insurance/.test(sub+' '+t))return['travel insurance'];
+      return['health insurance','health'];
+    }
+    if(data.route==='flights'){
+      if(/visa/.test(sub+' '+t))return['visa'];
+      if(/hotel/.test(sub+' '+t))return['flight','hotel'];
+      return['flights','flight','air travel'];
+    }
+    if(data.route==='travel'){
+      if(/hotel/.test(sub+' '+t))return['hotels','hotel','hotel stays'];
+      return['holiday packages','packages','domestic holidays','international holidays'];
+    }
+    if(data.route==='mf'){
+      if(/portfolio/.test(sub+' '+t))return['mutual fund','portfolio'];
+      if(/\bsip\b/.test(sub+' '+t)||String(data?.taskData?.investmentType||'').toLowerCase()==='sip')return['mutual fund','sip'];
+      return['mutual fund'];
+    }
+    return[];
+  }
+
+  function storeExternalContext(data,text){
+    const safe={route:data.route,subsection:data.subsection,taskData:{},request:String(text||'').slice(0,500),at:Date.now()};
+    for(const [k,v] of Object.entries(data.taskData||{}))if(SAFE_CONTEXT_KEYS.has(k)&&v!==''&&v!=null)safe.taskData[k]=v;
+    try{sessionStorage.setItem('dbest_ai_external_context',JSON.stringify(safe))}catch{}
+    window.__DBEST_AI_EXTERNAL_CONTEXT__=safe;
+  }
+
+  function cardScore(card,words){
+    const s=String(card?.innerText||'').toLowerCase();let score=0;
+    for(let i=0;i<words.length;i++){const w=String(words[i]||'').toLowerCase();if(!w)continue;if(s.includes(w))score+=10-i;}
+    return score;
+  }
+
+  function renderExternalContext(data,text){
+    const root=[...document.querySelectorAll('.sectionContent')].filter(el=>{try{const r=el.getBoundingClientRect(),s=getComputedStyle(el);return r.width>0&&r.height>0&&s.display!=='none'&&s.visibility!=='hidden'}catch{return false}}).pop();
+    if(!root)return false;
+    const show=root.querySelector('[data-dbest-showcase]');if(!show)return false;
+    let banner=root.querySelector('#dbestAiSectionContext');
+    const safePairs=Object.entries(data.taskData||{}).filter(([k,v])=>SAFE_CONTEXT_KEYS.has(k)&&v!==''&&v!=null).slice(0,7);
+    if(!banner){banner=document.createElement('div');banner.id='dbestAiSectionContext';banner.style.cssText='margin:0 0 12px;padding:13px 14px;border-radius:16px;background:linear-gradient(135deg,#eef5ff,#f3efff);border:1px solid #d9e4ff;color:#173b72;box-shadow:0 8px 20px rgba(27,65,145,.08)';root.insertBefore(banner,show);}
+    banner.innerHTML=`<div style="font-weight:900;font-size:14px">✨ DBest AI selected: ${String(data.subsection||ROUTE_LABELS[data.route]||'Service').replace(/[<>]/g,'')}</div><div style="font-size:11px;color:#5d6b82;margin-top:4px">We have taken you to the relevant DBest section instead of opening a generic lead form.</div>${safePairs.length?`<div style="font-size:11px;margin-top:8px"><b>Captured:</b> ${safePairs.map(([k,v])=>`${k}: ${String(v).replace(/[<>]/g,'')}`).join(' • ')}</div>`:''}`;
+
+    root.querySelectorAll('.dbestShowCard[data-dbest-ai-target="1"]').forEach(c=>{c.removeAttribute('data-dbest-ai-target');c.style.outline='';c.style.boxShadow='';});
+    const cards=[...show.querySelectorAll('.dbestShowCard')],words=targetKeywords(data,text);
+    let best=null,bestScore=0;for(const c of cards){const sc=cardScore(c,words);if(sc>bestScore){bestScore=sc;best=c;}}
+    if(!best&&cards.length===1)best=cards[0];
+    if(best){best.dataset.dbestAiTarget='1';best.style.outline='3px solid #2f67f6';best.style.outlineOffset='3px';best.style.boxShadow='0 16px 34px rgba(47,103,246,.24)';setTimeout(()=>{try{best.scrollIntoView({behavior:'smooth',block:'center'})}catch{}},60);}
+    const n=prefill(data);showGuide(data,text,n);
+    return true;
+  }
+
+  function openExternalGuided(data,text){
+    storeExternalContext(data,text);
+    const serviceId=externalServiceId(data.route);
+    if(typeof window.openService!=='function')return false;
+    window.openService(serviceId);
+    [80,180,350,650,1000,1600,2600,4200].forEach(ms=>setTimeout(()=>renderExternalContext(data,text),ms));
+    return true;
   }
 
   function goToTask(rawData,text){
@@ -136,9 +260,10 @@
     try{
       if(route==='car'&&typeof window.openRidePlatform==='function'){window.openRidePlatform();opened=true;}
       else if(route==='store'){const type=marketType(data,text);if(typeof window.openMarketplace==='function'){window.openMarketplace(type);opened=true;}else if(typeof window.openCommerceHub==='function'){window.openCommerceHub();opened=true;}}
+      else if(EXTERNAL_GUIDED.has(route)){opened=openExternalGuided(data,text);}
       else{const idx=SUB_INDEX[route]?.[String(data?.subsection||'')];if(SAFE_DIRECT_FORMS.has(route)&&Number.isInteger(idx)&&typeof window.openContentForm==='function'){window.openContentForm(route,idx);opened=true;}else if(typeof window.openService==='function'){window.openService(route);opened=true;}}
     }catch(e){console.warn('DBest AI navigation error',e);}
-    if(opened){
+    if(opened&&!EXTERNAL_GUIDED.has(route)){
       setTimeout(()=>{const n=prefill(data);showGuide(data,text,n);if(route==='car')stabilizeCabPrefill(data);},260);
       if(route!=='car')setTimeout(()=>prefill(data),900);
     }
@@ -153,5 +278,5 @@
 
   function setup(){const root=document.querySelector('#dbest-ai-test-host')?.shadowRoot;if(!root){setTimeout(setup,150);return;}const msgs=root.querySelector('#msgs');if(!msgs){setTimeout(setup,150);return;}root.addEventListener('pointerdown',unlockAudio,{capture:true,passive:true});new MutationObserver(muts=>{for(const m of muts)for(const n of m.addedNodes){if(n.nodeType===1&&n.matches?.('.msg.ai:not(.thinking)'))attachAction(n);}}).observe(msgs,{childList:true});}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',setup,{once:true});else setup();
-  window.__DBEST_AI_TASK_ROUTER__={goToTask,prepareData,version:'0.2-autofill'};
+  window.__DBEST_AI_TASK_ROUTER__={goToTask,prepareData,renderExternalContext,version:'0.3-external-guided-routing'};
 })();
