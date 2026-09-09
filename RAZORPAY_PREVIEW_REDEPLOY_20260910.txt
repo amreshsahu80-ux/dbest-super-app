@@ -1,0 +1,2 @@
+Trigger preview redeploy after configuring Razorpay test environment variables for the ai-safe-ui-test branch.
+No production configuration changed.
