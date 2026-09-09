@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DBest Facebook Login Retest</title>
+<style>
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Arial;background:#f5f7fb;color:#13203a}.wrap{min-height:100vh;display:grid;place-items:center;padding:20px}.card{width:min(520px,100%);background:#fff;border:1px solid #e2e8f2;border-radius:22px;padding:24px;box-shadow:0 16px 50px rgba(30,55,100,.12)}img{width:150px;max-height:55px;object-fit:contain}h1{font-size:27px;margin:18px 0 8px}p{color:#66738a;line-height:1.5}.btn{width:100%;border:0;border-radius:14px;padding:15px;background:#1877f2;color:#fff;font-weight:800;font-size:16px;margin-top:16px}.note{margin-top:14px;padding:12px;border-radius:12px;background:#eef4ff;color:#52627e;font-size:13px;line-height:1.45}
+</style>
+</head>
+<body>
+<div class="wrap"><div class="card">
+<img src="/dbest-logo.png" alt="DBest">
+<h1>Facebook login retest</h1>
+<p>This test uses the exact approved DBest preview callback and explicitly requests Facebook email + public profile access.</p>
+<button class="btn" id="go">Continue with Facebook</button>
+<div class="note">Test membership: Leader ₹999. No payment will be made from this page.</div>
+</div></div>
+<script>
+(()=>{
+const SUPA_URL='https://ydedmotbacnllkijzmvp.supabase.co';
+const PENDING='dbest_join_pending_v2';
+document.getElementById('go').onclick=()=>{
+  localStorage.setItem(PENDING,JSON.stringify({provider:'facebook',tier:'leader',ref:'',at:Date.now()}));
+  const redirect=location.origin+'/join.html';
+  const u=new URL(SUPA_URL+'/auth/v1/authorize');
+  u.searchParams.set('provider','facebook');
+  u.searchParams.set('redirect_to',redirect);
+  u.searchParams.set('scopes','email public_profile');
+  location.href=u.toString();
+};
+})();
+</script>
+</body>
+</html>
