@@ -25,6 +25,11 @@ async function findMemberByEmail(key,email){
   const q=new URLSearchParams({select:'id,external_id,name,email,mobile,category,status,payment_status,payload',kind:'eq.member',email:'eq.'+email,deleted_at:'is.null',order:'created_at.asc',limit:'1'});
   const rows=await sbFetch('/rest/v1/onboarding_records?'+q.toString(),key);return Array.isArray(rows)&&rows[0]?rows[0]:null;
 }
+async function findMemberByExternalId(key,externalId){
+  const id=safe(externalId,100);if(!id)return null;
+  const q=new URLSearchParams({select:'external_id,name,email,mobile,category,status',kind:'eq.member',external_id:'eq.'+id,deleted_at:'is.null',limit:'1'});
+  const rows=await sbFetch('/rest/v1/onboarding_records?'+q.toString(),key);return Array.isArray(rows)&&rows[0]?rows[0]:null;
+}
 async function memberIdExists(key,id){
   const q=new URLSearchParams({select:'id',external_id:'eq.'+id,limit:'1'});const rows=await sbFetch('/rest/v1/onboarding_records?'+q.toString(),key);return Array.isArray(rows)&&rows.length>0;
 }
@@ -55,7 +60,19 @@ async function persistMembership({key,user,payment,order,notes,tier,b}){
   const txId='RZP_'+String(payment.id||'').slice(0,80);
   const tx={transaction_id:txId,transaction_date:now,section:'Membership',subsection:safe(notes.sub||tier,100),actor_type:'Member',actor_name:name,actor_ref:memberId,counterparty_type:'Company',counterparty_name:'Sarwashresth Services OPC Pvt. Ltd.',amount:Number(payment.amount||0)/100,payment_mode:'Razorpay',payment_status:'Verified',reference:String(payment.id||''),payout_amount:0,metadata:{auth_user_id:String(user.id||''),email,tier,member_id:memberId,referral_code:referralCode,referral_upline:referral,dbest_ref:String(notes.dbest_ref||''),razorpay_order_id:String(order.id||''),razorpay_payment_id:String(payment.id||''),razorpay_method:String(payment.method||''),currency:String(payment.currency||order.currency||'INR'),source:'DBest Super Platform',environment:process.env.VERCEL_ENV||'preview'},updated_at:now};
   await sbFetch('/rest/v1/transactions?on_conflict=transaction_id',key,{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(tx)});
-  return {memberId,referralCode,payoutProfileStatus:'Incomplete',name,email,mobile};
+  return {memberId,referralCode,payoutProfileStatus:'Incomplete',name,email,mobile,centralTransactionId:txId};
+}
+async function persistTransaction({key,payment,order,notes}){
+  const now=new Date().toISOString();
+  const dbestRef=safe(notes.dbest_ref,100)||('RZP_'+safe(payment.id,80));
+  const member=await findMemberByExternalId(key,notes.user_id).catch(()=>null);
+  const actorRef=safe(member?.external_id||notes.user_id,100);
+  const actorName=safe(member?.name||payment.email||payment.contact||'DBest User',140);
+  const section=safe(notes.section||'DBest Payment',100);
+  const subsection=safe(notes.sub||'',120);
+  const tx={transaction_id:dbestRef,transaction_date:now,section,subsection,actor_type:member?'Member':'User',actor_name:actorName,actor_ref:actorRef,counterparty_type:'Company',counterparty_name:'Sarwashresth Services OPC Pvt. Ltd.',amount:Number(payment.amount||order.amount||0)/100,payment_mode:'Razorpay',payment_status:'Verified',reference:String(payment.id||''),payout_amount:0,metadata:{dbest_ref:dbestRef,kind:String(notes.kind||'transaction'),section,subsection,user_id:String(notes.user_id||''),razorpay_order_id:String(order.id||''),razorpay_payment_id:String(payment.id||''),razorpay_method:String(payment.method||''),currency:String(payment.currency||order.currency||'INR'),email:String(payment.email||''),contact:String(payment.contact||''),source:'DBest Super Platform',environment:process.env.VERCEL_ENV||'preview',verified_at:now},updated_at:now};
+  await sbFetch('/rest/v1/transactions?on_conflict=transaction_id',key,{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(tx)});
+  return {centralTransactionId:dbestRef,section,subsection,actorRef,actorName};
 }
 module.exports=async function handler(req,res){
   res.setHeader('Cache-Control','no-store, max-age=0, must-revalidate');
@@ -80,12 +97,14 @@ module.exports=async function handler(req,res){
     if(Number(payment.amount||0)!==Number(order.amount||0))return res.status(400).json({error:'Payment amount mismatch',verified:false});
     if(payment.status==='authorized')payment=await rzFetch('/payments/'+encodeURIComponent(paymentId)+'/capture',keyId,keySecret,{method:'POST',body:JSON.stringify({amount:Number(order.amount),currency:String(order.currency||'INR')})});
     if(payment.status!=='captured')return res.status(409).json({error:'Payment is not captured yet',verified:false,status:payment.status||'unknown'});
+    const key=serverKey();if(!key)return res.status(503).json({error:'Central DBest transaction storage is not configured',verified:false});
     let persisted=null;
     if(String(notes.kind||'').toLowerCase()==='membership'){
-      const key=serverKey();if(!key)return res.status(503).json({error:'Central membership storage is not configured',verified:false});
       const user=await authenticatedUser(b.supabaseAccessToken,key);
       if(String(notes.user_id||'')&&String(notes.user_id)!==String(user.id||''))return res.status(403).json({error:'Authenticated user does not match payment order',verified:false});
       persisted=await persistMembership({key,user,payment,order,notes,tier:String(notes.tier||tier||'').toLowerCase(),b});
+    }else{
+      persisted=await persistTransaction({key,payment,order,notes});
     }
     return res.status(200).json({verified:true,provider:'razorpay',paymentId,orderId,amount:Number(payment.amount||order.amount||0),currency:String(payment.currency||order.currency||'INR'),status:payment.status,method:String(payment.method||''),email:String(payment.email||''),contact:String(payment.contact||''),dbestRef:String(notes.dbest_ref||''),kind:String(notes.kind||''),tier:String(notes.tier||''),persisted:!!persisted,...(persisted||{})});
   }catch(err){
