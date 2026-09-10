@@ -1,20 +1,30 @@
 (()=>{
 'use strict';
-const VERSION='1.1-master-cart-hard-direct';
+const VERSION='1.2-master-cart-secure-session-direct';
 const ORIGINAL=/DBEST_MASTER_MARKET\.checkout\s*\(\s*\)/;
-function isCartButton(b){
-  if(!b||b.tagName!=='BUTTON')return false;
-  if(b.dataset.dbestMasterDirect==='1')return true;
-  const oc=String(b.getAttribute('onclick')||'');
-  return ORIGINAL.test(oc)&&/^\s*Checkout\s*$/i.test(String(b.textContent||''));
-}
+function secureToken(){try{return String(window.DBEST_MEMBER_LIVE?.getToken?.()||'')}catch(_){return''}}
 function ready(){return !!(window.DBEST_MASTER_RAZORPAY&&typeof window.DBEST_MASTER_RAZORPAY.checkout==='function')}
 function notice(msg){try{typeof toast==='function'?toast(msg):alert(msg)}catch(_){}}
+function invoke(){
+  if(!ready())return false;
+  const hasSecure=!!secureToken();
+  const old=window.requireMember;
+  try{
+    if(hasSecure&&typeof old==='function')window.requireMember=()=>true;
+    return window.DBEST_MASTER_RAZORPAY.checkout();
+  }catch(err){
+    console.error('[DBEST Master Checkout]',err);
+    notice('Checkout error: '+String(err?.message||err));
+    return false;
+  }finally{
+    if(hasSecure&&typeof old==='function')window.requireMember=old;
+  }
+}
 function open(e){
   e?.preventDefault?.();
   e?.stopImmediatePropagation?.();
   if(ready()){
-    window.DBEST_MASTER_RAZORPAY.checkout();
+    invoke();
     return false;
   }
   notice('Secure Razorpay checkout is loading…');
@@ -23,8 +33,8 @@ function open(e){
     n++;
     if(ready()){
       clearInterval(t);
-      window.DBEST_MASTER_RAZORPAY.checkout();
-    }else if(n>=20){
+      invoke();
+    }else if(n>=30){
       clearInterval(t);
       notice('Secure checkout did not load. Please refresh once.');
     }
