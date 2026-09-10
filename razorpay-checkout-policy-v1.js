@@ -1,63 +1,55 @@
 (()=>{
 'use strict';
-const VERSION='1.2-razorpay-marketplace-capture';
-let payu={checked:false,configured:false},busy=false;
+const VERSION='1.3-marketplace-direct-razorpay';
+let payu={checked:false,configured:false},busy=false,checkoutPromise=null;
 
-function say(msg){try{if(typeof toast==='function')toast(msg);else alert(msg)}catch{}}
-async function readPayU(){
-  try{const r=await fetch('/api/payu/config',{cache:'no-store'});const j=await r.json();payu={checked:true,configured:!!j.configured};}
-  catch{payu={checked:true,configured:false}}
-  patchForms();
-}
-function paymentChoices(){
-  return `<label class="payChoice" style="display:block"><input type="radio" name="payment" value="razorpay" checked><b>Primary • Razorpay</b><small style="display:block;color:var(--m);margin-top:3px">Secure online payment</small></label><label class="payChoice" style="display:block;opacity:${payu.configured?'1':'.58'}"><input type="radio" name="payment" value="payu" ${payu.configured?'':'disabled'}><b>Secondary • PayU</b><small style="display:block;color:var(--m);margin-top:3px">${payu.configured?'Alternate payment gateway':'Setup required — Merchant Key & Salt can be added later'}</small></label>`;
-}
-function patchOne(form){
-  if(!form)return;const choice=form.querySelector('.paymentChoice');if(!choice)return;
-  if(choice.dataset.dbestGatewayPolicy!==VERSION){choice.dataset.dbestGatewayPolicy=VERSION;choice.innerHTML=paymentChoices();}
-  const submit=form.querySelector('button[type="submit"],button.btn');if(submit)submit.textContent='Pay Securely with Razorpay →';
-  const parent=choice.closest('.sf')||choice.parentElement;
-  if(parent&&!parent.querySelector('.dbestGatewayNote')){const n=document.createElement('div');n.className='dbestGatewayNote';n.style.cssText='font-size:11px;color:var(--m);margin-top:7px;line-height:1.45';n.textContent='Razorpay is active now. PayU remains built in and will activate after merchant credentials are added.';parent.appendChild(n);}
-}
-function patchForms(){document.querySelectorAll('form[onsubmit*="placeMarketOrder"]').forEach(patchOne);}
-function currentUser(){try{return typeof me==='function'?(me()||{}):{}}catch{return{}}}
+function say(msg){try{if(typeof toast==='function')toast(msg);else alert(msg)}catch{alert(msg)}}
 function digits(v){return String(v||'').replace(/\D/g,'')}
+function currentUser(){try{return typeof me==='function'?(me()||{}):{}}catch{return{}}}
+async function jfetch(url,opts={}){const r=await fetch(url,opts),j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||j.message||('HTTP '+r.status));return j}
+function loadCheckout(){if(window.Razorpay)return Promise.resolve();if(checkoutPromise)return checkoutPromise;checkoutPromise=new Promise((ok,no)=>{const s=document.createElement('script');s.src='https://checkout.razorpay.com/v1/checkout.js';s.async=true;s.onload=ok;s.onerror=()=>no(new Error('Unable to load Razorpay Checkout'));document.head.appendChild(s)});return checkoutPromise}
+async function readPayU(){try{const j=await jfetch('/api/payu/config',{cache:'no-store'});payu={checked:true,configured:!!j.configured}}catch{payu={checked:true,configured:false}}patchForms()}
 function getType(form){const s=String(form?.getAttribute('onsubmit')||'');const m=s.match(/placeMarketOrder\(event\s*,\s*['\"]([^'\"]+)/);return m?m[1]:''}
-async function createMarketplaceTransaction(form,type){
-  if(typeof requireMember==='function'&&!requireMember())throw new Error('Active membership is required');
+function choices(){return `<label class="payChoice" style="display:block"><input type="radio" name="payment" value="razorpay" checked><b>Primary • Razorpay</b><small style="display:block;color:var(--m);margin-top:3px">Active • Secure online payment • Test Mode</small></label><label class="payChoice" style="display:block;opacity:${payu.configured?'1':'.55'}"><input type="radio" name="payment" value="payu" ${payu.configured?'':'disabled'}><b>Secondary • PayU</b><small style="display:block;color:var(--m);margin-top:3px">${payu.configured?'Alternate gateway':'Setup required — Merchant Key & Salt can be added later'}</small></label>`}
+function patchOne(form){if(!form)return;const type=getType(form);if(!type)return;const choice=form.querySelector('.paymentChoice');if(choice&&choice.dataset.dbestGatewayPolicy!==VERSION){choice.dataset.dbestGatewayPolicy=VERSION;choice.innerHTML=choices()}
+  const btn=form.querySelector('button[type="submit"],button.btn');if(btn){btn.type='button';btn.textContent='Pay Securely with Razorpay →';btn.dataset.dbestDirectRazorpay='1';btn.onclick=()=>directPay(form,type,btn)}
+  const parent=choice?.closest('.sf')||choice?.parentElement;if(parent&&!parent.querySelector('.dbestGatewayNote')){const n=document.createElement('div');n.className='dbestGatewayNote';n.style.cssText='font-size:11px;color:var(--m);margin-top:7px;line-height:1.45';n.innerHTML='<b>Razorpay is active.</b> PayU remains built in and will activate after merchant credentials are added.';parent.appendChild(n)}
+}
+function patchForms(){document.querySelectorAll('form[onsubmit*="placeMarketOrder"]').forEach(patchOne)}
+async function prepareTx(form,type){
+  if(typeof requireMember==='function'&&!requireMember())throw new Error('Please login with your active DBest membership before payment.');
+  if(!form.reportValidity())throw new Error('Please complete the required checkout details.');
   const t=marketTotals(type),min=Number(commerceConfig?.minOrder||0);if(type!=='digital'&&min&&Number(t.subtotal||0)<min)throw new Error(`Minimum product value is ₹${Math.round(min)}.`);
   const cart=marketCart(type);if(!Array.isArray(cart)||!cart.length)throw new Error('Your cart is empty.');
   const f=new FormData(form),u=currentUser(),customerName=String(f.get('name')||u.name||'').trim(),customerMobile=digits(f.get('mobile')||u.mobile||''),customerEmail=String(u.email||f.get('deliveryEmail')||'').trim().toLowerCase();
   if(type!=='digital'&&customerMobile.length<10)throw new Error('Enter a valid customer mobile number.');
-  let prescription=null;if(typeof cartNeedsPrescription==='function'&&cartNeedsPrescription(type)){const file=form.elements?.prescription?.files?.[0];if(file&&typeof fileRecord==='function')prescription=await fileRecord(file)}
-  const items=cart.map(r=>{const p=marketProduct(r.id);return {id:r.id,name:p?.name||r.id,qty:Number(r.qty||1),price:Number(p?.price||0),vendorId:p?.vendorId||'',rx:!!p?.rx}});
   let address=String(f.get('address')||'').trim();try{if(typeof commerceNeedsLocation==='function'&&commerceNeedsLocation(type)&&!address&&commerceLocation?.label)address=commerceLocation.label}catch{}
-  const loc=(typeof commerceLocation!=='undefined'&&commerceLocation?.lat)?{...commerceLocation}:null;
-  const x=addTx(session.id,`Marketplace - ${marketTitle(type)}`,`${marketTitle(type)} Order`,Number(t.total||0),'Order Created / Razorpay Pending','Razorpay',{
-    source:'DBest Multi-Vendor Marketplace',flow:'marketplace',marketType:type,paymentStage:'Razorpay Pending',paymentMethod:'Razorpay',
-    order:{type,items,subtotal:t.subtotal,delivery:t.delivery,tax:t.tax,total:t.total,address,pin:String(f.get('pin')||''),slot:String(f.get('slot')||''),deliveryEmail:String(f.get('deliveryEmail')||''),paymentMethod:'Razorpay',stage:1,liveLocation:loc,prescription,customerName,customerMobile,customerEmail}
-  });
-  x.order=x.meta.order;x.paymentStage='Razorpay Pending';x.paymentMethod='Razorpay';x.paymentMode='Razorpay';if(typeof save==='function')save();return x;
+  let loc=null;try{if(typeof commerceLocation!=='undefined'&&commerceLocation?.lat&&commerceLocation?.lng)loc={...commerceLocation}}catch{}
+  try{if(type!=='digital'&&typeof commerceNeedsLocation==='function'&&commerceNeedsLocation(type)&&!loc)throw new Error('Please tap “Use / Refresh Live Location” before Razorpay payment.')}catch(e){if(String(e.message||'').includes('Use / Refresh'))throw e}
+  let prescription=null;if(typeof cartNeedsPrescription==='function'&&cartNeedsPrescription(type)){const file=form.elements?.prescription?.files?.[0];if(file&&typeof fileRecord==='function')prescription=await fileRecord(file)}
+  const items=cart.map(r=>{const p=marketProduct(r.id);return{id:r.id,name:p?.name||r.id,qty:Number(r.qty||1),price:Number(p?.price||0),vendorId:p?.vendorId||'',rx:!!p?.rx}});
+  const x=addTx(session.id,`Marketplace - ${marketTitle(type)}`,`${marketTitle(type)} Order`,Number(t.total||0),'Order Created / Razorpay Pending','Razorpay',{source:'DBest Multi-Vendor Marketplace',flow:'marketplace',marketType:type,paymentStage:'Razorpay Pending',paymentMethod:'Razorpay',order:{type,items,subtotal:t.subtotal,delivery:t.delivery,tax:t.tax,total:t.total,address,pin:String(f.get('pin')||''),slot:String(f.get('slot')||''),deliveryEmail:String(f.get('deliveryEmail')||''),paymentMethod:'Razorpay',stage:1,liveLocation:loc,prescription,customerName,customerMobile,customerEmail}});
+  x.order=x.meta.order;x.paymentStage='Razorpay Pending';x.paymentMethod='Razorpay';x.paymentMode='Razorpay';if(typeof save==='function')save();return{x,u};
 }
-async function launch(tx,button){
-  if(!tx?.id)throw new Error('Payment transaction could not be prepared.');
-  if(typeof window.startRazorpay!=='function'&&!window.__DBEST_RAZORPAY__?.payTransaction)throw new Error('Razorpay checkout is still loading. Please retry in a moment.');
-  if(button){button.disabled=true;button.textContent='Opening Razorpay…'}
-  try{return typeof window.startRazorpay==='function'?await window.startRazorpay(tx.id):await window.__DBEST_RAZORPAY__.payTransaction(tx.id)}
-  finally{if(button){button.disabled=false;button.textContent='Pay Securely with Razorpay →'}}
+async function openDirect(tx,u){
+  const amount=Number(tx.amount||0);if(!(amount>0))throw new Error('Invalid payment amount.');
+  const order=await jfetch('/api/razorpay/create-order',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:'transaction',dbestRef:tx.id,txId:tx.id,amount,section:tx.section||'Marketplace',sub:tx.sub||'Order',userId:tx.userId||session?.id||''})});
+  await loadCheckout();
+  return new Promise((resolve,reject)=>{let done=false;const finish=(fn,v)=>{if(done)return;done=true;fn(v)};const rz=new Razorpay({key:order.keyId,amount:order.amount,currency:order.currency||'INR',name:'DBest Super Platform',description:`${tx.section||'Marketplace'} - ${tx.sub||'Order'}`,order_id:order.orderId,prefill:{name:u?.name||'',email:u?.email||'',contact:u?.mobile||''},handler:async r=>{try{const v=await jfetch('/api/razorpay/verify-payment',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...r,dbestRef:tx.id,kind:'transaction'})});finish(resolve,v)}catch(e){finish(reject,e)}},modal:{ondismiss:()=>finish(reject,new Error('Payment cancelled'))}});rz.on('payment.failed',r=>finish(reject,new Error(r?.error?.description||'Payment failed')));rz.open()})
 }
-async function captureSubmit(e){
-  const form=e.target;if(!(form instanceof HTMLFormElement))return;const type=getType(form);if(!type)return;
-  const selected=form.querySelector('input[name="payment"]:checked'),method=String(selected?.value||'razorpay').toLowerCase();
-  if(method==='payu'){if(!payu.configured){e.preventDefault();e.stopImmediatePropagation();say('PayU setup is pending. Please use Razorpay.');}return;}
-  if(method!=='razorpay')return;
-  e.preventDefault();e.stopImmediatePropagation();if(busy)return;busy=true;
-  const button=form.querySelector('button[type="submit"],button.btn');
-  try{const tx=await createMarketplaceTransaction(form,type);await launch(tx,button)}catch(err){say(String(err?.message||err||'Unable to start Razorpay payment'))}finally{busy=false;}
+async function afterSuccess(tx,type,v){
+  tx.status='Payment Successful / Razorpay Verified';tx.paymentStage='Razorpay Verified';tx.paymentRef=String(v.paymentId||'');tx.razorpayOrderId=String(v.orderId||'');tx.razorpayPaymentId=String(v.paymentId||'');tx.paidAt=new Date().toISOString();tx.paymentMethod='Razorpay';tx.meta={...(tx.meta||{}),paymentStage:'Razorpay Verified',razorpayOrderId:tx.razorpayOrderId,razorpayPaymentId:tx.razorpayPaymentId,centralTransactionId:v.centralTransactionId||tx.id};
+  try{commerceCarts[type]=[]}catch{};if(typeof save==='function')save();
+  try{if(type!=='digital'&&typeof createVaahakJobsForOrder==='function')createVaahakJobsForOrder(tx.id)}catch{}
+  say('Razorpay payment verified and centrally recorded.');
+  if(typeof marketOrderStatus==='function')return marketOrderStatus(tx.id);if(typeof txDetailsView==='function')return txDetailsView(tx.id)
 }
-function install(){patchForms();}
-install();readPayU();document.addEventListener('submit',captureSubmit,true);
-new MutationObserver(()=>patchForms()).observe(document.documentElement,{childList:true,subtree:true});
-setInterval(patchForms,1000);
-window.DBEST_RAZORPAY_CHECKOUT_POLICY={version:VERSION,patchForms,readPayU};
+async function directPay(form,type,btn){
+  if(busy)return;const method=String(form.querySelector('input[name="payment"]:checked')?.value||'razorpay').toLowerCase();if(method==='payu'){if(!payu.configured)return say('PayU setup is pending. Please use Razorpay.');return say('PayU will be activated after live credentials are added.')}
+  busy=true;const old=btn.textContent;btn.disabled=true;btn.textContent='Preparing secure payment…';let tx=null;
+  try{const p=await prepareTx(form,type);tx=p.x;btn.textContent='Opening Razorpay…';const v=await openDirect(tx,p.u);if(!v?.verified||!v?.persisted)throw new Error('Payment was not centrally verified.');await afterSuccess(tx,type,v)}catch(err){if(tx){tx.status='Payment Failed / Razorpay';tx.paymentStage='Razorpay Failed';tx.razorpayError=String(err?.message||err);try{save()}catch{}}say(String(err?.message||err||'Unable to start Razorpay payment'))}finally{busy=false;btn.disabled=false;btn.textContent=old||'Pay Securely with Razorpay →'}
+}
+function blockLegacySubmit(e){const form=e.target;if(!(form instanceof HTMLFormElement))return;if(!getType(form))return;const method=String(form.querySelector('input[name="payment"]:checked')?.value||'razorpay').toLowerCase();if(method==='razorpay'){e.preventDefault();e.stopImmediatePropagation();directPay(form,getType(form),form.querySelector('[data-dbest-direct-razorpay="1"]')||form.querySelector('button.btn'))}}
+
+readPayU();patchForms();document.addEventListener('submit',blockLegacySubmit,true);new MutationObserver(patchForms).observe(document.documentElement,{childList:true,subtree:true});setInterval(patchForms,700);window.DBEST_RAZORPAY_CHECKOUT_POLICY={version:VERSION,patchForms,readPayU,directPay};
 })();
