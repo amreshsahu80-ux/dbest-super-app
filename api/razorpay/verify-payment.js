@@ -70,9 +70,27 @@ async function persistTransaction({key,payment,order,notes}){
   const actorName=safe(member?.name||payment.email||payment.contact||'DBest User',140);
   const section=safe(notes.section||'DBest Payment',100);
   const subsection=safe(notes.sub||'',120);
-  const tx={transaction_id:dbestRef,transaction_date:now,section,subsection,actor_type:member?'Member':'User',actor_name:actorName,actor_ref:actorRef,counterparty_type:'Company',counterparty_name:'Sarwashresth Services OPC Pvt. Ltd.',amount:Number(payment.amount||order.amount||0)/100,payment_mode:'Razorpay',payment_status:'Verified',reference:String(payment.id||''),payout_amount:0,metadata:{dbest_ref:dbestRef,kind:String(notes.kind||'transaction'),section,subsection,user_id:String(notes.user_id||''),razorpay_order_id:String(order.id||''),razorpay_payment_id:String(payment.id||''),razorpay_method:String(payment.method||''),currency:String(payment.currency||order.currency||'INR'),email:String(payment.email||''),contact:String(payment.contact||''),source:'DBest Super Platform',environment:process.env.VERCEL_ENV||'preview',verified_at:now},updated_at:now};
+  const masterOrderId=safe(notes.master_order_id,80);
+  const tx={transaction_id:dbestRef,transaction_date:now,section,subsection,actor_type:member?'Member':'User',actor_name:actorName,actor_ref:actorRef,counterparty_type:'Company',counterparty_name:'Sarwashresth Services OPC Pvt. Ltd.',amount:Number(payment.amount||order.amount||0)/100,payment_mode:'Razorpay',payment_status:'Verified',reference:String(payment.id||''),payout_amount:0,metadata:{dbest_ref:dbestRef,kind:String(notes.kind||'transaction'),section,subsection,user_id:String(notes.user_id||''),marketplace_master_order_id:masterOrderId,razorpay_order_id:String(order.id||''),razorpay_payment_id:String(payment.id||''),razorpay_method:String(payment.method||''),currency:String(payment.currency||order.currency||'INR'),email:String(payment.email||''),contact:String(payment.contact||''),source:'DBest Super Platform',environment:process.env.VERCEL_ENV||'preview',verified_at:now},updated_at:now};
   await sbFetch('/rest/v1/transactions?on_conflict=transaction_id',key,{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(tx)});
   return {centralTransactionId:dbestRef,section,subsection,actorRef,actorName};
+}
+async function activateMarketplaceMaster({key,payment,notes}){
+  const masterOrderId=safe(notes.master_order_id,80);if(!masterOrderId)return null;
+  const q=new URLSearchParams({select:'id,parent_tx_id,customer_member_id,total_amount,payment_status,status',id:'eq.'+masterOrderId,limit:'1'});
+  const rows=await sbFetch('/rest/v1/marketplace_master_orders_live?'+q.toString(),key),m=Array.isArray(rows)&&rows[0]?rows[0]:null;
+  if(!m){const e=new Error('Paid Marketplace order could not be found centrally');e.statusCode=404;throw e;}
+  if(String(m.parent_tx_id||'')!==String(notes.dbest_ref||'')){const e=new Error('Paid Marketplace order reference mismatch');e.statusCode=403;throw e;}
+  if(notes.user_id&&String(m.customer_member_id||'')!==String(notes.user_id)){const e=new Error('Paid Marketplace member mismatch');e.statusCode=403;throw e;}
+  const expected=Math.round(Number(m.total_amount||0)*100);if(expected!==Number(payment.amount||0)){const e=new Error('Paid Marketplace total does not match Razorpay amount');e.statusCode=400;throw e;}
+  if(String(m.payment_status||'').toLowerCase()==='paid')return {marketplaceMasterId:masterOrderId,marketplaceOrderActivated:true,marketplaceAlreadyPaid:true};
+  const now=new Date().toISOString();
+  const masterPatch={payment_method:'Razorpay',payment_status:'Paid',status:'Awaiting Vendor Confirmation',updated_at:now};
+  await sbFetch('/rest/v1/marketplace_master_orders_live?id=eq.'+encodeURIComponent(masterOrderId),key,{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify(masterPatch)});
+  const childPatch={payment_method:'Razorpay',payment_status:'Paid',status:'Order Placed',vendor_status:'New Order',updated_at:now};
+  await sbFetch('/rest/v1/marketplace_orders_live?master_order_id=eq.'+encodeURIComponent(masterOrderId),key,{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify(childPatch)});
+  await sbFetch('/rest/v1/marketplace_delivery_groups_live?master_order_id=eq.'+encodeURIComponent(masterOrderId),key,{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({status:'Waiting for Vendor',updated_at:now})});
+  return {marketplaceMasterId:masterOrderId,marketplaceOrderActivated:true,marketplaceAlreadyPaid:false};
 }
 module.exports=async function handler(req,res){
   res.setHeader('Cache-Control','no-store, max-age=0, must-revalidate');
@@ -98,15 +116,16 @@ module.exports=async function handler(req,res){
     if(payment.status==='authorized')payment=await rzFetch('/payments/'+encodeURIComponent(paymentId)+'/capture',keyId,keySecret,{method:'POST',body:JSON.stringify({amount:Number(order.amount),currency:String(order.currency||'INR')})});
     if(payment.status!=='captured')return res.status(409).json({error:'Payment is not captured yet',verified:false,status:payment.status||'unknown'});
     const key=serverKey();if(!key)return res.status(503).json({error:'Central DBest transaction storage is not configured',verified:false});
-    let persisted=null;
+    let persisted=null,marketplace=null;
     if(String(notes.kind||'').toLowerCase()==='membership'){
       const user=await authenticatedUser(b.supabaseAccessToken,key);
       if(String(notes.user_id||'')&&String(notes.user_id)!==String(user.id||''))return res.status(403).json({error:'Authenticated user does not match payment order',verified:false});
       persisted=await persistMembership({key,user,payment,order,notes,tier:String(notes.tier||tier||'').toLowerCase(),b});
     }else{
       persisted=await persistTransaction({key,payment,order,notes});
+      marketplace=await activateMarketplaceMaster({key,payment,notes});
     }
-    return res.status(200).json({verified:true,provider:'razorpay',paymentId,orderId,amount:Number(payment.amount||order.amount||0),currency:String(payment.currency||order.currency||'INR'),status:payment.status,method:String(payment.method||''),email:String(payment.email||''),contact:String(payment.contact||''),dbestRef:String(notes.dbest_ref||''),kind:String(notes.kind||''),tier:String(notes.tier||''),persisted:!!persisted,...(persisted||{})});
+    return res.status(200).json({verified:true,provider:'razorpay',paymentId,orderId,amount:Number(payment.amount||order.amount||0),currency:String(payment.currency||order.currency||'INR'),status:payment.status,method:String(payment.method||''),email:String(payment.email||''),contact:String(payment.contact||''),dbestRef:String(notes.dbest_ref||''),kind:String(notes.kind||''),tier:String(notes.tier||''),persisted:!!persisted,...(persisted||{}),...(marketplace||{})});
   }catch(err){
     console.error('Razorpay verify-payment error',err);
     const sc=Number(err?.statusCode)||500;
