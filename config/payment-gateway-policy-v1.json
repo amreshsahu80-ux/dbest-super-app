@@ -1,0 +1,37 @@
+{
+  "version": "1.0",
+  "platform": "DBest Super Platform",
+  "environment_scope": "ai-safe-ui-test",
+  "registrations": {
+    "user": {"primary": "razorpay", "secondary": null},
+    "vaahak": {"primary": "razorpay", "secondary": null},
+    "service_partner": {"primary": "razorpay", "secondary": null},
+    "vendor": {"primary": "razorpay", "secondary": null}
+  },
+  "ecommerce": {
+    "primary": "razorpay",
+    "secondary": "payu"
+  },
+  "cab": {
+    "gateway": null,
+    "methods": ["cash_to_driver", "upi_to_driver"]
+  },
+  "home_jobs": {
+    "primary": "razorpay",
+    "secondary": "payu"
+  },
+  "repairing": {
+    "primary": "razorpay",
+    "secondary": "payu"
+  },
+  "forms": {
+    "primary": "payu",
+    "secondary": null
+  },
+  "rules": {
+    "registration_gateway_opens_only_when_fee_is_greater_than_zero": true,
+    "cab_gateway_must_never_open": true,
+    "primary_gateway_is_default_button": true,
+    "secondary_gateway_is_alternate_button": true
+  }
+}
