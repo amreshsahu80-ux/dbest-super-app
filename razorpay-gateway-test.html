@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=5">
+<meta name="robots" content="noindex">
+<title>DBest Razorpay Test</title>
+<style>
+:root{--p:#1760ff;--p2:#735cff;--ink:#13203a;--muted:#687386;--line:#dfe6f0;--bg:#f5f7fb;--ok:#15803d;--bad:#b91c1c}*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:Inter,system-ui,-apple-system,Segoe UI,Arial,sans-serif;color:var(--ink)}.page{min-height:100dvh;padding:14px}.card{max-width:560px;margin:25px auto;background:#fff;border:1px solid var(--line);border-radius:22px;padding:22px;box-shadow:0 18px 50px rgba(30,55,100,.12)}h1{margin:0 0 8px;font-size:26px}.muted{color:var(--muted);line-height:1.5}.status{margin:16px 0;padding:12px;border-radius:13px;background:#f5f7fb;border:1px solid var(--line);font-size:13px;line-height:1.45}.amount{font-size:34px;font-weight:900;margin:18px 0 4px}.btn{width:100%;border:0;border-radius:14px;padding:14px;background:linear-gradient(135deg,var(--p),var(--p2));color:#fff;font-weight:900;font-size:16px}.btn:disabled{opacity:.55}.ok{background:#ecfdf3;border-color:#bbf7d0;color:var(--ok)}.bad{background:#fff1f2;border-color:#fecdd3;color:var(--bad)}code{word-break:break-all;font-size:11px}.small{font-size:11px;color:var(--muted);margin-top:12px;line-height:1.5}</style>
+</head>
+<body>
+<div class="page"><div class="card">
+<h1>DBest Razorpay Gateway Test</h1>
+<div class="muted">This page tests only the Razorpay generic payment flow and central Supabase transaction recording. It does not use Marketplace or PayU.</div>
+<div class="amount">₹10 <span style="font-size:14px;color:var(--muted)">TEST</span></div>
+<div id="status" class="status">Checking Razorpay configuration…</div>
+<button id="pay" class="btn" disabled>Pay ₹10 with Razorpay Test Mode</button>
+<div class="small">No real money is charged while Razorpay Test Mode is active. A successful test must show both “Razorpay Verified” and “Central Record Saved”.</div>
+</div></div>
+<script>
+(()=>{
+'use strict';
+const status=document.getElementById('status'),btn=document.getElementById('pay');let cfg=null,checkoutPromise=null;
+function setStatus(text,kind=''){status.className='status '+kind;status.innerHTML=text}
+async function jfetch(url,opts={}){const r=await fetch(url,opts),j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||j.message||('HTTP '+r.status));return j}
+function loadCheckout(){if(window.Razorpay)return Promise.resolve();if(checkoutPromise)return checkoutPromise;checkoutPromise=new Promise((ok,no)=>{const s=document.createElement('script');s.src='https://checkout.razorpay.com/v1/checkout.js';s.async=true;s.onload=ok;s.onerror=()=>no(new Error('Unable to load Razorpay Checkout'));document.head.appendChild(s)});return checkoutPromise}
+async function init(){try{cfg=await jfetch('/api/razorpay/config',{cache:'no-store'});if(!cfg.configured)throw new Error('Razorpay is not configured');if(!cfg.persistenceConfigured)throw new Error('Central Supabase storage is not configured');setStatus('✅ Razorpay ready • <b>'+String(cfg.mode||'').toUpperCase()+'</b> mode<br>✅ Central Supabase storage ready','ok');btn.disabled=false}catch(e){setStatus('❌ '+e.message,'bad')}}
+btn.onclick=async()=>{btn.disabled=true;btn.textContent='Opening Razorpay…';const ref='RZPTEST_'+Date.now();try{const order=await jfetch('/api/razorpay/create-order',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:'transaction',dbestRef:ref,txId:ref,amount:10,section:'Razorpay Test',sub:'Generic Gateway Test',userId:'CU7966'})});await loadCheckout();const verified=await new Promise((resolve,reject)=>{let done=false;const finish=(fn,v)=>{if(done)return;done=true;fn(v)};const rz=new Razorpay({key:order.keyId,amount:order.amount,currency:order.currency||'INR',name:'DBest Super Platform',description:'Generic Razorpay Test',order_id:order.orderId,handler:async r=>{try{const v=await jfetch('/api/razorpay/verify-payment',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...r,dbestRef:ref,kind:'transaction'})});finish(resolve,v)}catch(e){finish(reject,e)}},modal:{ondismiss:()=>finish(reject,new Error('Payment cancelled'))}});rz.on('payment.failed',r=>finish(reject,new Error(r?.error?.description||'Payment failed')));rz.open()});if(!verified.verified||!verified.persisted)throw new Error('Payment verified but central record was not saved');setStatus('✅ <b>Razorpay Verified</b><br>✅ <b>Central Record Saved</b><br>DBest Ref: <code>'+ref+'</code><br>Payment ID: <code>'+String(verified.paymentId||'')+'</code>','ok');btn.textContent='Test Passed ✓'}catch(e){setStatus('❌ '+String(e.message||e),'bad');btn.disabled=false;btn.textContent='Retry ₹10 Razorpay Test'}};
+init();
+})();
+</script>
+</body>
+</html>
