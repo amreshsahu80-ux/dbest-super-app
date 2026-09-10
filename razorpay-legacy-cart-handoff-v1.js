@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='1.0-legacy-cart-to-master-razorpay';
+const VERSION='1.1-master-cart-checkout-direct';
 function rz(){return window.DBEST_MASTER_RAZORPAY&&typeof window.DBEST_MASTER_RAZORPAY.checkout==='function'?window.DBEST_MASTER_RAZORPAY:null}
 function wireForm(){
   const form=document.querySelector('.checkoutCard');
@@ -11,34 +11,45 @@ function wireForm(){
   form.addEventListener('submit',function(e){e.preventDefault();e.stopImmediatePropagation();const r=rz();if(r&&typeof r.submit==='function')return r.submit(e);},true);
   return true;
 }
-function go(type){
+function go(){
   const r=rz();
   if(!r){try{typeof toast==='function'&&toast('Secure checkout is loading. Please tap again in a moment.')}catch(_){}return false}
   r.checkout();
   setTimeout(wireForm,0);setTimeout(wireForm,80);setTimeout(wireForm,250);
   return false;
 }
+function isMasterCartCheckout(b){
+  if(!b)return false;
+  const text=String(b.textContent||'').trim();
+  const oc=String(b.getAttribute('onclick')||'');
+  return /^Checkout$/i.test(text)&&/DBEST_MASTER_MARKET\.checkout\(\)/.test(oc);
+}
 function install(){
   const f=window.marketCheckout;
   if(typeof f==='function'&&!f.__dbestRazorpayHandoff){
-    const w=function(type){return go(type)};
+    const w=function(){return go()};
     w.__dbestRazorpayHandoff=true;
     w.__legacy=f;
     window.marketCheckout=w;
   }
-  const proceed=[...document.querySelectorAll('button')].find(b=>/Proceed\s+to\s+Checkout/i.test(String(b.textContent||'')));
+  const buttons=[...document.querySelectorAll('button')];
+  const proceed=buttons.find(b=>/Proceed\s+to\s+Checkout/i.test(String(b.textContent||'')));
+  const master=buttons.find(isMasterCartCheckout);
   if(proceed){
     const bar=document.getElementById('dbestMarketplaceCartBar');if(bar)bar.remove();
     proceed.dataset.dbestRazorpayProceed='1';
   }
+  if(master)master.dataset.dbestMasterRazorpayCheckout='1';
   wireForm();
 }
 document.addEventListener('click',function(e){
   const b=e.target&&e.target.closest?e.target.closest('button'):null;
-  if(!b||!/Proceed\s+to\s+Checkout/i.test(String(b.textContent||'')))return;
+  if(!b)return;
+  const legacy=/Proceed\s+to\s+Checkout/i.test(String(b.textContent||''));
+  const master=isMasterCartCheckout(b)||b.dataset.dbestMasterRazorpayCheckout==='1';
+  if(!legacy&&!master)return;
   e.preventDefault();e.stopImmediatePropagation();
-  const m=String((b.getAttribute('onclick')||'').match(/marketCheckout\('([^']+)'\)/)?.[1]||'');
-  go(m);
+  go();
 },true);
 let n=0;const t=setInterval(()=>{install();if(++n>240)clearInterval(t)},250);
 new MutationObserver(()=>{clearTimeout(window.__dbestLegacyCartRzTimer);window.__dbestLegacyCartRzTimer=setTimeout(install,40)}).observe(document.documentElement,{childList:true,subtree:true});
