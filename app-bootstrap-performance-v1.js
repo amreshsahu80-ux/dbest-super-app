@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const V='20260910-master-market-razorpay-v2-source-direct';
+const V='20260910-master-market-razorpay-v3-final-authority';
 if(window.DBEST_PERFORMANCE_BOOTSTRAP?.version===V)return;
 
 const EARLY=['cab-entry-capture-final-v1.js','ux-performance-bridge.js'];
@@ -32,7 +32,7 @@ const GROUPS={
     'marketplace-vaahak-live-v2.js','marketplace-live-catalog-authority.js','marketplace-minimum-order-ux.js',
     'marketplace-live-order-submit-final.js','marketplace-cart-quantity-v1.js','marketplace-customer-stage-wording-fix.js',
     'customer-marketplace-my-orders.js','marketplace-completion-green.js','marketplace-delivery-rules.js',
-    'marketplace-delivery-order-display.js','marketplace-master-cart.js','razorpay-master-market-v1.js'
+    'marketplace-delivery-order-display.js','marketplace-master-cart.js','razorpay-master-market-v1.js','razorpay-master-checkout-final-v1.js'
   ],
   service:[
     'service-request-live-bridge.js','service-document-upload-bridge.js','service-payment-sync-bridge.js',
