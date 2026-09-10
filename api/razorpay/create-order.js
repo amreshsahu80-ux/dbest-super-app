@@ -17,14 +17,14 @@ module.exports=async function handler(req,res){
     const b=req.body&&typeof req.body==='object'?req.body:{};
     const kind=safe(b.kind||'transaction',40).toLowerCase(),tier=safe(b.tier,30).toLowerCase(),dbestRef=safe(b.dbestRef||b.txId,60);
     if(!dbestRef)return res.status(400).json({error:'DBest reference is required'});
+    const centralKey=serverKey();if(!centralKey)return res.status(503).json({error:'Central DBest transaction storage is not configured'});
     let amountRupees,authenticated=null;
     if(kind==='membership'){
       const prices=membershipPrices();if(!Object.prototype.hasOwnProperty.call(prices,tier))return res.status(400).json({error:'Invalid membership tier'});
-      const key=serverKey();if(!key)return res.status(503).json({error:'Central membership storage is not configured'});
-      authenticated=await authenticatedUser(b.supabaseAccessToken,key);
+      authenticated=await authenticatedUser(b.supabaseAccessToken,centralKey);
       if(b.userId&&String(b.userId)!==String(authenticated.id||''))return res.status(403).json({error:'Authenticated user mismatch'});
       const email=safe(authenticated.email,180).toLowerCase();if(!email)return res.status(400).json({error:'Authenticated account has no email address'});
-      const existing=await activeMembership(key,email);if(existing)return res.status(409).json({error:'Membership is already active',memberId:existing.external_id||''});
+      const existing=await activeMembership(centralKey,email);if(existing)return res.status(409).json({error:'Membership is already active',memberId:existing.external_id||''});
       amountRupees=Number(prices[tier]);
     }else{
       amountRupees=Number(b.amount);if(!Number.isFinite(amountRupees)||amountRupees<=0)return res.status(400).json({error:'Invalid amount'});if(amountRupees>1000000)return res.status(400).json({error:'Amount exceeds allowed limit'});
