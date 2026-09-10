@@ -17,7 +17,7 @@
   <script>
     (async function(){
       try{
-        const BUILD='20260910-master-market-razorpay-v14';
+        const BUILD='20260910-master-market-razorpay-v16';
         const r=await fetch('./index-26.html?v='+BUILD,{cache:'no-store'});
         if(!r.ok)throw new Error('Unable to load application');
         let html=await r.text();
@@ -30,7 +30,7 @@
 
         const uniform='<style id="dbest-device-uniformity">html{-webkit-text-size-adjust:100%;text-size-adjust:100%}body{margin:0;max-width:100%;overflow-x:hidden}*,*:before,*:after{box-sizing:border-box}button,input,select,textarea{font:inherit}@media(max-width:480px){input,select,textarea{font-size:16px}}</style>';
         html=html.replace('</head>',uniform+'<script src="./runtime-config.js?v='+BUILD+'"><\/script></head>');
-        html=html.replace('</body>','<script defer src="./app-bootstrap-performance-v1.js?v='+BUILD+'"><\/script><script defer src="./auth-mobile-layout-fix-v1.js?v='+BUILD+'"><\/script><script defer src="./payu-preserve-v1.js?v='+BUILD+'"><\/script><script defer src="./razorpay-integration-v1.js?v='+BUILD+'"><\/script><script defer src="./payment-policy-router-v1.js?v='+BUILD+'"><\/script><script defer src="./razorpay-ecom-trace-v1.js?v='+BUILD+'"><\/script><script defer src="./razorpay-checkout-policy-v1.js?v='+BUILD+'"><\/script><script defer src="./razorpay-paymentpage-fallback-v1.js?v='+BUILD+'"><\/script><script defer src="./razorpay-legacy-cart-handoff-v1.js?v='+BUILD+'"><\/script><script defer src="./marketplace-secure-session-v1.js?v='+BUILD+'"><\/script><script defer src="./ai-safe-client-v3.js?v='+BUILD+'"><\/script><script defer src="./ai-conversation-flow-v5.js?v='+BUILD+'"><\/script><script>setTimeout(function(){if(new URLSearchParams(location.search).get("dbestLogin")==="1"&&typeof loginChoice==="function")loginChoice()},300);<\/script></body>');
+        html=html.replace('</body>','<script defer src="./app-bootstrap-performance-v1.js?v='+BUILD+'"><\/script><script defer src="./auth-mobile-layout-fix-v1.js?v='+BUILD+'"><\/script><script defer src="./payu-preserve-v1.js?v='+BUILD+'"><\/script><script defer src="./razorpay-integration-v1.js?v='+BUILD+'"><\/script><script defer src="./payment-policy-router-v1.js?v='+BUILD+'"><\/script><script defer src="./razorpay-ecom-trace-v1.js?v='+BUILD+'"><\/script><script defer src="./razorpay-checkout-policy-v1.js?v='+BUILD+'"><\/script><script defer src="./razorpay-paymentpage-fallback-v1.js?v='+BUILD+'"><\/script><script defer src="./razorpay-legacy-cart-handoff-v1.js?v='+BUILD+'"><\/script><script defer src="./marketplace-secure-session-v1.js?v='+BUILD+'"><\/script><script defer src="./razorpay-master-cart-button-v1.js?v='+BUILD+'"><\/script><script defer src="./ai-safe-client-v3.js?v='+BUILD+'"><\/script><script defer src="./ai-conversation-flow-v5.js?v='+BUILD+'"><\/script><script>setTimeout(function(){if(new URLSearchParams(location.search).get("dbestLogin")==="1"&&typeof loginChoice==="function")loginChoice()},300);<\/script></body>');
         document.open();
         document.write(html);
         document.close();
