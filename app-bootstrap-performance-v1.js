@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const V='20260910-master-market-razorpay-v1';
+const V='20260910-master-market-razorpay-v2-source-direct';
 if(window.DBEST_PERFORMANCE_BOOTSTRAP?.version===V)return;
 
 const EARLY=['cab-entry-capture-final-v1.js','ux-performance-bridge.js'];
