@@ -17,7 +17,7 @@
   <script>
     (async function(){
       try{
-        const BUILD='20260911-legacy-inline-direct-v25';
+        const BUILD='20260911-marketplace-standalone-checkout-v26';
         const r=await fetch('./index-26.html?v='+BUILD,{cache:'no-store'});
         if(!r.ok)throw new Error('Unable to load application');
         let html=await r.text();
@@ -28,11 +28,11 @@
         html=html.replace('function registerChoice(){','function registerChoice(){'+joinExpr);
         html=html.replace('function reg(tier){','function reg(tier){location.href="/join.html?tier="+encodeURIComponent(tier);return;');
 
-        // Preview-only source rewrite: bypass legacy marketCheckout(type) on the visible
-        // "Proceed to Checkout" button and call the final verified Razorpay renderer instead.
+        // Preview-only: route the legacy Marketplace checkout button to the proven
+        // same-origin standalone Razorpay checkout flow.
         html=html.replace(
           'onclick="marketCheckout(\'${type}\')"',
-          'onclick="return window.DBEST_PREVIEW_OPEN_RAZORPAY&&window.DBEST_PREVIEW_OPEN_RAZORPAY(event)"'
+          'onclick="location.href=\'/preview-marketplace-razorpay-checkout.html\';return false"'
         );
 
         const uniform='<style id="dbest-device-uniformity">html{-webkit-text-size-adjust:100%;text-size-adjust:100%}body{margin:0;max-width:100%;overflow-x:hidden}*,*:before,*:after{box-sizing:border-box}button,input,select,textarea{font:inherit}@media(max-width:480px){input,select,textarea{font-size:16px}}</style>';
@@ -42,9 +42,10 @@
           'app-bootstrap-performance-v1.js','auth-mobile-layout-fix-v1.js','payu-preserve-v1.js',
           'razorpay-integration-v1.js','payment-policy-router-v1.js','razorpay-ecom-trace-v1.js',
           'razorpay-checkout-policy-v1.js','razorpay-paymentpage-fallback-v1.js',
-          'marketplace-secure-session-v1.js','razorpay-master-cart-button-v1.js','ai-safe-client-v3.js','ai-conversation-flow-v5.js'
+          'marketplace-secure-session-v1.js','razorpay-master-cart-button-v1.js',
+          'marketplace-checkout-standalone-route-v1.js','ai-safe-client-v3.js','ai-conversation-flow-v5.js'
         ].map(function(src){return '<script defer src="./'+src+'?v='+BUILD+'"><\/script>';}).join('');
-        const bootExtras='<script>(function(){window.DBEST_PREVIEW_OPEN_RAZORPAY=async function(e){try{e&&e.preventDefault&&e.preventDefault();await window.DBEST_PERFORMANCE_BOOTSTRAP?.startFeatures?.();if(window.DBEST_FINAL_MARKET_CHECKOUT&&typeof window.DBEST_FINAL_MARKET_CHECKOUT.checkout==="function")return window.DBEST_FINAL_MARKET_CHECKOUT.checkout();if(window.DBEST_MASTER_RAZORPAY&&typeof window.DBEST_MASTER_RAZORPAY.checkout==="function")return window.DBEST_MASTER_RAZORPAY.checkout();if(typeof toast==="function")toast("Secure Razorpay checkout did not load.");else alert("Secure Razorpay checkout did not load.")}catch(err){console.error("[DBEST Preview direct checkout]",err);if(typeof toast==="function")toast("Checkout error: "+String(err&&err.message||err));else alert("Checkout error: "+String(err&&err.message||err))}return false};setTimeout(function(){if(new URLSearchParams(location.search).get("dbestLogin")==="1"&&typeof loginChoice==="function")loginChoice()},300)})();<\/script>';
+        const bootExtras='<script>(function(){window.DBEST_PREVIEW_OPEN_RAZORPAY=function(e){try{e&&e.preventDefault&&e.preventDefault();e&&e.stopPropagation&&e.stopPropagation()}catch(_){}location.href="/preview-marketplace-razorpay-checkout.html";return false};setTimeout(function(){if(new URLSearchParams(location.search).get("dbestLogin")==="1"&&typeof loginChoice==="function")loginChoice()},300)})();<\/script>';
         html=html.replace('</body>',extras+bootExtras+'</body>');
 
         document.open();
