@@ -7,7 +7,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
 });
 
 (function(){
-  const V='20260907-runtime-idle-v2';
+  const V='20260911-owner-review-files-v1';
 
   const applyRuntimeSecrets=()=>{
     const sec=window.DBEST_RUNTIME_SECRETS||{};
@@ -56,6 +56,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
     loadScript('/vaahak-visual-profile-ui.js?v='+V,'data-dbest-vaahak-visual-profile');
   }
   if(/\/vendor(?:\.html)?\/?$/i.test(location.pathname))loadScript('/vendor-clean-catalog-tools.js?v='+V,'data-dbest-vendor-clean-catalog-tools');
+  if(/\/owner-live-onboarding\.html\/?$/i.test(location.pathname))loadScript('/owner-review-files-v1.js?v='+V,'data-dbest-owner-review-files-v1');
 
   const loadFinalLayers=async()=>{
     installLogoClarity();
@@ -99,7 +100,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
       try{await loadScriptAsync('/vendor-google-location-v1.js?v='+V,'data-dbest-vendor-google-location-v1')}catch(e){console.warn('DBest vendor Google location warning',e)}
     }
     if(googleConfigured()&&/\/vaahak(?:\.html)?\/?$/i.test(location.pathname)){
-      try{await loadScriptAsync('/vaahak-google-live-map-v1.js?v='+V,'data-dbest-vaahak-google-live-map-v1')}catch(e){console.warn('DBest Vaahak Google map warning',e)}
+      try{await loadScriptAsync('/vaahak-google-live-map-v1.js?v='+V,'data-dbest-vaahak-google-map-v1')}catch(e){console.warn('DBest Vaahak Google map warning',e)}
     }
   };
 
