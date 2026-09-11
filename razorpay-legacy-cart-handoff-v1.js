@@ -1,7 +1,8 @@
 (function(){
 'use strict';
-const VERSION='1.1-master-cart-checkout-direct';
+const VERSION='1.2-legacy-cart-final-authority';
 function rz(){return window.DBEST_MASTER_RAZORPAY&&typeof window.DBEST_MASTER_RAZORPAY.checkout==='function'?window.DBEST_MASTER_RAZORPAY:null}
+function finalCheckout(){return window.DBEST_FINAL_MARKET_CHECKOUT&&typeof window.DBEST_FINAL_MARKET_CHECKOUT.checkout==='function'?window.DBEST_FINAL_MARKET_CHECKOUT:null}
 function wireForm(){
   const form=document.querySelector('.checkoutCard');
   if(!form||!/Primary\s*•\s*Razorpay/i.test(String(form.textContent||'')))return false;
@@ -12,9 +13,21 @@ function wireForm(){
   return true;
 }
 function go(){
+  const f=finalCheckout();
+  if(f){
+    f.checkout();
+    setTimeout(wireForm,0);setTimeout(wireForm,80);setTimeout(wireForm,250);
+    return false;
+  }
+  if(window.DBEST_MASTER_MARKET&&typeof window.DBEST_MASTER_MARKET.secureCheckout==='function'){
+    window.DBEST_MASTER_MARKET.secureCheckout();
+    setTimeout(wireForm,0);setTimeout(wireForm,80);setTimeout(wireForm,250);
+    return false;
+  }
   const r=rz();
   if(!r){try{typeof toast==='function'&&toast('Secure checkout is loading. Please tap again in a moment.')}catch(_){}return false}
-  r.checkout();
+  const old=window.requireMember;
+  try{if(window.DBEST_MEMBER_LIVE?.getToken?.()&&typeof old==='function')window.requireMember=()=>true;r.checkout()}finally{if(window.DBEST_MEMBER_LIVE?.getToken?.()&&typeof old==='function')window.requireMember=old}
   setTimeout(wireForm,0);setTimeout(wireForm,80);setTimeout(wireForm,250);
   return false;
 }
@@ -38,6 +51,7 @@ function install(){
   if(proceed){
     const bar=document.getElementById('dbestMarketplaceCartBar');if(bar)bar.remove();
     proceed.dataset.dbestRazorpayProceed='1';
+    proceed.setAttribute('onclick','return DBEST_LEGACY_CART_RAZORPAY.go()');
   }
   if(master)master.dataset.dbestMasterRazorpayCheckout='1';
   wireForm();
