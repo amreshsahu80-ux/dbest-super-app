@@ -17,21 +17,18 @@
   <script>
     (async function(){
       try{
-        const BUILD='20260911-marketplace-final-login-v30';
+        const BUILD='20260911-direct-provider-pay-v31';
         const r=await fetch('./index-26.html?v='+BUILD,{cache:'no-store'});
         if(!r.ok)throw new Error('Unable to load application');
         let html=await r.text();
 
         const joinExpr='location.href="/join.html"+(new URLSearchParams(location.search).get("ref")?("?ref="+encodeURIComponent(new URLSearchParams(location.search).get("ref"))):"");return;';
-        // Keep the normal Account screen intact so visitors see both Register and Login.
         html=html.replace('function openService(id){','function openService(id){if(id==="join"&&session.role==="visitor"){'+joinExpr+'}');
         html=html.replace('function registerChoice(){','function registerChoice(){'+joinExpr);
         html=html.replace('function reg(tier){','function reg(tier){location.href="/join.html?tier="+encodeURIComponent(tier);return;');
         html=html.replace('function loginChoice(){','function loginChoice(){location.href="/preview-member-login.html?return=%2F";return;');
         html=html.split('onclick="loginChoice()"').join('onclick="location.href=\'/preview-member-login.html?return=%2F\';return false"');
 
-        // Preview-only: route the legacy Marketplace checkout button to the proven
-        // same-origin standalone Razorpay checkout flow with Android/UPI recovery.
         html=html.replace(
           'onclick="marketCheckout(\'${type}\')"',
           'onclick="location.href=\'/preview-marketplace-razorpay-checkout.html?v='+BUILD+'\';return false"'
