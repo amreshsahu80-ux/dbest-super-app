@@ -1,5 +1,5 @@
 {
-  "version": "1.1",
+  "version": "1.2",
   "platform": "DBest Super Platform",
   "environment_scope": "ai-safe-ui-test",
   "registrations": {
@@ -18,11 +18,15 @@
   },
   "home_jobs": {
     "gateway": null,
-    "methods": ["cash_to_service_provider", "upi_to_service_provider"]
+    "methods": ["cash_to_service_provider", "upi_to_service_provider"],
+    "dormant_gateway": "payu",
+    "dormant_gateway_enabled": false
   },
   "repairing": {
     "gateway": null,
-    "methods": ["cash_to_partner", "upi_to_partner"]
+    "methods": ["cash_to_partner", "upi_to_partner"],
+    "dormant_gateway": "payu",
+    "dormant_gateway_enabled": false
   },
   "forms": {
     "primary": "payu",
@@ -31,8 +35,10 @@
   "rules": {
     "registration_gateway_opens_only_when_fee_is_greater_than_zero": true,
     "cab_gateway_must_never_open": true,
-    "home_jobs_gateway_must_never_open": true,
-    "repairing_gateway_must_never_open": true,
+    "home_jobs_gateway_must_never_open_while_dormant_gateway_disabled": true,
+    "repairing_gateway_must_never_open_while_dormant_gateway_disabled": true,
+    "preserve_home_jobs_payu_integration_for_future_activation": true,
+    "preserve_repairing_payu_integration_for_future_activation": true,
     "primary_gateway_is_default_button": true,
     "secondary_gateway_is_alternate_button": true
   }
