@@ -17,7 +17,7 @@
   <script>
     (async function(){
       try{
-        const BUILD='20260911-direct-provider-pay-v31';
+        const BUILD='20260911-owner-live-onboarding-v32';
         const r=await fetch('./index-26.html?v='+BUILD,{cache:'no-store'});
         if(!r.ok)throw new Error('Unable to load application');
         let html=await r.text();
@@ -28,6 +28,8 @@
         html=html.replace('function reg(tier){','function reg(tier){location.href="/join.html?tier="+encodeURIComponent(tier);return;');
         html=html.replace('function loginChoice(){','function loginChoice(){location.href="/preview-member-login.html?return=%2F";return;');
         html=html.split('onclick="loginChoice()"').join('onclick="location.href=\'/preview-member-login.html?return=%2F\';return false"');
+        html=html.replace('function ownerOnboardingHub(){','function ownerOnboardingHub(){location.href="/owner-live-onboarding.html";return;');
+        html=html.replace('function ownerMemberOnboarding(){','function ownerMemberOnboarding(){location.href="/owner-live-onboarding.html";return;');
 
         html=html.replace(
           'onclick="marketCheckout(\'${type}\')"',
