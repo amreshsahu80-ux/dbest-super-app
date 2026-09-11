@@ -1,5 +1,5 @@
 {
-  "version": "1.0",
+  "version": "1.1",
   "platform": "DBest Super Platform",
   "environment_scope": "ai-safe-ui-test",
   "registrations": {
@@ -17,12 +17,12 @@
     "methods": ["cash_to_driver", "upi_to_driver"]
   },
   "home_jobs": {
-    "primary": "razorpay",
-    "secondary": "payu"
+    "gateway": null,
+    "methods": ["cash_to_service_provider", "upi_to_service_provider"]
   },
   "repairing": {
-    "primary": "razorpay",
-    "secondary": "payu"
+    "gateway": null,
+    "methods": ["cash_to_partner", "upi_to_partner"]
   },
   "forms": {
     "primary": "payu",
@@ -31,6 +31,8 @@
   "rules": {
     "registration_gateway_opens_only_when_fee_is_greater_than_zero": true,
     "cab_gateway_must_never_open": true,
+    "home_jobs_gateway_must_never_open": true,
+    "repairing_gateway_must_never_open": true,
     "primary_gateway_is_default_button": true,
     "secondary_gateway_is_alternate_button": true
   }
