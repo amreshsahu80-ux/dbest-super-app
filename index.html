@@ -17,15 +17,15 @@
   <script>
     (async function(){
       try{
-        const BUILD='20260912-wallet-summary-v1';
+        const BUILD='20260912-email-otp-register-v1';
         const r=await fetch('./index-26.html?v='+BUILD,{cache:'no-store'});
         if(!r.ok)throw new Error('Unable to load application');
         let html=await r.text();
 
-        const joinExpr='location.href="/join.html"+(new URLSearchParams(location.search).get("ref")?("?ref="+encodeURIComponent(new URLSearchParams(location.search).get("ref"))):"");return;';
+        const joinExpr='location.href="/join-v2.html"+(new URLSearchParams(location.search).get("ref")?("?ref="+encodeURIComponent(new URLSearchParams(location.search).get("ref"))):"");return;';
         html=html.replace('function openService(id){','function openService(id){if(id==="join"&&session.role==="visitor"){'+joinExpr+'}');
         html=html.replace('function registerChoice(){','function registerChoice(){'+joinExpr);
-        html=html.replace('function reg(tier){','function reg(tier){location.href="/join.html?tier="+encodeURIComponent(tier);return;');
+        html=html.replace('function reg(tier){','function reg(tier){location.href="/join-v2.html?tier="+encodeURIComponent(tier);return;');
         html=html.replace('function loginChoice(){','function loginChoice(){location.href="/preview-member-login-v2.html?return=%2F";return;');
         html=html.split('onclick="loginChoice()"').join('onclick="location.href=\'/preview-member-login-v2.html?return=%2F\';return false"');
         html=html.replace('function ownerOnboardingHub(){','function ownerOnboardingHub(){location.href="/owner-live-onboarding.html";return;');
