@@ -17,7 +17,7 @@
   <script>
     (async function(){
       try{
-        const BUILD='20260912-email-otp-register-v1';
+        const BUILD='20260912-wallet-dashboard-v1';
         const r=await fetch('./index-26.html?v='+BUILD,{cache:'no-store'});
         if(!r.ok)throw new Error('Unable to load application');
         let html=await r.text();
@@ -58,7 +58,7 @@
           'razorpay-integration-v1.js','payment-policy-router-v1.js','razorpay-ecom-trace-v1.js',
           'razorpay-checkout-policy-v1.js','razorpay-paymentpage-fallback-v1.js',
           'marketplace-secure-session-v1.js','razorpay-master-cart-button-v1.js',
-          'marketplace-checkout-standalone-route-v1.js','member-wallet-summary-ui-v1.js','ai-safe-client-v3.js','ai-conversation-flow-v5.js'
+          'marketplace-checkout-standalone-route-v1.js','member-wallet-summary-ui-v1.js','member-dashboard-live-summary-v1.js','ai-safe-client-v3.js','ai-conversation-flow-v5.js'
         ].map(function(src){return '<script defer src="./'+src+'?v='+BUILD+'"><\/script>';}).join('');
         const bootExtras='<script>(function(){window.DBEST_PREVIEW_LOGIN=function(){location.href="/preview-member-login-v2.html?return=%2F";return false};window.loginChoice=window.DBEST_PREVIEW_LOGIN;window.DBEST_PREVIEW_OPEN_RAZORPAY=function(e){try{e&&e.preventDefault&&e.preventDefault();e&&e.stopPropagation&&e.stopPropagation()}catch(_){}location.href="/preview-marketplace-razorpay-checkout.html?v='+BUILD+'";return false};setTimeout(function(){if(new URLSearchParams(location.search).get("dbestLogin")==="1")window.DBEST_PREVIEW_LOGIN()},300)})();<\/script>';
         html=html.replace('</body>',extras+bootExtras+'</body>');
