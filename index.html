@@ -17,7 +17,7 @@
   <script>
     (async function(){
       try{
-        const BUILD='20260912-register-login-split-v2';
+        const BUILD='20260912-register-login-split-v3';
         const r=await fetch('./index-26.html?v='+BUILD,{cache:'no-store'});
         if(!r.ok)throw new Error('Unable to load application');
         let html=await r.text();
@@ -26,18 +26,18 @@
         html=html.replace('function openService(id){','function openService(id){if(id==="join"&&session.role==="visitor"){'+joinExpr+'}');
         html=html.replace('function registerChoice(){','function registerChoice(){'+joinExpr);
         html=html.replace('function reg(tier){','function reg(tier){location.href="/join.html?tier="+encodeURIComponent(tier);return;');
-        html=html.replace('function loginChoice(){','function loginChoice(){location.href="/preview-member-login.html?return=%2F";return;');
-        html=html.split('onclick="loginChoice()"').join('onclick="location.href=\'/preview-member-login.html?return=%2F\';return false"');
+        html=html.replace('function loginChoice(){','function loginChoice(){location.href="/preview-member-login-v2.html?return=%2F";return;');
+        html=html.split('onclick="loginChoice()"').join('onclick="location.href=\'/preview-member-login-v2.html?return=%2F\';return false"');
         html=html.replace('function ownerOnboardingHub(){','function ownerOnboardingHub(){location.href="/owner-live-onboarding.html";return;');
         html=html.replace('function ownerMemberOnboarding(){','function ownerMemberOnboarding(){location.href="/owner-live-onboarding.html";return;');
 
         html=html.replace(
           '<button class="btn" id="account" onclick="account()">👤 Register / Login</button>',
-          '<div id="dbestHomeAuthActions" style="display:flex;gap:8px;align-items:center"><button class="btn soft" id="homeRegister" onclick="session.role===\'visitor\'?registerChoice():account()">✨ Register</button><button class="btn" id="loginHome" onclick="location.href=\'/preview-member-login.html?return=%2F\';return false">🔐 Login</button></div>'
+          '<div id="dbestHomeAuthActions" style="display:flex;gap:8px;align-items:center"><button class="btn soft" id="homeRegister" onclick="session.role===\'visitor\'?registerChoice():account()">✨ Register</button><button class="btn" id="loginHome" onclick="location.href=\'/preview-member-login-v2.html?return=%2F\';return false">🔐 Login</button></div>'
         );
         html=html.replace(
           '<button class="btn" style="background:#ffffff18;border:1px solid #ffffff35" onclick="account()">Register / Login</button>',
-          '<button class="btn" style="background:#fff;color:#1550c6" onclick="registerChoice()">Register</button> <button class="btn" style="background:#ffffff18;border:1px solid #ffffff35" onclick="location.href=\'/preview-member-login.html?return=%2F\';return false">Login</button>'
+          '<button class="btn" style="background:#fff;color:#1550c6" onclick="registerChoice()">Register</button> <button class="btn" style="background:#ffffff18;border:1px solid #ffffff35" onclick="location.href=\'/preview-member-login-v2.html?return=%2F\';return false">Login</button>'
         );
         html=html.replace(
           '$("account").textContent=session.role==="visitor"?"👤 "+t.acc:"👤 "+(u?.name||session.role);',
@@ -60,7 +60,7 @@
           'marketplace-secure-session-v1.js','razorpay-master-cart-button-v1.js',
           'marketplace-checkout-standalone-route-v1.js','ai-safe-client-v3.js','ai-conversation-flow-v5.js'
         ].map(function(src){return '<script defer src="./'+src+'?v='+BUILD+'"><\/script>';}).join('');
-        const bootExtras='<script>(function(){window.DBEST_PREVIEW_LOGIN=function(){location.href="/preview-member-login.html?return=%2F";return false};window.loginChoice=window.DBEST_PREVIEW_LOGIN;window.DBEST_PREVIEW_OPEN_RAZORPAY=function(e){try{e&&e.preventDefault&&e.preventDefault();e&&e.stopPropagation&&e.stopPropagation()}catch(_){}location.href="/preview-marketplace-razorpay-checkout.html?v='+BUILD+'";return false};setTimeout(function(){if(new URLSearchParams(location.search).get("dbestLogin")==="1")window.DBEST_PREVIEW_LOGIN()},300)})();<\/script>';
+        const bootExtras='<script>(function(){window.DBEST_PREVIEW_LOGIN=function(){location.href="/preview-member-login-v2.html?return=%2F";return false};window.loginChoice=window.DBEST_PREVIEW_LOGIN;window.DBEST_PREVIEW_OPEN_RAZORPAY=function(e){try{e&&e.preventDefault&&e.preventDefault();e&&e.stopPropagation&&e.stopPropagation()}catch(_){}location.href="/preview-marketplace-razorpay-checkout.html?v='+BUILD+'";return false};setTimeout(function(){if(new URLSearchParams(location.search).get("dbestLogin")==="1")window.DBEST_PREVIEW_LOGIN()},300)})();<\/script>';
         html=html.replace('</body>',extras+bootExtras+'</body>');
 
         document.open();
