@@ -17,7 +17,7 @@
   <script>
     (async function(){
       try{
-        const BUILD='20260912-register-login-split-v1';
+        const BUILD='20260912-register-login-split-v2';
         const r=await fetch('./index-26.html?v='+BUILD,{cache:'no-store'});
         if(!r.ok)throw new Error('Unable to load application');
         let html=await r.text();
@@ -33,7 +33,7 @@
 
         html=html.replace(
           '<button class="btn" id="account" onclick="account()">👤 Register / Login</button>',
-          '<div id="dbestHomeAuthActions" style="display:flex;gap:8px;align-items:center"><button class="btn soft" id="account" onclick="session.role===\'visitor\'?registerChoice():account()">✨ Register</button><button class="btn" id="loginHome" onclick="location.href=\'/preview-member-login.html?return=%2F\';return false">🔐 Login</button></div>'
+          '<div id="dbestHomeAuthActions" style="display:flex;gap:8px;align-items:center"><button class="btn soft" id="homeRegister" onclick="session.role===\'visitor\'?registerChoice():account()">✨ Register</button><button class="btn" id="loginHome" onclick="location.href=\'/preview-member-login.html?return=%2F\';return false">🔐 Login</button></div>'
         );
         html=html.replace(
           '<button class="btn" style="background:#ffffff18;border:1px solid #ffffff35" onclick="account()">Register / Login</button>',
@@ -41,7 +41,7 @@
         );
         html=html.replace(
           '$("account").textContent=session.role==="visitor"?"👤 "+t.acc:"👤 "+(u?.name||session.role);',
-          '$("account").textContent=session.role==="visitor"?"✨ Register":"👤 "+(u?.name||session.role);var lh=$("loginHome");if(lh)lh.style.display=session.role==="visitor"?"":"none";'
+          'var hr=$("homeRegister");if(hr)hr.textContent=session.role==="visitor"?"✨ Register":"👤 "+(u?.name||session.role);var lh=$("loginHome");if(lh)lh.style.display=session.role==="visitor"?"":"none";'
         );
 
         html=html.replace(
