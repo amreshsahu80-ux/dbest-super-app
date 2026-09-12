@@ -17,7 +17,7 @@
   <script>
     (async function(){
       try{
-        const BUILD='20260911-owner-live-onboarding-v32';
+        const BUILD='20260912-register-login-split-v1';
         const r=await fetch('./index-26.html?v='+BUILD,{cache:'no-store'});
         if(!r.ok)throw new Error('Unable to load application');
         let html=await r.text();
@@ -32,15 +32,29 @@
         html=html.replace('function ownerMemberOnboarding(){','function ownerMemberOnboarding(){location.href="/owner-live-onboarding.html";return;');
 
         html=html.replace(
+          '<button class="btn" id="account" onclick="account()">👤 Register / Login</button>',
+          '<div id="dbestHomeAuthActions" style="display:flex;gap:8px;align-items:center"><button class="btn soft" id="account" onclick="session.role===\'visitor\'?registerChoice():account()">✨ Register</button><button class="btn" id="loginHome" onclick="location.href=\'/preview-member-login.html?return=%2F\';return false">🔐 Login</button></div>'
+        );
+        html=html.replace(
+          '<button class="btn" style="background:#ffffff18;border:1px solid #ffffff35" onclick="account()">Register / Login</button>',
+          '<button class="btn" style="background:#fff;color:#1550c6" onclick="registerChoice()">Register</button> <button class="btn" style="background:#ffffff18;border:1px solid #ffffff35" onclick="location.href=\'/preview-member-login.html?return=%2F\';return false">Login</button>'
+        );
+        html=html.replace(
+          '$("account").textContent=session.role==="visitor"?"👤 "+t.acc:"👤 "+(u?.name||session.role);',
+          '$("account").textContent=session.role==="visitor"?"✨ Register":"👤 "+(u?.name||session.role);var lh=$("loginHome");if(lh)lh.style.display=session.role==="visitor"?"":"none";'
+        );
+
+        html=html.replace(
           'onclick="marketCheckout(\'${type}\')"',
           'onclick="location.href=\'/preview-marketplace-razorpay-checkout.html?v='+BUILD+'\';return false"'
         );
 
-        const uniform='<style id="dbest-device-uniformity">html{-webkit-text-size-adjust:100%;text-size-adjust:100%}body{margin:0;max-width:100%;overflow-x:hidden}*,*:before,*:after{box-sizing:border-box}button,input,select,textarea{font:inherit}@media(max-width:480px){input,select,textarea{font-size:16px}}</style>';
+        const uniform='<style id="dbest-device-uniformity">html{-webkit-text-size-adjust:100%;text-size-adjust:100%}body{margin:0;max-width:100%;overflow-x:hidden}*,*:before,*:after{box-sizing:border-box}button,input,select,textarea{font:inherit}@media(max-width:700px){#dbestHomeAuthActions{width:100%;order:4}#dbestHomeAuthActions .btn{flex:1}}@media(max-width:480px){input,select,textarea{font-size:16px}}</style>';
         html=html.replace('</head>',uniform+'<script src="./runtime-config.js?v='+BUILD+'"><\/script></head>');
 
         const extras=[
           'app-bootstrap-performance-v1.js','auth-mobile-layout-fix-v1.js','payu-preserve-v1.js',
+          'membership-explainer-action-fix-v1.js','user-login-overlay-guard-v1.js',
           'razorpay-integration-v1.js','payment-policy-router-v1.js','razorpay-ecom-trace-v1.js',
           'razorpay-checkout-policy-v1.js','razorpay-paymentpage-fallback-v1.js',
           'marketplace-secure-session-v1.js','razorpay-master-cart-button-v1.js',
