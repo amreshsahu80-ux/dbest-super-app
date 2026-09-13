@@ -21,5 +21,8 @@ window.fetch=async function(input,init){
   }
   return raw(input,init);
 };
-window.DBEST_RIDE_COORDINATE_FIX={version:'1.0.0'};
+if(!window.DBEST_CAB_LIVE_HANDOFF&&!document.querySelector('script[data-dbest-live-handoff]')){
+  const s=document.createElement('script');s.src='/cab-live-job-handoff-fix-v1.js?v=20260914-1';s.async=true;s.dataset.dbestLiveHandoff='1';(document.body||document.documentElement).appendChild(s);
+}
+window.DBEST_RIDE_COORDINATE_FIX={version:'1.1.0'};
 })();
