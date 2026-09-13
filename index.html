@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=5">
-  <title>DBest Super Platform — Invoice & COD Test</title>
+  <title>DBest Super Platform — Pay at Delivery Test</title>
   <style>
     html{-webkit-text-size-adjust:100%;text-size-adjust:100%;background:#f5f7fb}
     body{margin:0;min-width:320px;max-width:100%;overflow-x:hidden}
@@ -17,7 +17,7 @@
   <script>
     (async function(){
       try{
-        const BUILD='20260913-invoice-cod-test-v5';
+        const BUILD='20260913-pay-at-delivery-persistent-v1';
         const r=await fetch('./index-26.html?v='+BUILD,{cache:'no-store'});
         if(!r.ok)throw new Error('Unable to load application');
         let html=await r.text();
@@ -30,19 +30,9 @@
         html=html.split('onclick="loginChoice()"').join('onclick="location.href=\'/preview-member-login-v2.html?return=%2F\';return false"');
         html=html.replace('function ownerOnboardingHub(){','function ownerOnboardingHub(){location.href="/owner-live-onboarding.html";return;');
         html=html.replace('function ownerMemberOnboarding(){','function ownerMemberOnboarding(){location.href="/owner-live-onboarding.html";return;');
-
-        html=html.replace(
-          '<button class="btn" id="account" onclick="account()">👤 Register / Login</button>',
-          '<div id="dbestHomeAuthActions" style="display:flex;gap:8px;align-items:center"><button class="btn soft" id="homeRegister" onclick="session.role===\'visitor\'?registerChoice():account()">✨ Register</button><button class="btn" id="loginHome" onclick="location.href=\'/preview-member-login-v2.html?return=%2F\';return false">🔐 Login</button></div>'
-        );
-        html=html.replace(
-          '<button class="btn" style="background:#ffffff18;border:1px solid #ffffff35" onclick="account()">Register / Login</button>',
-          '<button class="btn" style="background:#fff;color:#1550c6" onclick="registerChoice()">Register</button> <button class="btn" style="background:#ffffff18;border:1px solid #ffffff35" onclick="location.href=\'/preview-member-login-v2.html?return=%2F\';return false">Login</button>'
-        );
-        html=html.replace(
-          '$("account").textContent=session.role==="visitor"?"👤 "+t.acc:"👤 "+(u?.name||session.role);',
-          'var hr=$("homeRegister");if(hr)hr.textContent=session.role==="visitor"?"✨ Register":"👤 "+(u?.name||session.role);var lh=$("loginHome");if(lh)lh.style.display=session.role==="visitor"?"":"none";'
-        );
+        html=html.replace('<button class="btn" id="account" onclick="account()">👤 Register / Login</button>','<div id="dbestHomeAuthActions" style="display:flex;gap:8px;align-items:center"><button class="btn soft" id="homeRegister" onclick="session.role===\'visitor\'?registerChoice():account()">✨ Register</button><button class="btn" id="loginHome" onclick="location.href=\'/preview-member-login-v2.html?return=%2F\';return false">🔐 Login</button></div>');
+        html=html.replace('<button class="btn" style="background:#ffffff18;border:1px solid #ffffff35" onclick="account()">Register / Login</button>','<button class="btn" style="background:#fff;color:#1550c6" onclick="registerChoice()">Register</button> <button class="btn" style="background:#ffffff18;border:1px solid #ffffff35" onclick="location.href=\'/preview-member-login-v2.html?return=%2F\';return false">Login</button>');
+        html=html.replace('$("account").textContent=session.role==="visitor"?"👤 "+t.acc:"👤 "+(u?.name||session.role);','var hr=$("homeRegister");if(hr)hr.textContent=session.role==="visitor"?"✨ Register":"👤 "+(u?.name||session.role);var lh=$("loginHome");if(lh)lh.style.display=session.role==="visitor"?"":"none";');
 
         const uniform='<style id="dbest-device-uniformity">html{-webkit-text-size-adjust:100%;text-size-adjust:100%}body{margin:0;max-width:100%;overflow-x:hidden}*,*:before,*:after{box-sizing:border-box}button,input,select,textarea{font:inherit}@media(max-width:700px){#dbestHomeAuthActions{width:100%;order:4}#dbestHomeAuthActions .btn{flex:1}}@media(max-width:480px){input,select,textarea{font-size:16px}}</style>';
         html=html.replace('</head>',uniform+'<script src="./runtime-config.js?v='+BUILD+'"><\/script></head>');
@@ -54,7 +44,7 @@
           'razorpay-checkout-policy-v1.js','razorpay-paymentpage-fallback-v1.js',
           'marketplace-secure-session-v1.js',
           'member-wallet-summary-ui-v1.js','wallet-dashboard-scope-v1.js','member-dashboard-live-summary-v1.js','demo-member-session-bootstrap.js','external-service-subtype-preserver-v1.js','external-success-transaction-id-v1.js','external-success-type-dropdown-v1.js',
-          'marketplace-cod-option-v1.js','transaction-invoice-receipt-v1.js'
+          'marketplace-pay-at-delivery-v2.js','transaction-invoice-receipt-v1.js'
         ].map(function(src){return '<script defer src="./'+src+'?v='+BUILD+'"><\/script>';}).join('');
         const bootExtras='<script>(function(){window.DBEST_PREVIEW_LOGIN=function(){location.href="/preview-member-login-v2.html?return=%2F";return false};window.loginChoice=window.DBEST_PREVIEW_LOGIN;setTimeout(function(){if(new URLSearchParams(location.search).get("dbestLogin")==="1")window.DBEST_PREVIEW_LOGIN()},300)})();<\/script>';
         html=html.replace('</body>',extras+bootExtras+'</body>');
