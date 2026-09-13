@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const V='20260913-global-back-nav-v3-centered-language';
+const V='20260913-global-back-nav-v4-language-beside-logo';
 if(window.DBEST_GLOBAL_BACK_NAV&&window.DBEST_GLOBAL_BACK_NAV.version===V)return;
 
 function visible(el){
@@ -33,12 +33,9 @@ function shouldShowArrow(){return deepView()&&!nativeBackControl()}
 function canSwipeBack(){return deepView()}
 
 function goBack(){
-  try{
-    if(window.history.length>1){window.history.back();return;}
-  }catch(_){}
+  try{if(window.history.length>1){window.history.back();return;}}catch(_){}
   location.href='/';
 }
-
 function ensureButton(){
   let b=document.getElementById('dbestGlobalBack');
   if(!b){
@@ -57,22 +54,31 @@ function looksLikeLanguageSelect(s){
   const hits=['en','hi','bn','or','od','te','ta'].filter(v=>values.includes(v)).length;
   return hits>=2||/english|hindi|bengali|bangla|odia|oriya|telugu|tamil|हिंदी|বাংলা|ଓଡ଼ିଆ|తెలుగు|தமிழ்/.test(text);
 }
-function centerLanguageSelector(){
+function placeLanguageBesideLogo(){
   const nav=document.querySelector('.navin');
-  if(!nav)return;
-  nav.style.setProperty('position','relative','important');
+  const logo=nav&&nav.querySelector('.dbestTopLogo');
   const sel=[...document.querySelectorAll('select')].find(looksLikeLanguageSelect);
-  if(!sel)return;
-  sel.style.setProperty('position','absolute','important');
-  sel.style.setProperty('left','50%','important');
-  sel.style.setProperty('top','50%','important');
-  sel.style.setProperty('transform','translate(-50%,-50%)','important');
-  sel.style.setProperty('z-index','8','important');
+  if(!nav||!logo||!sel)return;
+
+  let group=document.getElementById('dbestLogoLanguageGroup');
+  if(!group){
+    group=document.createElement('div');
+    group.id='dbestLogoLanguageGroup';
+    group.style.cssText='display:flex;align-items:center;gap:8px;min-width:0;flex:0 1 auto';
+    logo.parentNode.insertBefore(group,logo);
+    group.appendChild(logo);
+  }
+  if(sel.parentNode!==group)group.appendChild(sel);
+
+  sel.classList.remove('dbestCenteredLanguageSelector');
+  ['position','left','right','top','transform','z-index','margin'].forEach(function(p){sel.style.removeProperty(p)});
+  sel.style.setProperty('position','static','important');
+  sel.style.setProperty('transform','none','important');
   sel.style.setProperty('width','auto','important');
-  sel.style.setProperty('min-width',window.innerWidth<=390?'78px':'92px','important');
-  sel.style.setProperty('max-width',window.innerWidth<=390?'86px':'118px','important');
+  sel.style.setProperty('min-width',window.innerWidth<=390?'76px':'88px','important');
+  sel.style.setProperty('max-width',window.innerWidth<=390?'88px':'112px','important');
   sel.style.setProperty('height',window.innerWidth<=390?'34px':'36px','important');
-  sel.style.setProperty('padding',window.innerWidth<=390?'0 18px 0 7px':'0 24px 0 9px','important');
+  sel.style.setProperty('padding',window.innerWidth<=390?'0 17px 0 7px':'0 22px 0 9px','important');
   sel.style.setProperty('border','1px solid #e3e9f3','important');
   sel.style.setProperty('border-radius','11px','important');
   sel.style.setProperty('background-color','#fff','important');
@@ -80,6 +86,7 @@ function centerLanguageSelector(){
   sel.style.setProperty('font-size',window.innerWidth<=390?'10px':'11px','important');
   sel.style.setProperty('font-weight','800','important');
   sel.style.setProperty('color','#29415f','important');
+  group.style.setProperty('gap',window.innerWidth<=390?'5px':'8px','important');
 }
 
 let sx=0,sy=0,st=0,tracking=false,blocked=false;
@@ -101,7 +108,7 @@ function end(e){
 
 document.addEventListener('touchstart',start,{passive:true,capture:true});
 document.addEventListener('touchend',end,{passive:true,capture:true});
-function refresh(){requestAnimationFrame(function(){ensureButton();centerLanguageSelector()})}
+function refresh(){requestAnimationFrame(function(){ensureButton();placeLanguageBesideLogo()})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',refresh,{once:true});else refresh();
 new MutationObserver(refresh).observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['class','style','hidden']});
 window.addEventListener('popstate',refresh);window.addEventListener('pageshow',refresh);window.addEventListener('hashchange',refresh);window.addEventListener('resize',refresh,{passive:true});
