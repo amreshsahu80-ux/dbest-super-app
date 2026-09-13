@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const V='20260914-section-repair-v1';
+const V='20260914-mobile-smooth-v2';
 if(window.DBEST_PERFORMANCE_BOOTSTRAP?.version===V)return;
 
 const EARLY=['cab-entry-capture-final-v1.js','ux-performance-bridge.js'];
@@ -8,7 +8,7 @@ const CORE=[
   'member-id-collision-fix.js','backend-bridge.js','member-live-login-bridge.js',
   'production-demo-auth-guard.js','onboarding-contact-policy.js',
   'multilingual-ui-v2.js','language-selector-fix.js',
-  'clean-member-flow.js','plain-language-ui.js','service-variable-pricing-v1.js'
+  'clean-member-flow.js','plain-language-ui.js'
 ];
 
 const GROUPS={
@@ -44,7 +44,7 @@ const GROUPS={
     'marketplace-checkout-button-bridge-v1.js','razorpay-master-market-v1.js','razorpay-master-checkout-final-v1.js'
   ],
   service:[
-    'service-request-live-bridge.js','service-document-upload-bridge.js','service-payment-sync-bridge.js',
+    'service-variable-pricing-v1.js','service-request-live-bridge.js','service-document-upload-bridge.js','service-payment-sync-bridge.js',
     'dual-payment-options-live.js','merchant-upi-direct-v1.js','registration-payment-dedupe-v1.js',
     'service-partner-hyperlocal.js','hyperlocal-backend-live.js','home-jobs-section-finalizer.js'
   ],
@@ -103,7 +103,6 @@ function startCore(){
 function startGroup(name){
   if(!GROUPS[name])return Promise.resolve();
   if(groupPromises.has(name))return groupPromises.get(name);
-  preloadGroup(name);
   const p=(async()=>{await startCore();await loadSequence(GROUPS[name])})()
     .catch(e=>console.warn('DBest feature group warning',name,e));
   groupPromises.set(name,p);return p;
@@ -125,28 +124,41 @@ function inferGroup(el){
   if(/project owner|super admin|owner console|owner dashboard/.test(all))return 'owner';
   return null;
 }
-function interactionHint(e){const g=inferGroup(e.target);if(g)startGroup(g)}
+function interactionHint(e){
+  const g=inferGroup(e.target);
+  if(g){preloadGroup(g);startGroup(g)}
+}
 document.addEventListener('pointerdown',interactionHint,{capture:true,passive:true});
 document.addEventListener('focusin',interactionHint,{capture:true,passive:true});
 
 function scheduleVisualWarmup(){
-  setTimeout(()=>{
+  const warm=()=>{
     if(document.visibilityState!=='visible')return;
     if(document.querySelector('.classicDash,.sectionContent.fullPageBody'))return;
     preloadGroup('visual');
-  },6000);
+  };
+  setTimeout(()=>{
+    if('requestIdleCallback' in window)requestIdleCallback(warm,{timeout:5000});
+    else warm();
+  },20000);
 }
-function maybeStartMember(){
+function maybePreloadMember(){
   try{
     const s=JSON.parse(localStorage.getItem('d2_session')||'{}');
-    if(s&&s.role&&s.role!=='visitor'&&s.id){
+    if(!(s&&s.role&&s.role!=='visitor'&&s.id))return;
+    const warm=()=>{
+      if(document.visibilityState!=='visible')return;
+      if(document.querySelector('.classicDash,.sectionContent.fullPageBody'))return;
       preloadGroup('member');
-      setTimeout(()=>startGroup('member'),250);
-    }
+    };
+    setTimeout(()=>{
+      if('requestIdleCallback' in window)requestIdleCallback(warm,{timeout:6000});
+      else warm();
+    },8000);
   }catch(_){ }
 }
 const normalize=()=>{try{document.documentElement.style.webkitTextSizeAdjust='100%';document.documentElement.style.textSizeAdjust='100%';document.body?.classList.add('dbest-uniform-runtime')}catch(_){}};
-function boot(){normalize();startCore();maybeStartMember();scheduleVisualWarmup()}
+function boot(){normalize();startCore();maybePreloadMember();scheduleVisualWarmup()}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 window.DBEST_PERFORMANCE_BOOTSTRAP={version:V,startCore,startGroup,startFeatures,groups:Object.keys(GROUPS),legacyCabBlocked:[...CAB_LEGACY_BLOCKED]};
 })();
