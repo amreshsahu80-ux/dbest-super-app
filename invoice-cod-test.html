@@ -6,7 +6,9 @@
  try{
    const r=await fetch('/',{cache:'no-store'});if(!r.ok)throw new Error('base app load failed');
    let html=await r.text();
-   const extra='<script defer src="/marketplace-cod-option-v1.js?v=20260913-invoice-cod-test-v2"><\\/script><script defer src="/transaction-invoice-receipt-v1.js?v=20260913-invoice-cod-test-v2"><\\/script>';
+   html=html.replace("'marketplace-secure-session-v1.js','razorpay-master-cart-button-v1.js',","'marketplace-secure-session-v1.js',");
+   html=html.replace("'marketplace-checkout-standalone-route-v1.js',","");
+   const extra='<script defer src="/marketplace-cod-option-v1.js?v=20260913-invoice-cod-test-v4"><\/script><script defer src="/transaction-invoice-receipt-v1.js?v=20260913-invoice-cod-test-v4"><\/script>';
    html=html.replace('</body>',extra+'</body>');
    document.open();document.write(html);document.close();
  }catch(e){document.body.innerHTML='<div style="font:600 14px system-ui;padding:24px">Test page loading error. Please refresh.</div>';console.error(e)}
