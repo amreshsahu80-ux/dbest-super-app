@@ -1,8 +1,8 @@
 (function(){
 'use strict';
-const V='20260907-cab-entry-lazy-v3-fastwarm';
+const V='20260914-cab-entry-fastwarm-v4';
 if(window.DBEST_CAB_ENTRY_CAPTURE?.version===V)return;
-const ASSET_V='20260907-cab-fast-v2';
+const ASSET_V='20260914-cab-fast-v4';
 let opening=false,ensurePromise=null;
 
 function preload(src){
@@ -16,8 +16,10 @@ function warm(){
   preload('/cab-planned-ui-v2.js?v='+ASSET_V);
 }
 function scheduleWarm(){
-  if('requestIdleCallback' in window)requestIdleCallback(warm,{timeout:450});
-  else setTimeout(warm,160)
+  warm();
+  const run=()=>ensureApproved().catch(e=>console.warn('DBest Cab prewarm warning',e));
+  if('requestIdleCallback' in window)requestIdleCallback(run,{timeout:1600});
+  else setTimeout(run,650)
 }
 function load(src,attr){return new Promise((resolve,reject)=>{
   let s=document.querySelector('script['+attr+']');
@@ -60,6 +62,7 @@ function isCabEntry(el){
   const oc=String(b.getAttribute?.('onclick')||'').replace(/\s+/g,'');
   return oc.includes("openService('car')")||oc.includes('openService("car")')||oc.includes('openRidePlatform()')
 }
+document.addEventListener('pointerdown',e=>{if(isCabEntry(e.target))warm()},{capture:true,passive:true});
 document.addEventListener('click',e=>{
   if(!isCabEntry(e.target))return;
   e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();openApproved()
