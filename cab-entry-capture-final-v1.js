@@ -1,8 +1,8 @@
 (function(){
 'use strict';
-const V='20260914-cab-entry-fastwarm-v4';
+const V='20260914-cab-entry-lazy-v5';
 if(window.DBEST_CAB_ENTRY_CAPTURE?.version===V)return;
-const ASSET_V='20260914-cab-fast-v4';
+const ASSET_V='20260914-cab-lazy-v5';
 let opening=false,ensurePromise=null;
 
 function preload(src){
@@ -16,10 +16,8 @@ function warm(){
   preload('/cab-planned-ui-v2.js?v='+ASSET_V);
 }
 function scheduleWarm(){
-  warm();
-  const run=()=>ensureApproved().catch(e=>console.warn('DBest Cab prewarm warning',e));
-  if('requestIdleCallback' in window)requestIdleCallback(run,{timeout:1600});
-  else setTimeout(run,650)
+  if('requestIdleCallback' in window)requestIdleCallback(warm,{timeout:5000});
+  else setTimeout(warm,2500)
 }
 function load(src,attr){return new Promise((resolve,reject)=>{
   let s=document.querySelector('script['+attr+']');
