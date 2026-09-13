@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const V='20260910-master-market-razorpay-v3-final-authority';
+const V='20260913-subsection-speed-v2';
 if(window.DBEST_PERFORMANCE_BOOTSTRAP?.version===V)return;
 
 const EARLY=['cab-entry-capture-final-v1.js','ux-performance-bridge.js'];
@@ -85,14 +85,19 @@ function startCore(){
 function startFeatures(){
   if(!featuresPromise)featuresPromise=(async()=>{
     await startCore();
-    await Promise.all(Object.values(GROUPS).map(loadSequence));
+    /* Avoid six simultaneous script waterfalls competing with UI navigation. */
+    for(const name of Object.keys(GROUPS))await loadSequence(GROUPS[name]);
   })().catch(e=>console.warn('DBest feature bootstrap warning',e));
   return featuresPromise
 }
 function scheduleFeatures(){
-  const run=()=>startFeatures();
-  if('requestIdleCallback' in window)requestIdleCallback(run,{timeout:1200});
-  else setTimeout(run,650)
+  const run=()=>{
+    const launch=()=>startFeatures();
+    if('requestIdleCallback' in window)requestIdleCallback(launch,{timeout:5000});
+    else setTimeout(launch,500);
+  };
+  /* Give the first tap / subsection transition priority over background enhancements. */
+  setTimeout(run,3200);
 }
 
 const normalize=()=>{
