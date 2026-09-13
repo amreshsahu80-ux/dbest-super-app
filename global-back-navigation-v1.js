@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const V='20260913-global-back-nav-v4-language-beside-logo';
+const V='20260913-global-back-nav-v5-contact-emails';
 if(window.DBEST_GLOBAL_BACK_NAV&&window.DBEST_GLOBAL_BACK_NAV.version===V)return;
 
 function visible(el){
@@ -89,6 +89,31 @@ function placeLanguageBesideLogo(){
   group.style.setProperty('gap',window.innerWidth<=390?'5px':'8px','important');
 }
 
+function ensureContactEmails(){
+  if(document.getElementById('dbestContactEmailLinks'))return;
+  const candidates=[...document.querySelectorAll('footer,.footer,[class*="footer"],[id*="footer"],section,div')];
+  let target=null;
+  for(const el of candidates){
+    const tx=String(el.textContent||'').replace(/\s+/g,' ').trim();
+    if(!tx||tx.length>1400)continue;
+    if(/contact\s*us|contact|संपर्क|যোগাযোগ|ଯୋଗାଯୋଗ|సంప్రదించండి|தொடர்பு/i.test(tx)){target=el;break;}
+  }
+  if(!target)return;
+  const wrap=document.createElement('div');
+  wrap.id='dbestContactEmailLinks';
+  wrap.style.cssText='margin-top:8px;display:flex;flex-wrap:wrap;gap:7px 14px;align-items:center;font-size:12px;line-height:1.5';
+  const support=document.createElement('a');
+  support.href='mailto:support@dbest4u.com';
+  support.textContent='Support: support@dbest4u.com';
+  support.style.cssText='color:inherit;text-decoration:none;font-weight:700';
+  const complaints=document.createElement('a');
+  complaints.href='mailto:complaints@dbest4u.com';
+  complaints.textContent='Complaints: complaints@dbest4u.com';
+  complaints.style.cssText='color:inherit;text-decoration:none;font-weight:700';
+  wrap.appendChild(support);wrap.appendChild(complaints);
+  target.appendChild(wrap);
+}
+
 let sx=0,sy=0,st=0,tracking=false,blocked=false;
 function isBlockedTarget(t){
   if(!t||!t.closest)return false;
@@ -108,7 +133,7 @@ function end(e){
 
 document.addEventListener('touchstart',start,{passive:true,capture:true});
 document.addEventListener('touchend',end,{passive:true,capture:true});
-function refresh(){requestAnimationFrame(function(){ensureButton();placeLanguageBesideLogo()})}
+function refresh(){requestAnimationFrame(function(){ensureButton();placeLanguageBesideLogo();ensureContactEmails()})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',refresh,{once:true});else refresh();
 new MutationObserver(refresh).observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['class','style','hidden']});
 window.addEventListener('popstate',refresh);window.addEventListener('pageshow',refresh);window.addEventListener('hashchange',refresh);window.addEventListener('resize',refresh,{passive:true});
