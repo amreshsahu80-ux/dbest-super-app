@@ -1,68 +1,16 @@
 (function(){
-  'use strict';
-
-  function normalizedStatus(tx) {
-    return String((tx && tx.status) || '').trim().toLowerCase();
-  }
-
-  function transactionText(tx) {
-    var meta = tx && tx.meta ? tx.meta : {};
-    var order = meta && meta.order ? meta.order : {};
-    return [
-      tx && tx.status,
-      tx && tx.source,
-      tx && tx.section,
-      tx && tx.sub,
-      tx && tx.details,
-      meta.paymentStatus,
-      meta.payment_status,
-      meta.paymentStage,
-      meta.payment_stage,
-      meta.paymentMethod,
-      meta.payment_method,
-      meta.flow,
-      order.paymentStatus,
-      order.paymentMethod
-    ].join(' ').toLowerCase();
-  }
-
-  function isExternal(tx) {
-    var text = transactionText(tx);
-    return !!(tx && tx.meta && tx.meta.external) || text.indexOf('external partner') >= 0 || text.indexOf('external success') >= 0;
-  }
-
-  function isPayAtDelivery(tx) {
-    var text = transactionText(tx);
-    return text.indexOf('pay_at_delivery_online') >= 0 || text.indexOf('pay online at delivery') >= 0 || text.indexOf('payment due at delivery') >= 0 || text.indexOf('due at delivery') >= 0;
-  }
-
-  function paymentConfirmed(tx) {
-    var text = transactionText(tx);
-    var status = normalizedStatus(tx);
-    var blocked = ['failed','cancelled','canceled','rejected','declined','refunded','reversed','pending','initiated','submitted','awaiting','processing','retry','payment due','unpaid'];
-    if (blocked.some(function(word){ return text.indexOf(word) >= 0; })) return false;
-
-    var explicitPaid = ['payment verified','payment successful','payment success','paid','settled','captured'].some(function(word){ return text.indexOf(word) >= 0; });
-    if (explicitPaid) return true;
-
-    if (isExternal(tx)) {
-      return ['verified','approved','successful','success','completed','complete'].some(function(word){ return status.indexOf(word) >= 0; });
-    }
-
-    return ['verified','successful','success','settled','completed','complete','activated'].some(function(word){ return status.indexOf(word) >= 0; });
-  }
-
-  function eligible(tx) {
-    if (!tx) return false;
-    if (isPayAtDelivery(tx) && !paymentConfirmed(tx)) return false;
-    return paymentConfirmed(tx);
-  }
-
-  window.DBEST_TX_INVOICE = Object.assign(window.DBEST_TX_INVOICE || {}, {
-    version: '1.1.0',
-    eligible: eligible,
-    paymentConfirmed: paymentConfirmed,
-    isExternal: isExternal,
-    isPayAtDelivery: isPayAtDelivery
-  });
+'use strict';
+function txText(tx){var m=tx&&tx.meta||{},o=m.order||{};return [tx&&tx.status,tx&&tx.source,tx&&tx.section,tx&&tx.sub,tx&&tx.details,m.paymentStatus,m.payment_status,m.paymentStage,m.payment_stage,m.paymentMethod,m.payment_method,m.flow,o.paymentStatus,o.paymentMethod].join(' ').toLowerCase()}
+function isExternal(tx){var t=txText(tx);return !!(tx&&tx.meta&&tx.meta.external)||t.indexOf('external partner')>=0||t.indexOf('external success')>=0}
+function isPayAtDelivery(tx){var t=txText(tx);return /pay_at_delivery_online|pay online at delivery|payment due at delivery|due at delivery/.test(t)}
+function paymentConfirmed(tx){var t=txText(tx),s=String(tx&&tx.status||'').toLowerCase();if(/failed|cancelled|canceled|rejected|declined|refunded|reversed|pending|initiated|submitted|awaiting|processing|retry|payment due|unpaid/.test(t))return false;if(/payment verified|payment successful|payment success|paid|settled|captured/.test(t))return true;if(isExternal(tx))return /verified|approved|successful|success|completed|complete/.test(s);return /verified|successful|success|settled|completed|complete|activated/.test(s)}
+function eligible(tx){return !!tx&&(!isPayAtDelivery(tx)||paymentConfirmed(tx))&&paymentConfirmed(tx)}
+function bodyText(){return String(document.body&&document.body.innerText||'').replace(/\s+/g,' ').trim()}
+function pageEligible(){var t=bodyText();return /Transaction Details/i.test(t)&&/(Payment\s*(Verified|Successful)|\bVerified\b|\bPaid\b|\bSettled\b|\bCaptured\b|\bSuccessful\b|\bCompleted\b)/i.test(t)&&!/(Payment Due|Due at Delivery|Pending|Awaiting|Processing|Failed|Cancelled|Canceled|Rejected|Refunded|Unpaid)/i.test(t)}
+function valueAfter(label){var els=[].slice.call(document.querySelectorAll('div,span,p,b,strong,small'));for(var i=0;i<els.length;i++){var e=els[i],v=String(e.textContent||'').trim();if(v.toLowerCase()===label.toLowerCase()){var p=e.parentElement;if(p){var all=String(p.innerText||'').replace(v,'').trim();if(all)return all}}}return ''}
+function txId(){var m=bodyText().match(/(MKT_[A-Za-z0-9_]+|TX\d{6,})/);return m?m[1]:''}
+function openInvoice(){var t=bodyText(),id=txId(),date=valueAfter('Date / Time'),user=valueAfter('User'),status=valueAfter('Status')||'Payment Verified',section=valueAfter('Section'),sub=valueAfter('Service / Subsection'),am=(t.match(/(?:Amount|Total)\s*₹\s*([0-9,]+(?:\.\d{1,2})?)/i)||[])[1]||'';var w=window.open('','_blank');if(!w){alert('Please allow pop-ups to view invoice/receipt.');return}function e(s){return String(s||'—').replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c]})}w.document.write('<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><title>DBest Invoice</title><style>body{font-family:Arial;background:#f4f7fb;color:#14213d;margin:0}.s{max-width:760px;margin:24px auto;background:#fff;padding:28px;border-radius:18px}.h{border-bottom:2px solid #175cff;padding-bottom:16px}.h h1{color:#175cff;margin:0}.g{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:20px}.c{border:1px solid #e4e7ec;border-radius:12px;padding:12px}.c small{display:block;color:#667085;margin-bottom:5px}.tot{margin-top:20px;background:#f2f6ff;padding:16px;border-radius:12px;display:flex;justify-content:space-between;font-size:20px;font-weight:800}button{margin-top:20px;background:#175cff;color:#fff;border:0;padding:11px 16px;border-radius:9px;font-weight:700}@media print{button{display:none}.s{margin:0;max-width:none}}</style><div class="s"><div class="h"><h1>DBest</h1><div>Sarwashresth Services OPC Pvt. Ltd.</div><b>Payment Receipt / Invoice</b></div><div class="g"><div class="c"><small>DBest Transaction ID</small><b>'+e(id)+'</b></div><div class="c"><small>Date / Time</small><b>'+e(date)+'</b></div><div class="c"><small>Customer / Member</small><b>'+e(user)+'</b></div><div class="c"><small>Status</small><b>'+e(status)+'</b></div><div class="c"><small>Section</small><b>'+e(section)+'</b></div><div class="c"><small>Service / Subsection</small><b>'+e(sub)+'</b></div><div class="c"><small>Payment Method</small><b>Online Payment</b></div></div><div class="tot"><span>Total Paid</span><span>'+(am?'₹'+e(am):'Paid')+'</span></div><p style="color:#667085;font-size:12px">Generated only after successful payment confirmation.</p><button onclick="window.print()">Print / Save PDF</button></div>');w.document.close()}
+function inject(){if(!pageEligible()||document.getElementById('dbestInvoiceReceiptBtn'))return;var host=document.querySelector('.sectionContent')||document.body;var b=document.createElement('button');b.id='dbestInvoiceReceiptBtn';b.className='btn';b.type='button';b.textContent='🧾 View Invoice / Receipt';b.style.cssText='display:block;width:calc(100% - 32px);max-width:680px;margin:16px auto;padding:13px';b.onclick=openInvoice;host.appendChild(b)}
+window.DBEST_TX_INVOICE=Object.assign(window.DBEST_TX_INVOICE||{},{version:'1.2.0',eligible:eligible,paymentConfirmed:paymentConfirmed,isExternal:isExternal,isPayAtDelivery:isPayAtDelivery,inject:inject,openInvoice:openInvoice});
+new MutationObserver(function(){setTimeout(inject,30)}).observe(document.documentElement,{subtree:true,childList:true,characterData:true});setTimeout(inject,400);setTimeout(inject,1400);
 })();
