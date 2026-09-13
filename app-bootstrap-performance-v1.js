@@ -1,24 +1,22 @@
 (function(){
 'use strict';
-const V='20260913-mobile-lazy-v6';
+const V='20260914-section-repair-v1';
 if(window.DBEST_PERFORMANCE_BOOTSTRAP?.version===V)return;
 
 const EARLY=['cab-entry-capture-final-v1.js','ux-performance-bridge.js'];
-/* Keep startup limited to shared auth/navigation primitives. Transaction, wallet,
-   payout and marketplace layers load only when their sections are needed. */
 const CORE=[
   'member-id-collision-fix.js','backend-bridge.js','member-live-login-bridge.js',
   'production-demo-auth-guard.js','onboarding-contact-policy.js',
   'multilingual-ui-v2.js','language-selector-fix.js',
-  'clean-member-flow.js','plain-language-ui.js'
+  'clean-member-flow.js','plain-language-ui.js','service-variable-pricing-v1.js'
 ];
 
 const GROUPS={
   member:[
     'transaction-ledger-live.js','member-transaction-ledger-visible.js',
     'payout-rules-v1.js','payout-reset-v2.js','payout-engine-v2.js','member-earnings-visible.js',
-    'member-wallet-summary-ui-v1.js','wallet-dashboard-scope-v1.js',
-    'transaction-table-pagination-v1.js','member-dashboard-live-summary-v1.js',
+    'member-wallet-summary-ui-v1.js','wallet-dashboard-scope-v1.js','wallet-button-visibility-v2.js',
+    'transaction-table-pagination-v1.js','member-dashboard-table-performance-v1.js','member-dashboard-live-summary-v1.js',
     'transaction-invoice-receipt-v1.js'
   ],
   visual:[
@@ -71,6 +69,13 @@ const CAB_LEGACY_BLOCKED=new Set([
 const loaded=new Map();
 const groupPromises=new Map();
 function srcFor(name){return './'+name+'?v='+encodeURIComponent(V)}
+function preloadOne(name){
+  try{
+    if(CAB_LEGACY_BLOCKED.has(name)||document.querySelector('link[data-dbest-preload="'+name+'"]'))return;
+    const l=document.createElement('link');l.rel='preload';l.as='script';l.href=srcFor(name);l.dataset.dbestPreload=name;document.head.appendChild(l)
+  }catch(_){ }
+}
+function preloadGroup(name){(GROUPS[name]||[]).forEach(preloadOne)}
 function loadOne(name){
   if(CAB_LEGACY_BLOCKED.has(name))return Promise.resolve();
   if(loaded.has(name))return loaded.get(name);
@@ -98,6 +103,7 @@ function startCore(){
 function startGroup(name){
   if(!GROUPS[name])return Promise.resolve();
   if(groupPromises.has(name))return groupPromises.get(name);
+  preloadGroup(name);
   const p=(async()=>{await startCore();await loadSequence(GROUPS[name])})()
     .catch(e=>console.warn('DBest feature group warning',name,e));
   groupPromises.set(name,p);return p;
@@ -109,10 +115,11 @@ function inferGroup(el){
   const cls=String(node.className||'').toLowerCase();
   const txt=String(node.textContent||'').toLowerCase();
   const all=cls+' '+txt;
-  if(/my dashboard|my wallet|earnings|team|transactions|my profile|invoice|receipt/.test(all))return 'member';
+  if(/my dashboard|dashboard|my wallet|earnings|team|transactions|my profile|invoice|receipt/.test(all))return 'member';
   if(/service-car|\bcab\b|\bride\b|rental|taxi/.test(all))return 'rideOps';
+  if(/service-insurance|service-flights|service-travel|insurance|flight|hotel|package|visa/.test(all))return 'visual';
   if(/service-store|marketplace|grocery|shopping|cart|my orders|order|checkout/.test(all))return 'marketplace';
-  if(/service-jobs|service-repair|home jobs|hyperlocal|repair|local service/.test(all))return 'service';
+  if(/service-jobs|service-repair|service-govt|home jobs|hyperlocal|repair|local service|pan|itr|driving licence/.test(all))return 'service';
   if(/\bvendor\b|seller|merchant/.test(all))return 'vendor';
   if(/vaahak|delivery partner|driver partner/.test(all))return 'vaahak';
   if(/project owner|super admin|owner console|owner dashboard/.test(all))return 'owner';
@@ -126,15 +133,15 @@ function scheduleVisualWarmup(){
   setTimeout(()=>{
     if(document.visibilityState!=='visible')return;
     if(document.querySelector('.classicDash,.sectionContent.fullPageBody'))return;
-    if('requestIdleCallback' in window)requestIdleCallback(()=>startGroup('visual'),{timeout:5000});
-  },120000);
+    preloadGroup('visual');
+  },6000);
 }
 function maybeStartMember(){
   try{
     const s=JSON.parse(localStorage.getItem('d2_session')||'{}');
     if(s&&s.role&&s.role!=='visitor'&&s.id){
-      if('requestIdleCallback' in window)requestIdleCallback(()=>startGroup('member'),{timeout:2500});
-      else setTimeout(()=>startGroup('member'),800);
+      preloadGroup('member');
+      setTimeout(()=>startGroup('member'),250);
     }
   }catch(_){ }
 }
