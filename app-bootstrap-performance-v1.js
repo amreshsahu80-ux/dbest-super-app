@@ -1,22 +1,27 @@
 (function(){
 'use strict';
-const V='20260913-mobile-lazy-v3';
+const V='20260913-mobile-lazy-v4';
 if(window.DBEST_PERFORMANCE_BOOTSTRAP?.version===V)return;
 
 const EARLY=['cab-entry-capture-final-v1.js','ux-performance-bridge.js'];
+/* Keep startup limited to shared data/auth/navigation primitives. */
 const CORE=[
   'member-id-collision-fix.js','backend-bridge.js','member-live-login-bridge.js',
-  'owner-auth-bridge.js','owner-portal-route.js','owner-live-network-bridge.js',
   'production-demo-auth-guard.js','onboarding-contact-policy.js',
-  'multilingual-ui-v2.js','language-selector-fix.js','payout-rules-v1.js','payout-reset-v2.js',
-  'payout-engine-v2.js','transaction-ledger-live.js','member-transaction-ledger-visible.js',
-  'member-earnings-visible.js','top-live-location-bridge.js',
-  'clean-member-flow.js','plain-language-ui.js','finance-insurance-showcase.js',
-  'showcase-live-admin.js','visual-first-partner-tiles.js'
+  'multilingual-ui-v2.js','language-selector-fix.js',
+  'transaction-ledger-live.js','member-transaction-ledger-visible.js',
+  'clean-member-flow.js','plain-language-ui.js'
 ];
 
 const GROUPS={
+  member:[
+    'payout-rules-v1.js','payout-reset-v2.js','payout-engine-v2.js','member-earnings-visible.js'
+  ],
+  visual:[
+    'finance-insurance-showcase.js','showcase-live-admin.js','visual-first-partner-tiles.js','top-live-location-bridge.js'
+  ],
   owner:[
+    'owner-auth-bridge.js','owner-portal-route.js','owner-live-network-bridge.js',
     'owner-clean-controls.js','owner-report-center.js','owner-core-fix.js',
     'owner-report-launcher-fix.js','owner-partner-onboarding-fix.js','owner-report-visibility-v2.js',
     'owner-master-excel-download-fix.js','owner-partner-section-visuals-link.js','super-admin-command-center.js'
@@ -79,9 +84,8 @@ async function loadSequence(list){for(const name of list)await loadOne(name)}
 let corePromise=null;
 function startCore(){
   if(!corePromise)corePromise=(async()=>{
-    const early=Promise.all(EARLY.map(loadOne));
+    await Promise.all(EARLY.map(loadOne));
     await loadSequence(CORE);
-    await early;
   })().catch(e=>console.warn('DBest core bootstrap warning',e));
   return corePromise
 }
@@ -92,53 +96,37 @@ function startGroup(name){
     .catch(e=>console.warn('DBest feature group warning',name,e));
   groupPromises.set(name,p);return p;
 }
-function startFeatures(){
-  return Object.keys(GROUPS).reduce((p,name)=>p.then(()=>startGroup(name)),Promise.resolve());
-}
+function startFeatures(){return Object.keys(GROUPS).reduce((p,n)=>p.then(()=>startGroup(n)),Promise.resolve())}
 function inferGroup(el){
   if(!el)return null;
   const node=el.closest?.('.tile,.sub,.card,button,a,[onclick]')||el;
   const cls=String(node.className||'').toLowerCase();
   const txt=String(node.textContent||'').toLowerCase();
-  if(/service-car|\bcab\b|\bride\b|rental|taxi/.test(cls+' '+txt))return 'rideOps';
-  if(/service-store|marketplace|grocery|shopping|cart|my orders|order/.test(cls+' '+txt))return 'marketplace';
-  if(/service-jobs|service-repair|home jobs|hyperlocal|repair|local service/.test(cls+' '+txt))return 'service';
-  if(/\bvendor\b|seller|merchant/.test(txt))return 'vendor';
-  if(/vaahak|delivery partner|driver partner/.test(txt))return 'vaahak';
-  if(/project owner|super admin|owner console|owner dashboard/.test(txt))return 'owner';
+  const all=cls+' '+txt;
+  if(/my dashboard|my wallet|earnings|team|transactions|my profile/.test(all))return 'member';
+  if(/service-car|\bcab\b|\bride\b|rental|taxi/.test(all))return 'rideOps';
+  if(/service-store|marketplace|grocery|shopping|cart|my orders|order/.test(all))return 'marketplace';
+  if(/service-jobs|service-repair|home jobs|hyperlocal|repair|local service/.test(all))return 'service';
+  if(/\bvendor\b|seller|merchant/.test(all))return 'vendor';
+  if(/vaahak|delivery partner|driver partner/.test(all))return 'vaahak';
+  if(/project owner|super admin|owner console|owner dashboard/.test(all))return 'owner';
   return null;
 }
-function interactionHint(e){
-  const g=inferGroup(e.target);
-  if(g)startGroup(g);
-}
+function interactionHint(e){const g=inferGroup(e.target);if(g)startGroup(g)}
 document.addEventListener('pointerdown',interactionHint,{capture:true,passive:true});
 document.addEventListener('focusin',interactionHint,{capture:true,passive:true});
 
-function scheduleSafetyWarmup(){
-  const names=Object.keys(GROUPS);
-  let i=0;
-  const next=()=>{
-    if(i>=names.length)return;
-    if(document.visibilityState!=='visible'){setTimeout(next,10000);return}
-    const name=names[i++];
-    const run=()=>startGroup(name).finally(()=>setTimeout(next,7000));
-    if('requestIdleCallback' in window)requestIdleCallback(run,{timeout:8000});
-    else setTimeout(run,1500);
-  };
-  setTimeout(next,45000);
+/* No automatic feature-pack warmup: idle phones stay idle. Only light visual helpers
+   may warm after two minutes, and only while the home page is visible. */
+function scheduleVisualWarmup(){
+  setTimeout(()=>{
+    if(document.visibilityState!=='visible')return;
+    if(document.querySelector('.classicDash,.sectionContent.fullPageBody'))return;
+    if('requestIdleCallback' in window)requestIdleCallback(()=>startGroup('visual'),{timeout:5000});
+  },120000);
 }
-
-const normalize=()=>{
-  try{
-    document.documentElement.style.webkitTextSizeAdjust='100%';
-    document.documentElement.style.textSizeAdjust='100%';
-    document.body?.classList.add('dbest-uniform-runtime');
-  }catch(_){ }
-};
-
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{normalize();startCore();scheduleSafetyWarmup()},{once:true});
-else{normalize();startCore();scheduleSafetyWarmup()}
-
+const normalize=()=>{try{document.documentElement.style.webkitTextSizeAdjust='100%';document.documentElement.style.textSizeAdjust='100%';document.body?.classList.add('dbest-uniform-runtime')}catch(_){}};
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{normalize();startCore();scheduleVisualWarmup()},{once:true});
+else{normalize();startCore();scheduleVisualWarmup()}
 window.DBEST_PERFORMANCE_BOOTSTRAP={version:V,startCore,startGroup,startFeatures,groups:Object.keys(GROUPS),legacyCabBlocked:[...CAB_LEGACY_BLOCKED]};
 })();
