@@ -5,7 +5,6 @@ const ACTIVITY_THROTTLE_MS=1500;
 let idleTimer=null;
 let lastActivity=Date.now();
 let lastHandledActivity=0;
-let badgeScanQueued=false;
 
 function readSession(){
   try{return JSON.parse(localStorage.getItem('d2_session')||'{"role":"visitor","id":""}')||{role:'visitor',id:''}}
@@ -15,22 +14,10 @@ function isLoggedIn(){
   const s=readSession();
   return !!(s&&s.role&&s.role!=='visitor'&&s.id);
 }
-function hideVersionBadge(){
-  document.querySelectorAll('.sectionTop').forEach(top=>{
-    const title=String(top.querySelector('.sectionTitle b')?.textContent||'').trim().toLowerCase();
-    if(title.includes('my account')){
-      const badge=top.querySelector('.buildBadge');
-      if(badge)badge.style.setProperty('display','none','important');
-    }
-  });
-}
-function queueBadgeScan(){
-  if(badgeScanQueued)return;
-  badgeScanQueued=true;
-  requestAnimationFrame(()=>{
-    badgeScanQueued=false;
-    hideVersionBadge();
-  });
+function hideBuildBadges(root=document){
+  if(!isLoggedIn())return;
+  if(root?.matches?.('.buildBadge'))root.style.setProperty('display','none','important');
+  root?.querySelectorAll?.('.buildBadge').forEach(b=>b.style.setProperty('display','none','important'));
 }
 function doLogout(){
   if(!isLoggedIn())return;
@@ -54,7 +41,7 @@ function arm(){
 function activity(force=false){
   if(!isLoggedIn())return;
   const now=Date.now();
-  if(!force && now-lastHandledActivity<ACTIVITY_THROTTLE_MS)return;
+  if(!force&&now-lastHandledActivity<ACTIVITY_THROTTLE_MS)return;
   lastHandledActivity=now;
   lastActivity=now;
   arm();
@@ -73,13 +60,28 @@ document.addEventListener('visibilitychange',()=>{
   if(document.visibilityState==='visible'){
     if(isLoggedIn()&&Date.now()-lastActivity>=IDLE_MS)doLogout();
     else arm();
+    hideBuildBadges();
   }
 });
-window.addEventListener('storage',e=>{if(e.key==='d2_session'){lastActivity=Date.now();arm();queueBadgeScan()}});
+window.addEventListener('storage',e=>{
+  if(e.key==='d2_session'){
+    lastActivity=Date.now();
+    arm();
+    hideBuildBadges();
+  }
+});
 
-const observer=new MutationObserver(queueBadgeScan);
-observer.observe(document.documentElement,{childList:true,subtree:true});
-hideVersionBadge();
+const observer=new MutationObserver(records=>{
+  if(!isLoggedIn())return;
+  for(const r of records){
+    for(const n of r.addedNodes){
+      if(n.nodeType!==1)continue;
+      if(n.matches?.('.buildBadge')||n.querySelector?.('.buildBadge'))hideBuildBadges(n);
+    }
+  }
+});
+observer.observe(document.body||document.documentElement,{childList:true,subtree:true});
+hideBuildBadges();
 arm();
-window.DBEST_SESSION_HARDENING={version:'1.1.0',idleMs:IDLE_MS,reset:()=>activity(true)};
+window.DBEST_SESSION_HARDENING={version:'1.2.0',idleMs:IDLE_MS,reset:()=>activity(true)};
 })();
