@@ -1,6 +1,6 @@
 (()=>{
 'use strict';
-const VERSION='2.4.0';
+const VERSION='2.5.0';
 const css=`
 :root{--ux-bg:#f5f7fb;--ux-card:#fff;--ux-line:#e8edf5;--ux-ink:#13213a;--ux-muted:#667085;--ux-shadow:0 10px 26px rgba(24,39,75,.08)}
 html{scroll-behavior:smooth}body{background:var(--ux-bg)!important}
@@ -29,11 +29,16 @@ html{scroll-behavior:smooth}body{background:var(--ux-bg)!important}
 @media(max-width:380px){.grid,.grid.side{gap:7px!important}.subs,.cards{grid-template-columns:1fr!important}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 `;
-function install(){let old=document.getElementById('dbestModernPolish');if(old)old.remove();let current=document.getElementById('dbestModernPolishV2');if(current)current.remove();const s=document.createElement('style');s.id='dbestModernPolishV2';s.textContent=css;document.head.appendChild(s)}
+function install(){let old=document.getElementById('dbestModernPolish');if(old)old.remove();let current=document.getElementById('dbestModernPolishV2');if(current){current.textContent=css;return current}const s=document.createElement('style');s.id='dbestModernPolishV2';s.textContent=css;document.head.appendChild(s);return s}
 function dedupe(){document.querySelectorAll('.tabs').forEach(t=>{const seen=new Set();[...t.querySelectorAll('button')].forEach(b=>{const k=String(b.textContent||'').trim().toLowerCase().replace(/\s+/g,' ');if(!k)return;if(seen.has(k))b.remove();else seen.add(k)})})}
 function cleanMediaLabels(){document.querySelectorAll('.tileVisual').forEach(v=>{[...v.querySelectorAll('*')].forEach(el=>{if(el.matches('video,img,picture,source,.tileVideo,.tileMediaGrid,.tilePane,.tileMediaShade,.tilePaneShade'))return;if(el.querySelector('video,img,picture'))return;const txt=String(el.textContent||'').replace(/\s+/g,' ').trim();if(!txt)return;const cs=getComputedStyle(el);if(cs.position==='absolute'||/badge|label|caption|counter|hd/i.test(String(el.className||''))){el.style.setProperty('display','none','important');el.setAttribute('aria-hidden','true')}})})}
 function shorten(){document.querySelectorAll('.tileCta').forEach(e=>e.setAttribute('aria-hidden','true'));document.querySelectorAll('button').forEach(b=>{const t=String(b.textContent||'').trim();if(/^view details$/i.test(t))b.textContent='View';else if(/^click here$/i.test(t))b.textContent='Open';else if(/^proceed to continue$/i.test(t))b.textContent='Continue'})}
-function apply(){install();dedupe();cleanMediaLabels();shorten()}
-apply();new MutationObserver(()=>requestAnimationFrame(apply)).observe(document.documentElement,{childList:true,subtree:true});
+function cleanup(){dedupe();cleanMediaLabels();shorten()}
+function apply(){install();cleanup()}
+let queued=false;
+function relevant(records){if(!records)return true;for(const r of records){for(const n of r.addedNodes||[]){if(n.nodeType!==1)continue;const e=n;if(e.matches?.('.tabs,.tileVisual,.tileCta,button,.tile,.sub,.card,.sectionContent')||e.querySelector?.('.tabs,.tileVisual,.tileCta,button,.tile,.sub,.card,.sectionContent'))return true}}return false}
+function queue(records){if(queued||!relevant(records))return;queued=true;requestAnimationFrame(()=>{queued=false;cleanup()})}
+apply();
+const observer=new MutationObserver(queue);observer.observe(document.documentElement,{childList:true,subtree:true});
 window.DBEST_UI_POLISH={version:VERSION,refresh:apply};
 })();
