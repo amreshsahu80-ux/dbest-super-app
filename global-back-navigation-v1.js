@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const V='20260913-global-back-nav-v5-contact-emails';
+const V='20260913-global-back-nav-v6-contact-footer';
 if(window.DBEST_GLOBAL_BACK_NAV&&window.DBEST_GLOBAL_BACK_NAV.version===V)return;
 
 function visible(el){
@@ -31,7 +31,6 @@ function deepView(){
 }
 function shouldShowArrow(){return deepView()&&!nativeBackControl()}
 function canSwipeBack(){return deepView()}
-
 function goBack(){
   try{if(window.history.length>1){window.history.back();return;}}catch(_){}
   location.href='/';
@@ -59,17 +58,14 @@ function placeLanguageBesideLogo(){
   const logo=nav&&nav.querySelector('.dbestTopLogo');
   const sel=[...document.querySelectorAll('select')].find(looksLikeLanguageSelect);
   if(!nav||!logo||!sel)return;
-
   let group=document.getElementById('dbestLogoLanguageGroup');
   if(!group){
     group=document.createElement('div');
     group.id='dbestLogoLanguageGroup';
     group.style.cssText='display:flex;align-items:center;gap:8px;min-width:0;flex:0 1 auto';
-    logo.parentNode.insertBefore(group,logo);
-    group.appendChild(logo);
+    logo.parentNode.insertBefore(group,logo);group.appendChild(logo);
   }
   if(sel.parentNode!==group)group.appendChild(sel);
-
   sel.classList.remove('dbestCenteredLanguageSelector');
   ['position','left','right','top','transform','z-index','margin'].forEach(function(p){sel.style.removeProperty(p)});
   sel.style.setProperty('position','static','important');
@@ -89,29 +85,28 @@ function placeLanguageBesideLogo(){
   group.style.setProperty('gap',window.innerWidth<=390?'5px':'8px','important');
 }
 
-function ensureContactEmails(){
-  if(document.getElementById('dbestContactEmailLinks'))return;
-  const candidates=[...document.querySelectorAll('footer,.footer,[class*="footer"],[id*="footer"],section,div')];
-  let target=null;
-  for(const el of candidates){
-    const tx=String(el.textContent||'').replace(/\s+/g,' ').trim();
-    if(!tx||tx.length>1400)continue;
-    if(/contact\s*us|contact|संपर्क|যোগাযোগ|ଯୋଗାଯୋଗ|సంప్రదించండి|தொடர்பு/i.test(tx)){target=el;break;}
+function ensureContactFooter(){
+  if(document.getElementById('dbestContactFooter'))return;
+  const footer=document.createElement('footer');
+  footer.id='dbestContactFooter';
+  footer.style.cssText='margin-top:24px;background:#fff;border-top:1px solid #e8edf5;padding:18px 14px 20px;color:#506079;font:500 12px/1.55 system-ui,-apple-system,Segoe UI,Arial,sans-serif';
+  const inner=document.createElement('div');
+  inner.style.cssText='max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 18px';
+  const title=document.createElement('div');
+  title.style.cssText='font-weight:800;color:#243a5a';
+  title.textContent='Contact Us';
+  const links=document.createElement('div');
+  links.style.cssText='display:flex;flex-wrap:wrap;gap:7px 16px;align-items:center';
+  function mail(label,email){
+    const a=document.createElement('a');
+    a.href='mailto:'+email;a.textContent=label+': '+email;
+    a.style.cssText='color:#175cff;text-decoration:none;font-weight:750;overflow-wrap:anywhere';
+    return a;
   }
-  if(!target)return;
-  const wrap=document.createElement('div');
-  wrap.id='dbestContactEmailLinks';
-  wrap.style.cssText='margin-top:8px;display:flex;flex-wrap:wrap;gap:7px 14px;align-items:center;font-size:12px;line-height:1.5';
-  const support=document.createElement('a');
-  support.href='mailto:support@dbest4u.com';
-  support.textContent='Support: support@dbest4u.com';
-  support.style.cssText='color:inherit;text-decoration:none;font-weight:700';
-  const complaints=document.createElement('a');
-  complaints.href='mailto:complaints@dbest4u.com';
-  complaints.textContent='Complaints: complaints@dbest4u.com';
-  complaints.style.cssText='color:inherit;text-decoration:none;font-weight:700';
-  wrap.appendChild(support);wrap.appendChild(complaints);
-  target.appendChild(wrap);
+  links.appendChild(mail('Support','support@dbest4u.com'));
+  links.appendChild(mail('Complaints','complaints@dbest4u.com'));
+  inner.appendChild(title);inner.appendChild(links);footer.appendChild(inner);
+  document.body.appendChild(footer);
 }
 
 let sx=0,sy=0,st=0,tracking=false,blocked=false;
@@ -133,7 +128,7 @@ function end(e){
 
 document.addEventListener('touchstart',start,{passive:true,capture:true});
 document.addEventListener('touchend',end,{passive:true,capture:true});
-function refresh(){requestAnimationFrame(function(){ensureButton();placeLanguageBesideLogo();ensureContactEmails()})}
+function refresh(){requestAnimationFrame(function(){ensureButton();placeLanguageBesideLogo();ensureContactFooter()})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',refresh,{once:true});else refresh();
 new MutationObserver(refresh).observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['class','style','hidden']});
 window.addEventListener('popstate',refresh);window.addEventListener('pageshow',refresh);window.addEventListener('hashchange',refresh);window.addEventListener('resize',refresh,{passive:true});
