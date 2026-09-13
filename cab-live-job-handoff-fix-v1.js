@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='20260914-cab-live-handoff-v1';
+const VERSION='20260914-cab-live-handoff-v2';
 if(window.DBEST_CAB_LIVE_HANDOFF?.version===VERSION)return;
 const cfg=window.DBEST_RUNTIME_CONFIG||{};
 const BASE=String(cfg.supabaseUrl||'').replace(/\/$/,'');
@@ -8,6 +8,7 @@ const KEY=cfg.supabasePublishableKey||'';
 if(!BASE||!KEY)return;
 const LIVE=BASE+'/functions/v1/vaahak-live';
 const DISPATCH=BASE+'/functions/v1/vaahak-dispatch-live';
+const VOICE=BASE+'/functions/v1/partner-voice-alert';
 const inFlight=new Map();
 function headers(){return {'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':'application/json'}}
 function txList(){
@@ -57,15 +58,16 @@ async function createLiveJob(txId){
     try{localStorage.setItem(flag,'1');if(out?.customerToken)localStorage.setItem('dbest_ride_customer_token_'+id,String(out.customerToken))}catch(_){ }
     const jobId=out?.job?.id||'';
     try{await post(DISPATCH,{action:'tick',...(jobId?{jobId}:{txId:id})})}catch(e){console.warn('DBest dispatch tick warning',e?.message||e)}
+    setTimeout(()=>{post(VOICE,jobId?{jobId}:{txId:id}).catch(e=>console.warn('DBest Exotel escalation warning',e?.message||e))},28000);
     return out;
   })().catch(e=>{console.error('DBest live ride handoff failed',e);try{localStorage.removeItem(flag)}catch(_){ }return null}).finally(()=>inFlight.delete(id));
   inFlight.set(id,p);return p;
 }
 function wrap(){
   const fn=window.rideStatusScreen;
-  if(typeof fn!=='function'||fn.__dbestLiveHandoffV1)return false;
+  if(typeof fn!=='function'||fn.__dbestLiveHandoffV2)return false;
   function wrapped(txId){const out=fn.apply(this,arguments);setTimeout(()=>createLiveJob(txId),0);return out}
-  wrapped.__dbestLiveHandoffV1=true;wrapped.__dbestOriginal=fn;window.rideStatusScreen=wrapped;return true;
+  wrapped.__dbestLiveHandoffV2=true;wrapped.__dbestOriginal=fn;window.rideStatusScreen=wrapped;return true;
 }
 wrap();
 const installer=setInterval(()=>{if(wrap())console.info('DBest live ride handoff attached')},500);
