@@ -1,20 +1,21 @@
 (function(){
 'use strict';
-const V='20260913-mobile-lazy-v4';
+const V='20260913-mobile-lazy-v5';
 if(window.DBEST_PERFORMANCE_BOOTSTRAP?.version===V)return;
 
 const EARLY=['cab-entry-capture-final-v1.js','ux-performance-bridge.js'];
-/* Keep startup limited to shared data/auth/navigation primitives. */
+/* Keep startup limited to shared auth/navigation primitives. Transaction and payout
+   layers are member-only and load on demand. */
 const CORE=[
   'member-id-collision-fix.js','backend-bridge.js','member-live-login-bridge.js',
   'production-demo-auth-guard.js','onboarding-contact-policy.js',
   'multilingual-ui-v2.js','language-selector-fix.js',
-  'transaction-ledger-live.js','member-transaction-ledger-visible.js',
   'clean-member-flow.js','plain-language-ui.js'
 ];
 
 const GROUPS={
   member:[
+    'transaction-ledger-live.js','member-transaction-ledger-visible.js',
     'payout-rules-v1.js','payout-reset-v2.js','payout-engine-v2.js','member-earnings-visible.js'
   ],
   visual:[
@@ -116,8 +117,6 @@ function interactionHint(e){const g=inferGroup(e.target);if(g)startGroup(g)}
 document.addEventListener('pointerdown',interactionHint,{capture:true,passive:true});
 document.addEventListener('focusin',interactionHint,{capture:true,passive:true});
 
-/* No automatic feature-pack warmup: idle phones stay idle. Only light visual helpers
-   may warm after two minutes, and only while the home page is visible. */
 function scheduleVisualWarmup(){
   setTimeout(()=>{
     if(document.visibilityState!=='visible')return;
@@ -125,8 +124,17 @@ function scheduleVisualWarmup(){
     if('requestIdleCallback' in window)requestIdleCallback(()=>startGroup('visual'),{timeout:5000});
   },120000);
 }
+function maybeStartMember(){
+  try{
+    const s=JSON.parse(localStorage.getItem('d2_session')||'{}');
+    if(s&&s.role&&s.role!=='visitor'&&s.id){
+      if('requestIdleCallback' in window)requestIdleCallback(()=>startGroup('member'),{timeout:2500});
+      else setTimeout(()=>startGroup('member'),800);
+    }
+  }catch(_){ }
+}
 const normalize=()=>{try{document.documentElement.style.webkitTextSizeAdjust='100%';document.documentElement.style.textSizeAdjust='100%';document.body?.classList.add('dbest-uniform-runtime')}catch(_){}};
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{normalize();startCore();scheduleVisualWarmup()},{once:true});
-else{normalize();startCore();scheduleVisualWarmup()}
+function boot(){normalize();startCore();maybeStartMember();scheduleVisualWarmup()}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 window.DBEST_PERFORMANCE_BOOTSTRAP={version:V,startCore,startGroup,startFeatures,groups:Object.keys(GROUPS),legacyCabBlocked:[...CAB_LEGACY_BLOCKED]};
 })();
