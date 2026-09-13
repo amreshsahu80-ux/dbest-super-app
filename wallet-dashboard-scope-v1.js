@@ -12,47 +12,45 @@ function visible(el){
   const s=getComputedStyle(el);
   return s.display!=='none'&&s.visibility!=='hidden'&&el.getClientRects().length>0;
 }
-function isHome(){
+function homeActionButton(){
   const buttons=[...document.querySelectorAll('button')].filter(visible);
-  const texts=buttons.map(b=>String(b.textContent||'').replace(/\s+/g,' ').trim().toLowerCase());
-  return texts.some(t=>t.includes('my profile'))&&texts.some(t=>t.includes('dashboard'))&&texts.some(t=>t.includes('all services'));
+  const hasProfile=buttons.some(b=>/my profile/i.test(String(b.textContent||'')));
+  const hasDashboard=buttons.some(b=>/^\s*🏠?\s*dashboard\s*$/i.test(String(b.textContent||'').trim())||/dashboard/i.test(String(b.textContent||'')));
+  const hasLogout=buttons.some(b=>/logout/i.test(String(b.textContent||'')));
+  if(!(hasProfile&&hasDashboard&&hasLogout))return null;
+  return buttons.find(b=>/all services/i.test(String(b.textContent||''))||b.dataset.dbestHomeWallet==='1')||null;
 }
-function wireHomeWallet(){
-  if(!isHome())return;
-  const candidates=[...document.querySelectorAll('button')].filter(visible);
-  const all=candidates.find(b=>String(b.textContent||'').replace(/\s+/g,' ').trim().toLowerCase().includes('all services'));
-  if(!all)return;
-  if(!all.dataset.dbestOriginalAllServices){
-    all.dataset.dbestOriginalAllServices=all.innerHTML;
-    all.dataset.dbestOriginalOnclick=all.getAttribute('onclick')||'';
+function apply(){
+  ensureStyle();
+  const btn=document.getElementById('dbestWalletSummaryBtn');
+  if(btn&&!btn.closest('.classicDash'))btn.style.setProperty('display','none','important');
+  const home=homeActionButton();
+  document.querySelectorAll('button[data-dbest-home-wallet="1"]').forEach(b=>{
+    if(b!==home&&b.dataset.dbestOriginalHtml){
+      b.innerHTML=b.dataset.dbestOriginalHtml;
+      const oc=b.dataset.dbestOriginalOnclick||'';
+      b.onclick=null;
+      if(oc)b.setAttribute('onclick',oc);else b.removeAttribute('onclick');
+      delete b.dataset.dbestHomeWallet;delete b.dataset.dbestOriginalHtml;delete b.dataset.dbestOriginalOnclick;
+    }
+  });
+  if(!home)return;
+  if(!home.dataset.dbestHomeWallet){
+    home.dataset.dbestOriginalHtml=home.innerHTML;
+    home.dataset.dbestOriginalOnclick=home.getAttribute('onclick')||'';
+    home.dataset.dbestHomeWallet='1';
   }
-  all.innerHTML='💰 My Wallet';
-  all.setAttribute('aria-label','My Wallet');
-  all.onclick=function(e){
+  home.innerHTML='💰 My Wallet';
+  home.setAttribute('aria-label','My Wallet');
+  home.onclick=function(e){
     try{e&&e.preventDefault&&e.preventDefault();e&&e.stopPropagation&&e.stopPropagation()}catch(_){}
     const api=window.DBEST_MEMBER_WALLET_SUMMARY;
     if(api&&typeof api.open==='function')api.open();
     return false;
   };
 }
-function restoreNonHomeButtons(){
-  if(isHome())return;
-  document.querySelectorAll('button[data-dbest-original-all-services]').forEach(b=>{
-    b.innerHTML=b.dataset.dbestOriginalAllServices||'All Services';
-    const oc=b.dataset.dbestOriginalOnclick||'';
-    b.onclick=null;
-    if(oc)b.setAttribute('onclick',oc);else b.removeAttribute('onclick');
-    delete b.dataset.dbestOriginalAllServices;
-    delete b.dataset.dbestOriginalOnclick;
-  });
-}
-function apply(){
-  ensureStyle();
-  wireHomeWallet();
-  restoreNonHomeButtons();
-}
-let timer;function schedule(){clearTimeout(timer);timer=setTimeout(apply,50)}
+let timer;function schedule(){clearTimeout(timer);timer=setTimeout(apply,35)}
 new MutationObserver(schedule).observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['style','class']});
-document.addEventListener('click',()=>setTimeout(apply,60),true);
-[0,120,400,900,1800].forEach(ms=>setTimeout(apply,ms));
+document.addEventListener('click',()=>setTimeout(apply,45),true);
+[0,100,300,700,1400,2500].forEach(ms=>setTimeout(apply,ms));
 })();
