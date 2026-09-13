@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DBest Invoice & COD Test</title></head>
+<body style="margin:0">
+<iframe id="app" src="/" style="border:0;width:100%;height:100vh"></iframe>
+<script>
+(function(){
+  var frame=document.getElementById('app');
+  frame.addEventListener('load',function(){
+    try{
+      var doc=frame.contentDocument;
+      ['/marketplace-cod-option-v1.js','/transaction-invoice-receipt-v1.js'].forEach(function(src){
+        var s=doc.createElement('script');s.src=src+'?v=20260913-invoice-cod-test-v1';doc.body.appendChild(s);
+      });
+    }catch(e){console.error(e);}
+  });
+})();
+</script>
+</body>
+</html>
