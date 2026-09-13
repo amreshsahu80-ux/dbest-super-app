@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='1.1.1';
+const VERSION='1.2.0';
 const COMPANY='Sarwashresth Services OPC Pvt Ltd';
 const ADDRESS='Bata Road, Chakradharpur, Jharkhand - 833102';
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
@@ -13,5 +13,8 @@ function homeVisible(){const hero=document.querySelector('.hero');if(!hero)retur
 function removeFooter(){document.getElementById('dbestPlatformFooter')?.remove();closeModal()}
 function ensureFooter(){if(!homeVisible()){removeFooter();return null}let f=document.getElementById('dbestPlatformFooter');if(f)return f;f=document.createElement('footer');f.id='dbestPlatformFooter';f.style.cssText='position:relative;width:100%;z-index:2;background:#081833;color:#fff;border-top:1px solid rgba(255,255,255,.14);font-family:system-ui,Arial;margin-top:24px';f.innerHTML=`<div style="max-width:1100px;margin:auto;min-height:56px;padding:10px 14px;display:flex;align-items:center;justify-content:center;gap:8px 18px;flex-wrap:wrap"><button data-dbest-footer="about" style="border:0;background:transparent;color:#fff;font-weight:800;cursor:pointer;padding:7px 5px">About Us</button><button data-dbest-footer="contact" style="border:0;background:transparent;color:#fff;font-weight:800;cursor:pointer;padding:7px 5px">Contact Us</button><button data-dbest-footer="terms" style="border:0;background:transparent;color:#fff;font-weight:800;cursor:pointer;padding:7px 5px">Terms & Conditions</button><span style="font-size:11px;color:#b9c6d8">© 2026 DBest</span></div>`;f.addEventListener('click',e=>{const b=e.target.closest('[data-dbest-footer]');if(!b)return;const k=b.getAttribute('data-dbest-footer');if(k==='about')about();if(k==='contact')contact();if(k==='terms')terms()});document.body.appendChild(f);return f}
 function syncFooter(){if(homeVisible())ensureFooter();else removeFooter()}
-const obs=new MutationObserver(syncFooter);obs.observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['class','style']});setInterval(syncFooter,1200);setTimeout(syncFooter,120);window.addEventListener('hashchange',syncFooter);window.addEventListener('popstate',syncFooter);window.DBEST_PLATFORM_FOOTER={version:VERSION,about,contact,terms,ensure:ensureFooter,sync:syncFooter};
+let queued=false;
+function queueSync(){if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;syncFooter()})}
+const obs=new MutationObserver(queueSync);obs.observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['class','style']});
+setTimeout(queueSync,120);window.addEventListener('hashchange',queueSync);window.addEventListener('popstate',queueSync);window.addEventListener('pageshow',queueSync);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')queueSync()});window.DBEST_PLATFORM_FOOTER={version:VERSION,about,contact,terms,ensure:ensureFooter,sync:syncFooter};
 })();
