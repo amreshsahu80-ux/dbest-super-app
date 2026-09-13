@@ -1,19 +1,21 @@
 (function(){
 'use strict';
-const VERSION='20260912-live-wallet-dashboard-v1';
+const VERSION='20260913-live-wallet-dashboard-perf-v2';
 if(window.DBEST_MEMBER_DASHBOARD_LIVE?.version===VERSION)return;
 const cfg=window.DBEST_RUNTIME_CONFIG||{};
 const BASE=String(cfg.supabaseUrl||'').replace(/\/$/,'');
 const KEY=String(cfg.supabasePublishableKey||'');
 const TOKEN_KEY='dbest_member_live_token';
+const CACHE_MS=30000;
+const MERGE_LIMIT=60;
 let cache=null,cacheAt=0,pending=null;
 const money=v=>'₹'+Number(v||0).toLocaleString('en-IN',{maximumFractionDigits:2});
 function token(){try{return localStorage.getItem(TOKEN_KEY)||''}catch(_){return''}}
 function normalizeTx(t){return {id:String(t.transaction_id||t.id||''),userId:String(t.actor_ref||''),user:String(t.actor_name||''),section:String(t.section||''),sub:String(t.subsection||''),amount:Number(t.amount||0),status:String(t.payment_status||''),partner:String(t.counterparty_name||''),createdISO:String(t.transaction_date||t.created_at||''),created:String(t.transaction_date||t.created_at||''),details:String(t.reference||''),payoutAmount:Number(t.payout_amount||0),meta:t.metadata||{}}}
-function mergeTx(list){try{if(!Array.isArray(list)||!Array.isArray(window.txs))return;const by=new Map(window.txs.map(x=>[String(x.id||''),x]));for(const raw of list){const t=normalizeTx(raw),id=t.id;if(!id)continue;if(by.has(id))Object.assign(by.get(id),t);else{window.txs.push(t);by.set(id,t)}}window.txs.sort((a,b)=>new Date(b.createdISO||0)-new Date(a.createdISO||0))}catch(_){}}
+function mergeTx(list){try{if(!Array.isArray(list)||!Array.isArray(window.txs))return;const recent=list.slice(0,MERGE_LIMIT);const by=new Map(window.txs.map(x=>[String(x.id||''),x]));for(const raw of recent){const t=normalizeTx(raw),id=t.id;if(!id)continue;if(by.has(id))Object.assign(by.get(id),t);else{window.txs.push(t);by.set(id,t)}}window.txs.sort((a,b)=>new Date(b.createdISO||0)-new Date(a.createdISO||0))}catch(_){}}
 async function load(force=false){
  if(!BASE||!KEY||!token())return null;
- if(!force&&cache&&Date.now()-cacheAt<10000)return cache;
+ if(!force&&cache&&Date.now()-cacheAt<CACHE_MS)return cache;
  if(pending)return pending;
  pending=(async()=>{const r=await fetch(BASE+'/functions/v1/member-network-live',{method:'POST',cache:'no-store',headers:{apikey:KEY,Authorization:'Bearer '+KEY,'Content-Type':'application/json','x-dbest-member-token':token()},body:'{}'});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'dashboard_summary_failed');cache=d;cacheAt=Date.now();mergeTx(d.transactions||[]);return d})().finally(()=>pending=null);
  return pending;
@@ -37,7 +39,7 @@ function install(){
  if(typeof window.qualifyingTx==='function'&&!window.qualifyingTx.__dbestVerifiedPatched){const old=window.qualifyingTx;const patched=function(x){return old(x)||(String(x?.section||'')!=='Membership'&&/Verified/i.test(String(x?.status||''))&&!/(Failed|Rejected|Cancelled|Pending)/i.test(String(x?.status||'')))};patched.__dbestVerifiedPatched=true;window.qualifyingTx=patched}
  if(typeof window.memberDash!=='function'||window.memberDash.__dbestLiveWrapped)return false;
  const original=window.memberDash;
- const wrapped=function(id){const r=original.apply(this,arguments);load(true).then(d=>paint(d,id)).catch(e=>console.warn('DBest live dashboard summary',e));return r};wrapped.__dbestLiveWrapped=true;window.memberDash=wrapped;return true;
+ const wrapped=function(id){const r=original.apply(this,arguments);load(false).then(d=>paint(d,id)).catch(e=>console.warn('DBest live dashboard summary',e));return r};wrapped.__dbestLiveWrapped=true;window.memberDash=wrapped;return true;
 }
 let tries=0;const timer=setInterval(()=>{tries++;if(install()||tries>80)clearInterval(timer)},100);
 window.DBEST_MEMBER_DASHBOARD_LIVE={version:VERSION,refresh:async()=>{const d=await load(true);const id=window.session?.id;paint(d,id);return d}};
