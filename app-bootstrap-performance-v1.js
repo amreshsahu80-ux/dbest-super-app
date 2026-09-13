@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const V='20260913-subsection-speed-v2';
+const V='20260913-mobile-lazy-v3';
 if(window.DBEST_PERFORMANCE_BOOTSTRAP?.version===V)return;
 
 const EARLY=['cab-entry-capture-final-v1.js','ux-performance-bridge.js'];
@@ -10,9 +10,9 @@ const CORE=[
   'production-demo-auth-guard.js','onboarding-contact-policy.js',
   'multilingual-ui-v2.js','language-selector-fix.js','payout-rules-v1.js','payout-reset-v2.js',
   'payout-engine-v2.js','transaction-ledger-live.js','member-transaction-ledger-visible.js',
-  'member-earnings-visible.js','platform-footer-legal.js','top-live-location-bridge.js',
+  'member-earnings-visible.js','top-live-location-bridge.js',
   'clean-member-flow.js','plain-language-ui.js','finance-insurance-showcase.js',
-  'showcase-live-admin.js','visual-first-partner-tiles.js','security-inactivity-timeout-v1.js'
+  'showcase-live-admin.js','visual-first-partner-tiles.js'
 ];
 
 const GROUPS={
@@ -58,6 +58,7 @@ const CAB_LEGACY_BLOCKED=new Set([
 ]);
 
 const loaded=new Map();
+const groupPromises=new Map();
 function srcFor(name){return './'+name+'?v='+encodeURIComponent(V)}
 function loadOne(name){
   if(CAB_LEGACY_BLOCKED.has(name))return Promise.resolve();
@@ -65,15 +66,17 @@ function loadOne(name){
   const existing=Array.from(document.scripts).find(s=>String(s.src||'').includes('/'+name));
   if(existing){const p=Promise.resolve();loaded.set(name,p);return p}
   const p=new Promise(resolve=>{
-    const s=document.createElement('script');s.src=srcFor(name);s.async=true;s.dataset.dbestPerfAsset=name;
-    s.onload=()=>resolve();s.onerror=()=>{console.warn('DBest deferred asset failed:',name);resolve()};
+    const s=document.createElement('script');
+    s.src=srcFor(name);s.async=true;s.dataset.dbestPerfAsset=name;
+    s.onload=()=>resolve();
+    s.onerror=()=>{console.warn('DBest deferred asset failed:',name);resolve()};
     (document.body||document.documentElement).appendChild(s)
   });
   loaded.set(name,p);return p
 }
 async function loadSequence(list){for(const name of list)await loadOne(name)}
 
-let corePromise=null,featuresPromise=null;
+let corePromise=null;
 function startCore(){
   if(!corePromise)corePromise=(async()=>{
     const early=Promise.all(EARLY.map(loadOne));
@@ -82,22 +85,48 @@ function startCore(){
   })().catch(e=>console.warn('DBest core bootstrap warning',e));
   return corePromise
 }
-function startFeatures(){
-  if(!featuresPromise)featuresPromise=(async()=>{
-    await startCore();
-    /* Avoid six simultaneous script waterfalls competing with UI navigation. */
-    for(const name of Object.keys(GROUPS))await loadSequence(GROUPS[name]);
-  })().catch(e=>console.warn('DBest feature bootstrap warning',e));
-  return featuresPromise
+function startGroup(name){
+  if(!GROUPS[name])return Promise.resolve();
+  if(groupPromises.has(name))return groupPromises.get(name);
+  const p=(async()=>{await startCore();await loadSequence(GROUPS[name])})()
+    .catch(e=>console.warn('DBest feature group warning',name,e));
+  groupPromises.set(name,p);return p;
 }
-function scheduleFeatures(){
-  const run=()=>{
-    const launch=()=>startFeatures();
-    if('requestIdleCallback' in window)requestIdleCallback(launch,{timeout:5000});
-    else setTimeout(launch,500);
+function startFeatures(){
+  return Object.keys(GROUPS).reduce((p,name)=>p.then(()=>startGroup(name)),Promise.resolve());
+}
+function inferGroup(el){
+  if(!el)return null;
+  const node=el.closest?.('.tile,.sub,.card,button,a,[onclick]')||el;
+  const cls=String(node.className||'').toLowerCase();
+  const txt=String(node.textContent||'').toLowerCase();
+  if(/service-car|\bcab\b|\bride\b|rental|taxi/.test(cls+' '+txt))return 'rideOps';
+  if(/service-store|marketplace|grocery|shopping|cart|my orders|order/.test(cls+' '+txt))return 'marketplace';
+  if(/service-jobs|service-repair|home jobs|hyperlocal|repair|local service/.test(cls+' '+txt))return 'service';
+  if(/\bvendor\b|seller|merchant/.test(txt))return 'vendor';
+  if(/vaahak|delivery partner|driver partner/.test(txt))return 'vaahak';
+  if(/project owner|super admin|owner console|owner dashboard/.test(txt))return 'owner';
+  return null;
+}
+function interactionHint(e){
+  const g=inferGroup(e.target);
+  if(g)startGroup(g);
+}
+document.addEventListener('pointerdown',interactionHint,{capture:true,passive:true});
+document.addEventListener('focusin',interactionHint,{capture:true,passive:true});
+
+function scheduleSafetyWarmup(){
+  const names=Object.keys(GROUPS);
+  let i=0;
+  const next=()=>{
+    if(i>=names.length)return;
+    if(document.visibilityState!=='visible'){setTimeout(next,10000);return}
+    const name=names[i++];
+    const run=()=>startGroup(name).finally(()=>setTimeout(next,7000));
+    if('requestIdleCallback' in window)requestIdleCallback(run,{timeout:8000});
+    else setTimeout(run,1500);
   };
-  /* Give the first tap / subsection transition priority over background enhancements. */
-  setTimeout(run,3200);
+  setTimeout(next,45000);
 }
 
 const normalize=()=>{
@@ -108,9 +137,8 @@ const normalize=()=>{
   }catch(_){ }
 };
 
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{normalize();startCore()},{once:true});
-else{normalize();startCore()}
-if(document.readyState==='complete')scheduleFeatures();else window.addEventListener('load',scheduleFeatures,{once:true});
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{normalize();startCore();scheduleSafetyWarmup()},{once:true});
+else{normalize();startCore();scheduleSafetyWarmup()}
 
-window.DBEST_PERFORMANCE_BOOTSTRAP={version:V,startCore,startFeatures,groups:Object.keys(GROUPS),legacyCabBlocked:[...CAB_LEGACY_BLOCKED]};
+window.DBEST_PERFORMANCE_BOOTSTRAP={version:V,startCore,startGroup,startFeatures,groups:Object.keys(GROUPS),legacyCabBlocked:[...CAB_LEGACY_BLOCKED]};
 })();
