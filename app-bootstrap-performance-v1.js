@@ -1,11 +1,11 @@
 (function(){
 'use strict';
-const V='20260913-mobile-lazy-v5';
+const V='20260913-mobile-lazy-v6';
 if(window.DBEST_PERFORMANCE_BOOTSTRAP?.version===V)return;
 
 const EARLY=['cab-entry-capture-final-v1.js','ux-performance-bridge.js'];
-/* Keep startup limited to shared auth/navigation primitives. Transaction and payout
-   layers are member-only and load on demand. */
+/* Keep startup limited to shared auth/navigation primitives. Transaction, wallet,
+   payout and marketplace layers load only when their sections are needed. */
 const CORE=[
   'member-id-collision-fix.js','backend-bridge.js','member-live-login-bridge.js',
   'production-demo-auth-guard.js','onboarding-contact-policy.js',
@@ -16,7 +16,10 @@ const CORE=[
 const GROUPS={
   member:[
     'transaction-ledger-live.js','member-transaction-ledger-visible.js',
-    'payout-rules-v1.js','payout-reset-v2.js','payout-engine-v2.js','member-earnings-visible.js'
+    'payout-rules-v1.js','payout-reset-v2.js','payout-engine-v2.js','member-earnings-visible.js',
+    'member-wallet-summary-ui-v1.js','wallet-dashboard-scope-v1.js',
+    'transaction-table-pagination-v1.js','member-dashboard-live-summary-v1.js',
+    'transaction-invoice-receipt-v1.js'
   ],
   visual:[
     'finance-insurance-showcase.js','showcase-live-admin.js','visual-first-partner-tiles.js','top-live-location-bridge.js'
@@ -35,10 +38,12 @@ const GROUPS={
     'nearest-vaahak-dispatch.js','vaahak-live-rate-bridge.js','vaahak-freedom-model.js','vaahak-owner-approval-final.js'
   ],
   marketplace:[
-    'marketplace-vaahak-live-v2.js','marketplace-live-catalog-authority.js','marketplace-minimum-order-ux.js',
-    'marketplace-live-order-submit-final.js','marketplace-cart-quantity-v1.js','marketplace-customer-stage-wording-fix.js',
-    'customer-marketplace-my-orders.js','marketplace-completion-green.js','marketplace-delivery-rules.js',
-    'marketplace-delivery-order-display.js','marketplace-master-cart.js','razorpay-master-market-v1.js','razorpay-master-checkout-final-v1.js'
+    'marketplace-secure-session-v1.js','marketplace-vaahak-live-v2.js','marketplace-live-catalog-authority.js',
+    'marketplace-minimum-order-ux.js','marketplace-live-order-submit-final.js','marketplace-cart-quantity-v1.js',
+    'marketplace-customer-stage-wording-fix.js','customer-marketplace-my-orders.js','marketplace-completion-green.js',
+    'marketplace-delivery-rules.js','marketplace-delivery-order-display.js','marketplace-master-cart.js',
+    'marketplace-pay-at-delivery-v2.js','marketplace-pay-at-delivery-hardening-v1.js',
+    'marketplace-checkout-button-bridge-v1.js','razorpay-master-market-v1.js','razorpay-master-checkout-final-v1.js'
   ],
   service:[
     'service-request-live-bridge.js','service-document-upload-bridge.js','service-payment-sync-bridge.js',
@@ -104,9 +109,9 @@ function inferGroup(el){
   const cls=String(node.className||'').toLowerCase();
   const txt=String(node.textContent||'').toLowerCase();
   const all=cls+' '+txt;
-  if(/my dashboard|my wallet|earnings|team|transactions|my profile/.test(all))return 'member';
+  if(/my dashboard|my wallet|earnings|team|transactions|my profile|invoice|receipt/.test(all))return 'member';
   if(/service-car|\bcab\b|\bride\b|rental|taxi/.test(all))return 'rideOps';
-  if(/service-store|marketplace|grocery|shopping|cart|my orders|order/.test(all))return 'marketplace';
+  if(/service-store|marketplace|grocery|shopping|cart|my orders|order|checkout/.test(all))return 'marketplace';
   if(/service-jobs|service-repair|home jobs|hyperlocal|repair|local service/.test(all))return 'service';
   if(/\bvendor\b|seller|merchant/.test(all))return 'vendor';
   if(/vaahak|delivery partner|driver partner/.test(all))return 'vaahak';
