@@ -1,8 +1,10 @@
 (function(){
 'use strict';
-const VERSION='2.1.0';
+if(/\/vaahak-standalone-v2\.html\/?$/i.test(location.pathname))return;
+const VERSION='2.1.1';
 const cfg=window.DBEST_RUNTIME_CONFIG||{},BASE=String(cfg.supabaseUrl||'').replace(/\/$/,''),KEY=String(cfg.supabasePublishableKey||'');if(!BASE||!KEY)return;
 const API=BASE+'/functions/v1/partner-kyc-live',VTK='dbest_vendor_live_token',HTK='dbest_vaahak_live_token';
+let self=null,lastCustomerJob='',busy=false,lastSelfAt=0;
 const defs={vendor:[['shop_photo','Shop / Establishment Photo'],['owner_photo','Owner Photo'],['pan','PAN Copy'],['gst','GST Certificate'],['establishment','Shop & Establishment / Udyam'],['sector_licence','FSSAI / Drug / Sector Licence'],['bank_proof','Cancelled Cheque / Bank Proof'],['address_proof','Address Proof']],vaahak:[['id_proof','Identity Proof (Aadhaar / PAN)'],['driving_licence','Driving Licence'],['rc','Vehicle RC'],['insurance','Vehicle Insurance'],['puc','PUC / Pollution Certificate'],['fitness_permit','Fitness / Permit (where applicable)']]};
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const notify=m=>{try{typeof toast==='function'?toast(m):alert(m)}catch(e){alert(m)}};
