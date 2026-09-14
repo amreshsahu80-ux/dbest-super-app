@@ -1,10 +1,10 @@
 (function(){
 'use strict';
-const VERSION='2.1.0';
+const VERSION='2.1.1';
 if(window.DBEST_RIDE_LIVE_UI_FINALIZER?.version===VERSION)return;
 const POLL=3000,cfg=window.DBEST_RUNTIME_CONFIG||{},BASE=String(cfg.supabaseUrl||'').replace(/\/$/,''),KEY=cfg.supabasePublishableKey||'',PROFILE=BASE+'/functions/v1/vaahak-profile-live';
 let timer=null,currentTx='',photoCache={};
-const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
 function lang(){let x='en';try{x=localStorage.getItem('d2_lang')||'en'}catch(e){}if(x==='ta')x='te';return x}
 const labels={en:{pin:'Ride PIN',waiting:'Finding Vaahak…'},hi:{pin:'राइड PIN',waiting:'Vaahak खोज रहे हैं…'},bn:{pin:'রাইড PIN',waiting:'Vaahak খোঁজা হচ্ছে…'},or:{pin:'ରାଇଡ୍ PIN',waiting:'Vaahak ଖୋଜାଯାଉଛି…'},te:{pin:'రైడ్ PIN',waiting:'Vaahak కోసం వెతుకుతోంది…'}};
 function t(){return labels[lang()]||labels.en}
@@ -21,11 +21,12 @@ function removeDemoControls(){css();document.querySelectorAll('.ridePage button'
 function fallbackRename(){removeDemoControls();document.querySelectorAll('.ridePage .driverCard small').forEach(x=>{if(/^OTP$/i.test((x.textContent||'').trim()))x.textContent=t().pin})}
 function syncLegacyStatus(status){const s=String(status||'');if(!s)return;document.querySelectorAll('.ridePage .txDetailCell').forEach(cell=>{const small=cell.querySelector('small'),b=cell.querySelector('b');if(small&&b&&/^Status$/i.test((small.textContent||'').trim()))b.textContent=s});if(['Completed','Cancelled'].includes(s)){document.querySelectorAll('.ridePage button').forEach(b=>{const oc=String(b.getAttribute('onclick')||'');if(/\bcancelRide\s*\(/.test(oc))b.remove()})}}
 function setSteps(status){const steps=[...document.querySelectorAll('.ridePage .tripSteps .tripStep')];if(!steps.length)return;const s=String(status||'');let active=0;if(s==='Accepted')active=1;else if(s==='Trip Started')active=2;else if(s==='Completed')active=3;steps.forEach((el,i)=>{el.classList.toggle('done',i<active);el.classList.toggle('active',i===active&&s!=='Completed')});if(s==='Completed')steps.forEach(el=>el.classList.add('done'))}
+function assignmentConfirmed(j){const s=String(j?.status||'');return ['Accepted','Trip Started','Completed'].includes(s)}
 function liveCard(d,p){css();removeDemoControls();const page=document.querySelector('.ridePage');if(!page||!d?.job)return;const L=t(),j=d.job,pin=j.otp&&['Accepted','Trip Started'].includes(String(j.status))?String(j.otp):'';let box=document.getElementById('dbestRideLiveIdentityFinal');if(!box){box=document.createElement('div');box.id='dbestRideLiveIdentityFinal';const map=page.querySelector('.rideMap');(map?.parentNode||page).insertBefore(box,map?.nextSibling||page.firstChild)}
  box.innerHTML=p?`<div class="dbestRidePerson"><div class="dbestRideAvatar">${p.profile_photo_url?`<img src="${esc(p.profile_photo_url)}" alt="Vaahak photo">`:'🛵'}</div><div style="min-width:0"><div class="dbestRideName">${esc(p.name||'Vaahak')}</div><div class="dbestRideVehicle">${esc(p.vehicle||'')}${p.vehicle_no?' • '+esc(p.vehicle_no):''}${p.rating?' • ⭐ '+esc(p.rating):''}</div><span class="dbestRideStatus">${esc(j.status==='Accepted'?'Coming to pickup':j.status==='Trip Started'?'Ride active':j.status==='Completed'?'Ride completed':j.status||'Assigned')}</span></div>${pin?`<div class="dbestRidePin"><small>${esc(L.pin)}</small><b>${esc(pin)}</b></div>`:''}</div>`:`<div class="dbestRideWaiting"><span class="dbestRidePulse"></span>${esc(L.waiting)}</div>`;
  document.querySelectorAll('.ridePage .driverCard,.ridePage .vaahakStatusList,.ridePage .dispatchPending').forEach(x=>x.style.display='none');const old=document.getElementById('dbestLiveRideStatus');if(old)old.style.display='none';setSteps(j.status);syncLegacyStatus(j.status)
 }
-async function refresh(tx){fallbackRename();const tok=token(tx),call=api();if(!tok||typeof call!=='function')return;try{const d=await call('ride_status',{txId:String(tx),customerToken:tok});if(d?.job){let p=d.partner||null;if(p){const pp=await profile(tx,tok);if(pp)p={...p,...pp}}liveCard(d,p)}if(['Completed','Cancelled'].includes(String(d?.job?.status||'')))stop()}catch(e){fallbackRename()}}
+async function refresh(tx){fallbackRename();const tok=token(tx),call=api();if(!tok||typeof call!=='function')return;try{const d=await call('ride_status',{txId:String(tx),customerToken:tok});if(d?.job){let p=null;if(assignmentConfirmed(d.job)){p=d.partner||null;const pp=await profile(tx,tok);if(pp)p=p?{...p,...pp}:pp}liveCard(d,p)}if(['Completed','Cancelled'].includes(String(d?.job?.status||'')))stop()}catch(e){fallbackRename()}}
 function stop(){if(timer){clearInterval(timer);timer=null}}
 function start(tx){stop();currentTx=String(tx||'');if(!currentTx)return;[30,120,350,900].forEach(ms=>setTimeout(()=>refresh(currentTx),ms));timer=setInterval(()=>refresh(currentTx),POLL)}
 const old=window.rideStatusScreen;if(typeof old==='function')window.rideStatusScreen=function(tx){const r=old.apply(this,arguments);removeDemoControls();start(tx);return r};
