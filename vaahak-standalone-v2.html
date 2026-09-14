@@ -48,6 +48,6 @@ async function startDelivery(id){if(busy)return;busy=true;try{await comCall('sta
 async function toggleOnline(){if(busy)return;busy=true;try{const s=await call('status',{},true);await call('availability',{available:!s.partner.available},true);note(!s.partner.available?'You are ONLINE.':'You are OFFLINE.');loadStatus(true)}catch(x){note(x.message==='owner_approval_pending'?'Owner approval is required before going online.':'Unable to change status: '+x.message,false)}finally{busy=false}}function logout(){localStorage.removeItem(TK);clearTimeout(timer);stopGps();current=null;currentJob=null;el('globalStatus').textContent='OFFLINE';el('globalStatus').classList.remove('on');show('login')}
 if(token())show('dash');
 </script>
-<script src="/partner-alerts-v1.js?v=20260914-vh2"></script>
+<script src="/partner-alerts-v1.js?v=20260914-vh5"></script>
 </body>
 </html>
