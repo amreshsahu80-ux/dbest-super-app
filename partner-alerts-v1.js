@@ -1,11 +1,12 @@
 (function(){
 'use strict';
-const VERSION='1.0.0';
+const VERSION='1.0.1-clean-vaahak';
 const path=location.pathname.toLowerCase();
 const role=path.includes('vendor')?'vendor':path.includes('vaahak')?'vaahak':path.includes('servicepartner')?'service':null;
 if(!role)return;
+const IS_STANDALONE_VAAHAK=role==='vaahak'&&/\/vaahak-standalone-v2\.html\/?$/i.test(location.pathname);
 const SEEN_KEY='dbest_partner_alert_seen_v1_'+role, ENABLE_KEY='dbest_partner_alert_enabled_v1_'+role;
-let seen=new Set(),audioCtx=null,observer=null,scanQueued=false;
+let seen=new Set(),audioCtx=null,observer=null,scanQueued=false,cleanQueued=false;
 try{JSON.parse(sessionStorage.getItem(SEEN_KEY)||'[]').slice(-80).forEach(x=>seen.add(String(x)))}catch(_){}
 const enabled=()=>{try{return localStorage.getItem(ENABLE_KEY)==='1'}catch(_){return false}};
 function saveSeen(){try{sessionStorage.setItem(SEEN_KEY,JSON.stringify([...seen].slice(-80)))}catch(_){}}
@@ -22,11 +23,18 @@ function scanVaahak(){const el=document.querySelector('#jobs .job');if(!el)retur
 function scanService(){document.querySelectorAll('#dbestHyperAssignedJobs .ownerQueueRow').forEach(el=>{const text=fingerprint(el);if(!text)return;emit({id:'service:'+text,title:'New DBest Service Request',body:text.slice(0,150)+' — please review the assigned job.'})})}
 function scan(){scanQueued=false;if(!enabled())return;if(role==='vendor')scanVendor();else if(role==='vaahak')scanVaahak();else scanService()}
 function queueScan(){if(scanQueued)return;scanQueued=true;requestAnimationFrame(scan)}
+function cleanStandaloneVaahak(){cleanQueued=false;if(!IS_STANDALONE_VAAHAK)return;try{
+  document.querySelectorAll('#dbestVaahakAgreementSection,#dbestPartnerKycSelfModal,#dbestVaahakCustomerIdentity,#dbestVaahakVisualStatus,[data-dbest-kyc-self="vaahak"],#dbestVaahakPhotoBtn,#vaahakPhotoPickerLive').forEach(n=>n.remove());
+  document.querySelectorAll('#dash > .card').forEach((card,i)=>{if(i===0)return;const t=(card.textContent||'').replace(/\s+/g,' ').trim();if(/Activation\s*&\s*Agreement|Secure KYC Documents|Identity Proof|Driving Licence|Vehicle RC|Vehicle Insurance|PUC|Pollution Certificate|Owner OTP Sign|Vaahak OTP Sign/i.test(t))card.remove()});
+  const hero=document.getElementById('dbestVaahakHero');if(hero){const target=document.querySelector('#dash > .card:first-child .dashHead > div');const n=document.getElementById('vname'),m=document.getElementById('vmeta');if(target){if(n)target.appendChild(n);if(m)target.appendChild(m)}hero.remove()}
+  document.querySelectorAll('#dash > .card:first-child button').forEach(b=>{const t=(b.textContent||'').trim();if(/KYC Documents|Agreement Signed|Add Photo|Photo$/i.test(t))b.remove()});
+}catch(_){}}
+function queueClean(){if(!IS_STANDALONE_VAAHAK||cleanQueued)return;cleanQueued=true;requestAnimationFrame(cleanStandaloneVaahak)}
 async function enableAlerts(){unlockAudio();if('Notification' in window&&Notification.permission==='default'){try{await Notification.requestPermission()}catch(_){}}try{localStorage.setItem(ENABLE_KEY,'1')}catch(_){}updateButton();beep();vibrate();banner('DBest Alerts Enabled','You will now get sound, vibration and browser notifications for new requests while this portal is open.');setTimeout(scan,500)}
 function disableAlerts(){try{localStorage.removeItem(ENABLE_KEY)}catch(_){}updateButton()}
 function updateButton(){let b=document.getElementById('dbestPartnerAlertToggle');if(!b)return;const on=enabled();b.textContent=on?'🔔 Alerts ON':'🔕 Enable Alerts';b.style.background=on?'#176b42':'#1765ff'}
 function installButton(){if(document.getElementById('dbestPartnerAlertToggle'))return;const b=document.createElement('button');b.id='dbestPartnerAlertToggle';b.type='button';b.style.cssText='position:fixed;right:12px;bottom:14px;z-index:2147483645;border:0;border-radius:999px;padding:11px 14px;color:#fff;font:900 13px system-ui;box-shadow:0 9px 28px rgba(0,0,0,.22);cursor:pointer';b.onclick=()=>enabled()?disableAlerts():enableAlerts();document.body.appendChild(b);updateButton()}
-function start(){installButton();document.addEventListener('pointerdown',()=>{if(enabled())unlockAudio()},{once:true,capture:true});observer=new MutationObserver(queueScan);observer.observe(document.body,{childList:true,subtree:true,characterData:true});setInterval(scan,5000);setTimeout(scan,800)}
+function start(){installButton();document.addEventListener('pointerdown',()=>{if(enabled())unlockAudio()},{once:true,capture:true});observer=new MutationObserver(()=>{queueScan();queueClean()});observer.observe(document.body,{childList:true,subtree:true,characterData:true});setInterval(scan,5000);if(IS_STANDALONE_VAAHAK){setInterval(cleanStandaloneVaahak,1200);setTimeout(cleanStandaloneVaahak,50);setTimeout(cleanStandaloneVaahak,700)}setTimeout(scan,800)}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 window.DBEST_PARTNER_ALERTS={version:VERSION,role,emit,enable:enableAlerts,disable:disableAlerts,scan};
 })();
