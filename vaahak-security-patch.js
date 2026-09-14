@@ -3,8 +3,9 @@
   const apiBase=String(cfg.supabaseUrl||'').replace(/\/$/,'')+'/functions/v1/vaahak-live';
   const rawFetch=window.fetch.bind(window);
   const customerKey=txId=>'dbest_live_customer_token_'+String(txId||'');
-  const getCustomerToken=txId=>{try{return localStorage.getItem(customerKey(txId))||''}catch(e){return''}};
-  const saveCustomerToken=(txId,token)=>{try{if(txId&&token)localStorage.setItem(customerKey(txId),String(token))}catch(e){}};
+  const legacyCustomerKey=txId=>'dbest_ride_customer_token_'+String(txId||'');
+  const getCustomerToken=txId=>{try{return localStorage.getItem(customerKey(txId))||localStorage.getItem(legacyCustomerKey(txId))||''}catch(e){return''}};
+  const saveCustomerToken=(txId,token)=>{try{if(txId&&token){localStorage.setItem(customerKey(txId),String(token));localStorage.setItem(legacyCustomerKey(txId),String(token))}}catch(e){}};
   const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const notify=msg=>{try{typeof toast==='function'?toast(msg):alert(msg)}catch(e){alert(msg)}};
 
@@ -68,5 +69,5 @@
     window.rideStatusScreen=function(txId){oldRideStatus(txId);setTimeout(()=>secureCustomerPoll(txId),350);};
   }
 
-  window.DBEST_VAAHAK_SECURITY={version:'1.1.0',getCustomerToken};
+  window.DBEST_VAAHAK_SECURITY={version:'1.2.0',getCustomerToken};
 })();
