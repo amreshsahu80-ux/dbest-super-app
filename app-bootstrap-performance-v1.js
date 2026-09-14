@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const V='20260914-mobile-smooth-v2';
+const V='20260914-cab-alert-retry-v3';
 if(window.DBEST_PERFORMANCE_BOOTSTRAP?.version===V)return;
 
 const EARLY=['cab-entry-capture-final-v1.js','ux-performance-bridge.js'];
@@ -53,6 +53,7 @@ const GROUPS={
     'vendor-mobile-image-upload-fix.js'
   ],
   rideOps:[
+    'cab-live-job-handoff-fix-v1.js','partner-alert-retry-v2.js',
     'ride-otp-completion-fix.js','ride-cancel-customer-bridge.js','member-ride-history-bridge.js',
     'ride-coordinate-persistence-fix.js','ride-contact-call-buttons.js','member-transaction-excel-download.js'
   ]
