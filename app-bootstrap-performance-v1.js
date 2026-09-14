@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const V='20260914-cab-alert-retry-v3';
+const V='20260914-vaahak-clean-dispatch-v4';
 if(window.DBEST_PERFORMANCE_BOOTSTRAP?.version===V)return;
 
 const EARLY=['cab-entry-capture-final-v1.js','ux-performance-bridge.js'];
