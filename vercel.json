@@ -23,7 +23,7 @@
     {"source": "/SuperAdmin", "destination": "/index.html"},
     {"source": "/Vaahak/runtime-config.js", "destination": "/runtime-config.js"},
     {"source": "/vaahak/runtime-config.js", "destination": "/runtime-config.js"},
-    {"source": "/Vaahak", "destination": "/vaahak-alert-wrapper.html"}
+    {"source": "/Vaahak", "destination": "/vaahak-standalone-v2.html"}
   ],
   "headers": [
     {
@@ -54,8 +54,7 @@
     {"source": "/service-partner-alert-wrapper.html", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}]},
     {"source": "/SuperAdmin", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"},{"key": "X-Robots-Tag", "value": "noindex, nofollow, noarchive"}]},
     {"source": "/Vaahak", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}]},
-    {"source": "/vaahak.html", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}]},
-    {"source": "/vaahak-alert-wrapper.html", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}]},
+    {"source": "/vaahak-standalone-v2.html", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}]},
     {"source": "/runtime-config.js", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}]},
     {"source": "/Vaahak/runtime-config.js", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}]},
     {"source": "/vaahak-(.*).js", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}]},
