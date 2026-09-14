@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='20260914-cab-live-handoff-v2';
+const VERSION='20260914-cab-live-handoff-v3';
 if(window.DBEST_CAB_LIVE_HANDOFF?.version===VERSION)return;
 const cfg=window.DBEST_RUNTIME_CONFIG||{};
 const BASE=String(cfg.supabaseUrl||'').replace(/\/$/,'');
@@ -55,7 +55,14 @@ async function createLiveJob(txId){
     let out=null;
     try{out=await post(LIVE,{action:'create_ride',...payload})}
     catch(e){if(e.status!==409&&e.message!=='ride_already_created')throw e;out={already:true}}
-    try{localStorage.setItem(flag,'1');if(out?.customerToken)localStorage.setItem('dbest_ride_customer_token_'+id,String(out.customerToken))}catch(_){ }
+    try{
+      localStorage.setItem(flag,'1');
+      if(out?.customerToken){
+        const token=String(out.customerToken);
+        localStorage.setItem('dbest_live_customer_token_'+id,token);
+        localStorage.setItem('dbest_ride_customer_token_'+id,token);
+      }
+    }catch(_){ }
     const jobId=out?.job?.id||'';
     try{await post(DISPATCH,{action:'tick',...(jobId?{jobId}:{txId:id})})}catch(e){console.warn('DBest dispatch tick warning',e?.message||e)}
     setTimeout(()=>{post(VOICE,jobId?{jobId}:{txId:id}).catch(e=>console.warn('DBest Exotel escalation warning',e?.message||e))},28000);
@@ -65,9 +72,9 @@ async function createLiveJob(txId){
 }
 function wrap(){
   const fn=window.rideStatusScreen;
-  if(typeof fn!=='function'||fn.__dbestLiveHandoffV2)return false;
+  if(typeof fn!=='function'||fn.__dbestLiveHandoffV3)return false;
   function wrapped(txId){const out=fn.apply(this,arguments);setTimeout(()=>createLiveJob(txId),0);return out}
-  wrapped.__dbestLiveHandoffV2=true;wrapped.__dbestOriginal=fn;window.rideStatusScreen=wrapped;return true;
+  wrapped.__dbestLiveHandoffV3=true;wrapped.__dbestOriginal=fn;window.rideStatusScreen=wrapped;return true;
 }
 wrap();
 const installer=setInterval(()=>{if(wrap())console.info('DBest live ride handoff attached')},500);
