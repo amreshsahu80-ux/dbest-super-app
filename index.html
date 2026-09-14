@@ -17,8 +17,8 @@
   <script>
     (async function(){
       try{
-        const BUILD='20260913-ui-polish-v26-ultra-perf';
-        const r=await fetch('./index-26.html?v='+BUILD,{cache:'force-cache'});
+        const BUILD='20260914-vaahak-clean-dispatch-v27';
+        const r=await fetch('./index-26.html?v='+BUILD,{cache:'no-store'});
         if(!r.ok)throw new Error('Unable to load application');
         let html=await r.text();
         const joinExpr='var __q=new URLSearchParams(location.search),__lv="";try{var __vals=["en","hi","bn","or","od","te","ta"];var __sel=[].slice.call(document.querySelectorAll("select")).find(function(s){var v=String(s.value||"").toLowerCase();var tx=String((s.options&&s.selectedIndex>=0?s.options[s.selectedIndex].text:"")||"").toLowerCase();return __vals.indexOf(v)>=0||/english|hindi|bengali|bangla|odia|oriya|telugu|tamil|हिंदी|বাংলা|ଓଡ଼ିଆ|తెలుగు|தமிழ்/.test(tx)});if(__sel)__lv=String(__sel.value||"");if(!__lv){for(var __i=0;__i<localStorage.length;__i++){var __k=localStorage.key(__i)||"";if(/lang/i.test(__k)){__lv=localStorage.getItem(__k)||"";if(__lv)break}}}}catch(e){}if(__lv)__q.set("lang",__lv);location.href="/membership-choose.html"+(__q.toString()?"?"+__q.toString():"");return;';
