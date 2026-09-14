@@ -42,6 +42,7 @@
     {"source": "/index.html", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}]},
     {"source": "/index-26.html", "headers": [{"key": "Cache-Control", "value": "public, max-age=300, stale-while-revalidate=3600"}]},
     {"source": "/(.*).js", "headers": [{"key": "Cache-Control", "value": "public, max-age=300, stale-while-revalidate=3600"}]},
+    {"source": "/partner-alerts-v1.js", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}]},
     {"source": "/(.*).css", "headers": [{"key": "Cache-Control", "value": "public, max-age=300, stale-while-revalidate=3600"}]},
     {"source": "/(.*).png", "headers": [{"key": "Cache-Control", "value": "public, max-age=86400, stale-while-revalidate=604800"}]},
     {"source": "/(.*).jpg", "headers": [{"key": "Cache-Control", "value": "public, max-age=86400, stale-while-revalidate=604800"}]},
