@@ -6,6 +6,7 @@
     {"source": "/vaahak", "destination": "/Vaahak", "permanent": true},
     {"source": "/vaahak/", "destination": "/Vaahak", "permanent": true},
     {"source": "/Vaahak/", "destination": "/Vaahak", "permanent": true},
+    {"source": "/Vaahak", "destination": "/vaahak-standalone-v2.html?v=20260914-vh3", "permanent": false},
     {"source": "/vendor", "destination": "/Vendor", "permanent": true},
     {"source": "/vendor/", "destination": "/Vendor", "permanent": true},
     {"source": "/Vendor/", "destination": "/Vendor", "permanent": true},
@@ -22,8 +23,7 @@
     {"source": "/ServicePartner", "destination": "/service-partner-alert-wrapper.html"},
     {"source": "/SuperAdmin", "destination": "/index.html"},
     {"source": "/Vaahak/runtime-config.js", "destination": "/runtime-config.js"},
-    {"source": "/vaahak/runtime-config.js", "destination": "/runtime-config.js"},
-    {"source": "/Vaahak", "destination": "/vaahak-standalone-v2.html"}
+    {"source": "/vaahak/runtime-config.js", "destination": "/runtime-config.js"}
   ],
   "headers": [
     {
