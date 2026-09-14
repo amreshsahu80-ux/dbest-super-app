@@ -19,7 +19,7 @@
     if(!r.ok)throw new Error(d.error||('Request failed '+r.status));
     return d;
   }
-  window.DBEST_VAAHAK_LIVE={call,version:'1.0.0'};
+  window.DBEST_VAAHAK_LIVE={call,version:'1.0.1'};
 
   async function alertNewJob(job){
     if(!job||job.id===lastAlerted)return;lastAlerted=job.id;
@@ -68,21 +68,9 @@
   }
   window.vaahakDashboard=function(){renderLiveDashboard(false);if(pollTimer)clearInterval(pollTimer);pollTimer=setInterval(()=>{if(token())renderLiveDashboard(true)},3000)};
 
-  const oldRideStatus=window.rideStatusScreen;
-  if(typeof oldRideStatus==='function'){
-    window.rideStatusScreen=function(txId){
-      oldRideStatus(txId);
-      try{
-        const flag='dbest_live_ride_'+txId;if(localStorage.getItem(flag))return;
-        const x=Array.isArray(window.txs)?window.txs.find(t=>String(t.id)===String(txId)):(typeof txs!=='undefined'&&Array.isArray(txs)?txs.find(t=>String(t.id)===String(txId)):null);
-        const r=x?.ride||x?.meta?.ride||{};if(!x||!r)return;
-        const user=(typeof users!=='undefined'&&Array.isArray(users))?users.find(u=>u.id===x.userId):null;
-        call('create_ride',{txId:String(txId),customerName:user?.name||x.user||'',customerMobile:user?.mobile||'',pickup:r.pickup||'',drop:r.drop||'',pickupLat:r.pickupCoords?.lat,pickupLng:r.pickupCoords?.lng,dropLat:r.dropCoords?.lat,dropLng:r.dropCoords?.lng,distanceKm:Number(r.distance||0),fare:Number(x.amount||0),vehicleType:r.vehicleName||r.vehicleId||''}).then(()=>{localStorage.setItem(flag,'1');startCustomerRidePoll(txId)}).catch(()=>{});
-      }catch(e){}
-    };
-  }
-  let customerTimer=null;
-  function startCustomerRidePoll(txId){if(customerTimer)clearInterval(customerTimer);const tick=async()=>{try{const d=await call('ride_status',{txId});if(!d.job)return;let box=document.getElementById('dbestLiveRideStatus');if(!box){box=document.createElement('div');box.id='dbestLiveRideStatus';box.style.cssText='margin:12px 24px;padding:14px;border:1px solid #cfe0ff;border-radius:16px;background:#fff;box-shadow:0 8px 20px rgba(20,60,120,.08)';const host=document.querySelector('.sectionContent')||document.body;host.prepend(box)}box.innerHTML=`<b>📡 Live Vaahak Status: ${escx(d.job.status)}</b>${d.partner?`<div style="margin-top:6px">🛵 ${escx(d.partner.name)} • ${escx(d.partner.vehicle)} ${escx(d.partner.vehicle_no||'')} • ⭐ ${escx(d.partner.rating||'')}</div>`:'<div style="margin-top:6px;color:#64748b">Waiting for an online Vaahak to accept this ride…</div>'}${d.job.otp&&['Accepted','Trip Started'].includes(d.job.status)?`<div style="margin-top:8px;font-size:22px;font-weight:900">Ride OTP: ${escx(d.job.otp)}</div>`:''}`;if(d.job.status==='Completed'){clearInterval(customerTimer);customerTimer=null}}catch(e){}};tick();customerTimer=setInterval(tick,3000)}
+  // Customer ride creation is intentionally NOT handled here anymore.
+  // cab-live-job-handoff-fix-v1.js is the single authority for create_ride,
+  // customer-token persistence, nearest dispatch tick and voice escalation.
 
   const oldOwner=window.ownerVaahakControl;
   if(typeof oldOwner==='function')window.ownerVaahakControl=function(){oldOwner();setTimeout(loadOwnerLiveVaahak,150)};
