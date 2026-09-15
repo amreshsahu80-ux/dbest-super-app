@@ -7,7 +7,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
 });
 
 (function(){
-  const V='20260916-marketplace-razorpay-delivery-v1';
+  const V='20260916-marketplace-razorpay-delivery-v2';
 
   const applyRuntimeSecrets=()=>{
     const sec=window.DBEST_RUNTIME_SECRETS||{};
@@ -36,6 +36,31 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
     `;document.head.appendChild(s)
   };
   installLogoClarity();
+
+  const installVaahakMarketplacePaymentGuard=()=>{
+    if(!/\/vaahak(?:\.html)?\/?$/i.test(location.pathname)||window.__DBEST_VAAHAK_MKT_PAYMENT_GUARD)return;
+    window.__DBEST_VAAHAK_MKT_PAYMENT_GUARD=true;
+    const enforce=()=>{
+      const host=document.getElementById('jobs');
+      if(!host)return;
+      const text=String(host.textContent||'');
+      if(!/Marketplace Delivery/i.test(text))return;
+      const box=host.querySelector('.paymentBox');
+      if(!box)return;
+      const current=String(box.textContent||'');
+      if(/Marketplace Payment/i.test(current)&&!/Cash Received|UPI Received|Other Received/i.test(current))return;
+      const tripStarted=/Trip Started/i.test(text);
+      const verified=/RAZORPAY VERIFIED|Payment Verified|payment has been verified|PREPAID/i.test(text);
+      box.innerHTML=verified
+        ? '<div class="paymentHead"><b>💳 Marketplace Payment</b><span class="paymentPill paid">RAZORPAY VERIFIED</span></div><div class="muted">Customer payment has been verified by DBest through Razorpay.</div><div class="gps" style="margin-top:10px">Complete delivery only after the Customer confirms receipt.</div>'
+        : tripStarted
+          ? '<div class="paymentHead"><b>💳 Marketplace Payment</b><span class="paymentPill">PENDING</span></div><div class="muted">Waiting for the Customer to pay through Razorpay in the DBest order screen. Cash / UPI / Other confirmation is disabled for Marketplace orders.</div><div class="gps" style="margin-top:10px">This status refreshes automatically after successful payment.</div>'
+          : '<div class="paymentHead"><b>💳 Marketplace Payment</b><span class="paymentPill">RAZORPAY</span></div><div class="muted">Customer payment is collected through Razorpay after delivery starts. Cash / UPI / Other confirmation is disabled for Marketplace orders.</div>';
+    };
+    const start=()=>{enforce();new MutationObserver(()=>enforce()).observe(document.documentElement,{childList:true,subtree:true,characterData:true});setInterval(enforce,400)};
+    if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
+  };
+  installVaahakMarketplacePaymentGuard();
 
   const loadScript=(src,attr)=>{
     const load=()=>{if(document.querySelector('script['+attr+']'))return;const s=document.createElement('script');s.src=src;s.async=true;s.setAttribute(attr,'1');(document.body||document.documentElement).appendChild(s)};
