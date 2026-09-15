@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='4.0.0';
+const VERSION='4.0.1';
 const cfg=window.DBEST_RUNTIME_CONFIG||{},BASE=String(cfg.supabaseUrl||'').replace(/\/$/,''),KEY=String(cfg.supabasePublishableKey||''),HAND=BASE+'/functions/v1/marketplace-handover-live',ORDERS=BASE+'/functions/v1/marketplace-member-orders';
 let current='',payBusy=false,lastCentral='';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -16,7 +16,7 @@ function active(o){return !o.completed_at&&!o.cancelled_at&&!/Delivered|Complete
 async function resolveOrder(id){const rows=await allOrders();let o=rows.find(x=>String(x.id)===String(id));if(o)return o;const total=visibleTotal(),txt=String(root()?.textContent||'').toLowerCase();let c=rows.filter(active);if(total)c=c.filter(x=>Math.abs(Number(x.collect_amount||x.order_value||0)-total)<0.01);const scored=c.map(x=>{const items=Array.isArray(x.items)?x.items:[];const hits=items.filter(i=>txt.includes(String(i.name||'').toLowerCase())).length;return{x,hits,ts:+new Date(x.created_at||0)}}).sort((a,b)=>b.hits-a.hits||b.ts-a.ts);return scored[0]?.x||rows.sort((a,b)=>+new Date(b.created_at||0)-+new Date(a.created_at||0))[0]||null}
 function isPaid(o){return /paid|prepaid|received|verified/i.test(String(o?.payment_status||o?.job?.payment_status||''))}
 function isPad(o){return /pay\s*online\s*at\s*delivery|pay_at_delivery|payment at delivery/i.test(String(o?.payment_method||''))}
-function outForDelivery(o){return !!(o?.picked_up_at||o?.out_for_delivery_at||o?.derived?.picked_up_at)||/out for delivery|picked up|customer confirmed|delivery pending/i.test(String(o?.status||''))}
+function outForDelivery(o){return !!(o?.picked_up_at||o?.out_for_delivery_at||o?.derived?.picked_up_at)||/out for delivery|delivery in progress|trip started|picked up|customer confirmed|delivery pending/i.test(String(o?.status||''))}
 function pricing(o){const items=Array.isArray(o?.items)?o.items:[];const subtotal=Math.round(items.reduce((a,i)=>a+Number(i.price||0)*Number(i.qty||1),0)*100)/100,delivery=Number(o?.delivery_fee||0),total=Number(o?.collect_amount||o?.order_value||0),tax=Math.max(0,Math.round((total-subtotal-delivery)*100)/100);return{subtotal,delivery,tax,total}}
 function loadRazorpay(){if(window.Razorpay)return Promise.resolve();return new Promise((ok,no)=>{const s=document.createElement('script');s.src='https://checkout.razorpay.com/v1/checkout.js';s.onload=ok;s.onerror=()=>no(new Error('Unable to load Razorpay'));document.head.appendChild(s)})}
 function toastMsg(s){try{typeof toast==='function'?toast(s):alert(s)}catch(_){}}
