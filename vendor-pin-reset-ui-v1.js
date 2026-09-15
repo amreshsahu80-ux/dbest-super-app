@@ -13,3 +13,9 @@
   function install(){const login=document.getElementById('login');if(login&&!document.getElementById('dbestVendorForgotPin')){const form=login.querySelector('form');if(form){const btn=document.createElement('button');btn.id='dbestVendorForgotPin';btn.type='button';btn.className='btn soft';btn.textContent='Forgot / Reset PIN';btn.style.marginTop='10px';btn.onclick=()=>{const val=form.querySelector('[name="login"]')?.value||'';window.DBEST_VENDOR_PIN_RESET.open(String(val).includes('@')?val:'')};form.appendChild(btn)}}const account=document.getElementById('panel-account');if(account&&!document.getElementById('dbestVendorChangePin')){const card=account.querySelector('.card')||account;const btn=document.createElement('button');btn.id='dbestVendorChangePin';btn.type='button';btn.className='btn soft';btn.textContent='🔐 Change PIN';btn.style.marginTop='12px';btn.onclick=changeOwn;card.appendChild(btn)}}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();new MutationObserver(()=>install()).observe(document.documentElement,{subtree:true,childList:true});
 })();
+
+(function(){
+  const attr='data-dbest-vendor-compliance-image-v1';
+  const load=()=>{if(document.querySelector('script['+attr+']'))return;const s=document.createElement('script');s.src='/vendor-compliance-and-image-v1.js?v=20260915-2306';s.async=true;s.setAttribute(attr,'1');(document.body||document.documentElement).appendChild(s)};
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',load,{once:true});else load();
+})();
