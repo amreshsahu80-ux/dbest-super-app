@@ -28,8 +28,17 @@ module.exports=async function handler(req,res){
     const memberId=clean(sessions?.[0]?.member_id,80);
     if(!memberId)return send(res,401,{ok:false,error:'member_session_invalid'});
 
-    const txId=clean(req.body?.transactionId,120);
-    if(!txId)return send(res,400,{ok:false,error:'transaction_id_required'});
+    let txId=clean(req.body?.transactionId,120);
+    const requestedOrderId=clean(req.body?.orderId,120);
+    if(!txId&&requestedOrderId){
+      const childRows=await sb('marketplace_orders_live?id=eq.'+encodeURIComponent(requestedOrderId)+'&customer_member_id=eq.'+encodeURIComponent(memberId)+'&select=id,master_order_id&limit=1');
+      const masterIdFromChild=clean(childRows?.[0]?.master_order_id,100);
+      if(!masterIdFromChild)return send(res,404,{ok:false,error:'marketplace_order_not_found'});
+      const masterRows=await sb('marketplace_master_orders_live?id=eq.'+encodeURIComponent(masterIdFromChild)+'&customer_member_id=eq.'+encodeURIComponent(memberId)+'&select=id,parent_tx_id&limit=1');
+      txId=clean(masterRows?.[0]?.parent_tx_id,120);
+      if(!txId)return send(res,404,{ok:false,error:'verified_transaction_not_found'});
+    }
+    if(!txId)return send(res,400,{ok:false,error:'transaction_or_order_id_required'});
     const txRows=await sb('transactions?transaction_id=eq.'+encodeURIComponent(txId)+'&select=transaction_id,transaction_date,section,subsection,actor_name,actor_ref,amount,payment_mode,payment_status,reference,metadata&limit=1');
     const tx=txRows?.[0];
     if(!tx)return send(res,404,{ok:false,error:'transaction_not_found'});
