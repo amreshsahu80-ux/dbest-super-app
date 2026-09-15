@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='1.2.0';
+const VERSION='1.3.0';
 const MEMBER_ROLES=new Set(['guest','promoter','prime','leader']);
 const recent=new Map();
 let lastCreatedAt=0;
@@ -12,6 +12,7 @@ function ownTxs(){try{return (typeof txs!=='undefined'&&Array.isArray(txs)?txs:[
 function visible(el){if(!el)return false;try{const s=getComputedStyle(el);if(s.display==='none'||s.visibility==='hidden')return false;const r=el.getBoundingClientRect();return !!(r.width||r.height)}catch(e){return false}}
 function root(){try{const a=[...document.querySelectorAll('.sectionContent')].filter(visible);return a.pop()||null}catch(e){return null}}
 function clean(s){return String(s||'').replace(/\s+/g,' ').trim().slice(0,180)}
+function marketplaceRazorpayTarget(el){try{return !!(el?.closest?.('[data-dbest-marketplace-payment]')||el?.matches?.('[data-pay-marketplace]')||el?.closest?.('[data-pay-marketplace]'))}catch(e){return false}}
 function context(target){
   const r=root();
   let section=clean(r?.querySelector?.('.sectionHero b')?.textContent||r?.querySelector?.('.memberMiniHead b')?.textContent||r?.querySelector?.('h1,h2')?.textContent||'DBest Service');
@@ -114,6 +115,7 @@ document.addEventListener('click',function(e){
   if(!isMember())return;
   const a=e.target.closest?.('a[href]');if(a){const u=safeExternal(a.href);if(u)setTimeout(()=>recordExternal(u.toString(),a,'External link opened'),0);return}
   const b=e.target.closest?.('button,[role="button"]');if(!b||!transactionalPage())return;
+  if(marketplaceRazorpayTarget(b))return;
   if(b.closest?.('[data-dbest-universal-deeplink]')||/dbestUniversalExternalGo/.test(String(b.getAttribute?.('onclick')||'')))return;
   if(String(b.getAttribute?.('type')||'').toLowerCase()==='submit'||b.closest?.('form'))return;
   const label=clean(b.textContent||b.getAttribute?.('aria-label')||'');
@@ -125,7 +127,7 @@ document.addEventListener('click',function(e){
 document.addEventListener('submit',function(e){
   if(!isMember()||!transactionalPage())return;
   const form=e.target;if(!(form instanceof HTMLFormElement))return;
-  if(nonTransactionForm(form))return;
+  if(marketplaceRazorpayTarget(form)||nonTransactionForm(form))return;
   if(form.closest?.('.owner55,.ownerStudio,.dbestFinanceOwnerControl,#dbestMemberLoginOtpOverlay,#dbestOwnerLoginOtpOverlay'))return;
   const txt=clean(form.innerText||'');
   if(!/(pay|book|buy|purchase|order|apply|application|request|checkout|confirm|invest|renew|proceed to payment|place order)/i.test(txt))return;
