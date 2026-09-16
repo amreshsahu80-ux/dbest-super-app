@@ -23,7 +23,7 @@
     {"source": "/owner", "destination": "/index.html"},
     {"source": "/Vendor", "destination": "/vendor-alert-wrapper.html"},
     {"source": "/ServicePartner", "destination": "/service-partner-alert-wrapper.html"},
-    {"source": "/SuperAdmin", "destination": "/super-admin-wrapper.html"},
+    {"source": "/SuperAdmin", "destination": "/territory-admin-standalone.html"},
     {"source": "/Vaahak/runtime-config.js", "destination": "/runtime-config.js"},
     {"source": "/vaahak/runtime-config.js", "destination": "/runtime-config.js"}
   ],
@@ -56,12 +56,14 @@
     {"source": "/ServicePartner", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"},{"key": "X-Robots-Tag", "value": "noindex, nofollow, noarchive"}]},
     {"source": "/service-partner-alert-wrapper.html", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}]},
     {"source": "/SuperAdmin", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"},{"key": "X-Robots-Tag", "value":"noindex, nofollow, noarchive"}]},
+    {"source": "/territory-admin-standalone.html", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"},{"key":"X-Robots-Tag","value":"noindex, nofollow, noarchive"}]},
     {"source": "/super-admin-wrapper.html", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"},{"key":"X-Robots-Tag","value":"noindex, nofollow, noarchive"}]},
     {"source": "/vaahak-standalone-v2.html", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"},{"key":"X-Robots-Tag","value":"noindex, nofollow, noarchive"}]},
     {"source": "/runtime-config.js", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}]},
     {"source": "/Vaahak/runtime-config.js", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}]},
     {"source": "/vaahak-(.*).js", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}]},
     {"source": "/service-partner-(.*).js", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}]},
-    {"source": "/super-admin-(.*).js", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}]}
+    {"source": "/super-admin-(.*).js", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}]},
+    {"source": "/territory-admin-(.*).js", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}]}
   ]
 }
