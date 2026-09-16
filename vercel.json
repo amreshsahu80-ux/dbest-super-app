@@ -25,7 +25,7 @@
     {"source": "/Vendor", "destination": "/vendor-alert-wrapper.html"},
     {"source": "/ServicePartner", "destination": "/service-partner-entry.html"},
     {"source": "/ServicePartnerDashboard", "destination": "/service-partner-alert-wrapper.html"},
-    {"source": "/SuperAdmin", "destination": "/territory-admin-standalone.html"},
+    {"source": "/SuperAdmin", "destination": "/territory-admin-standalone-v2.html"},
     {"source": "/Vaahak/runtime-config.js", "destination": "/runtime-config.js"},
     {"source": "/vaahak/runtime-config.js", "destination": "/runtime-config.js"}
   ],
@@ -60,7 +60,7 @@
     {"source": "/service-partner-entry.html", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}]},
     {"source": "/service-partner-alert-wrapper.html", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}]},
     {"source": "/SuperAdmin", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"},{"key": "X-Robots-Tag", "value":"noindex, nofollow, noarchive"}]},
-    {"source": "/territory-admin-standalone.html", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"},{"key":"X-Robots-Tag","value":"noindex, nofollow, noarchive"}]},
+    {"source": "/territory-admin-standalone-v2.html", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"},{"key":"X-Robots-Tag","value":"noindex, nofollow, noarchive"}]},
     {"source": "/super-admin-wrapper.html", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"},{"key":"X-Robots-Tag","value":"noindex, nofollow, noarchive"}]},
     {"source": "/vaahak-standalone-v2.html", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"},{"key":"X-Robots-Tag","value":"noindex, nofollow,noarchive"}]},
     {"source": "/runtime-config.js", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}]},
