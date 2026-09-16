@@ -1,12 +1,12 @@
 (function(){
 'use strict';
-const VERSION='20260913-live-wallet-dashboard-perf-v2';
+const VERSION='20260916-wallet-direct-business-v3';
 if(window.DBEST_MEMBER_DASHBOARD_LIVE?.version===VERSION)return;
 const cfg=window.DBEST_RUNTIME_CONFIG||{};
 const BASE=String(cfg.supabaseUrl||'').replace(/\/$/,'');
 const KEY=String(cfg.supabasePublishableKey||'');
 const TOKEN_KEY='dbest_member_live_token';
-const CACHE_MS=30000;
+const CACHE_MS=10000;
 const MERGE_LIMIT=60;
 let cache=null,cacheAt=0,pending=null;
 const money=v=>'₹'+Number(v||0).toLocaleString('en-IN',{maximumFractionDigits:2});
@@ -20,8 +20,11 @@ async function load(force=false){
  pending=(async()=>{const r=await fetch(BASE+'/functions/v1/member-network-live',{method:'POST',cache:'no-store',headers:{apikey:KEY,Authorization:'Bearer '+KEY,'Content-Type':'application/json','x-dbest-member-token':token()},body:'{}'});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'dashboard_summary_failed');cache=d;cacheAt=Date.now();mergeTx(d.transactions||[]);return d})().finally(()=>pending=null);
  return pending;
 }
-function setByLabel(root,label,value){for(const card of root.querySelectorAll('.earnCard,.kpi')){const s=card.querySelector('small');if(String(s?.textContent||'').trim()===label){const b=card.querySelector('b');if(b)b.textContent=String(value);return true}}return false}
-function paint(d,id){const s=d?.summary;if(!s||String(d.viewerId||'')!==String(id||''))return;const root=document.querySelector('.classicDash');if(!root)return;
+function setByLabel(root,label,value,selectors='.earnCard,.kpi,.directCard'){
+ for(const card of root.querySelectorAll(selectors)){const s=card.querySelector('small');if(String(s?.textContent||'').trim()===label){const b=card.querySelector('b');if(b)b.textContent=String(value);return true}}
+ return false;
+}
+function paintMember(d,id){const s=d?.summary;if(!s||String(d.viewerId||'')!==String(id||''))return;const root=document.querySelector('.classicDash');if(!root)return;
  setByLabel(root,'Your Earnings Today',money(s.earnings?.today));
  setByLabel(root,'This Month Till Now',money(s.earnings?.month));
  setByLabel(root,'This Year',money(s.earnings?.year));
@@ -35,12 +38,41 @@ function paint(d,id){const s=d?.summary;if(!s||String(d.viewerId||'')!==String(i
  setByLabel(root,'Team Business',money(s.network?.business));
  setByLabel(root,'Downline Earnings',money(s.network?.earnings));
 }
+function paintDirect(d,id){
+ const s=d?.summary;if(!s||String(d.viewerId||'')!==String(id||''))return;
+ const root=document.querySelector('.classicDash');if(!root||!/My Direct Business/i.test(String(document.body.innerText||'')))return;
+ const p=s.direct?.periods||{};
+ setByLabel(root,'Direct Earning Today',money(p.today));
+ setByLabel(root,'This Month',money(p.month));
+ setByLabel(root,'This Year',money(p.year));
+ setByLabel(root,'Since Joining',money(p.all));
+ setByLabel(root,'Total Direct Earning',money(s.direct?.earnings));
+ const breakdown=Array.isArray(s.direct?.breakdown)?s.direct.breakdown:[];
+ const byService=new Map(breakdown.map(x=>[String(x.serviceKey||'').toLowerCase(),x]));
+ for(const card of root.querySelectorAll('.sectionEarningCard')){
+   const label=String(card.querySelector('small')?.textContent||'').trim();
+   let key='';
+   if(/marketplace/i.test(label))key='marketplace';
+   else if(/cab/i.test(label))key='cab';
+   else if(/mutual/i.test(label))key='mutual funds';
+   else if(/flight|hotel|package|travel/i.test(label))key='travel';
+   if(!key)continue;
+   let x=byService.get(key);
+   if(!x&&key==='cab')x=byService.get('cab booking');
+   if(!x&&key==='travel')x=byService.get('flights hotels packages');
+   if(!x)continue;
+   const b=card.querySelector('b');if(b)b.textContent=money(x.earning);
+   const sm=card.querySelectorAll('small')[1];if(sm)sm.textContent=Number(x.count||0)+' payout event'+(Number(x.count||0)===1?'':'s')+' • Payout base '+money(x.business);
+ }
+}
 function install(){
  if(typeof window.qualifyingTx==='function'&&!window.qualifyingTx.__dbestVerifiedPatched){const old=window.qualifyingTx;const patched=function(x){return old(x)||(String(x?.section||'')!=='Membership'&&/Verified/i.test(String(x?.status||''))&&!/(Failed|Rejected|Cancelled|Pending)/i.test(String(x?.status||'')))};patched.__dbestVerifiedPatched=true;window.qualifyingTx=patched}
- if(typeof window.memberDash!=='function'||window.memberDash.__dbestLiveWrapped)return false;
- const original=window.memberDash;
- const wrapped=function(id){const r=original.apply(this,arguments);load(false).then(d=>paint(d,id)).catch(e=>console.warn('DBest live dashboard summary',e));return r};wrapped.__dbestLiveWrapped=true;window.memberDash=wrapped;return true;
+ let ok=false;
+ if(typeof window.memberDash==='function'&&!window.memberDash.__dbestLiveWrapped){const original=window.memberDash;const wrapped=function(id){const r=original.apply(this,arguments);setTimeout(()=>load(true).then(d=>paintMember(d,id)).catch(()=>{}),60);return r};wrapped.__dbestLiveWrapped=true;window.memberDash=wrapped;ok=true}
+ if(typeof window.directBusinessDashboard==='function'&&!window.directBusinessDashboard.__dbestWalletWrapped){const original=window.directBusinessDashboard;const wrapped=function(id){const r=original.apply(this,arguments);setTimeout(()=>load(true).then(d=>paintDirect(d,id)).catch(e=>console.warn('DBest direct wallet summary',e)),80);return r};wrapped.__dbestWalletWrapped=true;window.directBusinessDashboard=wrapped;ok=true}
+ return ok;
 }
-let tries=0;const timer=setInterval(()=>{tries++;if(install()||tries>80)clearInterval(timer)},100);
-window.DBEST_MEMBER_DASHBOARD_LIVE={version:VERSION,refresh:async()=>{const d=await load(true);const id=window.session?.id;paint(d,id);return d}};
+let tries=0;const timer=setInterval(()=>{tries++;install();if(tries>120)clearInterval(timer)},100);
+document.addEventListener('click',()=>setTimeout(()=>{install();const id=window.session?.id;if(id)load(false).then(d=>{paintMember(d,id);paintDirect(d,id)}).catch(()=>{})},120),true);
+window.DBEST_MEMBER_DASHBOARD_LIVE={version:VERSION,refresh:async()=>{const d=await load(true);const id=window.session?.id;paintMember(d,id);paintDirect(d,id);return d}};
 })();
