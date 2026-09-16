@@ -1,0 +1,19 @@
+(function(){
+'use strict';
+const VERSION='20260916-territory-admin-hierarchy-ui-v1';
+const cfg=window.DBEST_RUNTIME_CONFIG||{},BASE=String(cfg.supabaseUrl||'').replace(/\/$/,''),KEY=String(cfg.supabasePublishableKey||'');
+if(!BASE||!KEY)return;
+const API=BASE+'/functions/v1/territory-admin-hierarchy-live',TOKEN='dbest_territory_admin_token';
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const tok=()=>{try{return sessionStorage.getItem(TOKEN)||''}catch(_){return''}};
+async function load(){const t=tok();if(!t)return null;const r=await fetch(API,{method:'POST',cache:'no-store',headers:{apikey:KEY,Authorization:'Bearer '+KEY,'Content-Type':'application/json','x-dbest-territory-admin-token':t},body:'{}'});if(!r.ok)return null;return r.json().catch(()=>null)}
+function badge(v,good){return `<span style="display:inline-block;padding:4px 8px;border-radius:999px;background:${good?'#eaf8ef':'#fff5db'};color:${good?'#16743b':'#7a5b00'};font-size:11px;font-weight:800;margin:2px 4px 2px 0">${esc(v)}</span>`}
+function territory(x){const a=x.assignment||{};return [a.district_name,a.state_name,a.zone_name?`${a.zone_name} Zone`:null].filter(Boolean).join(' • ')}
+function card(x){return `<div style="padding:12px 0;border-top:1px solid #edf1f6"><div style="display:flex;gap:10px;justify-content:space-between;align-items:flex-start;flex-wrap:wrap"><div><b>${esc(x.name)} • ${esc(x.admin_id)}</b><div style="font-size:12px;color:#66758e;line-height:1.5">${esc(x.admin_level)} Admin • ${esc(territory(x))}</div></div><div>${badge(x.status,/active/i.test(String(x.status||'')))} ${badge('Payment '+(x.onboarding_payment_status||'Pending'),/paid/i.test(String(x.onboarding_payment_status||'')))}</div></div><div style="margin-top:5px;font-size:12px;color:#66758e">Agreement: ${esc(x.agreement_status||'Pending')} • KYC: ${esc(x.kyc_status||'Pending')} • Owner Approval: ${esc(x.owner_approval_status||'Pending')}</div></div>`}
+let cached=null,busy=false;
+async function install(){if(location.pathname.toLowerCase()!='/superadmin'||new URLSearchParams(location.search).get('manage')==='1'||new URLSearchParams(location.search).get('agreement')==='1'||!tok())return;if(document.getElementById('dbestAdminNetwork'))return;const main=document.querySelector('main.main');if(!main||busy)return;busy=true;try{cached=cached||await load();if(!cached||!cached.admin||cached.admin.admin_level==='District')return;const s=cached.summary||{},list=cached.subordinates||[];const host=document.createElement('section');host.id='dbestAdminNetwork';host.className='card';host.style.marginTop='12px';const isState=cached.admin.admin_level==='State';host.innerHTML=`<div style="display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap"><div><h2 style="margin:0 0 4px">My Admin Network</h2><div class="meta">${isState?'District Admins reporting under your State':'State and District Admins reporting under your Zone'}</div></div><div style="display:flex;gap:8px;flex-wrap:wrap"><span class="badge">State Admins: ${Number(s.stateAdmins||0)}</span><span class="badge">District Admins: ${Number(s.districtAdmins||0)}</span></div></div><div style="margin-top:10px">${list.map(card).join('')||'<p class="meta">No subordinate Territory Admins are assigned yet.</p>'}</div>`;
+const note=main.querySelector('.note');if(note&&note.nextSibling)main.insertBefore(host,note.nextSibling);else main.prepend(host)}finally{busy=false}}
+[500,1200,2500].forEach(ms=>setTimeout(install,ms));
+new MutationObserver(()=>{clearTimeout(window.__dbestHierarchyTick);window.__dbestHierarchyTick=setTimeout(install,120)}).observe(document.documentElement,{childList:true,subtree:true});
+window.DBEST_TERRITORY_HIERARCHY={version:VERSION,refresh:async()=>{cached=null;document.getElementById('dbestAdminNetwork')?.remove();await install()}};
+})();
