@@ -7,7 +7,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
 });
 
 (function(){
-  const V='20260916-marketplace-accounting-v3';
+  const V='20260916-marketplace-accounting-v4';
 
   const applyRuntimeSecrets=()=>{
     const sec=window.DBEST_RUNTIME_SECRETS||{};
@@ -47,15 +47,17 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
       if(!/Marketplace Delivery/i.test(text))return;
       const box=host.querySelector('.paymentBox');
       if(!box)return;
-      const current=String(box.textContent||'');
-      if(/Marketplace Payment/i.test(current)&&!/Cash Received|UPI Received|Other Received/i.test(current))return;
-      const tripStarted=/Trip Started/i.test(text);
+      const tripStarted=/Trip Started|Out for Delivery|Delivery in Progress|Picked Up/i.test(text);
       const verified=/RAZORPAY VERIFIED|Payment Verified|payment has been verified|PREPAID/i.test(text);
-      box.innerHTML=verified
-        ? '<div class="paymentHead"><b>💳 Marketplace Payment</b><span class="paymentPill paid">RAZORPAY VERIFIED</span></div><div class="muted">Customer payment has been verified by DBest through Razorpay.</div><div class="gps" style="margin-top:10px">Complete delivery only after the Customer confirms receipt.</div>'
-        : tripStarted
-          ? '<div class="paymentHead"><b>💳 Marketplace Payment</b><span class="paymentPill">PENDING</span></div><div class="muted">Waiting for the Customer to pay through Razorpay in the DBest order screen. Cash / UPI / Other confirmation is disabled for Marketplace orders.</div><div class="gps" style="margin-top:10px">This status refreshes automatically after successful payment.</div>'
-          : '<div class="paymentHead"><b>💳 Marketplace Payment</b><span class="paymentPill">RAZORPAY</span></div><div class="muted">Customer payment is collected through Razorpay after delivery starts. Cash / UPI / Other confirmation is disabled for Marketplace orders.</div>';
+      if(verified){
+        box.innerHTML='<div class="paymentHead"><b>💳 Marketplace Payment</b><span class="paymentPill paid">RAZORPAY VERIFIED</span></div><div class="muted">Customer payment has been verified by DBest through Razorpay.</div><div class="gps" style="margin-top:10px">Complete delivery only after the Customer confirms receipt.</div><button type="button" class="btn wide" id="dbestRuntimeMarketplaceComplete" style="margin-top:12px">✅ Complete Delivery</button>';
+        const btn=document.getElementById('dbestRuntimeMarketplaceComplete');
+        if(btn)btn.onclick=()=>{try{if(typeof completeJob==='function'&&typeof currentJob!=='undefined'&&currentJob?.id)return completeJob(currentJob.id);if(typeof window.completeJob==='function')return window.completeJob(window.currentJob?.id)}catch(e){console.warn('DBest Marketplace complete action',e)}};
+        return;
+      }
+      box.innerHTML=tripStarted
+        ? '<div class="paymentHead"><b>💳 Marketplace Payment</b><span class="paymentPill">PENDING</span></div><div class="muted">Waiting for the Customer to pay through Razorpay in the DBest order screen. Cash / UPI / Other confirmation is disabled for Marketplace orders.</div><div class="gps" style="margin-top:10px">This status refreshes automatically after successful payment.</div>'
+        : '<div class="paymentHead"><b>💳 Marketplace Payment</b><span class="paymentPill">RAZORPAY</span></div><div class="muted">Customer payment is collected through Razorpay after delivery starts. Cash / UPI / Other confirmation is disabled for Marketplace orders.</div>';
     };
     const start=()=>{enforce();new MutationObserver(()=>enforce()).observe(document.documentElement,{childList:true,subtree:true,characterData:true});setInterval(enforce,400)};
     if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
