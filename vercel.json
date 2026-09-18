@@ -3,11 +3,6 @@
   "trailingSlash": false,
   "redirects": [
     {
-      "source": "/owner",
-      "destination": "/SuperAdmin?manage=1",
-      "permanent": false
-    },
-    {
       "source": "/owner/",
       "destination": "/owner",
       "permanent": true
@@ -94,6 +89,10 @@
     }
   ],
   "rewrites": [
+    {
+      "source": "/owner",
+      "destination": "/index.html"
+    },
     {
       "source": "/Vendor",
       "destination": "/vendor-alert-wrapper.html"
