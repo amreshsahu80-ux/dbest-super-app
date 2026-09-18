@@ -2,72 +2,464 @@
   "cleanUrls": false,
   "trailingSlash": false,
   "redirects": [
-    {"source": "/owner/", "destination": "/owner", "permanent": true},
-    {"source": "/vaahak", "destination": "/vaahak-standalone-v2.html?v=20260914-vh4", "permanent": false},
-    {"source": "/vaahak/", "destination": "/vaahak-standalone-v2.html?v=20260914-vh4", "permanent": false},
-    {"source": "/Vaahak", "destination": "/vaahak-standalone-v2.html?v=20260914-vh4", "permanent": false},
-    {"source": "/Vaahak/", "destination": "/vaahak-standalone-v2.html?v=20260914-vh4", "permanent": false},
-    {"source": "/vaahak.html", "destination": "/vaahak-standalone-v2.html?v=20260914-vh4", "permanent": false},
-    {"source": "/vaahak-alert-wrapper.html", "destination": "/vaahak-standalone-v2.html?v=20260914-vh4", "permanent": false},
-    {"source": "/vendor", "destination": "/Vendor", "permanent": true},
-    {"source": "/vendor/", "destination": "/Vendor", "permanent": true},
-    {"source": "/Vendor/", "destination": "/Vendor", "permanent": true},
-    {"source": "/servicepartner", "destination": "/ServicePartner", "permanent": true},
-    {"source": "/servicepartner/", "destination": "/ServicePartner", "permanent": true},
-    {"source": "/ServicePartner/", "destination": "/ServicePartner", "permanent": true},
-    {"source": "/servicepartnerdashboard", "destination": "/ServicePartnerDashboard", "permanent": true},
-    {"source": "/superadmin", "destination": "/SuperAdmin", "permanent": true},
-    {"source": "/superadmin/", "destination": "/SuperAdmin", "permanent": true},
-    {"source": "/SuperAdmin/", "destination": "/SuperAdmin", "permanent": true}
+    {
+      "source": "/owner",
+      "destination": "/SuperAdmin?manage=1",
+      "permanent": false
+    },
+    {
+      "source": "/owner/",
+      "destination": "/owner",
+      "permanent": true
+    },
+    {
+      "source": "/vaahak",
+      "destination": "/vaahak-standalone-v2.html?v=20260914-vh4",
+      "permanent": false
+    },
+    {
+      "source": "/vaahak/",
+      "destination": "/vaahak-standalone-v2.html?v=20260914-vh4",
+      "permanent": false
+    },
+    {
+      "source": "/Vaahak",
+      "destination": "/vaahak-standalone-v2.html?v=20260914-vh4",
+      "permanent": false
+    },
+    {
+      "source": "/Vaahak/",
+      "destination": "/vaahak-standalone-v2.html?v=20260914-vh4",
+      "permanent": false
+    },
+    {
+      "source": "/vaahak.html",
+      "destination": "/vaahak-standalone-v2.html?v=20260914-vh4",
+      "permanent": false
+    },
+    {
+      "source": "/vaahak-alert-wrapper.html",
+      "destination": "/vaahak-standalone-v2.html?v=20260914-vh4",
+      "permanent": false
+    },
+    {
+      "source": "/vendor",
+      "destination": "/Vendor",
+      "permanent": true
+    },
+    {
+      "source": "/vendor/",
+      "destination": "/Vendor",
+      "permanent": true
+    },
+    {
+      "source": "/Vendor/",
+      "destination": "/Vendor",
+      "permanent": true
+    },
+    {
+      "source": "/servicepartner",
+      "destination": "/ServicePartner",
+      "permanent": true
+    },
+    {
+      "source": "/servicepartner/",
+      "destination": "/ServicePartner",
+      "permanent": true
+    },
+    {
+      "source": "/ServicePartner/",
+      "destination": "/ServicePartner",
+      "permanent": true
+    },
+    {
+      "source": "/servicepartnerdashboard",
+      "destination": "/ServicePartnerDashboard",
+      "permanent": true
+    },
+    {
+      "source": "/superadmin",
+      "destination": "/SuperAdmin",
+      "permanent": true
+    },
+    {
+      "source": "/superadmin/",
+      "destination": "/SuperAdmin",
+      "permanent": true
+    },
+    {
+      "source": "/SuperAdmin/",
+      "destination": "/SuperAdmin",
+      "permanent": true
+    }
   ],
   "rewrites": [
-    {"source": "/owner", "destination": "/index.html"},
-    {"source": "/Vendor", "destination": "/vendor-alert-wrapper.html"},
-    {"source": "/ServicePartner", "destination": "/service-partner-entry.html"},
-    {"source": "/ServicePartnerDashboard", "destination": "/service-partner-alert-wrapper.html"},
-    {"source": "/SuperAdmin", "destination": "/territory-admin-standalone-v2.html"},
-    {"source": "/Vaahak/runtime-config.js", "destination": "/runtime-config.js"},
-    {"source": "/vaahak/runtime-config.js", "destination": "/runtime-config.js"}
+    {
+      "source": "/Vendor",
+      "destination": "/vendor-alert-wrapper.html"
+    },
+    {
+      "source": "/ServicePartner",
+      "destination": "/service-partner-entry.html"
+    },
+    {
+      "source": "/ServicePartnerDashboard",
+      "destination": "/service-partner-alert-wrapper.html"
+    },
+    {
+      "source": "/SuperAdmin",
+      "destination": "/territory-admin-standalone-v2.html"
+    },
+    {
+      "source": "/Vaahak/runtime-config.js",
+      "destination": "/runtime-config.js"
+    },
+    {
+      "source": "/vaahak/runtime-config.js",
+      "destination": "/runtime-config.js"
+    }
   ],
   "headers": [
-    {"source": "/(.*)", "headers": [
-      {"key": "X-Content-Type-Options", "value": "nosniff"},
-      {"key": "Referrer-Policy", "value": "strict-origin-when-cross-origin"},
-      {"key": "X-Frame-Options", "value": "DENY"},
-      {"key": "Content-Security-Policy", "value": "frame-ancestors 'none'; base-uri 'self'; object-src 'none'"},
-      {"key": "Permissions-Policy", "value": "camera=(), microphone=(self), geolocation=(self), usb=(), browsing-topics=()"}
-    ]},
-    {"source": "/", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}]},
-    {"source": "/index.html", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}]},
-    {"source": "/index-26.html", "headers": [{"key": "Cache-Control", "value": "public, max-age=300, stale-while-revalidate=3600"}]},
-    {"source": "/(.*).js", "headers": [{"key": "Cache-Control", "value": "public, max-age=300, stale-while-revalidate=3600"}]},
-    {"source": "/partner-alerts-v1.js", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}]},
-    {"source": "/ride-live-ui-finalizer.js", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}]},
-    {"source": "/cab-live-job-handoff-fix-v1.js", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}]},
-    {"source": "/customer-google-live-tracking-v1.js", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}]},
-    {"source": "/(.*).css", "headers": [{"key": "Cache-Control", "value": "public, max-age=300, stale-while-revalidate=3600"}]},
-    {"source": "/(.*).png", "headers": [{"key": "Cache-Control", "value": "public, max-age=86400, stale-while-revalidate=604800"}]},
-    {"source": "/(.*).jpg", "headers": [{"key": "Cache-Control", "value": "public, max-age=86400, stale-while-revalidate=604800"}]},
-    {"source": "/(.*).jpeg", "headers": [{"key": "Cache-Control", "value": "public, max-age=86400, stale-while-revalidate=604800"}]},
-    {"source": "/(.*).webp", "headers": [{"key": "Cache-Control", "value": "public, max-age=86400, stale-while-revalidate=604800"}]},
-    {"source": "/(.*).svg", "headers": [{"key": "Cache-Control", "value": "public, max-age=86400, stale-while-revalidate=604800"}]},
-    {"source": "/owner", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"},{"key": "X-Robots-Tag", "value": "noindex, nofollow, noarchive"}]},
-    {"source": "/Vendor", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}]},
-    {"source": "/vendor.html", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}]},
-    {"source": "/vendor-alert-wrapper.html", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}]},
-    {"source": "/ServicePartner", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"},{"key": "X-Robots-Tag", "value": "noindex, nofollow, noarchive"}]},
-    {"source": "/ServicePartnerDashboard", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"},{"key": "X-Robots-Tag", "value": "noindex, nofollow, noarchive"}]},
-    {"source": "/service-partner-entry.html", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}]},
-    {"source": "/service-partner-alert-wrapper.html", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}]},
-    {"source": "/SuperAdmin", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"},{"key": "X-Robots-Tag", "value":"noindex, nofollow, noarchive"}]},
-    {"source": "/territory-admin-standalone-v2.html", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"},{"key":"X-Robots-Tag","value":"noindex, nofollow, noarchive"}]},
-    {"source": "/super-admin-wrapper.html", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"},{"key":"X-Robots-Tag","value":"noindex, nofollow, noarchive"}]},
-    {"source": "/vaahak-standalone-v2.html", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"},{"key":"X-Robots-Tag","value":"noindex, nofollow,noarchive"}]},
-    {"source": "/runtime-config.js", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}]},
-    {"source": "/Vaahak/runtime-config.js", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}]},
-    {"source": "/vaahak-(.*).js", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}]},
-    {"source": "/service-partner-(.*).js", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}]},
-    {"source": "/super-admin-(.*).js", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}]},
-    {"source": "/territory-admin-(.*).js", "headers": [{"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}]}
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "frame-ancestors 'none'; base-uri 'self'; object-src 'none'"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(), microphone=(self), geolocation=(self), usb=(), browsing-topics=()"
+        }
+      ]
+    },
+    {
+      "source": "/",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/index.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/index-26.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=300, stale-while-revalidate=3600"
+        }
+      ]
+    },
+    {
+      "source": "/(.*).js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=300, stale-while-revalidate=3600"
+        }
+      ]
+    },
+    {
+      "source": "/partner-alerts-v1.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/ride-live-ui-finalizer.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/cab-live-job-handoff-fix-v1.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/customer-google-live-tracking-v1.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/(.*).css",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=300, stale-while-revalidate=3600"
+        }
+      ]
+    },
+    {
+      "source": "/(.*).png",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400, stale-while-revalidate=604800"
+        }
+      ]
+    },
+    {
+      "source": "/(.*).jpg",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400, stale-while-revalidate=604800"
+        }
+      ]
+    },
+    {
+      "source": "/(.*).jpeg",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400, stale-while-revalidate=604800"
+        }
+      ]
+    },
+    {
+      "source": "/(.*).webp",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400, stale-while-revalidate=604800"
+        }
+      ]
+    },
+    {
+      "source": "/(.*).svg",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400, stale-while-revalidate=604800"
+        }
+      ]
+    },
+    {
+      "source": "/owner",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0, must-revalidate"
+        },
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow, noarchive"
+        }
+      ]
+    },
+    {
+      "source": "/Vendor",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/vendor.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/vendor-alert-wrapper.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/ServicePartner",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0, must-revalidate"
+        },
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow, noarchive"
+        }
+      ]
+    },
+    {
+      "source": "/ServicePartnerDashboard",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0, must-revalidate"
+        },
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow, noarchive"
+        }
+      ]
+    },
+    {
+      "source": "/service-partner-entry.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/service-partner-alert-wrapper.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/SuperAdmin",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0, must-revalidate"
+        },
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow, noarchive"
+        }
+      ]
+    },
+    {
+      "source": "/territory-admin-standalone-v2.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0, must-revalidate"
+        },
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow, noarchive"
+        }
+      ]
+    },
+    {
+      "source": "/super-admin-wrapper.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0, must-revalidate"
+        },
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow, noarchive"
+        }
+      ]
+    },
+    {
+      "source": "/vaahak-standalone-v2.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0, must-revalidate"
+        },
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow,noarchive"
+        }
+      ]
+    },
+    {
+      "source": "/runtime-config.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/Vaahak/runtime-config.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/vaahak-(.*).js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/service-partner-(.*).js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/super-admin-(.*).js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/territory-admin-(.*).js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0, must-revalidate"
+        }
+      ]
+    }
   ]
 }
