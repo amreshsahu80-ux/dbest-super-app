@@ -500,5 +500,6 @@
       "path": "/api/marketplace/pay-at-delivery-order",
       "schedule": "* * * * *"
     }
-  ]
+  ],
+  "$schema": "https://openapi.vercel.sh/vercel.json"
 }
