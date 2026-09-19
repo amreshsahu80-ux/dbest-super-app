@@ -484,6 +484,15 @@
           "value": "no-store, max-age=0, must-revalidate"
         }
       ]
+    },
+    {
+      "source": "/owner-push-notification-center-v1.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0, must-revalidate"
+        }
+      ]
     }
   ]
 }
