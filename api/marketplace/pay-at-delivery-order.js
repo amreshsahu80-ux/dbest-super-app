@@ -21,6 +21,8 @@ async function sb(path,{method='GET',body,prefer='return=representation'}={}){
   return data;
 }
 
+async function triggerVendorVoice(orderId){try{await fetch(SUPABASE_URL+'/functions/v1/partner-voice-alert',{method:'POST',headers:{apikey:SERVICE_KEY,'Content-Type':'application/json'},body:JSON.stringify({action:'vendor_order',orderId})});}catch(e){console.error('[vendor voice alert]',e)}}
+
 module.exports = async function handler(req,res){
   if(req.method!=='POST') return send(res,405,{ok:false,error:'method_not_allowed'});
   if(!SERVICE_KEY) return send(res,503,{ok:false,error:'server_persistence_not_configured'});
@@ -105,6 +107,7 @@ module.exports = async function handler(req,res){
         delivery_fee:childDelivery,child_sequence:i+1
       }});
     }
+    const voiceRows=await sb('marketplace_orders_live?master_order_id=eq.'+encodeURIComponent(masterId)+'&select=id');for(const row of voiceRows||[])await triggerVendorVoice(row.id);
     const finalRows=await sb('marketplace_master_orders_live?id=eq.'+encodeURIComponent(masterId)+'&select=id,parent_tx_id,total_amount,payment_method,payment_status,status,child_order_count&limit=1');
     return send(res,200,{ok:true,order:finalRows&&finalRows[0]?finalRows[0]:{id:masterId,total_amount:totalAmount,payment_status:'Pending',status:'Confirmed - Payment Due at Delivery'},message:'Order confirmed. Payment is due online at delivery.'});
   }catch(e){
