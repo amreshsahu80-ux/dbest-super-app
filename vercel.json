@@ -91,7 +91,7 @@
   "rewrites": [
     {
       "source": "/owner",
-      "destination": "/index.html"
+      "destination": "/owner-master-entry.html"
     },
     {
       "source": "/Vendor",
