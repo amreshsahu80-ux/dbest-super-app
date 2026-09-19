@@ -3,7 +3,7 @@
 const cfg=window.DBEST_RUNTIME_CONFIG||{},BASE=String(cfg.supabaseUrl||'').replace(/\/$/,''),KEY=String(cfg.supabasePublishableKey||'');
 const id=new URLSearchParams(location.search).get('id')||'',card=document.getElementById('offerCard');
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-function dest(o){const t=String(o.destination_type||'home');if(t==='custom')return o.destination_url||'/';return '/?openService='+encodeURIComponent(t)}
+function dest(o){const t=String(o.destination_type||'home');if(t==='home')return '/';if(t==='custom')return o.destination_url||'/';return '/?openService='+encodeURIComponent(t)}
 async function run(){
  try{
   const r=await fetch(BASE+'/functions/v1/push-notification-live',{method:'POST',headers:{apikey:KEY,Authorization:'Bearer '+KEY,'Content-Type':'application/json'},body:JSON.stringify({action:'public_offer',id})});
