@@ -497,7 +497,7 @@
   ],
   "crons": [
     {
-      "path": "/api/service-cascade-cron",
+      "path": "/api/marketplace/pay-at-delivery-order",
       "schedule": "* * * * *"
     }
   ]
