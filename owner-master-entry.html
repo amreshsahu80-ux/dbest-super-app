@@ -9,14 +9,14 @@
     html,body{margin:0;min-height:100%;background:#f5f7fb}
     #dbestOwnerBoot{min-height:100dvh;display:grid;place-items:center;padding:24px;font:700 15px system-ui;color:#33415c;text-align:center}
   </style>
-  <script src="/runtime-config.js?v=20260919-owner-master-entry-v1"></script>
+  <script src="/runtime-config.js?v=20260919-owner-master-entry-v2"></script>
 </head>
 <body>
   <div id="dbestOwnerBoot">Opening DBest Project Owner Console…</div>
   <script>
   (async function(){
     try{
-      const BUILD='20260919-owner-master-entry-v1';
+      const BUILD='20260919-owner-master-entry-v2';
       const r=await fetch('/index-26.html?v='+BUILD,{cache:'no-store'});
       if(!r.ok)throw new Error('Unable to load Owner Console');
       let html=await r.text();
@@ -49,7 +49,8 @@
         'owner-vendor-profile-review-v1.js',
         'owner-marketplace-category-control-v1.js',
         'owner-control-deployment-v2.js',
-        'owner-distributor-management-entry-v1.js'
+        'owner-distributor-management-entry-v1.js',
+        'owner-intervention-center-v1.js'
       ].map(function(src){return '<script src="/'+src+'?v='+BUILD+'"><\/script>';}).join('');
 
       const ownerBoot='<script>(function(){function open(){try{if(window.DBEST_OWNER_PORTAL_ROUTE&&window.DBEST_OWNER_PORTAL_ROUTE.open&&location.pathname.toLowerCase()!=="/owner"){location.replace("/owner");return}if(typeof window.ownerLogin==="function"){window.ownerLogin();return}}catch(e){}setTimeout(open,120)}setTimeout(open,80)})();<\/script>';
