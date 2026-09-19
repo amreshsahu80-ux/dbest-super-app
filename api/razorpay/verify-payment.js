@@ -75,6 +75,7 @@ async function persistTransaction({key,payment,order,notes}){
   await sbFetch('/rest/v1/transactions?on_conflict=transaction_id',key,{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(tx)});
   return {centralTransactionId:dbestRef,section,subsection,actorRef,actorName};
 }
+async function triggerVendorVoice(key,orderId){try{await fetch(SUPABASE_URL+'/functions/v1/partner-voice-alert',{method:'POST',headers:{apikey:key,'Content-Type':'application/json'},body:JSON.stringify({action:'vendor_order',orderId})});}catch(e){console.error('[vendor voice alert]',e)}}
 async function activateMarketplaceMaster({key,payment,notes}){
   const masterOrderId=safe(notes.master_order_id,80);if(!masterOrderId)return null;
   const q=new URLSearchParams({select:'id,parent_tx_id,customer_member_id,total_amount,payment_status,status',id:'eq.'+masterOrderId,limit:'1'});
@@ -90,6 +91,7 @@ async function activateMarketplaceMaster({key,payment,notes}){
   const childPatch={payment_method:'Razorpay',payment_status:'Paid',status:'Order Placed',vendor_status:'New Order',updated_at:now};
   await sbFetch('/rest/v1/marketplace_orders_live?master_order_id=eq.'+encodeURIComponent(masterOrderId),key,{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify(childPatch)});
   await sbFetch('/rest/v1/marketplace_delivery_groups_live?master_order_id=eq.'+encodeURIComponent(masterOrderId),key,{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({status:'Waiting for Vendor',updated_at:now})});
+  const voiceChildren=await sbFetch('/rest/v1/marketplace_orders_live?master_order_id=eq.'+encodeURIComponent(masterOrderId)+'&select=id',key);for(const child of voiceChildren||[])await triggerVendorVoice(key,child.id);
   return {marketplaceMasterId:masterOrderId,marketplaceOrderActivated:true,marketplaceAlreadyPaid:false};
 }
 module.exports=async function handler(req,res){
