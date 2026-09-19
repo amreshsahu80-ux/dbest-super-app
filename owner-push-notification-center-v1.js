@@ -23,11 +23,16 @@ function open(){
    finally{btn.disabled=false;btn.textContent='Send Push Notification'}
  };
 }
+function ownerActive(){try{return !!ownerToken()||window.session?.role==='owner'||window.ownerOpen===true}catch(_){return !!ownerToken()}}
 function inject(){
- if(!ownerToken()||document.getElementById('dbestOwnerPushBtn'))return;
- const host=document.querySelector('.ownerControlGrid,.owner55Grid,#ownerControls,.adminGrid')||document.body;
- const b=document.createElement('button');b.id='dbestOwnerPushBtn';b.type='button';b.textContent='🔔 Push Notifications';b.className='btn';b.style.cssText='margin:8px;padding:12px 16px;border:0;border-radius:12px;background:#175cff;color:#fff;font-weight:900;cursor:pointer';b.onclick=open;host.appendChild(b);
+ if(!ownerActive()||document.getElementById('dbestOwnerPushBtn'))return;
+ const b=document.createElement('button');
+ b.id='dbestOwnerPushBtn';b.type='button';b.textContent='🔔 Push Notifications';
+ b.style.cssText='position:fixed;right:14px;bottom:78px;z-index:2147483645;border:0;border-radius:999px;padding:13px 16px;background:linear-gradient(135deg,#175cff,#654cff);color:#fff;font:900 13px system-ui;box-shadow:0 12px 32px rgba(23,92,255,.35);cursor:pointer';
+ b.onclick=open;
+ document.body.appendChild(b);
 }
-setTimeout(inject,700);setInterval(inject,3000);
+setTimeout(inject,500);setInterval(inject,1500);
+new MutationObserver(()=>inject()).observe(document.documentElement,{childList:true,subtree:true});
 window.DBEST_OWNER_PUSH={open};
 })();
