@@ -24,6 +24,31 @@ async function sb(path,{method='GET',body,prefer='return=representation'}={}){
 async function triggerVendorVoice(orderId){try{await fetch(SUPABASE_URL+'/functions/v1/partner-voice-alert',{method:'POST',headers:{apikey:SERVICE_KEY,'Content-Type':'application/json'},body:JSON.stringify({action:'vendor_order',orderId})});}catch(e){console.error('[vendor voice alert]',e)}}
 
 module.exports = async function handler(req,res){
+  if(req.method==='GET'){
+    res.setHeader('Cache-Control','no-store');
+    const secret=String(process.env.CRON_SECRET||'');
+    const auth=String(req.headers.authorization||'');
+    const sched=String(req.headers['x-vercel-cron-schedule']||'');
+    if(secret){if(auth!==('Bearer '+secret))return send(res,401,{ok:false,error:'unauthorized'});}
+    else if(sched!=='* * * * *')return send(res,401,{ok:false,error:'cron_only'});
+    if(!SERVICE_KEY)return send(res,503,{ok:false,error:'server_persistence_not_configured'});
+    try{
+      const now=new Date().toISOString();
+      const expired=await sb('hyperlocal_jobs_live?status=eq.Assigned&offer_expires_at=lt.'+encodeURIComponent(now)+'&select=transaction_id&order=offer_expires_at.asc&limit=50');
+      const results=[];
+      for(const row of expired||[]){
+        try{
+          const r=await fetch(SUPABASE_URL+'/functions/v1/service-cascade-live',{method:'POST',headers:{apikey:SERVICE_KEY,'Content-Type':'application/json'},body:JSON.stringify({transactionId:String(row.transaction_id||'')})});
+          const t=await r.text();let j=null;try{j=t?JSON.parse(t):null}catch{j=t}
+          results.push({transactionId:row.transaction_id,ok:r.ok,result:j});
+        }catch(e){results.push({transactionId:row.transaction_id,ok:false,error:String(e.message||e)});}
+      }
+      return send(res,200,{ok:true,processed:results.length,results});
+    }catch(e){
+      console.error('[service cascade cron]',e);
+      return send(res,500,{ok:false,error:'cascade_cron_failed'});
+    }
+  }
   if(req.method!=='POST') return send(res,405,{ok:false,error:'method_not_allowed'});
   if(!SERVICE_KEY) return send(res,503,{ok:false,error:'server_persistence_not_configured'});
   try{
