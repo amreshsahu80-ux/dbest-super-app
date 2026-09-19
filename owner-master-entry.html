@@ -50,7 +50,7 @@
         'owner-marketplace-category-control-v1.js',
         'owner-control-deployment-v2.js',
         'owner-distributor-management-entry-v1.js',
-        'owner-intervention-center-v1.js','dbest-push-client-v1.js'
+        'owner-intervention-center-v1.js','owner-push-notification-center-v1.js','dbest-push-client-v1.js'
       ].map(function(src){return '<script src="/'+src+'?v='+BUILD+'"><\/script>';}).join('');
 
       const ownerBoot='<script>(function(){function open(){try{if(window.DBEST_OWNER_PORTAL_ROUTE&&window.DBEST_OWNER_PORTAL_ROUTE.open&&location.pathname.toLowerCase()!=="/owner"){location.replace("/owner");return}if(typeof window.ownerLogin==="function"){window.ownerLogin();return}}catch(e){}setTimeout(open,120)}setTimeout(open,80)})();<\/script>';
