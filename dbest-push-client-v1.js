@@ -17,11 +17,13 @@ function ident(){
 function headers(id){const h={apikey:KEY,Authorization:'Bearer '+KEY,'Content-Type':'application/json'};if(id?.token)h[id.header]=id.token;return h}
 async function call(body,id){const r=await fetch(API,{method:'POST',cache:'no-store',headers:headers(id),body:JSON.stringify(body)}),d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||d.detail||('HTTP '+r.status));return d}
 function b64(s){const pad='='.repeat((4-s.length%4)%4),b=(s+pad).replace(/-/g,'+').replace(/_/g,'/'),raw=atob(b);return Uint8Array.from([...raw].map(c=>c.charCodeAt(0)))}
+function sameKey(buf,expected){try{if(!buf)return false;const a=new Uint8Array(buf),b=b64(expected);if(a.length!==b.length)return false;for(let i=0;i<a.length;i++)if(a[i]!==b[i])return false;return true}catch(_){return false}}
 async function ensure(){
   const id=ident();if(!id)return {ok:false,reason:'not_logged_in'};
   const reg=await navigator.serviceWorker.register('/dbest-sw.js',{scope:'/'});
   const pk=await call({action:'public_key'},id);if(!pk.publicKey)throw Error('Push key unavailable');
   let sub=await reg.pushManager.getSubscription();
+  if(sub&&!sameKey(sub.options?.applicationServerKey,pk.publicKey)){try{await call({action:'unregister',endpoint:sub.endpoint},id)}catch(_){}try{await sub.unsubscribe()}catch(_){}sub=null}
   if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64(pk.publicKey)});
   const d=await call({action:'register',subscription:sub.toJSON(),userAgent:navigator.userAgent,platform:navigator.userAgentData?.platform||navigator.platform||''},id);
   return {...d,subscription:sub};
