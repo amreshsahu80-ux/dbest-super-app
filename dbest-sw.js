@@ -5,10 +5,12 @@ self.addEventListener('push',event=>{
     body:d.body||'You have a new DBest notification.',
     icon:'/dbest-logo.png',
     badge:'/dbest-logo.png',
+    image:d.imageUrl||undefined,
     tag:d.notificationId||('dbest-'+Date.now()),
     renotify:true,
     requireInteraction:['order','ride','job','payment','intervention'].includes(String(d.category||'')),
-    data:{targetUrl:d.targetUrl||'/',notificationId:d.notificationId||'',category:d.category||'',extra:d.data||{}}
+    actions:d.cta?[{action:'open',title:d.cta}]:undefined,
+    data:{targetUrl:d.targetUrl||'/',notificationId:d.notificationId||'',category:d.category||'',imageUrl:d.imageUrl||'',cta:d.cta||'',validTill:d.validTill||'',extra:d.data||{}}
   };
   event.waitUntil(self.registration.showNotification(title,options));
 });
