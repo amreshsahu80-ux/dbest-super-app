@@ -1,7 +1,7 @@
 (function(){
   'use strict';
-  const CODES=['en','hi','bn','or','te'];
-  const LANG_LABELS={en:'English',hi:'हिन्दी',bn:'বাংলা',or:'ଓଡ଼ିଆ',te:'తెలుగు'};
+  const CODES=['en','hi','bn','or','te','ta'];
+  const LANG_LABELS={en:'English',hi:'हिन्दी',bn:'বাংলা',or:'ଓଡ଼ିଆ',te:'తెలుగు',ta:'தமிழ்'};
   const packs={hi:{},bn:{},or:{},te:{}};
   function add(en,hi,bn,od,te){packs.hi[en]=hi;packs.bn[en]=bn;packs.or[en]=od;packs.te[en]=te}
 
@@ -177,7 +177,7 @@
   Object.keys(packs).forEach(code=>Object.entries(packs[code]).forEach(([en,v])=>{if(v)reverse[String(v).trim()]=en}));
   Object.keys(packs.hi).forEach(en=>reverse[en]=en);
 
-  function currentLang(){let v=localStorage.getItem('d2_lang')||'en';return v==='ta'?'te':(CODES.includes(v)?v:'en')}
+  function currentLang(){let v=localStorage.getItem('d2_lang')||'en';return CODES.includes(v)?v:'en'}
   function translateCanonical(en,code=currentLang()){return code==='en'?en:(packs[code]?.[en]||en)}
   function canonicalExact(s){const t=String(s||'').trim();return reverse[t]||t}
   function exact(s,code=currentLang()){
@@ -241,33 +241,31 @@
   }
   function fixLanguageSelector(){
     const s=document.getElementById('lang');if(!s)return;
-    [...s.options].forEach(o=>{if(o.value==='ta')o.remove()});
     CODES.forEach(code=>{let o=[...s.options].find(x=>x.value===code);if(!o){o=document.createElement('option');o.value=code;s.appendChild(o)}o.textContent=LANG_LABELS[code]});
     s.value=currentLang();
   }
   let applying=false,pending=false;
   function applyLanguage(){
     if(applying)return;applying=true;try{
-      const code=currentLang();document.documentElement.lang=code==='or'?'or':code;document.body?.setAttribute('data-dbest-lang',code);fixLanguageSelector();translateTextNodes(document.body);translateAttrs(document);
+      const code=currentLang();document.documentElement.lang=code==='or'?'or':code;document.body?.setAttribute('data-dbest-lang',code);fixLanguageSelector();if(code==='ta'){try{window.DBEST_USER_I18N?.apply?.()}catch(e){};return}translateTextNodes(document.body);translateAttrs(document);
     }finally{applying=false}
   }
   function schedule(){if(pending)return;pending=true;requestAnimationFrame(()=>{pending=false;applyLanguage()})}
 
   const originalSetLang=window.setLang;
   window.setLang=function(v){
-    v=v==='ta'?'te':v;if(!CODES.includes(v))v='en';localStorage.setItem('d2_lang',v);
+    if(!CODES.includes(v))v='en';localStorage.setItem('d2_lang',v);
     try{if(typeof originalSetLang==='function')originalSetLang(v)}catch(e){try{window.render?.()}catch(_){}}
     schedule();setTimeout(applyLanguage,40);setTimeout(applyLanguage,180);
   };
   const originalToast=window.toast;
   if(typeof originalToast==='function')window.toast=function(msg){return originalToast.call(this,exact(msg))};
 
-  if(localStorage.getItem('d2_lang')==='ta')localStorage.setItem('d2_lang','te');
   const initial=currentLang();
   try{if(typeof originalSetLang==='function')originalSetLang(initial)}catch(e){}
   const obs=new MutationObserver(schedule);obs.observe(document.documentElement,{childList:true,subtree:true,characterData:true});
   document.addEventListener('change',e=>{if(e.target?.id==='lang')setTimeout(applyLanguage,0)},true);
   window.addEventListener('load',applyLanguage);
   setTimeout(applyLanguage,0);setTimeout(applyLanguage,250);setTimeout(applyLanguage,900);
-  window.DBEST_I18N={version:'2.0.0',languages:CODES,labels:LANG_LABELS,translate:exact,apply:applyLanguage,get language(){return currentLang()}};
+  window.DBEST_I18N={version:'2.1.0-six-language-compatible',languages:CODES,labels:LANG_LABELS,translate:exact,apply:applyLanguage,get language(){return currentLang()}};
 })();
