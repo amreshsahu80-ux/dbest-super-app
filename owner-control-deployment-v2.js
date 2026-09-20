@@ -5,7 +5,7 @@ if(window.DBEST_OWNER_CONTROL_DEPLOYMENT?.version===V)return;
 const cfg=window.DBEST_RUNTIME_CONFIG||{},BASE=String(cfg.supabaseUrl||'').replace(/\/$/,''),KEY=String(cfg.supabasePublishableKey||''),END=BASE+'/functions/v1/owner-control-deployment';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function ownerToken(){try{return String(window.DBEST_OWNER_AUTH_BRIDGE?.getOwnerToken?.()||sessionStorage.getItem('dbest_owner_session_token')||'')}catch(_){return''}}
-function isOwner(){try{return !!ownerToken()||(typeof session!=='undefined'&&session?.role==='owner')}catch(_){return !!ownerToken()}}
+function isOwner(){try{return location.pathname.toLowerCase()==='/owner'&&(!!ownerToken()||(typeof session!=='undefined'&&session?.role==='owner'))}catch(_){return false}}
 function toastMsg(m){try{window.toast?.(m)}catch(_){}}
 async function api(body){const t=ownerToken();if(!t)throw new Error('owner_session_required');const r=await fetch(END,{method:'POST',cache:'no-store',headers:{apikey:KEY,Authorization:'Bearer '+KEY,'Content-Type':'application/json','x-dbest-owner-token':t},body:JSON.stringify(body)}),d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.detail||d.error||'request_failed');return d}
 const kinds={member:{icon:'👤',title:'User / Member'},vendor:{icon:'🏪',title:'Vendor'},vaahak:{icon:'🛵',title:'Vaahak'},service_partner:{icon:'🧰',title:'Service Partner'}};
