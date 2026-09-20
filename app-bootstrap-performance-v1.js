@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const V='20260920-user-tiles-i18n-v5';
+const V='20260920-user-tiles-i18n-v6';
 if(window.DBEST_PERFORMANCE_BOOTSTRAP?.version===V)return;
 
 const EARLY=['cab-entry-capture-final-v1.js','ux-performance-bridge.js'];
