@@ -2378,6 +2378,7 @@ function openService(id){
   }
   let s=services.find(x=>x[0]===id);
   if(!s)return;
+  const renderSubs=id==="flights"?["Flight Booking","Flight + Hotel","Visa Assistance"]:s[5];
   let ex=externalIds.includes(id),l=links[id];
   sectionScreen(`${sectionTopBar(`${s[2]} ${s[1]}`,s[4],"backHome()")}
     <div class="sectionContent">
@@ -2386,7 +2387,7 @@ function openService(id){
         `<div class="notice" style="margin-bottom:14px">Hi <b>${esc(me()?.name||"Member")}</b>. All member-facing features in this section are available.</div>`:""}
       ${ex?`<div class="card" style="margin-bottom:16px;border:1px solid #cfe0ff;background:linear-gradient(135deg,#f7faff,#eef4ff)"><small>🔗 DBest Partner Deeplink</small><b style="font-size:18px;margin-top:5px">${esc(l?.partner||s[1]+" Partner")}</b><small>${l?.url?(l.enabled!==false?"Integrated and ready to continue":"Configured by Owner but currently disabled"):"No partner URL configured in this browser yet"}</small>${l?.url&&l.enabled!==false?`<button class="btn" style="margin-top:10px" onclick="externalGo('${id}')">${esc(l.buttonLabel||("Continue to "+(l.partner||"Partner")))} ↗</button>`:""}</div>`:""}
       <div class="subs">
-        ${s[5].map((z,i)=>`<button class="sub" onclick="openContentForm('${id}',${i})"><b>${esc(z)}</b><small>Open this service →</small></button>`).join("")}
+        ${renderSubs.map((z,i)=>`<button class="sub" onclick="openContentForm('${id}',${i})"><b>${esc(z)}</b><small>Open this service →</small></button>`).join("")}
       </div>
     </div>`);
 }
