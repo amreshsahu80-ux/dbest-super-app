@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='20260920-user-flow-i18n-render-v2';
+const VERSION='20260920-user-flow-i18n-render-v3';
 if(window.DBEST_USER_FLOW_I18N?.version===VERSION)return;
 
 function norm(v){
@@ -109,29 +109,25 @@ function translateRoot(root){
 function ensureFlights(){
   const root=document.querySelector('#m .sectionOverlay');
   if(!root)return;
+  const title=String(root.querySelector('.sectionTitle b,.sectionHero b')?.textContent||'').toLowerCase();
   const all=String(root.textContent||'').toLowerCase();
-  if(!/flight/.test(all))return;
+  if(!(/flight/.test(title)||/फ्लाइट|ফ্লাইট|ଫ୍ଲାଇଟ୍|ఫ్లైట్|விமான/.test(all)))return;
   let subs=root.querySelector('.subs');
   if(!subs){
-    const content=root.querySelector('.sectionContent');
-    if(!content)return;
-    subs=document.createElement('div');
-    subs.className='subs';
-    content.appendChild(subs);
+    const content=root.querySelector('.sectionContent');if(!content)return;
+    subs=document.createElement('div');subs.className='subs';content.appendChild(subs);
   }
   const defs=[['Flight Booking',0],['Flight + Hotel',1],['Visa Assistance',2]];
-  defs.forEach(([label,i])=>{
-    let b=[...subs.querySelectorAll('button.sub')].find(x=>String(x.getAttribute('onclick')||'').includes("openContentForm('flights',"+i+")"));
-    if(!b){b=document.createElement('button');b.className='sub';b.setAttribute('onclick',"openContentForm('flights',"+i+")");b.innerHTML='<b>'+label+'</b><small>Open this service →</small>';subs.appendChild(b)}
-    b.style.setProperty('display','block','important');
-    b.style.setProperty('visibility','visible','important');
-    b.style.setProperty('opacity','1','important');
-  });
+  const signature=[...subs.querySelectorAll('button.sub')].map(b=>String(b.getAttribute('onclick')||'')).join('|');
+  const correct=defs.every(([,i])=>signature.includes("openContentForm('flights',"+i+")"))&&subs.querySelectorAll('button.sub').length===3;
+  if(!correct){
+    subs.innerHTML=defs.map(([label,i])=>'<button class="sub" onclick="openContentForm(\'flights\','+i+')"><b>'+label+'</b><small>Open this service →</small></button>').join('');
+  }
   subs.style.setProperty('display','grid','important');
   subs.style.setProperty('visibility','visible','important');
   subs.style.setProperty('opacity','1','important');
+  subs.querySelectorAll('button.sub').forEach(b=>{b.style.setProperty('display','block','important');b.style.setProperty('visibility','visible','important');b.style.setProperty('opacity','1','important')});
 }
-
 function postRender(){
   const root=document.querySelector('#m .sectionOverlay,#m .overlay');
   if(root){ensureFlights();translateRoot(root)}
