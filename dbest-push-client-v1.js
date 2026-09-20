@@ -40,12 +40,21 @@ async function disable(){
 }
 function notice(t,ok=true){let n=document.getElementById('dbestPushToast');if(!n){n=document.createElement('div');n.id='dbestPushToast';n.style.cssText='position:fixed;left:14px;right:14px;bottom:76px;max-width:520px;margin:auto;z-index:2147483647;padding:12px 14px;border-radius:14px;font:800 13px system-ui;box-shadow:0 12px 35px #0003';document.body.appendChild(n)}n.textContent=t;n.style.background=ok?'#eafff3':'#fff0f0';n.style.color=ok?'#146b43':'#9b2525';n.style.display='block';clearTimeout(n._t);n._t=setTimeout(()=>n.style.display='none',3500)}
 async function update(){const b=document.getElementById('dbestPushEnable');if(!b)return;let on=false;try{const reg=await navigator.serviceWorker.getRegistration('/');on=Notification.permission==='granted'&&!!(await reg?.pushManager.getSubscription())}catch(_){}b.textContent=on?'🔔 Push ON':'🔔 Enable Push';b.style.background=on?'#176b42':'#175cff';b.onclick=on?disable:enable}
+function homeVisible(){const hero=document.querySelector('.hero');if(!hero)return false;try{const s=getComputedStyle(hero);return s.display!=='none'&&s.visibility!=='hidden'&&hero.getClientRects().length>0}catch(_){return !!hero}}
+function isMemberHome(){const id=ident();return !!id&&id.type==='Member'&&homeVisible()}
+function removeFloating(){document.getElementById('dbestPushEnable')?.remove();document.getElementById('dbestPushToast')?.remove()}
 function install(){
-  if(!ident()||document.getElementById('dbestPushEnable'))return;
+  if(!isMemberHome()){removeFloating();return}
+  if(document.getElementById('dbestPushEnable'))return;
   const b=document.createElement('button');b.id='dbestPushEnable';b.type='button';b.style.cssText='position:fixed;left:12px;bottom:14px;z-index:2147483644;border:0;border-radius:999px;padding:11px 14px;color:#fff;font:900 12px system-ui;box-shadow:0 9px 28px rgba(0,0,0,.22);cursor:pointer';document.body.appendChild(b);update();
   if(Notification.permission==='granted')ensure().then(update).catch(()=>{});
 }
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(install,400),{once:true});else setTimeout(install,400);
-setInterval(()=>{if(!document.getElementById('dbestPushEnable'))install()},5000);
+function syncFloating(){if(isMemberHome())install();else removeFloating()}
+let pushSyncQueued=false;
+function queuePushSync(){if(pushSyncQueued)return;pushSyncQueued=true;requestAnimationFrame(()=>{pushSyncQueued=false;syncFloating()})}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(syncFloating,400),{once:true});else setTimeout(syncFloating,400);
+const pushObs=new MutationObserver(queuePushSync);pushObs.observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['class','style']});
+window.addEventListener('hashchange',queuePushSync);window.addEventListener('popstate',queuePushSync);window.addEventListener('pageshow',queuePushSync);
+setInterval(syncFloating,3000);
 window.DBEST_PUSH={enable,disable,ensure,status:async()=>call({action:'status'},ident())};
 })();
