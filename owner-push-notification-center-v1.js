@@ -29,7 +29,7 @@ function inject(){
  if(!ownerActive()||document.getElementById('dbestOwnerPushBtn'))return;
  const b=document.createElement('button');
  b.id='dbestOwnerPushBtn';b.type='button';b.textContent='🔔 Push Notifications';
- b.style.cssText='position:fixed;right:14px;bottom:78px;z-index:2147483645;border:0;border-radius:999px;padding:13px 16px;background:linear-gradient(135deg,#175cff,#654cff);color:#fff;font:900 13px system-ui;box-shadow:0 12px 32px rgba(23,92,255,.35);cursor:pointer';
+ b.style.cssText='position:fixed;right:14px;bottom:126px;z-index:2147483645;border:0;border-radius:999px;padding:13px 16px;background:linear-gradient(135deg,#175cff,#654cff);color:#fff;font:900 13px system-ui;box-shadow:0 12px 32px rgba(23,92,255,.35);cursor:pointer';
  b.onclick=open;
  document.body.appendChild(b);
 }
