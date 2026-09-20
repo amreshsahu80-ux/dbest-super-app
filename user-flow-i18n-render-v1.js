@@ -130,7 +130,12 @@ function ensureFlights(){
 }
 function postRender(){
   const root=document.querySelector('#m .sectionOverlay,#m .overlay');
-  if(root){ensureFlights();translateRoot(root)}
+  if(root){
+    ensureFlights();
+    translateRoot(root);
+    try{window.DBEST_I18N?.apply?.()}catch(_){}
+    try{window.DBEST_USER_I18N?.apply?.()}catch(_){}
+  }
 }
 function wrap(name){
   const fn=window[name];if(typeof fn!=='function'||fn.__dbestI18nWrapped)return false;
