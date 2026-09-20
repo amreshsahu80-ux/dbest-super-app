@@ -40,8 +40,7 @@ async function disable(){
 }
 function notice(t,ok=true){let n=document.getElementById('dbestPushToast');if(!n){n=document.createElement('div');n.id='dbestPushToast';n.style.cssText='position:fixed;left:14px;right:14px;bottom:76px;max-width:520px;margin:auto;z-index:2147483647;padding:12px 14px;border-radius:14px;font:800 13px system-ui;box-shadow:0 12px 35px #0003';document.body.appendChild(n)}n.textContent=t;n.style.background=ok?'#eafff3':'#fff0f0';n.style.color=ok?'#146b43':'#9b2525';n.style.display='block';clearTimeout(n._t);n._t=setTimeout(()=>n.style.display='none',3500)}
 async function update(){const b=document.getElementById('dbestPushEnable');if(!b)return;let on=false;try{const reg=await navigator.serviceWorker.getRegistration('/');on=Notification.permission==='granted'&&!!(await reg?.pushManager.getSubscription())}catch(_){}b.textContent=on?'🔔 Push ON':'🔔 Enable Push';b.style.background=on?'#176b42':'#175cff';b.onclick=on?disable:enable}
-function homeVisible(){const hero=document.querySelector('.hero');if(!hero)return false;try{const s=getComputedStyle(hero);return s.display!=='none'&&s.visibility!=='hidden'&&hero.getClientRects().length>0}catch(_){return !!hero}}
-function isMemberHome(){const id=ident();return !!id&&id.type==='Member'&&homeVisible()}
+function isMemberHome(){const id=ident();if(!id||id.type!=='Member')return false;const m=document.getElementById('m');const open=!!(document.body.classList.contains('sectionOpen')||m?.querySelector('.sectionOverlay,.overlay'));return !open}
 function removeFloating(){document.getElementById('dbestPushEnable')?.remove();document.getElementById('dbestPushToast')?.remove()}
 function install(){
   if(!isMemberHome()){removeFloating();return}
