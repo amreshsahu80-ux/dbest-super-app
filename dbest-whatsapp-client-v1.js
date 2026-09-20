@@ -57,8 +57,7 @@ async function refresh(){
   b.onclick=on?disable:enable;
   b.title=on?'Transactional WhatsApp alerts enabled':'Enable important DBest WhatsApp alerts';
 }
-function homeVisible(){const hero=document.querySelector('.hero');if(!hero)return false;try{const s=getComputedStyle(hero);return s.display!=='none'&&s.visibility!=='hidden'&&hero.getClientRects().length>0}catch(_){return !!hero}}
-function isMemberHome(){const id=ident();return !!id&&id.type==='Member'&&homeVisible()}
+function isMemberHome(){const id=ident();if(!id||id.type!=='Member')return false;const m=document.getElementById('m');const open=!!(document.body.classList.contains('sectionOpen')||m?.querySelector('.sectionOverlay,.overlay'));return !open}
 function removeFloating(){document.getElementById('dbestWhatsAppEnable')?.remove();document.getElementById('dbestWaToast')?.remove()}
 function install(){
   if(!isMemberHome()){removeFloating();return}
