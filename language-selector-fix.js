@@ -1,12 +1,11 @@
 (function(){
   'use strict';
-  const CODES=['en','hi','bn','or','te'];
-  const LABELS={en:'English',hi:'हिन्दी',bn:'বাংলা',or:'ଓଡ଼ିଆ',te:'తెలుగు'};
+  const CODES=['en','hi','bn','or','te','ta'];
+  const LABELS={en:'English',hi:'हिन्दी',bn:'বাংলা',or:'ଓଡ଼ିଆ',te:'తెలుగు',ta:'தமிழ்'};
   let busy=false;
 
   function normalize(v){
     v=String(v||'en').toLowerCase();
-    if(v==='ta')v='te';
     return CODES.includes(v)?v:'en';
   }
 
@@ -31,10 +30,6 @@
   function prepareSelector(){
     const s=document.getElementById('lang');
     if(!s)return null;
-    let tamil=[...s.options].find(o=>o.value==='ta');
-    let telugu=[...s.options].find(o=>o.value==='te');
-    if(tamil&&!telugu){tamil.value='te';tamil.textContent=LABELS.te;telugu=tamil}
-    else if(tamil){tamil.remove()}
     CODES.forEach(code=>{
       let o=[...s.options].find(x=>x.value===code);
       if(!o){o=document.createElement('option');o.value=code;s.appendChild(o)}
@@ -76,9 +71,8 @@
     s.addEventListener('blur',function(){delete this.dataset.dbestSelecting});
   }
 
-  if(localStorage.getItem('d2_lang')==='ta')localStorage.setItem('d2_lang','te');
   bind();
   document.addEventListener('DOMContentLoaded',bind,{once:true});
   setTimeout(bind,80);setTimeout(bind,350);setTimeout(bind,1000);
-  window.DBEST_LANGUAGE_SELECTOR_FIX={version:'1.0.0',bind:bind,setLanguage:commitLanguage};
+  window.DBEST_LANGUAGE_SELECTOR_FIX={version:'1.1.0-six-languages',bind:bind,setLanguage:commitLanguage};
 })();
