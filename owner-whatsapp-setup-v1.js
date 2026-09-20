@@ -23,7 +23,7 @@ async function load(){
 function templateRows(){
  const rows=state?.templates||[];
  if(!rows.length)return '<div style="padding:12px;color:#64748b">No DBest WhatsApp templates found.</div>';
- return rows.map(x=>'<div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid #eef2f7"><div><b>'+esc(x.event_type)+'</b><div style="font-size:11px;color:#64748b;margin-top:2px">'+esc(x.template_name)+' • '+esc(x.recipient_type)+'</div></div><span style="padding:6px 9px;border-radius:999px;font:800 10px system-ui;background:'+(x.enabled?'#e8fff1':'#fff5df')+';color:'+(x.enabled?'#166534':'#92400e')+'">'+(x.enabled?'APPROVED / ON':'PENDING / OFF')+'</span></div>').join('');
+ return rows.map(x=>{const ms=String(x.metaStatus||'').toUpperCase();const label=x.enabled?'APPROVED / ON':(ms==='REJECTED'?'REJECTED / OFF':ms==='NOT_FOUND'?'NOT FOUND / OFF':ms==='PENDING'?'PENDING / OFF':ms?ms+' / OFF':'PENDING / OFF');const bg=x.enabled?'#e8fff1':(ms==='REJECTED'||ms==='NOT_FOUND'?'#fff0f0':'#fff5df');const fg=x.enabled?'#166534':(ms==='REJECTED'||ms==='NOT_FOUND'?'#9b2525':'#92400e');return '<div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid #eef2f7"><div><b>'+esc(x.event_type)+'</b><div style="font-size:11px;color:#64748b;margin-top:2px">'+esc(x.template_name)+' • '+esc(x.recipient_type)+'</div></div><span style="padding:6px 9px;border-radius:999px;font:800 10px system-ui;background:'+bg+';color:'+fg+'">'+esc(label)+'</span></div>'}).join('');
 }
 function render(){
  let m=document.getElementById('dbestWaOwnerModal');if(!m)return;
