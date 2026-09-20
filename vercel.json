@@ -115,6 +115,18 @@
   ],
   "rewrites": [
     {
+      "source": "/data-deletion",
+      "destination": "/data-deletion.html"
+    },
+    {
+      "source": "/terms",
+      "destination": "/terms.html"
+    },
+    {
+      "source": "/privacy-policy",
+      "destination": "/privacy-policy.html"
+    },
+    {
       "source": "/owner",
       "destination": "/owner-master-entry.html"
     },
