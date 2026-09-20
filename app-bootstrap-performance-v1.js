@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const V='20260920-user-tiles-i18n-v7';
+const V='20260920-flights-core-fix-v8';
 if(window.DBEST_PERFORMANCE_BOOTSTRAP?.version===V)return;
 
 const EARLY=['cab-entry-capture-final-v1.js','ux-performance-bridge.js'];
@@ -127,12 +127,14 @@ function inferGroup(el){
 }
 function interactionHint(e){
   const g=inferGroup(e.target);
+  if(g==='visual'&&!/^\/owner\/?$/i.test(location.pathname))return;
   if(g){preloadGroup(g);startGroup(g)}
 }
 document.addEventListener('pointerdown',interactionHint,{capture:true,passive:true});
 document.addEventListener('focusin',interactionHint,{capture:true,passive:true});
 
 function scheduleVisualWarmup(){
+  if(!/^\/owner\/?$/i.test(location.pathname))return;
   const warm=()=>{
     if(document.visibilityState!=='visible')return;
     if(document.querySelector('.classicDash,.sectionContent.fullPageBody'))return;
