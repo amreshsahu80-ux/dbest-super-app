@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='20260920-user-flow-i18n-render-v1';
+const VERSION='20260920-user-flow-i18n-render-v2';
 if(window.DBEST_USER_FLOW_I18N?.version===VERSION)return;
 
 function norm(v){
@@ -111,7 +111,14 @@ function ensureFlights(){
   if(!root)return;
   const all=String(root.textContent||'').toLowerCase();
   if(!/flight/.test(all))return;
-  const subs=root.querySelector('.subs');if(!subs)return;
+  let subs=root.querySelector('.subs');
+  if(!subs){
+    const content=root.querySelector('.sectionContent');
+    if(!content)return;
+    subs=document.createElement('div');
+    subs.className='subs';
+    content.appendChild(subs);
+  }
   const defs=[['Flight Booking',0],['Flight + Hotel',1],['Visa Assistance',2]];
   defs.forEach(([label,i])=>{
     let b=[...subs.querySelectorAll('button.sub')].find(x=>String(x.getAttribute('onclick')||'').includes("openContentForm('flights',"+i+")"));
