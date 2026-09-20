@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const V='20260913-subsection-performance-v1';
+const V='20260920-subsection-paint-fix-v2';
 if(window.DBEST_SUBSECTION_PERF?.version===V)return;
 
 function pauseDecorativeMedia(){
@@ -38,7 +38,7 @@ function installCss(){
   if(document.getElementById('dbest-subsection-perf-css'))return;
   const s=document.createElement('style');
   s.id='dbest-subsection-perf-css';
-  s.textContent='.subs,.cards,.table{content-visibility:auto;contain-intrinsic-size:1px 420px}.sub,.card{contain:layout paint style}.tile video,.tileVisual video{will-change:auto!important}';
+  s.textContent='.subs{content-visibility:visible!important;contain:none!important}.cards,.table{content-visibility:auto;contain-intrinsic-size:1px 420px}.sub{contain:none!important}.card{contain:layout paint style}.tile video,.tileVisual video{will-change:auto!important}';
   document.head.appendChild(s);
 }
 
