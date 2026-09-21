@@ -1,13 +1,12 @@
 (function(){
 'use strict';
-const V='20260920-flights-core-fix-v8';
+const V='20260921-user-i18n-deeplink-v11';
 if(window.DBEST_PERFORMANCE_BOOTSTRAP?.version===V)return;
 
 const EARLY=['cab-entry-capture-final-v1.js','ux-performance-bridge.js'];
 const CORE=[
   'member-id-collision-fix.js','backend-bridge.js','member-live-login-bridge.js',
   'production-demo-auth-guard.js','onboarding-contact-policy.js',
-  'multilingual-ui-v2.js','language-selector-fix.js',
   'clean-member-flow.js','plain-language-ui.js'
 ];
 
