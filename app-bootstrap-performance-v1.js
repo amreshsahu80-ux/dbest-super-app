@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const V='20260921-user-i18n-deeplink-v11';
+const V='20260921-wallet-ledger-authority-v12';
 if(window.DBEST_PERFORMANCE_BOOTSTRAP?.version===V)return;
 
 const EARLY=['cab-entry-capture-final-v1.js','ux-performance-bridge.js'];
