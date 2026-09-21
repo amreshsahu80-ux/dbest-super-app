@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='20260921-user-showcase-safe-v1';
+const VERSION='20260921-user-showcase-safe-v2';
 if(window.DBEST_USER_SHOWCASE_SAFE?.version===VERSION)return;
 
 const cfg=window.DBEST_RUNTIME_CONFIG||{};
@@ -28,10 +28,15 @@ async function load(){
   if(cards)return cards;
   if(loading)return loading;
   loading=(async()=>{
-    const r=await fetch(base+'/functions/v1/manage-showcase-cards',{method:'POST',headers:{apikey:key,Authorization:'Bearer '+key,'Content-Type':'application/json'},body:JSON.stringify({action:'list'}),cache:'no-store'});
-    const d=await r.json().catch(()=>({}));
-    if(!r.ok)throw new Error(d.error||'showcase_unavailable');
-    cards=Array.isArray(d.cards)?d.cards:[];
+    try{
+      const r=await fetch(base+'/functions/v1/manage-showcase-cards',{method:'POST',headers:{apikey:key,Authorization:'Bearer '+key,'Content-Type':'application/json'},body:JSON.stringify({action:'list'}),cache:'no-store'});
+      const d=await r.json().catch(()=>({}));
+      if(r.ok&&Array.isArray(d.cards)){cards=d.cards;return cards}
+    }catch(e){}
+    const r2=await fetch(base+'/rest/v1/service_showcase_cards?select=*&is_visible=eq.true&order=section.asc,sort_order.asc',{headers:{apikey:key,Authorization:'Bearer '+key},cache:'no-store'});
+    const d2=await r2.json().catch(()=>[]);
+    if(!r2.ok)throw new Error('showcase_unavailable');
+    cards=Array.isArray(d2)?d2:[];
     return cards;
   })().catch(e=>{console.warn('DBest user showcase',e);cards=[];return cards}).finally(()=>{loading=null});
   return loading;
