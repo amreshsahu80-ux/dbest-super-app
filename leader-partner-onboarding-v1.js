@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='20260922-leader-assisted-onboarding-v1';
+const VERSION='20260922-leader-assisted-onboarding-v2';
 if(window.DBEST_LEADER_PARTNER_ONBOARDING?.version===VERSION)return;
 const cfg=window.DBEST_RUNTIME_CONFIG||{},BASE=String(cfg.supabaseUrl||'').replace(/\/$/,''),KEY=String(cfg.supabasePublishableKey||''),TK='dbest_member_live_token';
 if(!BASE||!KEY)return;
@@ -21,7 +21,22 @@ function css(){if(document.getElementById('dbestLeaderOnboardCss'))return;const 
 #dbestLeaderOnboarding .loNote{margin-top:10px;padding:10px;border-radius:12px;background:#fff8e8;border:1px solid #f1dfad;color:#765719;font-size:10px;line-height:1.45}
 @media(max-width:560px){#dbestLeaderOnboarding .loGrid{grid-template-columns:1fr}.loStats{grid-template-columns:1fr 1fr!important}.loBtn{min-height:72px!important}}
 `;document.head.appendChild(s)}
-async function launch(type,btn){if(btn)btn.disabled=true;try{const d=await call({action:'launch',partnerType:type});if(!d.url)throw new Error('Onboarding link unavailable.');location.href=d.url}catch(e){alert('Could not start onboarding: '+(e.message||e));if(btn)btn.disabled=false}}
+async function launch(type,btn){
+ if(btn){
+   if(btn.dataset.opening==='1')return;
+   btn.dataset.opening='1';btn.disabled=true;
+   btn.dataset.originalHtml=btn.innerHTML;
+   btn.innerHTML='<b>Opening onboarding…</b><small>Please wait</small>';
+ }
+ try{
+   const d=await call({action:'launch',partnerType:type});
+   if(!d.url)throw new Error('Onboarding link unavailable.');
+   location.assign(d.url);
+ }catch(e){
+   alert('Could not start onboarding: '+(e.message||e));
+   if(btn){btn.disabled=false;btn.dataset.opening='0';if(btn.dataset.originalHtml)btn.innerHTML=btn.dataset.originalHtml}
+ }
+}
 async function refresh(){if(!isLeader())return;try{const d=await call({action:'list'}),s=d.summary||{};const map={loStarted:s.started||0,loPending:s.pending||0,loActivated:s.activated||0,loEarned:'₹'+Number(s.earned||0).toLocaleString('en-IN')};for(const [id,v] of Object.entries(map)){const e=document.getElementById(id);if(e)e.textContent=String(v)}}catch(_){}}
 function mount(){
  if(!isLeader()){document.getElementById('dbestLeaderOnboarding')?.remove();return}
