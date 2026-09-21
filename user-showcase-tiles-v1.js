@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='20260921-user-showcase-safe-v2';
+const VERSION='20260921-user-showcase-safe-v3';
 if(window.DBEST_USER_SHOWCASE_SAFE?.version===VERSION)return;
 
 const cfg=window.DBEST_RUNTIME_CONFIG||{};
@@ -23,6 +23,18 @@ function fallback(name,kind,category){
   const icon=kind==='travel'?'✈️':kind==='mutual_fund'?'📈':'🛡️';
   return 'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="760" height="380"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#10264d"/><stop offset=".55" stop-color="#175cff"/><stop offset="1" stop-color="#745cff"/></linearGradient></defs><rect width="100%" height="100%" rx="34" fill="url(#g)"/><text x="52" y="155" font-size="72">'+icon+'</text><text x="52" y="235" font-family="Arial" font-size="34" font-weight="700" fill="white">'+String(name||'DBest').slice(0,26)+'</text><text x="54" y="290" font-family="Arial" font-size="20" fill="#eaf1ff">'+String(category||'').slice(0,34)+'</text></svg>');
 }
+const OWNER_FALLBACK=[
+{id:'ins-health',section:'insurance',name:'Top Health Insurance Companies',category:'Best Health Insurance Solutions',description:'Health plans, family floater and protection solutions',image_url:'https://ydedmotbacnllkijzmvp.supabase.co/storage/v1/object/public/showcase-images/cards/d2235b4f-c1c6-49d2-8c67-40c52dfcbc16.png',sort_order:10,is_visible:true},
+{id:'ins-life',section:'insurance',name:'Top Life Insurance Companies',category:'Life Insurance',description:'Best Term and Investment Plans',image_url:'https://ydedmotbacnllkijzmvp.supabase.co/storage/v1/object/public/showcase-images/cards/35be645f-afb6-41c3-a0e6-be28f63eb0da.png',sort_order:20,is_visible:true},
+{id:'ins-motor',section:'insurance',name:'Top Motor Insurance Companies',category:'General Insurance',description:'Best Motor Insurance Plans',image_url:'https://ydedmotbacnllkijzmvp.supabase.co/storage/v1/object/public/showcase-images/cards/29fb0e91-d25a-49d5-9b27-6b2b7aab6f06.png',sort_order:30,is_visible:true},
+{id:'ins-term',section:'insurance',name:'Sample Term Plan Table',category:'30 Year Male, Salaried',description:'Term plan Illustration For A 30 Year Male.',image_url:'https://ydedmotbacnllkijzmvp.supabase.co/storage/v1/object/public/showcase-images/cards/0ac9814d-81f3-4a0f-93a0-0656589dfe6c.png',sort_order:40,is_visible:true},
+{id:'ins-health-compare',section:'insurance',name:'Health Insurance Comparison',category:'Sample Of a 30 Year Male',description:'Get your Best Premium Today.',image_url:'https://ydedmotbacnllkijzmvp.supabase.co/storage/v1/object/public/showcase-images/cards/6e8caba6-496a-4bc7-8e63-4b9116ccbaa1.png',sort_order:50,is_visible:true},
+{id:'ins-support',section:'insurance',name:'24/7 Claims & Service Support',category:'Get Best Service Experience',description:'Our Promise-Worry Free Claim settlements.',image_url:'https://ydedmotbacnllkijzmvp.supabase.co/storage/v1/object/public/showcase-images/cards/7d422d73-8f00-4d0b-a79d-57f4307e70bf.png',sort_order:60,is_visible:true},
+{id:'tr-flights',section:'travel',name:'Flights',category:'Air Travel',description:'Search and book domestic and international flights through the configured DBest partner.',image_url:'https://ydedmotbacnllkijzmvp.supabase.co/storage/v1/object/public/showcase-images/cards/c7e23dd2-e107-4a1a-bcfa-c865be4eab70.png',sort_order:10,is_visible:true},
+{id:'tr-hotels',section:'travel',name:'Best Hotel Chains',category:'Hotel Stays',description:'Explore hotel stays and accommodation options through the DBest travel partner.',image_url:'https://ydedmotbacnllkijzmvp.supabase.co/storage/v1/object/public/showcase-images/cards/7f390df3-3ed9-49bf-94d9-b20686bc76de.png',sort_order:20,is_visible:true},
+{id:'tr-domestic',section:'travel',name:'Domestic Tour Packages',category:'Lowest Price, Best Service',description:'We Provide the best and Cheapest Tour pacakges allover India and Abroad.',image_url:'https://ydedmotbacnllkijzmvp.supabase.co/storage/v1/object/public/showcase-images/cards/5d7fae87-8a99-437f-ae50-319b0e9d595e.png',sort_order:30,is_visible:true},
+{id:'tr-intl',section:'travel',name:'International Holidays',category:'Travel The World',description:'Explore curated international destinations and package ideas at Lowest Cost, Guaranteed.',image_url:'https://ydedmotbacnllkijzmvp.supabase.co/storage/v1/object/public/showcase-images/cards/97d61c94-4666-49b7-a76f-c1b9e88c3700.png',sort_order:40,is_visible:true}
+];
 let cards=null,loading=null,currentId='';
 async function load(){
   if(cards)return cards;
@@ -38,7 +50,7 @@ async function load(){
     if(!r2.ok)throw new Error('showcase_unavailable');
     cards=Array.isArray(d2)?d2:[];
     return cards;
-  })().catch(e=>{console.warn('DBest user showcase',e);cards=[];return cards}).finally(()=>{loading=null});
+  })().catch(e=>{console.warn('DBest user showcase',e);cards=OWNER_FALLBACK.slice();return cards}).finally(()=>{loading=null});
   return loading;
 }
 function serviceIdFromRoot(){
@@ -55,7 +67,7 @@ async function render(id){
   id=id||serviceIdFromRoot();const kind=MAP[id];if(!kind)return;
   root.dataset.dbestServiceId=id;
   const rows=(await load()).filter(c=>c.section===kind&&c.is_visible!==false).sort((a,b)=>Number(a.sort_order||0)-Number(b.sort_order||0));
-  if(!rows.length)return;
+  if(!rows.length){rows=OWNER_FALLBACK.filter(c=>c.section===kind&&c.is_visible!==false).sort((a,b)=>Number(a.sort_order||0)-Number(b.sort_order||0))}if(!rows.length)return;
   let box=root.querySelector('[data-dbest-safe-showcase]');
   if(!box){box=document.createElement('section');box.setAttribute('data-dbest-safe-showcase',kind);const subs=root.querySelector('.subs');if(subs)root.insertBefore(box,subs);else root.appendChild(box)}
   const [title,intro]=(TITLES[lang()]||TITLES.en)[kind]||[kind,''];
