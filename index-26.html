@@ -2390,6 +2390,10 @@ function openService(id){
         ${renderSubs.map((z,i)=>`<button class="sub" onclick="openContentForm('${id}',${i})"><b>${esc(z)}</b><small>Open this service →</small></button>`).join("")}
       </div>
     </div>`);
+  if(["insurance","flights","mf"].includes(id)){
+    setTimeout(()=>{try{window.DBEST_USER_SHOWCASE_SAFE?.render?.(id)}catch(e){}},40);
+    setTimeout(()=>{try{window.DBEST_USER_SHOWCASE_SAFE?.render?.(id)}catch(e){}},220);
+  }
 }
 function vaahakJobsForTx(txId){return vaahakJobs.filter(j=>j.txId===txId)}
 function vaahakJobForTx(txId){return vaahakJobsForTx(txId)[0]||null}
