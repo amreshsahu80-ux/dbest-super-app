@@ -1,8 +1,8 @@
 (function(){
 'use strict';
-const V='20260914-cab-entry-lazy-v5';
+const V='20260921-cab-entry-add-stop-v6';
 if(window.DBEST_CAB_ENTRY_CAPTURE?.version===V)return;
-const ASSET_V='20260914-cab-lazy-v5';
+const ASSET_V='20260921-cab-add-stop-v6';
 let opening=false,ensurePromise=null;
 
 function preload(src){
