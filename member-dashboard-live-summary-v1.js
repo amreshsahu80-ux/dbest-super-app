@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='20260916-wallet-direct-business-v3';
+const VERSION='20260921-wallet-ledger-authority-v4';
 if(window.DBEST_MEMBER_DASHBOARD_LIVE?.version===VERSION)return;
 const cfg=window.DBEST_RUNTIME_CONFIG||{};
 const BASE=String(cfg.supabaseUrl||'').replace(/\/$/,'');
@@ -17,7 +17,7 @@ async function load(force=false){
  if(!BASE||!KEY||!token())return null;
  if(!force&&cache&&Date.now()-cacheAt<CACHE_MS)return cache;
  if(pending)return pending;
- pending=(async()=>{const r=await fetch(BASE+'/functions/v1/member-network-live',{method:'POST',cache:'no-store',headers:{apikey:KEY,Authorization:'Bearer '+KEY,'Content-Type':'application/json','x-dbest-member-token':token()},body:'{}'});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'dashboard_summary_failed');cache=d;cacheAt=Date.now();mergeTx(d.transactions||[]);return d})().finally(()=>pending=null);
+ pending=(async()=>{const headers={apikey:KEY,Authorization:'Bearer '+KEY,'Content-Type':'application/json','x-dbest-member-token':token()};const [nr,wr]=await Promise.all([fetch(BASE+'/functions/v1/member-network-live',{method:'POST',cache:'no-store',headers,body:'{}'}),fetch(BASE+'/functions/v1/member-wallet-live',{method:'POST',cache:'no-store',headers,body:JSON.stringify({action:'status'})})]);const d=await nr.json().catch(()=>({}));if(!nr.ok)throw new Error(d.error||'dashboard_summary_failed');const wd=await wr.json().catch(()=>({}));if(wr.ok)d.walletStatus=wd;cache=d;cacheAt=Date.now();mergeTx(d.transactions||[]);return d})().finally(()=>pending=null);
  return pending;
 }
 function setByLabel(root,label,value,selectors='.earnCard,.kpi,.directCard'){
@@ -25,13 +25,14 @@ function setByLabel(root,label,value,selectors='.earnCard,.kpi,.directCard'){
  return false;
 }
 function paintMember(d,id){const s=d?.summary;if(!s||String(d.viewerId||'')!==String(id||''))return;const root=document.querySelector('.classicDash');if(!root)return;
- setByLabel(root,'Your Earnings Today',money(s.earnings?.today));
- setByLabel(root,'This Month Till Now',money(s.earnings?.month));
- setByLabel(root,'This Year',money(s.earnings?.year));
- setByLabel(root,'Since Joining',money(s.earnings?.all));
+ const we=d?.walletStatus?.wallet?.earnings_summary||null;
+ setByLabel(root,'Your Earnings Today',money(we?.today??s.earnings?.today));
+ setByLabel(root,'This Month Till Now',money(we?.month??s.earnings?.month));
+ setByLabel(root,'This Year',money(we?.year??s.earnings?.year));
+ setByLabel(root,'Since Joining',money(we?.all??s.earnings?.all));
  setByLabel(root,'My Direct Txns',Number(s.direct?.transactions||0).toLocaleString('en-IN'));
  setByLabel(root,'My Direct Business',money(s.direct?.business));
- setByLabel(root,'My Direct Earnings',money(s.direct?.earnings));
+ setByLabel(root,'My Direct Earnings',money(we?.directNet??s.direct?.earnings));
  setByLabel(root,'Direct Branches',Number(s.network?.directBranches||0).toLocaleString('en-IN'));
  setByLabel(root,'Total Team',Number(s.network?.totalTeam||0).toLocaleString('en-IN'));
  setByLabel(root,'Team Transactions',Number(s.network?.transactions||0).toLocaleString('en-IN'));
@@ -41,12 +42,12 @@ function paintMember(d,id){const s=d?.summary;if(!s||String(d.viewerId||'')!==St
 function paintDirect(d,id){
  const s=d?.summary;if(!s||String(d.viewerId||'')!==String(id||''))return;
  const root=document.querySelector('.classicDash');if(!root||!/My Direct Business/i.test(String(document.body.innerText||'')))return;
- const p=s.direct?.periods||{};
- setByLabel(root,'Direct Earning Today',money(p.today));
- setByLabel(root,'This Month',money(p.month));
- setByLabel(root,'This Year',money(p.year));
- setByLabel(root,'Since Joining',money(p.all));
- setByLabel(root,'Total Direct Earning',money(s.direct?.earnings));
+ const p=s.direct?.periods||{},we=d?.walletStatus?.wallet?.earnings_summary||null;
+ setByLabel(root,'Direct Earning Today',money(we?.today??p.today));
+ setByLabel(root,'This Month',money(we?.month??p.month));
+ setByLabel(root,'This Year',money(we?.year??p.year));
+ setByLabel(root,'Since Joining',money(we?.directNet??p.all));
+ setByLabel(root,'Total Direct Earning',money(we?.directNet??s.direct?.earnings));
  const breakdown=Array.isArray(s.direct?.breakdown)?s.direct.breakdown:[];
  const byService=new Map(breakdown.map(x=>[String(x.serviceKey||'').toLowerCase(),x]));
  for(const card of root.querySelectorAll('.sectionEarningCard')){
