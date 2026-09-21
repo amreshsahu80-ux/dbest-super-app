@@ -231,7 +231,7 @@
   }
   function translateTextNodes(root=document.body){
     if(!root)return;const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);const nodes=[];while(walker.nextNode())nodes.push(walker.currentNode);
-    nodes.forEach(n=>{if(protectedText(n))return;const z=exact(n.nodeValue);if(z!==n.nodeValue)n.nodeValue=z});
+    nodes.forEach(n=>{if(protectedText(n))return;const p=n.parentElement;if(p?.tagName==='OPTION'&&!p.hasAttribute('value'))p.setAttribute('value',String(p.textContent||'').trim());const z=exact(n.nodeValue);if(z!==n.nodeValue)n.nodeValue=z});
   }
   function translateAttrs(root=document){
     if(!root?.querySelectorAll)return;
@@ -267,5 +267,5 @@
   document.addEventListener('change',e=>{if(e.target?.id==='lang')setTimeout(applyLanguage,0)},true);
   window.addEventListener('load',applyLanguage);
   setTimeout(applyLanguage,0);setTimeout(applyLanguage,250);setTimeout(applyLanguage,900);
-  window.DBEST_I18N={version:'2.1.0-six-language-compatible',languages:CODES,labels:LANG_LABELS,translate:exact,apply:applyLanguage,get language(){return currentLang()}};
+  window.DBEST_I18N={version:'2.2.0-user-flow-direct',languages:CODES,labels:LANG_LABELS,translate:exact,apply:applyLanguage,get language(){return currentLang()}};
 })();
