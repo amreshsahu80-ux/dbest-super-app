@@ -3624,6 +3624,7 @@ async function syncOwnerMasterConfig(silent=false){
     });
     customServices=top.filter(m=>!builtIds.has(m.module_key)&&!reserved.has(m.module_key)&&m.visibility!=="private").map(m=>({id:m.module_key,title:m.name,icon:m.icon||"🧩",color:m.config?.color||"#536dfe",description:m.config?.description||"",subsections:(children[m.module_key]||[]).filter(x=>x.enabled!==false).sort((a,b)=>(a.sort_order||0)-(b.sort_order||0)).map(x=>x.name)}));
     applyServiceControl();
+    try{localStorage.setItem("d2_service_control",JSON.stringify(serviceControl))}catch(e){}
     const order=new Map(top.map(m=>[m.module_key,Number(m.sort_order||999)])); services.sort((a,b)=>(order.get(a[0])??9999)-(order.get(b[0])??9999));
     // Text/content
     (cfg.content||[]).filter(c=>c.enabled!==false&&c.section_key==="home").forEach(c=>{let t=T[c.language]||T.en;let k=String(c.content_key||"");if(k.includes("home_heading"))t.ht=c.body;if(k.includes("home_subheading"))t.hd=c.body;if(k.includes("all_services_title"))t.all=c.body;if(k.includes("all_services_subtitle"))t.sub=c.body;if(k.includes("account_button"))t.acc=c.body;});
