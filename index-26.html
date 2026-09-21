@@ -2413,7 +2413,7 @@ function createVaahakJobFromTx(txId,kind){
   let x=txs.find(t=>t.id===txId);if(!x)return null;
   let existing=vaahakJobForTx(txId);if(existing)return existing;
   let r=x.ride||x.meta?.ride||{},job=baseVaahakJob(x,kind);
-  job.pickup=r.pickup||"Customer Pickup";job.drop=r.drop||"Destination";job.pickupCoords=r.pickupCoords||null;job.dropCoords=r.dropCoords||null;
+  job.pickup=r.pickup||"Customer Pickup";job.drop=r.drop||"Destination";job.stops=Array.isArray(r.stops)?[...r.stops]:[];job.pickupCoords=r.pickupCoords||null;job.dropCoords=r.dropCoords||null;
   job.marketType="";job.items=[];job.partnerEarning=Math.round(Number(x.amount||0)*0.17);job.status="Open";
   autoAssignVaahak(job);vaahakJobs.push(job);x.vaahakJobId=job.id;x.vaahakJobIds=[job.id];x.vaahakPartnerId=job.partnerId||"";save();return job;
 }
@@ -2441,7 +2441,30 @@ function vaahakStatusHtml(txId){
   if(!jobs.length)return `<div class="dispatchPending"><b>🛵 Vaahak assignment pending</b><br><small>No dispatch job created yet.</small></div>`;
   return `<div class="vaahakStatusList">${jobs.map(j=>{let p=vaahakPartner(j);return `<div class="vaahakStatusItem"><b>🛵 ${esc(p?.name||"Awaiting Vaahak")}</b><small>${esc(j.id)} • ${esc(j.status)} • Pickup: ${esc(j.vendorName||j.pickup||"")}${p?` • ${esc(p.vehicle)} ${esc(p.vehicleNo||"")}`:""}</small></div>`}).join("")}</div>`;
 }
-let rideDraft={pickup:"",pickupCoords:null,drop:"",distance:0,schedule:"Now",selected:""};
+let rideDraft={pickup:"",pickupCoords:null,drop:"",stops:[],distance:0,schedule:"Now",selected:""};
+function rideRoutePoints(){return [rideDraft.pickup,...(Array.isArray(rideDraft.stops)?rideDraft.stops:[]),rideDraft.drop].filter(Boolean)}
+function rideRouteLabel(){return rideRoutePoints().map(x=>esc(x)).join(" → ")}
+function rideStopsHtml(){
+  return (Array.isArray(rideDraft.stops)?rideDraft.stops:[]).map((s,i)=>`<div class="locationField rideStopField"><label>Stop ${i+1}</label><div style="display:flex;gap:8px"><input name="stop" value="${esc(s)}" placeholder="Enter stop location"><button type="button" class="mini" onclick="removeRideStop(this)" aria-label="Remove stop">✕</button></div></div>`).join("");
+}
+function addRideStop(){
+  const box=document.getElementById("rideStops");if(!box)return;
+  const count=box.querySelectorAll('input[name="stop"]').length;
+  if(count>=3){toast("Maximum 3 stops allowed");return}
+  const row=document.createElement("div");row.className="locationField rideStopField";
+  row.innerHTML=`<label>Stop ${count+1}</label><div style="display:flex;gap:8px"><input name="stop" placeholder="Enter stop location"><button type="button" class="mini" onclick="removeRideStop(this)" aria-label="Remove stop">✕</button></div>`;
+  box.appendChild(row);
+  try{window.DBEST_I18N?.apply?.();window.DBEST_USER_I18N?.apply?.()}catch(e){}
+}
+function removeRideStop(btn){
+  const row=btn?.closest?.(".rideStopField");if(row)row.remove();
+  document.querySelectorAll("#rideStops .rideStopField label").forEach((x,i)=>x.textContent="Stop "+(i+1));
+}
+function rideEstimatedDistance(points){
+  let total=0;
+  for(let i=0;i<points.length-1;i++)total+=deterministicKm(points[i],points[i+1]);
+  return Math.round(total*10)/10;
+}
 function deterministicKm(a,b){
   let s=(String(a)+String(b)).toLowerCase(),h=0;
   for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))>>>0;
@@ -2514,6 +2537,8 @@ function openRidePlatform(){
           <div class="locationGrid">
             <div class="locationField"><label>Pickup</label><input id="ridePickup" name="pickup" value="${esc(rideDraft.pickup||"")}" placeholder="Enter pickup location" required></div>
             <div class="locationField"><label>Destination</label><input name="drop" value="${esc(rideDraft.drop||"")}" placeholder="Where to?" required></div>
+            <div id="rideStops" style="display:contents">${rideStopsHtml()}</div>
+            <div class="locationField"><label>Route</label><button type="button" class="mini" onclick="addRideStop()">＋ Add Stop</button><small style="display:block;color:var(--m);margin-top:5px">Add up to 3 stops</small></div>
             <div class="locationField"><label>When</label><select name="schedule"><option>Now</option><option>Schedule Later</option></select></div>
             <div class="locationField"><label>Pickup help</label><button type="button" class="mini" onclick="useRideLocation()">📍 Refresh Live Location</button></div>
           </div>
@@ -2528,15 +2553,16 @@ function findRides(e){
   e.preventDefault();let f=new FormData(e.target);
   rideDraft.pickup=String(f.get("pickup")||"").trim();
   rideDraft.drop=String(f.get("drop")||"").trim();
+  rideDraft.stops=f.getAll("stop").map(x=>String(x||"").trim()).filter(Boolean).slice(0,3);
   rideDraft.schedule=String(f.get("schedule")||"Now");
-  rideDraft.distance=deterministicKm(rideDraft.pickup,rideDraft.drop);
+  rideDraft.distance=rideEstimatedDistance(rideRoutePoints());
   showRideOptions();
 }
 function showRideOptions(){
   let km=Number(rideDraft.distance||6);
   sectionScreen(`${sectionTopBar("🚕 Choose a Ride",`${km.toFixed(1)} km estimated route`,"openRidePlatform()")}
     <div class="sectionContent ridePage">
-      <div class="rideMap"><span class="rideMapLabel">${esc(rideDraft.pickup)} → ${esc(rideDraft.drop)}</span><span class="rideRoute"></span></div>
+      <div class="rideMap"><span class="rideMapLabel">${rideRouteLabel()}</span><span class="rideRoute"></span></div>
       <div class="notice">Upfront fares are prototype estimates based on Owner-configured base fare, per-km rate, surge and platform fee.</div>
       <div class="rideOptions">${rideConfig.vehicles.map(v=>`<button class="rideOption" onclick="confirmRide('${v.id}')">
         <span class="vehicleIcon">${v.icon||"🚗"}</span><b>${esc(v.name)}</b><span class="fare">₹${rideFare(v,km)}</span>
@@ -2560,6 +2586,7 @@ function confirmRide(vehicleId){
         <div class="txDetailGrid">
           <div class="txDetailCell"><small>Pickup</small><b>${esc(rideDraft.pickup)}</b></div>
           <div class="txDetailCell"><small>Destination</small><b>${esc(rideDraft.drop)}</b></div>
+          ${rideDraft.stops.length?`<div class="txDetailCell full"><small>Stops</small><b>${rideDraft.stops.map((s,i)=>`${i+1}. ${esc(s)}`).join(" • ")}</b></div>`:""}
           <div class="txDetailCell"><small>Ride</small><b>${esc(v.name)}</b></div>
           <div class="txDetailCell"><small>Estimated Fare</small><b>₹${fare}</b></div>
         </div>
@@ -2584,7 +2611,7 @@ function bookRide(e,vehicleId){
   let payment=new FormData(e.target).get("payment")||"cash",fare=rideFare(v,rideDraft.distance);
   let x=addTx(session.id,"Cab Booking",v.name,fare,payment==="payu"?"Ride Created / Payment Pending":"Ride Confirmed / Driver Assigning","",{
     source:"DBest Ride Platform",flow:"ride",paymentStage:payment==="payu"?"Pending PayU":"Pay on Trip",
-    ride:{pickup:rideDraft.pickup,pickupCoords:rideDraft.pickupCoords||null,drop:rideDraft.drop,distance:rideDraft.distance,vehicleId:v.id,vehicleName:v.name,paymentMethod:payment,stage:0}
+    ride:{pickup:rideDraft.pickup,pickupCoords:rideDraft.pickupCoords||null,drop:rideDraft.drop,stops:[...(rideDraft.stops||[])],distance:rideDraft.distance,vehicleId:v.id,vehicleName:v.name,paymentMethod:payment,stage:0}
   });
   x.ride=x.meta.ride;x.paymentStage=x.meta.paymentStage;save();
   if(payment==="payu")return ridePaymentScreen(x.id);
@@ -2616,7 +2643,7 @@ function rideStatusScreen(txId){
   let r=x.ride,d=r.driver||{},steps=["Driver Assigned","Arriving","Trip Started","Completed"],stage=Number(r.stage||1);
   sectionScreen(`${sectionTopBar("🚕 Your Ride",x.id,"backHome()")}
     <div class="sectionContent ridePage">
-      <div class="rideMap"><span class="rideMapLabel">${esc(r.pickup)} → ${esc(r.drop)}</span><span class="rideRoute"></span></div>
+      <div class="rideMap"><span class="rideMapLabel">${[r.pickup,...(Array.isArray(r.stops)?r.stops:[]),r.drop].filter(Boolean).map(x=>esc(x)).join(" → ")}</span><span class="rideRoute"></span></div>
       ${vaahakStatusHtml(x.id)}<div class="driverCard"><div class="driverAvatar">👨‍✈️</div><div><b>${esc(d.name||"Driver")}</b><small style="display:block;color:var(--m)">⭐ ${d.rating||4.8} • ${esc(d.number||"")}</small><small>${esc(d.phone||"")}</small></div><div><small>OTP</small><b style="display:block;font-size:20px">${esc(r.otp||"—")}</b></div></div>
       <div class="tripSteps">${steps.map((s,i)=>`<div class="tripStep ${i<stage?"done":i===stage?"active":""}">${s}</div>`).join("")}</div>
       <div class="txDetailGrid"><div class="txDetailCell"><small>Fare</small><b>₹${Number(x.amount||0)}</b></div><div class="txDetailCell"><small>Payment</small><b>${esc(r.paymentMethod||"")}</b></div><div class="txDetailCell"><small>Distance</small><b>${Number(r.distance||0).toFixed(1)} km</b></div><div class="txDetailCell"><small>Status</small><b>${esc(x.status)}</b></div></div>
@@ -3460,6 +3487,7 @@ function txDetailsView(txId){
       ${(x.ride||meta.ride)?`<h3>Ride Details</h3><div class="txDetailGrid">${renderServiceData({
         pickup:(x.ride||meta.ride).pickup||"",
         destination:(x.ride||meta.ride).drop||"",
+        stops:Array.isArray((x.ride||meta.ride).stops)?(x.ride||meta.ride).stops.join(" → "):"",
         distanceKm:(x.ride||meta.ride).distance||"",
         vehicle:(x.ride||meta.ride).vehicleName||"",
         paymentMethod:(x.ride||meta.ride).paymentMethod||"",
