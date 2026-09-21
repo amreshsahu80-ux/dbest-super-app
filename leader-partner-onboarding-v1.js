@@ -7,7 +7,7 @@ if(!BASE||!KEY)return;
 const API=BASE+'/functions/v1/leader-partner-onboarding-live';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const token=()=>{try{return localStorage.getItem(TK)||''}catch(_){return''}};
-function isLeader(){try{return String(window.session?.role||'').toLowerCase()==='leader'&&!!window.session?.id}catch(_){return false}}
+function isLeader(){try{const s=window.DBEST_SESSION_COMPAT?.read?.()||window.session||JSON.parse(localStorage.getItem('d2_session')||'{}');return String(s?.role||'').toLowerCase()==='leader'&&!!s?.id}catch(_){return false}}
 async function call(body){const t=token();if(!t)throw new Error('Leader login session required.');const r=await fetch(API,{method:'POST',cache:'no-store',headers:{apikey:KEY,Authorization:'Bearer '+KEY,'Content-Type':'application/json','x-dbest-member-token':t},body:JSON.stringify(body)});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||d.detail||('HTTP '+r.status));return d}
 function css(){if(document.getElementById('dbestLeaderOnboardCss'))return;const s=document.createElement('style');s.id='dbestLeaderOnboardCss';s.textContent=`
 #dbestLeaderOnboarding{margin:16px 0;background:#fff;border:1px solid #dfe7f2;border-radius:20px;padding:15px;box-shadow:0 8px 24px rgba(20,50,100,.06)}
