@@ -3668,6 +3668,27 @@ async function syncOwnerMasterConfig(silent=false){
     if(cfg.payment&&typeof cfg.payment==="object"){paymentSettings={...paymentSettings,companyName:cfg.payment.companyName||cfg.payment.company_name||paymentSettings.companyName,payeeName:cfg.payment.payeeName||cfg.payment.payee_name||paymentSettings.payeeName,mobile:cfg.payment.mobile||cfg.payment.upi_mobile||paymentSettings.mobile,upiId:cfg.payment.upiId||cfg.payment.upi_id||paymentSettings.upiId,qrImage:cfg.payment.qrImage||cfg.payment.qr_url||paymentSettings.qrImage,instructions:cfg.payment.instructions||paymentSettings.instructions};}
     // Owner payment/deeplink settings
     const os=cfg.owner_settings||{};
+    // Owner visibility is the final authority across all devices.
+    // Never allow stale localStorage or platform_modules data to re-enable
+    // sections/subsections that the Owner has explicitly disabled.
+    try{
+      const ov=os?.serviceControl?.__visibilityV2||{};
+      const sec=(ov.sections&&typeof ov.sections==="object")?ov.sections:{};
+      Object.entries(sec).forEach(([id,on])=>{
+        serviceControl[id]={...(serviceControl[id]||{}),visible:on!==false};
+      });
+      const sub=(ov.subsections&&typeof ov.subsections==="object")?ov.subsections:{};
+      Object.entries(sub).forEach(([key,on])=>{
+        if(on!==false)return;
+        const m=String(key).match(/^(.+)::(\d+)$/);if(!m)return;
+        const id=m[1],idx=Number(m[2]),row=serviceControl[id];
+        if(row&&Array.isArray(row.subsections)&&idx>=0&&idx<row.subsections.length){
+          row.subsections=row.subsections.filter((_,i)=>i!==idx);
+        }
+      });
+      try{localStorage.setItem("d2_service_control",JSON.stringify(serviceControl))}catch(_){}
+      applyServiceControl();
+    }catch(e){console.warn("DBest Owner visibility overlay",e)}
     if(os.payu){payuSettings={...payuSettings,enabled:os.payu.enabled!==false,mode:String(os.payu.mode||payuSettings.mode).toLowerCase(),merchantKey:os.payu.merchant_key||payuSettings.merchantKey,createEndpoint:os.payu.endpoint||payuSettings.createEndpoint,verifiedReturnUrl:os.payu.return_url||payuSettings.verifiedReturnUrl,buttonLabel:os.payu.button_label||payuSettings.buttonLabel};}
     if(os.links&&typeof os.links==="object")links={...links,...os.links};
     if(os.payout){payout={self:Number(os.payout.self||0),l1:Number(os.payout.l1||0),l2:Number(os.payout.l2||0),l3:Number(os.payout.l3||0)};}
