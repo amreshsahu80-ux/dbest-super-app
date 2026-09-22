@@ -134,7 +134,7 @@ function vehCard(v){const rr=S.tripType==='roundtrip'?roundRules()[v.id]:null;re
 function mapBlock(title,id='cab6Map'){return `<div class="cab6MapFrame"><div id="${id}" class="cab6Map"></div><div class="cab6MapShade"></div><div class="cab6RoutePill">${esc(title)}</div></div>`}
 async function renderRealMap(id){
  const el=$(id);if(!el)return;
- try{const L=await initLeaflet();destroyMap();S.map=L.map(el,{zoomControl:true,attributionControl:true,preferCanvas:true});L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:20,attribution:'© OpenStreetMap © CARTO'}).addTo(S.map);
+ try{const L=await initLeaflet();destroyMap();S.map=L.map(el,{zoomControl:true,attributionControl:true,preferCanvas:true});L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(S.map);
  if(S.mode==='rental'){S.map.setView([S.p.lat,S.p.lng],14);L.circleMarker([S.p.lat,S.p.lng],{radius:8,weight:4,color:'#fff',fillColor:'#56dfea',fillOpacity:1}).addTo(S.map);return}
  const pts=(S.route?.geo||[]).map(c=>[c[1],c[0]]);if(pts.length){S.layer=L.polyline(pts,{weight:5,opacity:1,color:'#55ddea',lineCap:'round'}).addTo(S.map);S.map.fitBounds(S.layer.getBounds(),{padding:[42,42]})}else S.map.setView([(S.p.lat+S.d.lat)/2,(S.p.lng+S.d.lng)/2],13);
  L.circleMarker([S.p.lat,S.p.lng],{radius:8,weight:4,color:'#fff',fillColor:'#56dfea',fillOpacity:1}).addTo(S.map);L.circleMarker([S.d.lat,S.d.lng],{radius:8,weight:4,color:'#fff',fillColor:'#56dfea',fillOpacity:1}).addTo(S.map);setTimeout(()=>S.map?.invalidateSize?.(),120)
