@@ -185,6 +185,94 @@ Object.assign(D.ta,{
  'Use current location':'தற்போதைய இடத்தை பயன்படுத்தவும்'
 });
 
+
+/* DBest Cab Round Trip */
+Object.assign(D.hi,{
+ 'One Way':'एक तरफ',
+ 'Round Trip':'राउंड ट्रिप',
+ 'Same vehicle round trip':'एक ही वाहन से राउंड ट्रिप',
+ 'Tolls extra':'टोल अतिरिक्त',
+ 'Night halt':'नाइट हॉल्ट',
+ 'Total round-trip distance':'कुल राउंड-ट्रिप दूरी',
+ 'Total driving time':'कुल ड्राइविंग समय',
+ 'Same vehicle • Return included • Tolls extra':'एक ही वाहन • वापसी शामिल • टोल अतिरिक्त',
+ 'Same vehicle reserved for outward and return journey • Tolls extra':'आना-जाना दोनों के लिए एक ही वाहन आरक्षित • टोल अतिरिक्त',
+ 'Round Trip estimated fare':'अनुमानित राउंड-ट्रिप किराया',
+ 'Return to pickup included • Same vehicle/Vaahak retained • Tolls extra':'पिकअप तक वापसी शामिल • वही वाहन/वाहक रहेगा • टोल अतिरिक्त',
+ 'Round Trip booking is currently unavailable.':'राउंड ट्रिप बुकिंग अभी उपलब्ध नहीं है।',
+ 'Round Trip is available only for Sedan and SUV.':'राउंड ट्रिप केवल सेडान और SUV के लिए उपलब्ध है।',
+ 'Outbound Journey':'जाने की यात्रा',
+ 'Return Journey':'वापसी यात्रा'
+});
+Object.assign(D.bn,{
+ 'One Way':'একমুখী',
+ 'Round Trip':'রাউন্ড ট্রিপ',
+ 'Same vehicle round trip':'একই গাড়িতে রাউন্ড ট্রিপ',
+ 'Tolls extra':'টোল অতিরিক্ত',
+ 'Night halt':'নাইট হল্ট',
+ 'Total round-trip distance':'মোট রাউন্ড-ট্রিপ দূরত্ব',
+ 'Total driving time':'মোট ড্রাইভিং সময়',
+ 'Same vehicle • Return included • Tolls extra':'একই গাড়ি • রিটার্ন অন্তর্ভুক্ত • টোল অতিরিক্ত',
+ 'Same vehicle reserved for outward and return journey • Tolls extra':'যাওয়া ও ফেরার জন্য একই গাড়ি সংরক্ষিত • টোল অতিরিক্ত',
+ 'Round Trip estimated fare':'আনুমানিক রাউন্ড-ট্রিপ ভাড়া',
+ 'Return to pickup included • Same vehicle/Vaahak retained • Tolls extra':'পিকআপে ফেরা অন্তর্ভুক্ত • একই গাড়ি/বাহক থাকবে • টোল অতিরিক্ত',
+ 'Round Trip booking is currently unavailable.':'রাউন্ড ট্রিপ বুকিং বর্তমানে উপলভ্য নয়।',
+ 'Round Trip is available only for Sedan and SUV.':'রাউন্ড ট্রিপ শুধুমাত্র Sedan এবং SUV-এর জন্য উপলভ্য।',
+ 'Outbound Journey':'যাওয়ার যাত্রা',
+ 'Return Journey':'ফেরার যাত্রা'
+});
+Object.assign(D.or,{
+ 'One Way':'ଏକମୁଖୀ',
+ 'Round Trip':'ରାଉଣ୍ଡ ଟ୍ରିପ୍',
+ 'Same vehicle round trip':'ସେଇ ଗାଡ଼ିରେ ରାଉଣ୍ଡ ଟ୍ରିପ୍',
+ 'Tolls extra':'ଟୋଲ୍ ଅତିରିକ୍ତ',
+ 'Night halt':'ନାଇଟ୍ ହଲ୍ଟ',
+ 'Total round-trip distance':'ମୋଟ ରାଉଣ୍ଡ-ଟ୍ରିପ୍ ଦୂରତା',
+ 'Total driving time':'ମୋଟ ଡ୍ରାଇଭିଂ ସମୟ',
+ 'Same vehicle • Return included • Tolls extra':'ସେଇ ଗାଡ଼ି • ଫେରା ଅନ୍ତର୍ଭୁକ୍ତ • ଟୋଲ୍ ଅତିରିକ୍ତ',
+ 'Same vehicle reserved for outward and return journey • Tolls extra':'ଯିବା ଓ ଫେରିବା ପାଇଁ ସେଇ ଗାଡ଼ି ରହିବ • ଟୋଲ୍ ଅତିରିକ୍ତ',
+ 'Round Trip estimated fare':'ଆନୁମାନିକ ରାଉଣ୍ଡ-ଟ୍ରିପ୍ ଭାଡା',
+ 'Return to pickup included • Same vehicle/Vaahak retained • Tolls extra':'ପିକଅପ୍‌କୁ ଫେରା ଅନ୍ତର୍ଭୁକ୍ତ • ସେଇ ଗାଡ଼ି/ବାହକ ରହିବ • ଟୋଲ୍ ଅତିରିକ୍ତ',
+ 'Round Trip booking is currently unavailable.':'ରାଉଣ୍ଡ ଟ୍ରିପ୍ ବୁକିଂ ବର୍ତ୍ତମାନ ଉପଲବ୍ଧ ନୁହେଁ।',
+ 'Round Trip is available only for Sedan and SUV.':'ରାଉଣ୍ଡ ଟ୍ରିପ୍ କେବଳ Sedan ଏବଂ SUV ପାଇଁ ଉପଲବ୍ଧ।',
+ 'Outbound Journey':'ଯିବା ଯାତ୍ରା',
+ 'Return Journey':'ଫେରା ଯାତ୍ରା'
+});
+Object.assign(D.te,{
+ 'One Way':'వన్ వే',
+ 'Round Trip':'రౌండ్ ట్రిప్',
+ 'Same vehicle round trip':'అదే వాహనంతో రౌండ్ ట్రిప్',
+ 'Tolls extra':'టోల్ ఛార్జీలు అదనం',
+ 'Night halt':'నైట్ హాల్ట్',
+ 'Total round-trip distance':'మొత్తం రౌండ్-ట్రిప్ దూరం',
+ 'Total driving time':'మొత్తం డ్రైవింగ్ సమయం',
+ 'Same vehicle • Return included • Tolls extra':'అదే వాహనం • రిటర్న్ చేర్చబడింది • టోల్ అదనం',
+ 'Same vehicle reserved for outward and return journey • Tolls extra':'వెళ్లడం మరియు తిరుగు ప్రయాణానికి అదే వాహనం రిజర్వ్ • టోల్ అదనం',
+ 'Round Trip estimated fare':'అంచనా రౌండ్-ట్రిప్ ఛార్జీ',
+ 'Return to pickup included • Same vehicle/Vaahak retained • Tolls extra':'పికప్‌కు తిరుగు చేర్చబడింది • అదే వాహనం/వాహక్ ఉంటుంది • టోల్ అదనం',
+ 'Round Trip booking is currently unavailable.':'రౌండ్ ట్రిప్ బుకింగ్ ప్రస్తుతం అందుబాటులో లేదు.',
+ 'Round Trip is available only for Sedan and SUV.':'రౌండ్ ట్రిప్ Sedan మరియు SUVలకు మాత్రమే అందుబాటులో ఉంది.',
+ 'Outbound Journey':'వెళ్లే ప్రయాణం',
+ 'Return Journey':'తిరుగు ప్రయాణం'
+});
+Object.assign(D.ta,{
+ 'One Way':'ஒரு வழி',
+ 'Round Trip':'ரவுண்ட் ட்ரிப்',
+ 'Same vehicle round trip':'அதே வாகனத்தில் ரவுண்ட் ட்ரிப்',
+ 'Tolls extra':'டோல் கட்டணம் கூடுதல்',
+ 'Night halt':'இரவு நிறுத்தம்',
+ 'Total round-trip distance':'மொத்த ரவுண்ட்-ட்ரிப் தூரம்',
+ 'Total driving time':'மொத்த ஓட்டுநர் நேரம்',
+ 'Same vehicle • Return included • Tolls extra':'அதே வாகனம் • திரும்புதல் சேர்க்கப்பட்டுள்ளது • டோல் கூடுதல்',
+ 'Same vehicle reserved for outward and return journey • Tolls extra':'செல்லவும் திரும்பவும் அதே வாகனம் ஒதுக்கப்படும் • டோல் கூடுதல்',
+ 'Round Trip estimated fare':'மதிப்பிடப்பட்ட ரவுண்ட்-ட்ரிப் கட்டணம்',
+ 'Return to pickup included • Same vehicle/Vaahak retained • Tolls extra':'பிக்அப்பிற்கு திரும்புதல் சேர்க்கப்பட்டுள்ளது • அதே வாகனம்/வாகக் தொடரும் • டோல் கூடுதல்',
+ 'Round Trip booking is currently unavailable.':'ரவுண்ட் ட்ரிப் புக்கிங் தற்போது கிடைக்கவில்லை.',
+ 'Round Trip is available only for Sedan and SUV.':'ரவுண்ட் ட்ரிப் Sedan மற்றும் SUVக்கு மட்டுமே கிடைக்கும்.',
+ 'Outbound Journey':'செல்லும் பயணம்',
+ 'Return Journey':'திரும்பும் பயணம்'
+});
+
 const P={hi:{'Search services...':'सेवाएँ खोजें...','Enter pickup location':'पिकअप स्थान दर्ज करें','Where to?':'कहाँ जाना है?','you@example.com':'आपका ईमेल','Minimum 8 characters':'कम से कम 8 अक्षर','Re-enter password':'पासवर्ड दोबारा दर्ज करें'},bn:{'Search services...':'পরিষেবা খুঁজুন...','Enter pickup location':'পিকআপ লোকেশন লিখুন','Where to?':'কোথায় যাবেন?','Minimum 8 characters':'কমপক্ষে ৮ অক্ষর','Re-enter password':'পাসওয়ার্ড আবার লিখুন'},or:{'Search services...':'ସେବା ଖୋଜନ୍ତୁ...','Enter pickup location':'ପିକଅପ୍ ସ୍ଥାନ ଦିଅନ୍ତୁ','Where to?':'କେଉଁଠି ଯିବେ?','Minimum 8 characters':'ଅତି କମରେ 8 ଅକ୍ଷର','Re-enter password':'ପାସୱାର୍ଡ ପୁଣି ଦିଅନ୍ତୁ'},te:{'Search services...':'సేవలు వెతకండి...','Enter pickup location':'పికప్ స్థానం నమోదు చేయండి','Where to?':'ఎక్కడికి?','Minimum 8 characters':'కనీసం 8 అక్షరాలు','Re-enter password':'పాస్‌వర్డ్ మళ్లీ నమోదు చేయండి'},ta:{'Search services...':'சேவைகளைத் தேடுங்கள்...','Enter pickup location':'பிக்அப் இடத்தை உள்ளிடவும்','Where to?':'எங்கு செல்ல வேண்டும்?','Minimum 8 characters':'குறைந்தது 8 எழுத்துகள்','Re-enter password':'கடவுச்சொல்லை மீண்டும் உள்ளிடவும்'}};
 function clean(s){return String(s||'').replace(/\s+/g,' ').trim()}
 function lookup(s){
