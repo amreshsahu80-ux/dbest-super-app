@@ -1,16 +1,15 @@
 (function(){
 'use strict';
 const BASE='20260905-selected-realmap-v6';
-const VERSION='20260922-cab-experience-v2-mapbar-final';
+const VERSION='20260922-cab-vehicle-cleanup-v1';
 const PACKS=[['2|20','2 Hours / 20 km'],['4|40','4 Hours / 40 km'],['8|80','8 Hours / 80 km'],['12|120','12 Hours / 120 km']];
 const VEH=[
  {id:'bike',name:'Bike',seats:1,base:35,km:8,min:45,img:'https://images.tractorjunction.com/GLOSS_BLACK_4c0619d5ab.png?format=webp&height=424&width=760'},
  {id:'auto',name:'Auto/E-Rickshaw',seats:3,base:45,km:12,min:60,img:'https://wallpapers.com/images/high/yellow-black-auto-rickshaw-side-view-png-i1udu28purzkrd2x-i1udu28purzkrd2x.png'},
- {id:'mini',name:'Mini',seats:4,base:65,km:15,min:90,img:'https://media.mijnwinkel-api.nl/resizer2/2525200/pictures/CS280003-Stootlijsten-set-breed-zwart-Suzuki-Swift-04.2024-1-wxh.jpg?version=1'},
  {id:'sedan',name:'Sedan',seats:4,base:85,km:18,min:120,img:'https://www.autobics.com/wp-content/uploads/2017/05/2017-maruti-suzuki-dzire-pearl-arctic-white.jpg'},
  {id:'suv',name:'SUV',seats:6,base:110,km:22,min:150,img:'https://images.91wheels.com/assets/c_images/gallery/toyota/innova-crysta/toyota-innova-crysta-4-1767849001.png?q=40&w=850'}
 ];
-const F={p:null,d:null,stops:[],stopTexts:[],route:null,selected:'mini',mode:'ride',rentalHours:2,rentalKm:20,schedule:'now',scheduledAt:'',rider:'self',riderName:'',riderMobile:'',map:null,calculating:false};
+const F={p:null,d:null,stops:[],stopTexts:[],route:null,selected:'auto',mode:'ride',rentalHours:2,rentalKm:20,schedule:'now',scheduledAt:'',rider:'self',riderName:'',riderMobile:'',map:null,calculating:false};
 let api=null,loader=null,leafletPromise=null,googlePromise=null;
 const $=id=>document.getElementById(id),q=(s,r=document)=>r.querySelector(s),qa=(s,r=document)=>Array.from(r.querySelectorAll(s));
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -20,7 +19,7 @@ function css(){if($('dbest-cab-v16-css'))return;const s=document.createElement('
 .cab13Status{margin:0 2px 10px;padding:8px 10px;border-radius:12px;background:#eef5ff;color:#31507f;font-size:9px;font-weight:800}.cab13Status.ok{background:#ecfdf5;color:#16735f}.cab13Status.warn{background:#fff7ed;color:#9a4b13}
 .cab13MapFallback{height:100%;display:grid;place-items:center;text-align:center;padding:20px;color:#fff;background:linear-gradient(145deg,#17204d,#273b79)}
 .cab6MapShade{display:none!important}.cab6MapFrame{z-index:1!important}.cab6Confirm{z-index:5!important;margin:14px 7px 0!important}.cab6Veh .photo,.cab6VehicleHero .pic{background:#fff!important}.cab6Veh img,.cab6VehicleHero img{object-fit:contain!important;background:#fff!important;filter:drop-shadow(0 5px 5px rgba(21,31,70,.16))!important}.cab6Veh b{line-height:1.08!important}
-.cab6Veh[data-v="bike"] img{width:112px!important;height:62px!important}.cab6Veh[data-v="auto"] img{width:110px!important;height:61px!important}.cab6Veh[data-v="mini"] img,.cab6Veh[data-v="sedan"] img,.cab6Veh[data-v="suv"] img{width:112px!important;height:62px!important}
+.cab6Veh[data-v="bike"] img{width:112px!important;height:62px!important}.cab6Veh[data-v="auto"] img{width:110px!important;height:61px!important}.cab6Veh[data-v="sedan"] img,.cab6Veh[data-v="suv"] img{width:112px!important;height:62px!important}
 #cab6Gps{font-size:0!important;flex:0 0 44px!important;width:44px!important;padding:8px!important}#cab6Gps:before{content:'◎';font-size:19px;line-height:1}
 #cab6AddStop{width:100%;min-height:42px;border:1px dashed #94a3c7;border-radius:14px;background:#fff;color:#31507f;font-size:11px;font-weight:900;margin:4px 0 8px}
 .cab6StopRow{display:grid;grid-template-columns:1fr 38px;gap:7px;align-items:center;margin:7px 0}.cab6StopRow .cab6Field{margin:0}.cab6StopRemove{height:38px;border:1px solid #e1e5ef;border-radius:12px;background:#fff;color:#9b3340;font-weight:900}
