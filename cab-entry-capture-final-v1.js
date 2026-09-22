@@ -1,8 +1,8 @@
 (function(){
 'use strict';
-const V='20260923-cab-map-mobile-v5';
+const V='20260923-cab-map-mobile-v6';
 if(window.DBEST_CAB_ENTRY_CAPTURE?.version===V)return;
-const ASSET_V='20260923-cab-map-mobile-v5';
+const ASSET_V='20260923-cab-map-mobile-v6';
 let opening=false,ensurePromise=null;
 
 function preload(src){
