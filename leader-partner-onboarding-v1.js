@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='20260922-leader-assisted-onboarding-v2';
+const VERSION='20260922-leader-assisted-onboarding-v3-promo';
 if(window.DBEST_LEADER_PARTNER_ONBOARDING?.version===VERSION)return;
 const cfg=window.DBEST_RUNTIME_CONFIG||{},BASE=String(cfg.supabaseUrl||'').replace(/\/$/,''),KEY=String(cfg.supabasePublishableKey||''),TK='dbest_member_live_token';
 if(!BASE||!KEY)return;
@@ -42,14 +42,14 @@ function mount(){
  if(!isLeader()){document.getElementById('dbestLeaderOnboarding')?.remove();return}
  css();const root=document.querySelector('.classicDash');if(!root||document.getElementById('dbestLeaderOnboarding'))return;
  const host=document.createElement('section');host.id='dbestLeaderOnboarding';host.innerHTML=`
- <div class="loHead"><div><h3>⭐ Leader Exclusive • Partner Onboarding</h3><div class="loMeta">Complete assisted onboarding for Vendor, Vaahak or Service Partner. ₹100 is credited only after verified activation.</div></div><span style="padding:5px 8px;border-radius:999px;background:#eaf1ff;color:#175cff;font-size:10px;font-weight:900">LEADER ONLY</span></div>
+ <div class="loHead"><div><h3>⭐ Leader Exclusive • Partner Onboarding</h3><div class="loMeta">Complete assisted onboarding for Vendor, Vaahak or Service Partner. Promotional incentive applies only to verified activations completed by 31 Oct 2026.</div></div><span style="padding:5px 8px;border-radius:999px;background:#eaf1ff;color:#175cff;font-size:10px;font-weight:900">LEADER ONLY</span></div>
  <div class="loGrid">
-  <button class="loBtn vendor" type="button" data-kind="Vendor"><b>🏪 Onboard Vendor</b><small>Complete registration, documents & agreement • Earn ₹100 after activation</small></button>
-  <button class="loBtn vaahak" type="button" data-kind="Vaahak"><b>🛵 Onboard Vaahak</b><small>Complete driver/vehicle onboarding • Earn ₹100 after activation</small></button>
+  <button class="loBtn vendor" type="button" data-kind="Vendor"><b>🏪 Onboard Vendor</b><small>Complete registration, documents & agreement • Earn ₹300 after activation</small></button>
+  <button class="loBtn vaahak" type="button" data-kind="Vaahak"><b>🛵 Onboard Vaahak</b><small>Complete driver/vehicle onboarding • Earn ₹200 after activation</small></button>
   <button class="loBtn service" type="button" data-kind="Service Partner"><b>🧰 Onboard Service Partner</b><small>Complete KYC/service onboarding • Earn ₹100 after activation</small></button>
  </div>
  <div class="loStats"><div class="loStat"><small>Started</small><b id="loStarted">—</b></div><div class="loStat"><small>Pending</small><b id="loPending">—</b></div><div class="loStat"><small>Activated</small><b id="loActivated">—</b></div><div class="loStat"><small>Incentive Earned</small><b id="loEarned">—</b></div></div>
- <div class="loNote"><b>Security:</b> The Leader may fill and upload the onboarding details, but the applicant must provide their own OTP/agreement consent and company payment where applicable. No personal collection of company payments is allowed.</div>`;
+ <div class="loNote"><b>Promotional incentive till 31 Oct 2026:</b> Vendor ₹300 • Vaahak ₹200 • Service Partner ₹100. Credit is generated only after verified activation by the deadline.<br><br><b>Security:</b> The Leader may fill and upload the onboarding details, but the applicant must provide their own OTP/agreement consent and company payment where applicable. No personal collection of company payments is allowed.</div>`;
  const walletBtn=[...root.querySelectorAll('button')].find(x=>/My Wallet/i.test(x.textContent||''));if(walletBtn?.parentElement)walletBtn.parentElement.insertAdjacentElement('afterend',host);else root.prepend(host);
  host.querySelectorAll('[data-kind]').forEach(b=>b.addEventListener('click',()=>launch(b.dataset.kind,b)));
  refresh();
