@@ -1,8 +1,8 @@
 (function(){
 'use strict';
-const V='20260923-cab-light-route-v7';
+const V='20260923-cab-no-recents-v8';
 if(window.DBEST_CAB_ENTRY_CAPTURE?.version===V)return;
-const ASSET_V='20260923-cab-light-route-v7';
+const ASSET_V='20260923-cab-no-recents-v8';
 let opening=false,ensurePromise=null;
 
 function preload(src){
