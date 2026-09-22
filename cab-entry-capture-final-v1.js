@@ -1,8 +1,8 @@
 (function(){
 'use strict';
-const V='20260922-cab-experience-v2-entry';
+const V='20260922-cab-experience-v2-entry-redesign';
 if(window.DBEST_CAB_ENTRY_CAPTURE?.version===V)return;
-const ASSET_V='20260922-cab-experience-v2';
+const ASSET_V='20260922-cab-experience-v2-entry-redesign';
 let opening=false,ensurePromise=null;
 
 function preload(src){
