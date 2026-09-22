@@ -1,7 +1,7 @@
 (function(){
 'use strict';
 const BASE='20260905-selected-realmap-v6';
-const VERSION='20260922-cab-experience-v2';
+const VERSION='20260922-cab-experience-v2-entry-redesign';
 const PACKS=[['2|20','2 Hours / 20 km'],['4|40','4 Hours / 40 km'],['8|80','8 Hours / 80 km'],['12|120','12 Hours / 120 km']];
 const VEH=[
  {id:'bike',name:'Bike',seats:1,base:35,km:8,min:45,img:'https://images.tractorjunction.com/GLOSS_BLACK_4c0619d5ab.png?format=webp&height=424&width=760'},
@@ -30,6 +30,26 @@ function css(){if($('dbest-cab-v16-css'))return;const s=document.createElement('
 .cab6Veh small.dbestPickupEta{margin-top:2px;color:#2d6a57;font-weight:800}.cab6Veh strong{display:flex;align-items:end;justify-content:space-between;gap:4px}.cab6Veh strong em{font-size:8px;font-style:normal;color:#7f8797;font-weight:800}
 .dbestCabConfirmHead{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}.dbestCabConfirmHead button{border:0;background:#eef2fb;color:#29406c;border-radius:12px;padding:8px 10px;font-size:10px;font-weight:900}.dbestCabConfirmHead b{font-size:18px}
 .dbestFinding{display:none;position:absolute;inset:0;z-index:30;border-radius:28px;background:rgba(255,255,255,.96);backdrop-filter:blur(10px);align-items:center;justify-content:center;text-align:center;padding:28px}.dbestFinding.show{display:flex}.dbestFindingPulse{width:64px;height:64px;border-radius:50%;margin:0 auto 13px;background:linear-gradient(135deg,#1f64f3,#6a4de9);position:relative;display:grid;place-items:center;color:#fff;font-size:28px;box-shadow:0 0 0 0 rgba(61,90,230,.35);animation:dbestPulse 1.2s infinite}@keyframes dbestPulse{70%{box-shadow:0 0 0 22px rgba(61,90,230,0)}100%{box-shadow:0 0 0 0 rgba(61,90,230,0)}}.dbestFinding b{display:block;font-size:18px}.dbestFinding small{display:block;margin-top:5px;color:#7d8595;font-size:10px}
+#dbestCabEntryMapWrap{position:relative;height:300px;margin:0 0 -44px;border-radius:28px;overflow:hidden;background:linear-gradient(145deg,#dbe9ff,#edf3ff);box-shadow:0 18px 42px rgba(30,55,120,.14)}
+#dbestCabEntryMap{position:absolute;inset:0}
+#dbestCabEntryMap .entryMapFallback{position:absolute;inset:0;display:grid;place-items:center;text-align:center;color:#42506c;background:
+radial-gradient(circle at 25% 25%,rgba(44,177,132,.18),transparent 26%),
+linear-gradient(135deg,#edf4ff,#e9eefc 50%,#f6f8ff)}
+#dbestCabEntryMap .entryMapFallback:before{content:'';position:absolute;left:9%;right:8%;top:48%;height:7px;border-radius:999px;background:linear-gradient(90deg,#1bc2dc,#2462ee);transform:rotate(-9deg);box-shadow:0 0 0 2px rgba(255,255,255,.6)}
+#dbestCabEntryMap .entryMapPin{position:absolute;left:50%;top:45%;transform:translate(-50%,-100%);width:34px;height:34px;border-radius:50% 50% 50% 0;rotate:-45deg;background:#2362ee;box-shadow:0 8px 18px rgba(35,98,238,.3)}
+#dbestCabEntryMap .entryMapPin:after{content:'';position:absolute;width:12px;height:12px;border-radius:50%;background:#fff;left:11px;top:11px}
+#dbestCabEntryMapWrap .entryMapBadge{position:absolute;z-index:3;left:14px;top:14px;padding:8px 11px;border-radius:999px;background:rgba(16,30,71,.82);color:#fff;font-size:9px;font-weight:900;backdrop-filter:blur(8px)}
+#dbestCabEntryMapWrap .entryMapLocate{position:absolute;z-index:3;right:14px;bottom:58px;width:42px;height:42px;border:0;border-radius:14px;background:#fff;color:#2162ef;font-size:19px;box-shadow:0 8px 20px rgba(28,52,110,.18)}
+.cab6Search.dbestEntrySheet{position:relative;z-index:6;margin:0 8px;border-radius:28px;padding:15px 14px 18px;background:rgba(255,255,255,.98);box-shadow:0 24px 54px rgba(29,46,100,.2);border:1px solid #e3e8f3}
+.cab6Search.dbestEntrySheet .cab6Spark,.cab6Search.dbestEntrySheet .cab6Title,.cab6Search.dbestEntrySheet .cab6Sub{display:none!important}
+.dbestEntryHandle{width:42px;height:5px;border-radius:99px;background:#d6dbe7;margin:0 auto 12px}
+.dbestEntryHeading{display:flex;align-items:center;justify-content:space-between;margin:0 2px 8px}.dbestEntryHeading b{font-size:17px;color:#17203d}.dbestEntryHeading small{font-size:9px;color:#8490a4}
+.cab6Search.dbestEntrySheet .cab6Field{margin:7px 0}.cab6Search.dbestEntrySheet .cab6Field input{min-height:52px;border-radius:16px;background:#fbfcff;font-size:13px}
+.cab6Search.dbestEntrySheet .cab6RecentHead{margin-top:10px}
+.cab6Search.dbestEntrySheet .cab6Quick{margin:10px 0 12px}.cab6Search.dbestEntrySheet .cab6Quick button{min-height:68px;border-radius:16px}
+.cab6Search.dbestEntrySheet .cab6Tools{display:none}
+.cab6Search.dbestEntrySheet .cab6Go{position:sticky;bottom:8px;z-index:8;min-height:56px;border-radius:17px;box-shadow:0 12px 28px rgba(51,80,208,.28)}
+@media(max-width:480px){#dbestCabEntryMapWrap{height:270px;margin-bottom:-38px}.cab6Search.dbestEntrySheet{margin:0 4px}.cab6Search.dbestEntrySheet .cab6Quick button{font-size:8.5px}}
 `;document.head.appendChild(s)}
 function header(back){return `<div class="cab6Top"><button type="button" onclick="${back}">← Back</button><img class="cab6Logo" src="/dbest-logo.png" alt="DBest"><button type="button" onclick="backHome()">⌂ Home</button></div>`}
 function screen(body,back='DBEST_CAB_SELECTED_UI.open()'){css();try{F.map&&F.map.remove&&F.map.remove()}catch(e){}F.map=null;const html=`<div class="cab6Page">${header(back)}<div class="cab6Wrap">${body}</div></div>`;if(typeof sectionScreen==='function')sectionScreen(html);else document.body.innerHTML=html}
@@ -138,6 +158,18 @@ function book(id){
  tell('Booking details are ready. Please retry once.')
 }
 function patchSearch(){css();
+ const search=document.querySelector('.cab6Search');
+ if(search&&!search.classList.contains('dbestEntrySheet')){
+   search.classList.add('dbestEntrySheet');
+   search.insertAdjacentHTML('afterbegin','<div class="dbestEntryHandle"></div><div class="dbestEntryHeading"><b>Where would you like to go?</b><small>DBest Cab</small></div>');
+   if(!document.getElementById('dbestCabEntryMapWrap')){
+     const map=document.createElement('div');map.id='dbestCabEntryMapWrap';
+     map.innerHTML='<div id="dbestCabEntryMap"><div class="entryMapFallback"><div class="entryMapPin"></div></div></div><div class="entryMapBadge">Live pickup map</div><button type="button" class="entryMapLocate" id="dbestEntryLocate" aria-label="Use current location">◎</button>';
+     search.insertAdjacentElement('beforebegin',map);
+     document.getElementById('dbestEntryLocate').onclick=()=>document.getElementById('cab6Gps')?.click();
+     setTimeout(renderEntryMap,50);
+   }
+ }
  const drop=$('cab6DropWrap');
  if(drop&&!$('cab6AddStop')){
    const wrap=document.createElement('div');wrap.id='cab6StopsWrap';
@@ -153,7 +185,41 @@ function patchSearch(){css();
      try{window.DBEST_I18N?.apply?.();window.DBEST_USER_I18N?.apply?.()}catch(e){}
    };
  }
- const rent=$('cab6RentalPkg');if(rent&&rent.dataset.dbestV16!=='1'){const current=PACKS.some(x=>x[0]===rent.value)?rent.value:'2|20';rent.innerHTML=PACKS.map(x=>`<option value="${x[0]}">${x[1]}</option>`).join('');rent.value=current;rent.dataset.dbestV16='1'}const gps=$('cab6Gps');if(gps){gps.setAttribute('aria-label','Use current location');gps.setAttribute('title','Use current location')}const b=$('cab6Go');if(b){b.textContent='Search Cabs';b.disabled=false}}
+ const rent=$('cab6RentalPkg');if(rent&&rent.dataset.dbestV16!=='1'){const current=PACKS.some(x=>x[0]===rent.value)?rent.value:'2|20';rent.innerHTML=PACKS.map(x=>`<option value="${x[0]}">${x[1]}</option>`).join('');rent.value=current;rent.dataset.dbestV16='1'}
+ const gps=$('cab6Gps');if(gps){gps.setAttribute('aria-label','Use current location');gps.setAttribute('title','Use current location')}
+ const b=$('cab6Go');if(b){b.textContent='Find My Ride';b.disabled=false}
+ try{window.DBEST_I18N?.apply?.();window.DBEST_USER_I18N?.apply?.()}catch(e){}
+}
+async function renderEntryMap(){
+ const el=document.getElementById('dbestCabEntryMap');if(!el)return;
+ const paint=(lat,lng)=>{
+   try{
+     if(window.google?.maps?.Map){
+       el.innerHTML='';
+       const m=new google.maps.Map(el,{center:{lat,lng},zoom:14,streetViewControl:false,mapTypeControl:false,fullscreenControl:false,gestureHandling:'greedy',disableDefaultUI:true});
+       new google.maps.Marker({map:m,position:{lat,lng}});
+       return true;
+     }
+   }catch(_){}
+   return false;
+ };
+ try{
+   if(navigator.geolocation){
+     navigator.geolocation.getCurrentPosition(async p=>{
+       const lat=p.coords.latitude,lng=p.coords.longitude;
+       if(paint(lat,lng))return;
+       try{
+         const L=await loadLeaflet();
+         if(!document.getElementById('dbestCabEntryMap'))return;
+         el.innerHTML='';
+         const m=L.map(el,{zoomControl:false,attributionControl:false}).setView([lat,lng],14);
+         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(m);
+         L.circleMarker([lat,lng],{radius:8,weight:4,color:'#fff',fillColor:'#2362ee',fillOpacity:1}).addTo(m);
+       }catch(_){}
+     },()=>{}, {enableHighAccuracy:false,timeout:2200,maximumAge:60000});
+   }
+ }catch(_){}
+}
 function bind(a){if(!a||typeof a.open!=='function')return;api=a;const open=()=>{a.open();setTimeout(patchSearch,0)};try{Object.defineProperty(window,'openRidePlatform',{configurable:true,get(){return open},set(){}})}catch(e){window.openRidePlatform=open}window.DBEST_CAB_SELECTED_UI={...a,open};window.DBEST_ACTIVE_CAB_VERSION='SELECTED_REALMAP_V16';patchSearch()}
 function ensure(){if(api)return Promise.resolve(api);if(window.DBEST_CAB_SELECTED_UI&&window.DBEST_CAB_SELECTED_UI.version===BASE){bind(window.DBEST_CAB_SELECTED_UI);return Promise.resolve(api)}if(loader)return loader;loader=new Promise((ok,no)=>{const old=$('dbest-selected-cab-v6-script');if(old)old.remove();const s=document.createElement('script');s.id='dbest-selected-cab-v6-script';s.src='/cab-selected-ui-v3.js?v='+BASE+'&t='+Date.now();s.async=false;s.onload=()=>{const a=window.DBEST_CAB_SELECTED_UI;if(a&&a.version===BASE){bind(a);ok(api)}else no(new Error('base unavailable'))};s.onerror=no;(document.body||document.documentElement).appendChild(s)}).catch(e=>{loader=null;console.warn(e);throw e});return loader}
 document.addEventListener('click',e=>{const r=e.target.closest?.('[data-q="rental"]');if(r)setTimeout(()=>{const w=$('cab6StopsWrap');if(w)w.style.display=r.classList.contains('on')?'none':''},0);const b=e.target.closest?.('#cab6Go');if(!b)return;e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();startSearch(e)},true);
