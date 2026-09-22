@@ -1,8 +1,8 @@
 (function(){
 'use strict';
-const V='20260922-cab-entry-eta-performance-v7';
+const V='20260922-cab-experience-v2-entry';
 if(window.DBEST_CAB_ENTRY_CAPTURE?.version===V)return;
-const ASSET_V='20260922-cab-eta-performance-v7';
+const ASSET_V='20260922-cab-experience-v2';
 let opening=false,ensurePromise=null;
 
 function preload(src){
