@@ -3691,6 +3691,17 @@ async function syncOwnerMasterConfig(silent=false){
     }catch(e){console.warn("DBest Owner visibility overlay",e)}
     if(os.payu){payuSettings={...payuSettings,enabled:os.payu.enabled!==false,mode:String(os.payu.mode||payuSettings.mode).toLowerCase(),merchantKey:os.payu.merchant_key||payuSettings.merchantKey,createEndpoint:os.payu.endpoint||payuSettings.createEndpoint,verifiedReturnUrl:os.payu.return_url||payuSettings.verifiedReturnUrl,buttonLabel:os.payu.button_label||payuSettings.buttonLabel};}
     if(os.links&&typeof os.links==="object")links={...links,...os.links};
+    if(os.rideConfig&&typeof os.rideConfig==="object"){
+      const localDrivers=Array.isArray(rideConfig?.drivers)?rideConfig.drivers:[];
+      const incoming={...os.rideConfig};
+      rideConfig={...rideConfig,...incoming};
+      if(localDrivers.length)rideConfig.drivers=localDrivers;
+      if(Array.isArray(incoming.vehicles)){
+        rideConfig.vehicles=incoming.vehicles.map(v=>({...v}));
+      }
+      try{localStorage.setItem("d2_ride_config",JSON.stringify(rideConfig))}catch(_){}
+      try{window.dispatchEvent(new CustomEvent("dbest:ride-config-updated",{detail:rideConfig}))}catch(_){}
+    }
     if(os.payout){payout={self:Number(os.payout.self||0),l1:Number(os.payout.l1||0),l2:Number(os.payout.l2||0),l3:Number(os.payout.l3||0)};}
     // Backend payout defaults
     const pr=(cfg.payout_rules||[]).filter(x=>x.enabled!==false);
