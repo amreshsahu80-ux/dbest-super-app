@@ -1,8 +1,8 @@
 (function(){
 'use strict';
-const V='20260922-cab-mapbar-final';
+const V='20260922-cab-vehicle-cleanup-v1';
 if(window.DBEST_CAB_ENTRY_CAPTURE?.version===V)return;
-const ASSET_V='20260922-cab-mapbar-final';
+const ASSET_V='20260922-cab-vehicle-cleanup-v1';
 let opening=false,ensurePromise=null;
 
 function preload(src){
