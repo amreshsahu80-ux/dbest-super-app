@@ -2608,10 +2608,27 @@ function assignRideDriver(x){
 function bookRide(e,vehicleId){
   e.preventDefault();if(!requireMember())return;
   let v=rideConfig.vehicles.find(x=>x.id===vehicleId);if(!v)return;
-  let payment=new FormData(e.target).get("payment")||"cash",fare=rideFare(v,rideDraft.distance);
-  let x=addTx(session.id,"Cab Booking",v.name,fare,payment==="payu"?"Ride Created / Payment Pending":"Ride Confirmed / Driver Assigning","",{
+  let payment=new FormData(e.target).get("payment")||"cash";
+  let isRound=rideDraft.roundTrip===true||rideDraft.tripType==="roundtrip";
+  let fare=0;
+  if(isRound){
+    let rr=rideConfig.roundTripRules||{},rule=rr[v.id];
+    if(rr.enabled===false||!rule||!["sedan","suv"].includes(v.id))return toast("Round Trip is available only for Sedan and SUV.");
+    fare=Math.round(Number(rideDraft.distance||0)*Number(rule.perKm||0)+(rideDraft.nightHalt?Number(rule.nightHalt||0):0));
+  }else{
+    fare=rideFare(v,rideDraft.distance);
+  }
+  let x=addTx(session.id,"Cab Booking",isRound?v.name+" • Round Trip":v.name,fare,payment==="payu"?"Ride Created / Payment Pending":"Ride Confirmed / Driver Assigning","",{
     source:"DBest Ride Platform",flow:"ride",paymentStage:payment==="payu"?"Pending PayU":"Pay on Trip",
-    ride:{pickup:rideDraft.pickup,pickupCoords:rideDraft.pickupCoords||null,drop:rideDraft.drop,stops:[...(rideDraft.stops||[])],distance:rideDraft.distance,vehicleId:v.id,vehicleName:v.name,paymentMethod:payment,stage:0}
+    ride:{
+      pickup:rideDraft.pickup,pickupCoords:rideDraft.pickupCoords||null,drop:rideDraft.drop,
+      stops:[...(rideDraft.stops||[])],distance:rideDraft.distance,vehicleId:v.id,vehicleName:v.name,
+      paymentMethod:payment,stage:0,tripType:isRound?"roundtrip":"oneway",roundTrip:isRound,
+      sameVehicle:isRound,returnPickup:isRound?(rideDraft.returnPickup||rideDraft.drop):null,
+      returnDrop:isRound?(rideDraft.returnDrop||rideDraft.pickup):null,
+      nightHalt:isRound&&rideDraft.nightHalt===true,tollsExtra:isRound,
+      estimatedMinutes:Number(rideDraft.estimatedMinutes||0)
+    }
   });
   x.ride=x.meta.ride;x.paymentStage=x.meta.paymentStage;save();
   if(payment==="payu")return ridePaymentScreen(x.id);
@@ -2640,7 +2657,7 @@ function ridePaymentScreen(txId){
 function rideStatusScreen(txId){
   let x=txs.find(t=>t.id===txId);if(!x)return;
   if(!x.ride?.driver)assignRideDriver(x);
-  let r=x.ride,d=r.driver||{},steps=["Driver Assigned","Arriving","Trip Started","Completed"],stage=Number(r.stage||1);
+  let r=x.ride,d=r.driver||{},steps=r.roundTrip?["Driver Assigned","Outbound Journey","Return Journey","Completed"]:["Driver Assigned","Arriving","Trip Started","Completed"],stage=Number(r.stage||1);
   sectionScreen(`${sectionTopBar("🚕 Your Ride",x.id,"backHome()")}
     <div class="sectionContent ridePage">
       <div class="rideMap"><span class="rideMapLabel">${[r.pickup,...(Array.isArray(r.stops)?r.stops:[]),r.drop].filter(Boolean).map(x=>esc(x)).join(" → ")}</span><span class="rideRoute"></span></div>
@@ -2657,7 +2674,7 @@ function rideStatusScreen(txId){
 function advanceRide(txId){
   let x=txs.find(t=>t.id===txId);if(!x)return;let r=x.ride||{};
   r.stage=Math.min(3,Number(r.stage||1)+1);x.ride=r;x.meta={...(x.meta||{}),ride:r};
-  x.status=r.stage===2?"Trip Started":r.stage===3?"Ride Completed":"Driver Arriving";
+  x.status=r.roundTrip?(r.stage===2?"Return Journey":r.stage===3?"Ride Completed":"Outbound Journey"):(r.stage===2?"Trip Started":r.stage===3?"Ride Completed":"Driver Arriving");
   if(r.stage===3&&r.paymentMethod!=="payu"){x.paymentStage="Paid on Trip";x.paymentRef="TRIP-"+x.id.slice(-6)}
   save();rideStatusScreen(txId);
 }
