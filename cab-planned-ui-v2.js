@@ -1,7 +1,7 @@
 (function(){
 'use strict';
 const BASE='20260905-selected-realmap-v6';
-const VERSION='20260922-cab-roundtrip-v1';
+const VERSION='20260922-cab-roundtrip-v2';
 const PACKS=[['2|20','2 Hours / 20 km'],['4|40','4 Hours / 40 km'],['8|80','8 Hours / 80 km'],['12|120','12 Hours / 120 km']];
 const VEH=[
  {id:'bike',name:'Bike',seats:1,base:35,km:8,min:45,img:'https://images.tractorjunction.com/GLOSS_BLACK_4c0619d5ab.png?format=webp&height=424&width=760'},
