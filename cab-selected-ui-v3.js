@@ -12,12 +12,11 @@ const IMG={
 };
 const VEH=[
  {id:'bike',name:'Bike',seats:1,base:35,km:8,min:45},
- {id:'auto',name:'Auto',seats:3,base:45,km:12,min:60},
- {id:'mini',name:'Mini',seats:4,base:65,km:15,min:90},
+ {id:'auto',name:'Auto/E-Rickshaw',seats:3,base:45,km:12,min:60},
  {id:'sedan',name:'Sedan',seats:4,base:85,km:18,min:120},
  {id:'suv',name:'SUV',seats:6,base:110,km:22,min:150}
 ];
-const S={p:null,d:null,route:null,mode:'ride',schedule:'now',scheduledAt:'',rider:'self',riderName:'',riderMobile:'',rentalHours:2,rentalKm:20,selected:'mini',provider:'fallback',map:null,layer:null};
+const S={p:null,d:null,route:null,mode:'ride',schedule:'now',scheduledAt:'',rider:'self',riderName:'',riderMobile:'',rentalHours:2,rentalKm:20,selected:'auto',provider:'fallback',map:null,layer:null};
 const $=id=>document.getElementById(id), q=(s,r=document)=>r.querySelector(s), qa=(s,r=document)=>Array.from(r.querySelectorAll(s));
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const say=m=>{try{typeof toast==='function'?toast(m):alert(m)}catch(e){alert(m)}};
