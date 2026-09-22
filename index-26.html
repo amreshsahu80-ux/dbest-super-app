@@ -2413,7 +2413,7 @@ function createVaahakJobFromTx(txId,kind){
   let x=txs.find(t=>t.id===txId);if(!x)return null;
   let existing=vaahakJobForTx(txId);if(existing)return existing;
   let r=x.ride||x.meta?.ride||{},job=baseVaahakJob(x,kind);
-  job.pickup=r.pickup||"Customer Pickup";job.drop=r.drop||"Destination";job.stops=Array.isArray(r.stops)?[...r.stops]:[];job.pickupCoords=r.pickupCoords||null;job.dropCoords=r.dropCoords||null;
+  job.pickup=r.pickup||"Customer Pickup";job.drop=r.roundTrip?(r.returnDrop||r.pickup||"Customer Pickup"):(r.drop||"Destination");job.stops=Array.isArray(r.stops)?[...r.stops]:[];if(r.roundTrip){job.stops.push(r.drop||"Destination");job.roundTrip=true;job.sameVehicle=true;job.returnPickup=r.returnPickup||r.drop||"";job.returnDrop=r.returnDrop||r.pickup||"";job.tollsExtra=r.tollsExtra!==false;job.nightHalt=!!r.nightHalt}job.pickupCoords=r.pickupCoords||null;job.dropCoords=r.roundTrip?(r.pickupCoords||null):(r.dropCoords||null);
   job.marketType="";job.items=[];job.partnerEarning=Math.round(Number(x.amount||0)*0.17);job.status="Open";
   autoAssignVaahak(job);vaahakJobs.push(job);x.vaahakJobId=job.id;x.vaahakJobIds=[job.id];x.vaahakPartnerId=job.partnerId||"";save();return job;
 }
@@ -2660,7 +2660,7 @@ function rideStatusScreen(txId){
   let r=x.ride,d=r.driver||{},steps=r.roundTrip?["Driver Assigned","Outbound Journey","Return Journey","Completed"]:["Driver Assigned","Arriving","Trip Started","Completed"],stage=Number(r.stage||1);
   sectionScreen(`${sectionTopBar("🚕 Your Ride",x.id,"backHome()")}
     <div class="sectionContent ridePage">
-      <div class="rideMap"><span class="rideMapLabel">${[r.pickup,...(Array.isArray(r.stops)?r.stops:[]),r.drop].filter(Boolean).map(x=>esc(x)).join(" → ")}</span><span class="rideRoute"></span></div>
+      <div class="rideMap"><span class="rideMapLabel">${[r.pickup,...(Array.isArray(r.stops)?r.stops:[]),r.drop,...(r.roundTrip?[r.returnDrop||r.pickup]:[])].filter(Boolean).map(x=>esc(x)).join(" → ")}</span><span class="rideRoute"></span></div>
       ${vaahakStatusHtml(x.id)}<div class="driverCard"><div class="driverAvatar">👨‍✈️</div><div><b>${esc(d.name||"Driver")}</b><small style="display:block;color:var(--m)">⭐ ${d.rating||4.8} • ${esc(d.number||"")}</small><small>${esc(d.phone||"")}</small></div><div><small>OTP</small><b style="display:block;font-size:20px">${esc(r.otp||"—")}</b></div></div>
       <div class="tripSteps">${steps.map((s,i)=>`<div class="tripStep ${i<stage?"done":i===stage?"active":""}">${s}</div>`).join("")}</div>
       <div class="txDetailGrid"><div class="txDetailCell"><small>Fare</small><b>₹${Number(x.amount||0)}</b></div><div class="txDetailCell"><small>Payment</small><b>${esc(r.paymentMethod||"")}</b></div><div class="txDetailCell"><small>Distance</small><b>${Number(r.distance||0).toFixed(1)} km</b></div><div class="txDetailCell"><small>Status</small><b>${esc(x.status)}</b></div></div>
