@@ -1,7 +1,7 @@
 (function(){
 'use strict';
 const BASE='20260905-selected-realmap-v6';
-const VERSION='20260922-cab-experience-v2-entry-redesign';
+const VERSION='20260922-cab-experience-v2-mapfix';
 const PACKS=[['2|20','2 Hours / 20 km'],['4|40','4 Hours / 40 km'],['8|80','8 Hours / 80 km'],['12|120','12 Hours / 120 km']];
 const VEH=[
  {id:'bike',name:'Bike',seats:1,base:35,km:8,min:45,img:'https://images.tractorjunction.com/GLOSS_BLACK_4c0619d5ab.png?format=webp&height=424&width=760'},
@@ -192,34 +192,67 @@ function patchSearch(){css();
 }
 async function renderEntryMap(){
  const el=document.getElementById('dbestCabEntryMap');if(!el)return;
- const paint=(lat,lng)=>{
+ let mountedMap=null;
+ const cleanup=()=>{try{mountedMap?.remove?.()}catch(_){}mountedMap=null};
+ const coordsFromBrowser=()=>new Promise(resolve=>{
    try{
+     if(!navigator.geolocation)return resolve(null);
+     navigator.geolocation.getCurrentPosition(
+       p=>resolve({lat:p.coords.latitude,lng:p.coords.longitude}),
+       ()=>resolve(null),
+       {enableHighAccuracy:false,timeout:2600,maximumAge:60000}
+     );
+   }catch(_){resolve(null)}
+ });
+ const coordsFromPickup=async()=>{
+   const txt=String(document.getElementById('cab6P')?.value||'').trim();
+   if(txt.length<3)return null;
+   try{
+     const p=await Promise.race([geocode(txt),new Promise(r=>setTimeout(()=>r(null),2600))]);
+     return p&&Number.isFinite(p.lat)&&Number.isFinite(p.lng)?{lat:p.lat,lng:p.lng}:null;
+   }catch(_){return null}
+ };
+ const mount=async(pos)=>{
+   if(!pos||!Number.isFinite(pos.lat)||!Number.isFinite(pos.lng)||!document.getElementById('dbestCabEntryMap'))return false;
+   cleanup();
+   try{
+     await ensureGoogle(1800);
      if(window.google?.maps?.Map){
        el.innerHTML='';
-       const m=new google.maps.Map(el,{center:{lat,lng},zoom:14,streetViewControl:false,mapTypeControl:false,fullscreenControl:false,gestureHandling:'greedy',disableDefaultUI:true});
-       new google.maps.Marker({map:m,position:{lat,lng}});
+       mountedMap=new google.maps.Map(el,{center:pos,zoom:14,streetViewControl:false,mapTypeControl:false,fullscreenControl:false,gestureHandling:'greedy',disableDefaultUI:true});
+       new google.maps.Marker({map:mountedMap,position:pos});
        return true;
      }
    }catch(_){}
+   try{
+     const L=await loadLeaflet();
+     if(!document.getElementById('dbestCabEntryMap'))return false;
+     el.innerHTML='';
+     mountedMap=L.map(el,{zoomControl:false,attributionControl:false}).setView([pos.lat,pos.lng],14);
+     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(mountedMap);
+     L.circleMarker([pos.lat,pos.lng],{radius:8,weight:4,color:'#fff',fillColor:'#2362ee',fillOpacity:1}).addTo(mountedMap);
+     setTimeout(()=>mountedMap?.invalidateSize?.(),80);
+     return true;
+   }catch(_){return false}
+ };
+ const tryResolve=async()=>{
+   const pickup=await coordsFromPickup();
+   if(await mount(pickup))return true;
+   const gps=await coordsFromBrowser();
+   if(await mount(gps))return true;
    return false;
  };
- try{
-   if(navigator.geolocation){
-     navigator.geolocation.getCurrentPosition(async p=>{
-       const lat=p.coords.latitude,lng=p.coords.longitude;
-       if(paint(lat,lng))return;
-       try{
-         const L=await loadLeaflet();
-         if(!document.getElementById('dbestCabEntryMap'))return;
-         el.innerHTML='';
-         const m=L.map(el,{zoomControl:false,attributionControl:false}).setView([lat,lng],14);
-         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(m);
-         L.circleMarker([lat,lng],{radius:8,weight:4,color:'#fff',fillColor:'#2362ee',fillOpacity:1}).addTo(m);
-       }catch(_){}
-     },()=>{}, {enableHighAccuracy:false,timeout:2200,maximumAge:60000});
-   }
- }catch(_){}
+ await tryResolve();
+ const input=document.getElementById('cab6P');
+ if(input&&!input.dataset.dbestEntryMapBound){
+   input.dataset.dbestEntryMapBound='1';
+   let t=0;
+   input.addEventListener('change',()=>{clearTimeout(t);t=setTimeout(tryResolve,180)});
+   input.addEventListener('blur',()=>{clearTimeout(t);t=setTimeout(tryResolve,220)});
+ }
+ [900,2200,4200].forEach(ms=>setTimeout(()=>{if(document.getElementById('dbestCabEntryMap')&&el.querySelector('.entryMapFallback'))tryResolve()},ms));
 }
+
 function bind(a){if(!a||typeof a.open!=='function')return;api=a;const open=()=>{a.open();setTimeout(patchSearch,0)};try{Object.defineProperty(window,'openRidePlatform',{configurable:true,get(){return open},set(){}})}catch(e){window.openRidePlatform=open}window.DBEST_CAB_SELECTED_UI={...a,open};window.DBEST_ACTIVE_CAB_VERSION='SELECTED_REALMAP_V16';patchSearch()}
 function ensure(){if(api)return Promise.resolve(api);if(window.DBEST_CAB_SELECTED_UI&&window.DBEST_CAB_SELECTED_UI.version===BASE){bind(window.DBEST_CAB_SELECTED_UI);return Promise.resolve(api)}if(loader)return loader;loader=new Promise((ok,no)=>{const old=$('dbest-selected-cab-v6-script');if(old)old.remove();const s=document.createElement('script');s.id='dbest-selected-cab-v6-script';s.src='/cab-selected-ui-v3.js?v='+BASE+'&t='+Date.now();s.async=false;s.onload=()=>{const a=window.DBEST_CAB_SELECTED_UI;if(a&&a.version===BASE){bind(a);ok(api)}else no(new Error('base unavailable'))};s.onerror=no;(document.body||document.documentElement).appendChild(s)}).catch(e=>{loader=null;console.warn(e);throw e});return loader}
 document.addEventListener('click',e=>{const r=e.target.closest?.('[data-q="rental"]');if(r)setTimeout(()=>{const w=$('cab6StopsWrap');if(w)w.style.display=r.classList.contains('on')?'none':''},0);const b=e.target.closest?.('#cab6Go');if(!b)return;e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();startSearch(e)},true);
