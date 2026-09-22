@@ -1512,10 +1512,10 @@ if(!serviceFeeOverrides||typeof serviceFeeOverrides!=="object"||Array.isArray(se
 let rideConfig=JSON.parse(localStorage.getItem("d2_ride_config")||"null")||{
   surge:1,platformFee:15,cancellationFee:40,taxPercent:0,
   payu:true,cash:true,upiDriver:true,
+  roundTripRules:{enabled:true,sameVehicle:true,sameDayPreferred:true,tollsExtra:true,sedan:{perKm:15,nightHalt:1000},suv:{perKm:18,nightHalt:1500}},
   vehicles:[
     {id:"bike",name:"Bike",icon:"🏍️",base:22,perKm:8,minFare:30,eta:3,seats:1},
-    {id:"auto",name:"Auto",icon:"🛺",base:35,perKm:12,minFare:50,eta:4,seats:3},
-    {id:"mini",name:"Mini",icon:"🚗",base:55,perKm:15,minFare:80,eta:5,seats:4},
+    {id:"auto",name:"Auto/E-Rickshaw",icon:"🛺",base:35,perKm:12,minFare:50,eta:4,seats:3},
     {id:"sedan",name:"Sedan",icon:"🚘",base:75,perKm:18,minFare:110,eta:6,seats:4},
     {id:"suv",name:"SUV",icon:"🚙",base:105,perKm:23,minFare:160,eta:7,seats:6}
   ],
@@ -3759,12 +3759,23 @@ function ownerCabControl(){
         <div class="f full"><label><input type="checkbox" name="payu" ${rideConfig.payu?"checked":""}> PayU &nbsp; <input type="checkbox" name="cash" ${rideConfig.cash?"checked":""}> Cash &nbsp; <input type="checkbox" name="upiDriver" ${rideConfig.upiDriver?"checked":""}> UPI to Driver</label></div><div class="f full"><button class="btn">Save Ride Rules</button></div>
       </form></div>
       <h3>Vehicle Fare Rules</h3><div class="ownerList">${rideConfig.vehicles.map(v=>`<form class="ownerRow" onsubmit="saveRideVehicle(event,'${v.id}')"><div><label>Name</label><input name="name" value="${esc(v.name)}"></div><div><label>Base / Per KM</label><input name="rates" value="${v.base},${v.perKm}"></div><div><label>Minimum Fare / ETA</label><input name="mineta" value="${v.minFare},${v.eta}"></div><div><button class="mini">Save</button></div></form>`).join("")}</div>
+      <h3>Round Trip Rules</h3>
+      <div class="ownerPanelCard"><form class="form" onsubmit="saveRoundTripRules(event)">
+        <div class="f"><label>Sedan ₹/KM</label><input name="sedanPerKm" type="number" step=".1" min="0" value="${rideConfig.roundTripRules?.sedan?.perKm??15}"></div>
+        <div class="f"><label>Sedan Night Halt ₹</label><input name="sedanNight" type="number" min="0" value="${rideConfig.roundTripRules?.sedan?.nightHalt??1000}"></div>
+        <div class="f"><label>SUV ₹/KM</label><input name="suvPerKm" type="number" step=".1" min="0" value="${rideConfig.roundTripRules?.suv?.perKm??18}"></div>
+        <div class="f"><label>SUV Night Halt ₹</label><input name="suvNight" type="number" min="0" value="${rideConfig.roundTripRules?.suv?.nightHalt??1500}"></div>
+        <div class="f full"><label><input type="checkbox" name="enabled" ${rideConfig.roundTripRules?.enabled!==false?"checked":""}> Round Trip Enabled &nbsp; <input type="checkbox" name="tollsExtra" ${rideConfig.roundTripRules?.tollsExtra!==false?"checked":""}> Tolls Extra</label></div>
+        <div class="f full"><small>Round Trip is a single same-vehicle booking. Only Sedan and SUV are offered. Fare = total round-trip KM × configured rate + night halt if selected.</small></div>
+        <div class="f full"><button class="btn">Save Round Trip Rules</button></div>
+      </form></div>
       <h3>Driver Pool</h3><div class="ownerList">${rideConfig.drivers.map(d=>`<div class="ownerRow"><div><label>Driver</label><b>${esc(d.name)}</b></div><div><label>Vehicle</label><span>${esc(d.vehicle)}</span></div><div><label>Number</label><span>${esc(d.number)}</span></div><div><button class="mini" onclick="removeRideDriver('${d.id}')">Remove</button></div></div>`).join("")}</div>
       <div class="ownerPanelCard" style="margin-top:12px"><h3>Add Driver</h3><form class="form" onsubmit="addRideDriver(event)"><div class="f"><label>Name</label><input name="name" required></div><div class="f"><label>Vehicle Type ID</label><input name="vehicle" placeholder="mini / bike / auto" required></div><div class="f"><label>Vehicle Number</label><input name="number" required></div><div class="f"><label>Phone</label><input name="phone"></div><div class="f full"><button class="btn">Add Driver</button></div></form></div>
     </div>`);
 }
 function saveRideRules(e){e.preventDefault();let f=new FormData(e.target);rideConfig.surge=+f.get("surge")||1;rideConfig.platformFee=+f.get("platformFee")||0;rideConfig.cancellationFee=+f.get("cancellationFee")||0;rideConfig.taxPercent=+f.get("taxPercent")||0;rideConfig.payu=f.get("payu")==="on";rideConfig.cash=f.get("cash")==="on";rideConfig.upiDriver=f.get("upiDriver")==="on";save();toast("Ride rules saved");ownerCabControl()}
 function saveRideVehicle(e,id){e.preventDefault();let f=new FormData(e.target),v=rideConfig.vehicles.find(x=>x.id===id);if(!v)return;let r=String(f.get("rates")||"").split(",").map(Number),m=String(f.get("mineta")||"").split(",").map(Number);v.name=String(f.get("name")||v.name);v.base=r[0]||v.base;v.perKm=r[1]||v.perKm;v.minFare=m[0]||v.minFare;v.eta=m[1]||v.eta;save();ownerCabControl()}
+function saveRoundTripRules(e){e.preventDefault();let f=new FormData(e.target);rideConfig.roundTripRules={enabled:f.get("enabled")==="on",sameVehicle:true,sameDayPreferred:true,tollsExtra:f.get("tollsExtra")==="on",sedan:{perKm:+f.get("sedanPerKm")||15,nightHalt:+f.get("sedanNight")||1000},suv:{perKm:+f.get("suvPerKm")||18,nightHalt:+f.get("suvNight")||1500}};save();toast("Round Trip rules saved");ownerCabControl()}
 function addRideDriver(e){e.preventDefault();let f=new FormData(e.target);rideConfig.drivers.push({id:"DRV"+Date.now().toString().slice(-6),name:String(f.get("name")),vehicle:String(f.get("vehicle")),number:String(f.get("number")),phone:String(f.get("phone")||""),rating:4.8});save();ownerCabControl()}
 function removeRideDriver(id){rideConfig.drivers=rideConfig.drivers.filter(x=>x.id!==id);save();ownerCabControl()}
 function ownerVaahakControl(){
