@@ -22,6 +22,36 @@ async function sb(path,{method='GET',body,prefer='return=representation'}={}){
 }
 
 async function triggerVendorVoice(orderId){try{await fetch(SUPABASE_URL+'/functions/v1/partner-voice-alert',{method:'POST',headers:{apikey:SERVICE_KEY,'Content-Type':'application/json'},body:JSON.stringify({action:'vendor_order',orderId})});}catch(e){console.error('[vendor voice alert]',e)}}
+async function rpc(name,body){
+  const r=await fetch(SUPABASE_URL+'/rest/v1/rpc/'+name,{
+    method:'POST',
+    headers:{apikey:SERVICE_KEY,Authorization:'Bearer '+SERVICE_KEY,'Content-Type':'application/json'},
+    body:JSON.stringify(body||{})
+  });
+  const text=await r.text();let data=null;try{data=text?JSON.parse(text):null}catch{data=text}
+  if(!r.ok){const e=new Error((data&&data.message)||('Supabase RPC '+r.status));e.status=r.status;throw e}
+  return data;
+}
+function htmlEsc(s){return String(s??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]))}
+async function triggerVendorMail(orderId){
+  try{
+    const rows=await sb('marketplace_orders_live?id=eq.'+encodeURIComponent(orderId)+'&select=*'+'&limit=1');
+    const order=rows&&rows[0];if(!order)return {sent:false,error:'order_not_found'};
+    const vendors=await sb('marketplace_vendors_live?id=eq.'+encodeURIComponent(order.vendor_id)+'&select=id,name,email,mobile,city&limit=1');
+    const vendor=vendors&&vendors[0];if(!vendor?.email||!String(vendor.email).includes('@'))return {sent:false,error:'vendor_email_missing'};
+    const key=await rpc('get_dbest_secret',{p_name:'dbest_resend_api_key'});
+    if(!key)return {sent:false,error:'email_service_unavailable'};
+    const items=Array.isArray(order.items)?order.items:[];
+    const lines=items.map(i=>`${String(i.name||'Item')} × ${Number(i.qty||1)} — ₹${Number(i.price||0)*Number(i.qty||1)}`);
+    const subject=`New DBest Marketplace Order — ${order.id}`;
+    const text=`New Marketplace order ${order.id}. Customer: ${order.customer_name}. Mobile: ${order.customer_mobile}. Delivery address: ${order.delivery_address}. Payment: ${order.payment_method}. Amount: ₹${Number(order.collect_amount||order.order_value||0)}. Items: ${lines.join('; ')}. Please login to the DBest Vendor Portal and Accept → Prepare → Ready for Pickup.`;
+    const html=`<!doctype html><html><body style="font-family:Arial,sans-serif;background:#f4f7fb;color:#14213d;padding:20px"><div style="max-width:640px;margin:auto;background:#fff;border:1px solid #e2e8f2;border-radius:18px;overflow:hidden"><div style="background:#175cff;color:#fff;padding:22px"><b style="font-size:22px">New Marketplace Order</b><div style="margin-top:5px">${htmlEsc(order.id)}</div></div><div style="padding:22px"><p>Hi <b>${htmlEsc(vendor.name)}</b>, a new DBest Marketplace order requires your confirmation.</p><p><b>Customer:</b> ${htmlEsc(order.customer_name)}<br><b>Mobile:</b> ${htmlEsc(order.customer_mobile)}<br><b>Delivery address:</b> ${htmlEsc(order.delivery_address)}<br><b>Payment:</b> ${htmlEsc(order.payment_method)}<br><b>Order amount:</b> ₹${Number(order.collect_amount||order.order_value||0).toLocaleString('en-IN')}</p><h3>Items</h3><table width="100%" cellpadding="8" cellspacing="0" style="border-collapse:collapse">${items.map(i=>`<tr><td style="border-bottom:1px solid #eee">${htmlEsc(i.name||'Item')}</td><td style="border-bottom:1px solid #eee">Qty ${Number(i.qty||1)}</td><td align="right" style="border-bottom:1px solid #eee">₹${(Number(i.price||0)*Number(i.qty||1)).toLocaleString('en-IN')}</td></tr>`).join('')}</table><div style="margin-top:18px;padding:14px;background:#f6f9ff;border-radius:12px"><b>Next step:</b> Open the DBest Vendor Portal and mark the order <b>Accept → Preparing → Ready for Pickup</b>.</div></div></div></body></html>`;
+    const r=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:`Bearer ${key}`,'Content-Type':'application/json'},body:JSON.stringify({from:'DBest Marketplace <no-reply@dbest4u.com>',to:[String(vendor.email).trim().toLowerCase()],subject,text,html,tags:[{name:'purpose',value:'marketplace-order'},{name:'order',value:String(order.id).slice(0,50)}]})});
+    if(!r.ok){console.error('[vendor mail]',r.status,await r.text());return {sent:false,error:'vendor_email_failed'}}
+    await sb('marketplace_orders_live?id=eq.'+encodeURIComponent(order.id),{method:'PATCH',body:{vendor_notified_at:new Date().toISOString(),vendor_status:'Vendor Notified',status:'Vendor Notified / Awaiting Confirmation',updated_at:new Date().toISOString()}});
+    return {sent:true};
+  }catch(e){console.error('[vendor mail]',e);return {sent:false,error:String(e.message||e)}}
+}
 
 module.exports = async function handler(req,res){
   if(req.method==='GET'){
@@ -132,7 +162,7 @@ module.exports = async function handler(req,res){
         delivery_fee:childDelivery,child_sequence:i+1
       }});
     }
-    const voiceRows=await sb('marketplace_orders_live?master_order_id=eq.'+encodeURIComponent(masterId)+'&select=id');for(const row of voiceRows||[])await triggerVendorVoice(row.id);
+    const voiceRows=await sb('marketplace_orders_live?master_order_id=eq.'+encodeURIComponent(masterId)+'&select=id');for(const row of voiceRows||[]){await triggerVendorVoice(row.id);await triggerVendorMail(row.id);}
     const finalRows=await sb('marketplace_master_orders_live?id=eq.'+encodeURIComponent(masterId)+'&select=id,parent_tx_id,total_amount,payment_method,payment_status,status,child_order_count&limit=1');
     return send(res,200,{ok:true,order:finalRows&&finalRows[0]?finalRows[0]:{id:masterId,total_amount:totalAmount,payment_status:'Pending',status:'Confirmed - Payment Due at Delivery'},message:'Order confirmed. Payment is due online at delivery.'});
   }catch(e){
