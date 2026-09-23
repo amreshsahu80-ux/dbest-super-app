@@ -23,7 +23,7 @@ async function load(){
 function templateRows(){
  const rows=state?.templates||[];
  if(!rows.length)return '<div style="padding:12px;color:#64748b">No DBest WhatsApp templates found.</div>';
- return rows.map(x=>{const ms=String(x.metaStatus||'').toUpperCase();const label=x.enabled?'APPROVED / ON':(ms==='REJECTED'?'REJECTED / OFF':ms==='NOT_FOUND'?'NOT FOUND / OFF':ms==='PENDING'?'PENDING / OFF':ms?ms+' / OFF':'PENDING / OFF');const bg=x.enabled?'#e8fff1':(ms==='REJECTED'||ms==='NOT_FOUND'?'#fff0f0':'#fff5df');const fg=x.enabled?'#166534':(ms==='REJECTED'||ms==='NOT_FOUND'?'#9b2525':'#92400e');return '<div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid #eef2f7"><div><b>'+esc(x.event_type)+'</b><div style="font-size:11px;color:#64748b;margin-top:2px">'+esc(x.template_name)+' • '+esc(x.recipient_type)+'</div></div><span style="padding:6px 9px;border-radius:999px;font:800 10px system-ui;background:'+bg+';color:'+fg+'">'+esc(label)+'</span></div>'}).join('');
+ return rows.map(x=>{const ms=String(x.metaStatus||'').toUpperCase(),cs=String(x.ctaStatus||'').toUpperCase();const ctaNote=cs?(' • CTA '+cs):'';const label=x.enabled?'APPROVED / ON':(ms==='REJECTED'?'REJECTED / OFF':ms==='NOT_FOUND'?'NOT FOUND / OFF':ms==='PENDING'?'PENDING / OFF':ms?ms+' / OFF':'PENDING / OFF');const bg=x.enabled?'#e8fff1':(ms==='REJECTED'||ms==='NOT_FOUND'?'#fff0f0':'#fff5df');const fg=x.enabled?'#166534':(ms==='REJECTED'||ms==='NOT_FOUND'?'#9b2525':'#92400e');return '<div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid #eef2f7"><div><b>'+esc(x.event_type)+'</b><div style="font-size:11px;color:#64748b;margin-top:2px">'+esc(x.template_name)+' • '+esc(x.recipient_type)+esc(ctaNote)+'</div></div><span style="padding:6px 9px;border-radius:999px;font:800 10px system-ui;background:'+bg+';color:'+fg+'">'+esc(label)+'</span></div>'}).join('');
 }
 function render(){
  let m=document.getElementById('dbestWaOwnerModal');if(!m)return;
@@ -74,7 +74,7 @@ function open(){
   m.innerHTML='<div style="width:min(760px,100%);max-height:92dvh;overflow:auto;background:#fff;border-radius:22px;box-shadow:0 30px 80px #0005"><div style="position:sticky;top:0;background:#fff;padding:16px 18px;border-bottom:1px solid #e7edf5;display:flex;align-items:center;justify-content:space-between;z-index:2"><div><b style="font:900 18px system-ui">WhatsApp Cloud API</b><div style="font:700 11px system-ui;color:#64748b;margin-top:3px">Direct Meta integration • DBest secure vault</div></div><button class="waClose" style="border:0;background:#eef2f7;width:36px;height:36px;border-radius:50%;font-size:18px">×</button></div><div class="waBody" style="padding:18px">Loading…</div></div>';
   document.body.appendChild(m);m.querySelector('.waClose').onclick=()=>m.remove();m.onclick=e=>{if(e.target===m)m.remove()};
  }
- load().catch(e=>{m.querySelector('.waBody').innerHTML='<div style="padding:16px;color:#9b2525;font:800 13px system-ui">Unable to load WhatsApp setup: '+esc(e.message)+'</div>'});
+ load().then(()=>{if(!sessionStorage.getItem('dbest_wa_cta_autosync_v1')){sessionStorage.setItem('dbest_wa_cta_autosync_v1','1');setTimeout(()=>syncTemplates().catch(()=>{}),350)}}).catch(e=>{m.querySelector('.waBody').innerHTML='<div style="padding:16px;color:#9b2525;font:800 13px system-ui">Unable to load WhatsApp setup: '+esc(e.message)+'</div>'});
 }
 function install(){
  if(location.pathname.toLowerCase()!='/owner'||!token()||document.getElementById('dbestOwnerWhatsAppSetup'))return;
@@ -82,5 +82,5 @@ function install(){
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(install,900),{once:true});else setTimeout(install,900);
 setInterval(install,5000);
-window.DBEST_WHATSAPP_OWNER={open,load};
+window.DBEST_WHATSAPP_OWNER={open,load,syncTemplates,version:'1.1.0-cta-v4'};
 })();
