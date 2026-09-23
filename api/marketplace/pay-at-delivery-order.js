@@ -22,6 +22,20 @@ async function sb(path,{method='GET',body,prefer='return=representation'}={}){
 }
 
 async function triggerVendorVoice(orderId){try{await fetch(SUPABASE_URL+'/functions/v1/partner-voice-alert',{method:'POST',headers:{apikey:SERVICE_KEY,'Content-Type':'application/json'},body:JSON.stringify({action:'vendor_order',orderId})});}catch(e){console.error('[vendor voice alert]',e)}}
+async function triggerVendorWhatsApp(orderId){
+  try{
+    const rows=await sb('marketplace_orders_live?id=eq.'+encodeURIComponent(orderId)+'&select=id,vendor_id&limit=1');
+    const order=rows&&rows[0];if(!order?.vendor_id)return {sent:false,error:'vendor_missing'};
+    const r=await fetch(SUPABASE_URL+'/functions/v1/whatsapp-notification-live',{
+      method:'POST',
+      headers:{apikey:SERVICE_KEY,'Content-Type':'application/json'},
+      body:JSON.stringify({action:'internal_event',recipientType:'Vendor',recipientId:String(order.vendor_id),eventType:'vendor_new_order',eventKey:'vendor_new_order:'+String(order.id)})
+    });
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok)console.error('[vendor whatsapp]',r.status,d);
+    return d;
+  }catch(e){console.error('[vendor whatsapp]',e);return {sent:false,error:String(e.message||e)}}
+}
 async function rpc(name,body){
   const r=await fetch(SUPABASE_URL+'/rest/v1/rpc/'+name,{
     method:'POST',
@@ -162,7 +176,7 @@ module.exports = async function handler(req,res){
         delivery_fee:childDelivery,child_sequence:i+1
       }});
     }
-    const voiceRows=await sb('marketplace_orders_live?master_order_id=eq.'+encodeURIComponent(masterId)+'&select=id');for(const row of voiceRows||[]){await triggerVendorVoice(row.id);await triggerVendorMail(row.id);}
+    const voiceRows=await sb('marketplace_orders_live?master_order_id=eq.'+encodeURIComponent(masterId)+'&select=id');for(const row of voiceRows||[]){await triggerVendorVoice(row.id);await triggerVendorMail(row.id);await triggerVendorWhatsApp(row.id);}
     const finalRows=await sb('marketplace_master_orders_live?id=eq.'+encodeURIComponent(masterId)+'&select=id,parent_tx_id,total_amount,payment_method,payment_status,status,child_order_count&limit=1');
     return send(res,200,{ok:true,order:finalRows&&finalRows[0]?finalRows[0]:{id:masterId,total_amount:totalAmount,payment_status:'Pending',status:'Confirmed - Payment Due at Delivery'},message:'Order confirmed. Payment is due online at delivery.'});
   }catch(e){
