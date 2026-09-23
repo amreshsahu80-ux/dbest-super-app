@@ -55,24 +55,24 @@ async function refresh(){
   b.textContent=on?'WhatsApp ON':'Enable WhatsApp';
   b.style.background=on?'#128C7E':'#25D366';
   b.onclick=on?disable:enable;
-  b.title=on?'Transactional WhatsApp alerts enabled':'Enable important DBest WhatsApp alerts';
+  b.title=on?'Transactional WhatsApp alerts enabled':'Enable important DBest transactional WhatsApp alerts';
 }
-function isMemberHome(){const id=ident();if(!id||id.type!=='Member')return false;const m=document.getElementById('m');const open=!!(document.body.classList.contains('sectionOpen')||m?.querySelector('.sectionOverlay,.overlay'));return !open}
+function isEligibleScreen(){const id=ident();if(!id)return false;if(id.type==='Member'){const m=document.getElementById('m');const open=!!(document.body.classList.contains('sectionOpen')||m?.querySelector('.sectionOverlay,.overlay'));return !open}return true}
 function removeFloating(){document.getElementById('dbestWhatsAppEnable')?.remove();document.getElementById('dbestWaToast')?.remove()}
 function install(){
-  if(!isMemberHome()){removeFloating();return}
+  if(!isEligibleScreen()){removeFloating();return}
   if(document.getElementById('dbestWhatsAppEnable'))return;
   const b=document.createElement('button');
   b.id='dbestWhatsAppEnable';b.type='button';
   b.style.cssText='position:fixed;right:12px;bottom:14px;z-index:2147483644;border:0;border-radius:999px;padding:11px 14px;color:#fff;font:900 12px system-ui;box-shadow:0 9px 28px rgba(0,0,0,.22);cursor:pointer';
   document.body.appendChild(b);refresh();
 }
-function syncFloating(){if(isMemberHome())install();else removeFloating()}
+function syncFloating(){if(isEligibleScreen())install();else removeFloating()}
 let waSyncQueued=false;
 function queueWaSync(){if(waSyncQueued)return;waSyncQueued=true;requestAnimationFrame(()=>{waSyncQueued=false;syncFloating()})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(syncFloating,550),{once:true});else setTimeout(syncFloating,550);
 const waObs=new MutationObserver(queueWaSync);waObs.observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['class','style']});
 window.addEventListener('hashchange',queueWaSync);window.addEventListener('popstate',queueWaSync);window.addEventListener('pageshow',queueWaSync);
 setInterval(syncFloating,3000);
-window.DBEST_WHATSAPP={enable,disable,status,refresh};
+window.DBEST_WHATSAPP={enable,disable,status,refresh,version:'1.1.0-partners'};
 })();
