@@ -23,7 +23,10 @@ async function load(){
 function templateRows(){
  const rows=state?.templates||[];
  if(!rows.length)return '<div style="padding:12px;color:#64748b">No DBest WhatsApp templates found.</div>';
- return rows.map(x=>{const ms=String(x.metaStatus||'').toUpperCase(),cs=String(x.ctaStatus||'').toUpperCase();const ctaNote=cs?(' • CTA '+cs):'';const label=x.enabled?'APPROVED / ON':(ms==='REJECTED'?'REJECTED / OFF':ms==='NOT_FOUND'?'NOT FOUND / OFF':ms==='PENDING'?'PENDING / OFF':ms?ms+' / OFF':'PENDING / OFF');const bg=x.enabled?'#e8fff1':(ms==='REJECTED'||ms==='NOT_FOUND'?'#fff0f0':'#fff5df');const fg=x.enabled?'#166534':(ms==='REJECTED'||ms==='NOT_FOUND'?'#9b2525':'#92400e');return '<div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid #eef2f7"><div><b>'+esc(x.event_type)+'</b><div style="font-size:11px;color:#64748b;margin-top:2px">'+esc(x.template_name)+' • '+esc(x.recipient_type)+esc(ctaNote)+'</div></div><span style="padding:6px 9px;border-radius:999px;font:800 10px system-ui;background:'+bg+';color:'+fg+'">'+esc(label)+'</span></div>'}).join('');
+ const ctaEvents=new Set(['vendor_new_order','vaahak_new_request','service_partner_new_job']);
+ const v4Name=x=>String(x.event_type||'').replace('vendor_new_order','dbest_vendor_new_order_v4').replace('vaahak_new_request','dbest_vaahak_new_request_v4').replace('service_partner_new_job','dbest_service_partner_new_job_v4');
+ const pill=(label,status)=>{const s=String(status||'PENDING').toUpperCase(),ok=s==='APPROVED',bad=s==='REJECTED'||s==='NOT_FOUND';return '<span style="padding:5px 8px;border-radius:999px;font:800 9px system-ui;background:'+(ok?'#e8fff1':bad?'#fff0f0':'#fff5df')+';color:'+(ok?'#166534':bad?'#9b2525':'#92400e')+'">'+esc(label+': '+s)+'</span>'};
+ return rows.map(x=>{const ms=String(x.metaStatus||'').toUpperCase()||(x.enabled?'APPROVED':'PENDING'),cs=String(x.ctaStatus||'').toUpperCase(),active=String(x.template_name||''),hasCta=ctaEvents.has(String(x.event_type||'')),activeStatus=x.enabled?'APPROVED':'OFF';let extra='';if(hasCta){extra='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:7px">'+pill('Active',activeStatus)+pill('CTA v4',cs||'PENDING')+'</div><div style="font-size:10px;color:#64748b;margin-top:5px">Active: '+esc(active)+'<br>CTA: '+esc(v4Name(x))+'</div>'}else{extra='<div style="margin-top:7px">'+pill('Template',ms)+'</div>'}return '<div style="padding:11px 0;border-bottom:1px solid #eef2f7"><div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start"><div><b>'+esc(x.event_type)+'</b><div style="font-size:11px;color:#64748b;margin-top:2px">'+esc(x.recipient_type)+'</div></div>'+pill('Rule',x.enabled?'ON':'OFF')+'</div>'+extra+'</div>'}).join('');
 }
 function render(){
  let m=document.getElementById('dbestWaOwnerModal');if(!m)return;
@@ -82,5 +85,5 @@ function install(){
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(install,900),{once:true});else setTimeout(install,900);
 setInterval(install,5000);
-window.DBEST_WHATSAPP_OWNER={open,load,syncTemplates,version:'1.1.0-cta-v4'};
+window.DBEST_WHATSAPP_OWNER={open,load,syncTemplates,version:'1.2.0-cta-status-ui'};
 })();
