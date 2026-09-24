@@ -2399,11 +2399,9 @@ function vaahakJobsForTx(txId){return vaahakJobs.filter(j=>j.txId===txId)}
 function vaahakJobForTx(txId){return vaahakJobsForTx(txId)[0]||null}
 function compatibleVaahaks(kind){return vaahakPartners.filter(v=>v.available!==false&&v.ownerApproval==="Approved"&&agreementFullySigned(v.agreement)&&(kind==="ride"?v.canRide!==false:v.canDeliver!==false))}
 function autoAssignVaahak(job){
-  if(job.partnerId)return vaahakPartners.find(v=>v.id===job.partnerId)||null;
-  let pool=compatibleVaahaks(job.kind),p=pool[0]||null;
-  if(p){job.partnerId=p.id;job.status="Assigned";job.assignedAt=new Date().toISOString()}
-  else job.status="Open / Awaiting Vaahak";
-  return p;
+  // Production authority is Supabase live dispatch. Never assign a local/demo Vaahak here.
+  if(job){job.partnerId="";job.status="Open / Awaiting Vaahak"}
+  return null;
 }
 function baseVaahakJob(x,kind){
   let u=users.find(a=>a.id===x.userId)||{};
@@ -2441,7 +2439,7 @@ function vaahakStatusHtml(txId){
   if(!jobs.length)return `<div class="dispatchPending"><b>🛵 Vaahak assignment pending</b><br><small>No dispatch job created yet.</small></div>`;
   return `<div class="vaahakStatusList">${jobs.map(j=>{let p=vaahakPartner(j);return `<div class="vaahakStatusItem"><b>🛵 ${esc(p?.name||"Awaiting Vaahak")}</b><small>${esc(j.id)} • ${esc(j.status)} • Pickup: ${esc(j.vendorName||j.pickup||"")}${p?` • ${esc(p.vehicle)} ${esc(p.vehicleNo||"")}`:""}</small></div>`}).join("")}</div>`;
 }
-let rideDraft={pickup:"",pickupCoords:null,drop:"",stops:[],distance:0,schedule:"Now",selected:""};
+let rideDraft=window.rideDraft=window.rideDraft||{pickup:"",pickupCoords:null,drop:"",dropCoords:null,stops:[],distance:0,schedule:"Now",selected:""};
 function rideRoutePoints(){return [rideDraft.pickup,...(Array.isArray(rideDraft.stops)?rideDraft.stops:[]),rideDraft.drop].filter(Boolean)}
 function rideRouteLabel(){return rideRoutePoints().map(x=>esc(x)).join(" → ")}
 function rideStopsHtml(){
@@ -2599,11 +2597,14 @@ function confirmRide(vehicleId){
     </div>`);
 }
 function assignRideDriver(x){
-  let ride=x.ride||x.meta?.ride||{},pool=rideConfig.drivers.filter(d=>d.vehicle===ride.vehicleId);
-  let d=pool[0]||rideConfig.drivers[0]||{id:"DRV-DEMO",name:"DBest Driver",rating:4.8,number:"JH05XX0001",phone:"98XXXXXX00"};
-  ride.driver=d;ride.otp=String(1000+(Number(String(x.id).replace(/\D/g,"").slice(-4)||1234)%9000));
-  ride.stage=1;x.ride=ride;x.meta={...(x.meta||{}),ride};x.status="Driver Assigned / Arriving";
-  save();return d;
+  // Deprecated production demo hook. Driver/Vaahak assignment comes only from Supabase live dispatch.
+  return null;
+}
+function requestLiveRideJob(txId){
+  const id=String(txId||"").trim();if(!id)return;
+  let tries=0;
+  const run=()=>{tries++;const fn=window.DBEST_CAB_LIVE_HANDOFF?.createLiveJob;if(typeof fn==="function"){Promise.resolve(fn(id)).catch(()=>{});return}if(tries<30)setTimeout(run,150)};
+  run();
 }
 function bookRide(e,vehicleId){
   e.preventDefault();if(window.rideDraft&&window.rideDraft!==rideDraft){try{Object.assign(rideDraft,window.rideDraft)}catch(_){}}
@@ -2633,16 +2634,15 @@ function bookRide(e,vehicleId){
   });
   x.ride=x.meta.ride;x.paymentStage=x.meta.paymentStage;save();
   if(payment==="payu")return ridePaymentScreen(x.id);
-  assignRideDriver(x);createVaahakJobFromTx(x.id,"ride");rideStatusScreen(x.id);
+  rideStatusScreen(x.id);requestLiveRideJob(x.id);
 }
 function finishPaidRide(txId){
   let x=txs.find(t=>t.id===txId);if(!x)return;
   if(!x.ride)x.ride=(x.meta||{}).ride||{};
   x.ride.paymentMethod="payu";
   x.paymentStage="Paid";
-  if(!x.ride.driver)assignRideDriver(x);createVaahakJobFromTx(txId,"ride");
   save();
-  rideStatusScreen(txId);
+  rideStatusScreen(txId);requestLiveRideJob(txId);
 }
 function ridePaymentScreen(txId){
   let x=txs.find(t=>t.id===txId);if(!x)return;
@@ -2657,12 +2657,11 @@ function ridePaymentScreen(txId){
 }
 function rideStatusScreen(txId){
   let x=txs.find(t=>t.id===txId);if(!x)return;
-  if(!x.ride?.driver)assignRideDriver(x);
-  let r=x.ride,d=r.driver||{},steps=r.roundTrip?["Driver Assigned","Outbound Journey","Return Journey","Completed"]:["Driver Assigned","Arriving","Trip Started","Completed"],stage=Number(r.stage||1);
+  let r=x.ride||{},d={},steps=r.roundTrip?["Vaahak Assigned","Outbound Journey","Return Journey","Completed"]:["Vaahak Assigned","Arriving","Trip Started","Completed"],stage=Number(r.stage||0);
   sectionScreen(`${sectionTopBar("🚕 Your Ride",x.id,"backHome()")}
     <div class="sectionContent ridePage">
       <div class="rideMap"><span class="rideMapLabel">${[r.pickup,...(Array.isArray(r.stops)?r.stops:[]),r.drop,...(r.roundTrip?[r.returnDrop||r.pickup]:[])].filter(Boolean).map(x=>esc(x)).join(" → ")}</span><span class="rideRoute"></span></div>
-      ${vaahakStatusHtml(x.id)}<div class="driverCard"><div class="driverAvatar">👨‍✈️</div><div><b>${esc(d.name||"Driver")}</b><small style="display:block;color:var(--m)">⭐ ${d.rating||4.8} • ${esc(d.number||"")}</small><small>${esc(d.phone||"")}</small></div><div><small>OTP</small><b style="display:block;font-size:20px">${esc(r.otp||"—")}</b></div></div>
+      <div id="dbestBaseFindingVaahak" class="dbestBaseFindingVaahak">🛵 Finding Vaahak…</div>${vaahakStatusHtml(x.id)}<div class="driverCard"><div class="driverAvatar">👨‍✈️</div><div><b>${esc(d.name||"Driver")}</b><small style="display:block;color:var(--m)">⭐ ${d.rating||4.8} • ${esc(d.number||"")}</small><small>${esc(d.phone||"")}</small></div><div><small>OTP</small><b style="display:block;font-size:20px">${esc(r.otp||"—")}</b></div></div>
       <div class="tripSteps">${steps.map((s,i)=>`<div class="tripStep ${i<stage?"done":i===stage?"active":""}">${s}</div>`).join("")}</div>
       <div class="txDetailGrid"><div class="txDetailCell"><small>Fare</small><b>₹${Number(x.amount||0)}</b></div><div class="txDetailCell"><small>Payment</small><b>${esc(r.paymentMethod||"")}</b></div><div class="txDetailCell"><small>Distance</small><b>${Number(r.distance||0).toFixed(1)} km</b></div><div class="txDetailCell"><small>Status</small><b>${esc(x.status)}</b></div></div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px">
