@@ -2606,7 +2606,8 @@ function assignRideDriver(x){
   save();return d;
 }
 function bookRide(e,vehicleId){
-  e.preventDefault();if(!requireMember())return;
+  e.preventDefault();if(window.rideDraft&&window.rideDraft!==rideDraft){try{Object.assign(rideDraft,window.rideDraft)}catch(_){}}
+  if(!requireMember())return;
   let v=rideConfig.vehicles.find(x=>x.id===vehicleId);if(!v)return;
   let payment=new FormData(e.target).get("payment")||"cash";
   let isRound=rideDraft.roundTrip===true||rideDraft.tripType==="roundtrip";
@@ -2621,7 +2622,7 @@ function bookRide(e,vehicleId){
   let x=addTx(session.id,"Cab Booking",isRound?v.name+" • Round Trip":v.name,fare,payment==="payu"?"Ride Created / Payment Pending":"Ride Confirmed / Driver Assigning","",{
     source:"DBest Ride Platform",flow:"ride",paymentStage:payment==="payu"?"Pending PayU":"Pay on Trip",
     ride:{
-      pickup:rideDraft.pickup,pickupCoords:rideDraft.pickupCoords||null,drop:rideDraft.drop,
+      pickup:rideDraft.pickup,pickupCoords:rideDraft.pickupCoords||null,drop:rideDraft.drop,dropCoords:rideDraft.dropCoords||null,
       stops:[...(rideDraft.stops||[])],distance:rideDraft.distance,vehicleId:v.id,vehicleName:v.name,
       paymentMethod:payment,stage:0,tripType:isRound?"roundtrip":"oneway",roundTrip:isRound,
       sameVehicle:isRound,returnPickup:isRound?(rideDraft.returnPickup||rideDraft.drop):null,
