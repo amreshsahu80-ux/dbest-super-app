@@ -17,7 +17,7 @@
   <script>
     (async function(){
       try{
-        const BUILD='20260924-cab-live-handoff-v45';
+        const BUILD='20260924-live-dispatch-authority-v46';
         const r=await fetch('./index-26.html?v='+BUILD,{cache:'no-store'});
         if(!r.ok)throw new Error('Unable to load application');
         let html=await r.text();
@@ -33,11 +33,6 @@
         html=html.replace('<button class="btn" id="account" onclick="account()">👤 Register / Login</button>','<div id="dbestHomeAuthActions" style="display:flex;gap:8px;align-items:center"><button class="btn soft" id="homeRegister" onclick="session.role===\'visitor\'?registerChoice():account()">✨ Register</button><button class="btn" id="loginHome" onclick="location.href=\'/preview-member-login-v2.html?return=%2F\';return false">🔐 Login</button></div>');
         html=html.replace('<button class="btn" style="background:#ffffff18;border:1px solid #ffffff35" onclick="account()">Register / Login</button>','<button class="btn" style="background:#fff;color:#1550c6" onclick="registerChoice()">Register</button> <button class="btn" style="background:#ffffff18;border:1px solid #ffffff35" onclick="location.href=\'/preview-member-login-v2.html?return=%2F\';return false">Login</button>');
         html=html.replace('$("account").textContent=session.role==="visitor"?"👤 "+t.acc:"👤 "+(u?.name||session.role);','var hr=$("homeRegister");if(hr)hr.textContent=session.role==="visitor"?"✨ Register":"👤 "+(u?.name||session.role);var lh=$("loginHome");if(lh)lh.style.display=session.role==="visitor"?"":"none";');
-        html=html.replace('assignRideDriver(x);createVaahakJobFromTx(x.id,"ride");rideStatusScreen(x.id);','createVaahakJobFromTx(x.id,"ride");rideStatusScreen(x.id);');
-        html=html.replace('if(!x.ride.driver)assignRideDriver(x);createVaahakJobFromTx(txId,"ride");','createVaahakJobFromTx(txId,"ride");');
-        html=html.replace('if(!x.ride?.driver)assignRideDriver(x);','');
-        html=html.replace('autoAssignVaahak(job);vaahakJobs.push(job);x.vaahakJobId=job.id;x.vaahakJobIds=[job.id];x.vaahakPartnerId=job.partnerId||"";save();return job;','job.partnerId="";job.status="Open / Awaiting Vaahak";vaahakJobs.push(job);x.vaahakJobId=job.id;x.vaahakJobIds=[job.id];x.vaahakPartnerId="";save();return job;');
-        html=html.replace('${vaahakStatusHtml(x.id)}<div class="driverCard">','<div id="dbestBaseFindingVaahak" class="dbestBaseFindingVaahak">🛵 Finding Vaahak…</div>${vaahakStatusHtml(x.id)}<div class="driverCard">');
         html=html.replace('x.status="Ride Cancelled";x.cancellationFee=Number(rideConfig.cancellationFee||0);save();txDetailsView(txId);','x.status="Ride Cancelled";x.cancellationFee=Number(rideConfig.cancellationFee||0);if(x.ride){delete x.ride.driver;delete x.ride.otp;x.ride.stage=0}if(x.meta&&x.meta.ride){delete x.meta.ride.driver;delete x.meta.ride.otp;x.meta.ride.stage=0}x.vaahakPartnerId="";x.vaahakJobId="";x.vaahakJobIds=[];try{vaahakJobs=vaahakJobs.filter(function(j){return j.txId!==txId})}catch(e){}save();txDetailsView(txId);');
         const uniform='<style id="dbest-device-uniformity">html{-webkit-text-size-adjust:100%;text-size-adjust:100%}body{margin:0;max-width:100%;overflow-x:hidden}*,*:before,*:after{box-sizing:border-box}button,input,select,textarea{font:inherit}.nav .search{display:none!important}.navin{justify-content:space-between!important}.ridePage .driverCard,.ridePage .vaahakStatusList,.ridePage .dispatchPending{display:none!important}.ridePage:not(.dbestLiveRideBound) .tripSteps{display:none!important}.dbestBaseFindingVaahak{margin:10px 0;padding:14px 16px;border:1px solid #dfe7f2;border-radius:18px;background:#fff;font-weight:900;color:#13213a;box-shadow:0 8px 22px rgba(20,50,100,.07)}.ridePage.dbestLiveRideBound .dbestBaseFindingVaahak{display:none!important}@media(max-width:700px){#dbestHomeAuthActions{width:auto;order:initial}#dbestHomeAuthActions .btn{flex:0 0 auto}.navin{flex-wrap:nowrap!important}}@media(max-width:480px){input,select,textarea{font-size:16px}}</style>';
         html=html.replace('</head>',uniform+'<script src="./runtime-config.js?v='+BUILD+'"><\/script></head>');
