@@ -64,7 +64,7 @@ function install(){
   if(document.getElementById('dbestWhatsAppEnable'))return;
   const b=document.createElement('button');
   b.id='dbestWhatsAppEnable';b.type='button';
-  b.style.cssText='position:fixed;right:12px;bottom:14px;z-index:2147483644;border:0;border-radius:999px;padding:11px 14px;color:#fff;font:900 12px system-ui;box-shadow:0 9px 28px rgba(0,0,0,.22);cursor:pointer';
+  const bottom=path.includes('vaahak')?'76px':'14px';b.style.cssText='position:fixed;right:12px;bottom:'+bottom+';z-index:2147483644;border:0;border-radius:999px;padding:11px 14px;color:#fff;font:900 12px system-ui;box-shadow:0 9px 28px rgba(0,0,0,.22);cursor:pointer';
   document.body.appendChild(b);refresh();
 }
 function syncFloating(){if(isEligibleScreen())install();else removeFloating()}
@@ -74,5 +74,5 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 const waObs=new MutationObserver(queueWaSync);waObs.observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['class','style']});
 window.addEventListener('hashchange',queueWaSync);window.addEventListener('popstate',queueWaSync);window.addEventListener('pageshow',queueWaSync);
 setInterval(syncFloating,3000);
-window.DBEST_WHATSAPP={enable,disable,status,refresh,version:'1.1.0-partners'};
+window.DBEST_WHATSAPP={enable,disable,status,refresh,version:'1.1.1-vaahak-spacing'};
 })();
