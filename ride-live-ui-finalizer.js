@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='2.6.0';
+const VERSION='2.6.1';
 if(window.DBEST_RIDE_LIVE_UI_FINALIZER?.version===VERSION)return;
 const POLL=1500,cfg=window.DBEST_RUNTIME_CONFIG||{},BASE=String(cfg.supabaseUrl||'').replace(/\/$/,''),KEY=cfg.supabasePublishableKey||'',RIDE_API=BASE+'/functions/v1/vaahak-live',PROFILE=BASE+'/functions/v1/vaahak-profile-live',SESSION=BASE+'/functions/v1/vaahak-customer-session-live';
 let timer=null,currentTx='',photoCache={},lastPartner=null,lastStatus='',recovering=false;
@@ -21,6 +21,10 @@ async function profile(tx,tok){if(!tx||!tok||!PROFILE)return null;const key=tx+'
 function css(){if(document.getElementById('dbestRideIdentityV26Css'))return;const s=document.createElement('style');s.id='dbestRideIdentityV26Css';s.textContent=`
 .ridePage button[onclick*="advanceRide("],.ridePage .driverCard,.ridePage .vaahakStatusList,.ridePage .dispatchPending{display:none!important}
 .ridePage:not(.dbestLiveRideBound) .tripSteps{display:none!important}.ridePage.dbestLiveRideWaiting .tripSteps{display:none!important}
+.ridePage .tripSteps .tripStep.done{background:linear-gradient(135deg,#e9f9ef,#dff6e8)!important;border-color:#9ed7b5!important;color:#17633f!important;box-shadow:inset 0 0 0 1px #cfead9!important}
+.ridePage .tripSteps .tripStep.done *{color:#17633f!important}
+.ridePage .tripSteps .tripStep.active{background:linear-gradient(135deg,#eef4ff,#e7efff)!important;border-color:#b7cdfb!important;color:#1f57aa!important}
+
 #dbestRideLiveIdentityFinal{margin:10px 0!important;background:linear-gradient(145deg,#fff,#f7faff)!important;border:1px solid #dfe7f2!important;border-radius:20px!important;padding:12px!important;box-shadow:0 10px 26px rgba(20,50,100,.08)!important}.dbestRidePerson{display:grid;grid-template-columns:62px 1fr auto;gap:10px;align-items:center}.dbestRideAvatar{width:62px;height:62px;border-radius:20px;overflow:hidden;background:#eef4ff;display:grid;place-items:center;font-size:28px;border:3px solid #fff;box-shadow:0 6px 16px rgba(20,80,180,.12)}.dbestRideAvatar img{width:100%;height:100%;object-fit:cover}.dbestRideName{font-size:18px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.dbestRideVehicle{font-size:12px;color:#687386;margin-top:3px}.dbestRideStatus{display:inline-flex;margin-top:5px;padding:5px 8px;border-radius:999px;background:#eaf8f0;color:#17633f;font-size:10px;font-weight:900}.dbestRidePin{text-align:center;background:#eef4ff;color:#173d83;padding:8px 9px;border-radius:14px;min-width:78px}.dbestRidePin small{display:block;font-size:9px;font-weight:800}.dbestRidePin b{display:block;font-size:24px;letter-spacing:2px;margin-top:2px}.dbestRideWaiting{display:flex;align-items:center;gap:9px;font-weight:900}.dbestRidePulse{width:12px;height:12px;border-radius:50%;background:#175cff;box-shadow:0 0 0 6px rgba(23,92,255,.1)}
 @media(max-width:520px){.dbestRidePerson{grid-template-columns:56px 1fr auto}.dbestRideAvatar{width:56px;height:56px;border-radius:18px}.dbestRideName{font-size:16px}.dbestRidePin{min-width:70px;padding:7px}.dbestRidePin b{font-size:21px}}
 `;document.head.appendChild(s)}
