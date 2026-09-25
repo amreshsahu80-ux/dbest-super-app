@@ -2612,13 +2612,15 @@ function bookRide(e,vehicleId){
   let v=rideConfig.vehicles.find(x=>x.id===vehicleId);if(!v)return;
   let payment=new FormData(e.target).get("payment")||"cash";
   let isRound=rideDraft.roundTrip===true||rideDraft.tripType==="roundtrip";
-  let fare=0;
+  let fare=Number(rideDraft.quotedFare||0);
+  if(!(fare>0)){
   if(isRound){
     let rr=rideConfig.roundTripRules||{},rule=rr[v.id];
     if(rr.enabled===false||!rule||!["sedan","suv"].includes(v.id))return toast("Round Trip is available only for Sedan and SUV.");
     fare=Math.round(Number(rideDraft.distance||0)*Number(rule.perKm||0)+(rideDraft.nightHalt?Number(rule.nightHalt||0):0));
   }else{
     fare=rideFare(v,rideDraft.distance);
+  }
   }
   let x=addTx(session.id,"Cab Booking",isRound?v.name+" • Round Trip":v.name,fare,payment==="payu"?"Ride Created / Payment Pending":"Ride Confirmed / Driver Assigning","",{
     source:"DBest Ride Platform",flow:"ride",paymentStage:payment==="payu"?"Pending PayU":"Pay on Trip",
