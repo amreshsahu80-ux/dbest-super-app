@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='20260925-single-fare-authority-v8';
+const VERSION='20260925-restored-tariff-v9';
 const cfg=()=>window.DBEST_RUNTIME_CONFIG||{};
 const RECENT_KEY='dbest_cab_recent_places_v6';
 const IMG={
@@ -10,11 +10,12 @@ const IMG={
  sedan:'https://toppng.com/uploads/preview/mercedes-cars-png-free-11663106574ofjrkgo0xd.png',
  suv:'https://toppng.com/uploads/preview/mercedes-cars-png-11663106529htsw5otepi.png'
 };
+const PLATFORM_FEE=15;
 const VEH=[
- {id:'bike',name:'Bike',seats:1,base:35,km:8,min:45},
- {id:'auto',name:'Auto/E-Rickshaw',seats:3,base:45,km:12,min:60},
- {id:'sedan',name:'Sedan',seats:4,base:85,km:18,min:120},
- {id:'suv',name:'SUV',seats:6,base:110,km:22,min:150}
+ {id:'bike',name:'Bike',seats:1,base:4,km:3,min:4},
+ {id:'auto',name:'Auto/E-Rickshaw',seats:3,base:20,km:6,min:20},
+ {id:'sedan',name:'Sedan',seats:4,base:70,km:18,min:100},
+ {id:'suv',name:'SUV',seats:6,base:105,km:23,min:160}
 ];
 const S={p:null,d:null,stops:[],route:null,mode:'ride',tripType:'oneway',nightHalt:false,schedule:'now',scheduledAt:'',rider:'self',riderName:'',riderMobile:'',rentalHours:2,rentalKm:20,selected:'auto',provider:'fallback',map:null,layer:null,entryMap:null};
 const $=id=>document.getElementById(id), q=(s,r=document)=>r.querySelector(s), qa=(s,r=document)=>Array.from(r.querySelectorAll(s));
@@ -129,7 +130,7 @@ async function continueRide(){
  const b=$('cab6Go');if(b){b.disabled=true;b.textContent='Checking route…'}
  try{if(!S.p)S.p=await geocodeText($('cab6P')?.value);if(S.mode!=='rental'&&!S.d)S.d=await geocodeText($('cab6D')?.value);if(S.mode!=='rental'){const stopTexts=qa('.cab6StopInput').map(x=>String(x.value||'').trim()).filter(Boolean).slice(0,3);S.stops=[];for(const t of stopTexts){const p=await geocodeText(t);if(!p)return say('Please enter a valid stop location.');S.stops.push(p)}}if(!S.p||S.mode!=='rental'&&!S.d)return say(S.mode==='rental'?'Please enter a valid pickup location.':'Please enter valid pickup and destination.');if(S.mode==='rental'){S.route={km:S.rentalKm,min:S.rentalHours*60,geo:[]};return vehicles()}S.route=await routeOSRM();saveRecent(S.d?.label||$('cab6D')?.value);vehicles()}catch(e){console.warn('Cab route error',e);say('Unable to calculate the route. Please try again.')}finally{if(b){b.disabled=false;b.textContent='Search Cabs'}}
 }
-function roundRules(){try{const x=JSON.parse(localStorage.getItem('d2_ride_config')||'null'),r=x?.roundTripRules||{};return{sedan:{perKm:Number(r.sedan?.perKm||15),nightHalt:Number(r.sedan?.nightHalt||1000)},suv:{perKm:Number(r.suv?.perKm||18),nightHalt:Number(r.suv?.nightHalt||1500)}}}catch(e){return{sedan:{perKm:15,nightHalt:1000},suv:{perKm:18,nightHalt:1500}}}}function visibleVehicles(){return S.mode==='rental'||S.tripType!=='roundtrip'?VEH:VEH.filter(v=>v.id==='sedan'||v.id==='suv')}function totalKm(){const k=S.route?.km||S.rentalKm;return S.mode!=='rental'&&S.tripType==='roundtrip'?k*2:k}function totalMin(){const m=S.route?.min||S.rentalHours*60;return S.mode!=='rental'&&S.tripType==='roundtrip'?m*2:m}function fare(v){const k=S.route?.km||S.rentalKm;if(S.mode!=='rental'&&S.tripType==='roundtrip'){const rr=roundRules()[v.id];if(!rr)return 0;return Math.round((k*2)*rr.perKm+(S.nightHalt?rr.nightHalt:0))}return Math.round(Math.max(v.min,v.base+v.km*k))}
+function roundRules(){try{const x=JSON.parse(localStorage.getItem('d2_ride_config')||'null'),r=x?.roundTripRules||{};return{sedan:{perKm:Number(r.sedan?.perKm||15),nightHalt:Number(r.sedan?.nightHalt||1000)},suv:{perKm:Number(r.suv?.perKm||18),nightHalt:Number(r.suv?.nightHalt||1500)}}}catch(e){return{sedan:{perKm:15,nightHalt:1000},suv:{perKm:18,nightHalt:1500}}}}function visibleVehicles(){return S.mode==='rental'||S.tripType!=='roundtrip'?VEH:VEH.filter(v=>v.id==='sedan'||v.id==='suv')}function totalKm(){const k=S.route?.km||S.rentalKm;return S.mode!=='rental'&&S.tripType==='roundtrip'?k*2:k}function totalMin(){const m=S.route?.min||S.rentalHours*60;return S.mode!=='rental'&&S.tripType==='roundtrip'?m*2:m}function fare(v){const k=S.route?.km||S.rentalKm;if(S.mode!=='rental'&&S.tripType==='roundtrip'){const rr=roundRules()[v.id];if(!rr)return 0;return Math.round((k*2)*rr.perKm+(S.nightHalt?rr.nightHalt:0))}return Math.round(Math.max(v.min,v.base+v.km*k)+PLATFORM_FEE)}
 function vehCard(v){const rr=S.tripType==='roundtrip'?roundRules()[v.id]:null;return `<button type="button" class="cab6Veh ${S.selected===v.id?'on':''}" data-v="${v.id}"><span class="photo"><img src="${IMG[v.id]}" alt="${esc(v.name)}" loading="eager"></span><b>${esc(v.name)}${S.tripType==='roundtrip'?'<span style="display:block;font-size:7px;color:#315efb;margin-top:2px">ROUND TRIP</span>':''}</b><small>${v.seats} seat${v.seats>1?'s':''}${rr?' • ₹'+rr.perKm+'/km':''}</small><strong>₹${fare(v)}</strong></button>`}
 function mapBlock(title,id='cab6Map'){return `<div class="cab6MapFrame"><div id="${id}" class="cab6Map"></div><div class="cab6MapShade"></div><div class="cab6RoutePill">${esc(title)}</div></div>`}
 async function renderRealMap(id){
