@@ -57,7 +57,7 @@ h2,h3{margin:0 0 7px}.muted{color:var(--muted)}.row{display:flex;gap:8px;flex-wr
 
   <section id="panel-current" class="sectionPanel">
     <div class="card">
-      <div class="panelHead"><div><h3>📦 Current Order Flow</h3><div class="hint">Only new and active orders</div></div></div>
+      <div class="panelHead"><div><h3>📦 Current Order Flow</h3><div class="hint">Only orders from the last 24 hours</div></div></div>
       <div id="currentOrders">Loading…</div>
     </div>
   </section>
@@ -70,7 +70,7 @@ h2,h3{margin:0 0 7px}.muted{color:var(--muted)}.row{display:flex;gap:8px;flex-wr
   </section>
 
   <section id="panel-history" class="sectionPanel hidden">
-    <div class="card"><div class="panelHead"><div><h3>🧾 Order History</h3><div class="hint">Completed and closed orders</div></div></div>
+    <div class="card"><div class="panelHead"><div><h3>🧾 Order History</h3><div class="hint">Completed, closed and orders older than 24 hours</div></div></div>
       <div class="historyFilters"><button class="on" data-history="all">All</button><button data-history="completed">Completed</button><button data-history="cancelled">Cancelled / Rejected</button></div>
       <div id="historyOrders"></div>
     </div>
@@ -107,9 +107,12 @@ document.getElementById('loginForm').onsubmit=async e=>{e.preventDefault();const
 
 const steps=['Order Placed','Vendor Confirmed','Preparing Order','Ready for Pickup','Vaahak Assigned','Reached Vendor','Picked Up','Out for Delivery','Payment Received','Delivered'];
 function progressIndex(o){if(o.completed_at)return 9;if(o.payment_received_at)return 8;if(o.out_for_delivery_at)return 7;if(o.picked_up_at)return 6;if(o.pickup_arrived_at)return 5;if(o.vaahak_partner_id)return 4;if(o.ready_for_pickup_at)return 3;if(o.preparing_at)return 2;if(o.vendor_accepted_at)return 1;return 0}
-function isNew(o){return ['New Order','Vendor Notified'].includes(String(o.vendor_status))&&!o.cancelled_at&&!o.completed_at}
-function isActive(o){return !o.completed_at&&!o.cancelled_at&&!isNew(o)&&!['Rejected','Cancelled'].includes(String(o.vendor_status))}
-function isClosed(o){return !!o.completed_at||!!o.cancelled_at||['Rejected','Cancelled'].includes(String(o.vendor_status))}
+const HOME_ORDER_MAX_AGE_MS=24*60*60*1000;
+function orderAgeMs(o){const t=new Date(o.created_at||o.updated_at||0).getTime();return Number.isFinite(t)?Math.max(0,Date.now()-t):Number.POSITIVE_INFINITY}
+function visibleOnHome(o){return orderAgeMs(o)<=HOME_ORDER_MAX_AGE_MS}
+function isNew(o){return visibleOnHome(o)&&['New Order','Vendor Notified'].includes(String(o.vendor_status))&&!o.cancelled_at&&!o.completed_at}
+function isActive(o){return visibleOnHome(o)&&!o.completed_at&&!o.cancelled_at&&!isNew(o)&&!['Rejected','Cancelled'].includes(String(o.vendor_status))}
+function isClosed(o){return !!o.completed_at||!!o.cancelled_at||['Rejected','Cancelled'].includes(String(o.vendor_status))||!visibleOnHome(o)}
 function sortNewest(a,b){return new Date(b.created_at||b.updated_at||0)-new Date(a.created_at||a.updated_at||0)}
 function actions(o){const s=String(o.vendor_status||'');if(['New Order','Vendor Notified'].includes(s))return `<button class="btn" onclick="orderAction('${esc(o.id)}','accept')">Accept Order</button><button class="btn danger" onclick="orderAction('${esc(o.id)}','reject')">Reject</button>`;if(s==='Accepted')return `<button class="btn" onclick="orderAction('${esc(o.id)}','preparing')">Start Preparing</button>`;if(s==='Preparing')return `<button class="btn" onclick="orderAction('${esc(o.id)}','ready')">Ready for Pickup</button>`;if(s==='Ready for Pickup')return `<span class="pill">Waiting for Vaahak</span>`;return ''}
 function orderHtml(o,readonly=false){const idx=progressIndex(o),items=Array.isArray(o.items)?o.items:[],pct=Math.max(5,Math.round(((idx+1)/steps.length)*100)),newFlag=isNew(o),status=o.vendor_status||o.status||'Order';return `<div class="order ${newFlag?'newOrder':(!readonly&&isActive(o)?'activeOrder':'')}"><div class="orderTop"><div><div class="orderId">${newFlag?'🔔 ':''}${esc(o.id)}</div><div class="orderMeta">${esc(o.customer_name||'Customer')} • ${esc(o.customer_mobile||'')}</div></div><span class="pill ${newFlag?'new':''}">${esc(status)}</span></div><div class="items">${items.length?items.map(i=>`${esc(i.name)} × ${Number(i.qty||1)} — ${money(Number(i.price||0)*Number(i.qty||1))}`).join('<br>'):'No item details'}</div><div class="orderSummary"><div class="label">Order Value</div><div class="value"><b>${money(o.collect_amount||o.order_value)}</b> • ${esc(o.payment_method||'')}</div><div class="label">Deliver To</div><div class="value">${esc(o.delivery_address||'')}</div></div><div class="flow"><div class="flowHead"><span>Order progress</span><span>Step ${idx+1}/${steps.length}</span></div><div class="flowTrack"><div class="flowFill" style="width:${pct}%"></div></div><div class="flowNow">${esc(steps[idx]||status)}</div><div class="flowSteps">${steps.map((s,i)=>`<span class="${i<idx?'done':i===idx?'active':''}">${esc(s)}</span>`).join('')}</div></div>${readonly?'':`<div class="orderActions">${actions(o)}</div>`}${o.vaahak_job_id?`<div class="vaahakInfo">🛵 Vaahak job <b>${esc(o.vaahak_job_id)}</b>${o.vaahak_partner_id?' • Assigned':' • Dispatch pending'}</div>`:''}</div>`}
