@@ -33,36 +33,6 @@
       "permanent": true
     },
     {
-      "source": "/vaahak",
-      "destination": "/vaahak-standalone-v2.html?v=20260914-vh4",
-      "permanent": false
-    },
-    {
-      "source": "/vaahak/",
-      "destination": "/vaahak-standalone-v2.html?v=20260914-vh4",
-      "permanent": false
-    },
-    {
-      "source": "/Vaahak",
-      "destination": "/vaahak-standalone-v2.html?v=20260914-vh4",
-      "permanent": false
-    },
-    {
-      "source": "/Vaahak/",
-      "destination": "/vaahak-standalone-v2.html?v=20260914-vh4",
-      "permanent": false
-    },
-    {
-      "source": "/vaahak.html",
-      "destination": "/vaahak-standalone-v2.html?v=20260914-vh4",
-      "permanent": false
-    },
-    {
-      "source": "/vaahak-alert-wrapper.html",
-      "destination": "/vaahak-standalone-v2.html?v=20260914-vh4",
-      "permanent": false
-    },
-    {
       "source": "/vendor",
       "destination": "/Vendor",
       "permanent": true
@@ -114,6 +84,30 @@
     }
   ],
   "rewrites": [
+    {
+      "source": "/vaahak-alert-wrapper.html",
+      "destination": "/vaahak-standalone-v2.html"
+    },
+    {
+      "source": "/vaahak.html",
+      "destination": "/vaahak-standalone-v2.html"
+    },
+    {
+      "source": "/Vaahak/",
+      "destination": "/vaahak-standalone-v2.html"
+    },
+    {
+      "source": "/Vaahak",
+      "destination": "/vaahak-standalone-v2.html"
+    },
+    {
+      "source": "/vaahak/",
+      "destination": "/vaahak-standalone-v2.html"
+    },
+    {
+      "source": "/vaahak",
+      "destination": "/vaahak-standalone-v2.html"
+    },
     {
       "source": "/data-deletion",
       "destination": "/data-deletion.html"
@@ -503,6 +497,58 @@
         {
           "key": "Cache-Control",
           "value": "no-store, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/vaahak",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0, must-revalidate"
+        },
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow, noarchive"
+        }
+      ]
+    },
+    {
+      "source": "/vaahak/",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0, must-revalidate"
+        },
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow, noarchive"
+        }
+      ]
+    },
+    {
+      "source": "/Vaahak",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0, must-revalidate"
+        },
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow, noarchive"
+        }
+      ]
+    },
+    {
+      "source": "/Vaahak/",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0, must-revalidate"
+        },
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow, noarchive"
         }
       ]
     }
