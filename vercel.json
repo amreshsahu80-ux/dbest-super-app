@@ -85,6 +85,10 @@
   ],
   "rewrites": [
     {
+      "source": "/partner-onboarding",
+      "destination": "/partner-onboarding.html"
+    },
+    {
       "source": "/vaahak-alert-wrapper.html",
       "destination": "/vaahak-standalone-v2.html"
     },
@@ -549,6 +553,15 @@
         {
           "key": "X-Robots-Tag",
           "value": "noindex, nofollow, noarchive"
+        }
+      ]
+    },
+    {
+      "source": "/partner-onboarding",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0, must-revalidate"
         }
       ]
     }
