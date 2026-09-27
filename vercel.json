@@ -85,6 +85,10 @@
   ],
   "rewrites": [
     {
+      "source": "/partner",
+      "destination": "/partner-onboarding.html"
+    },
+    {
       "source": "/partner-onboarding",
       "destination": "/partner-onboarding.html"
     },
@@ -558,6 +562,15 @@
     },
     {
       "source": "/partner-onboarding",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/partner",
       "headers": [
         {
           "key": "Cache-Control",
