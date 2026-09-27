@@ -23,8 +23,8 @@
 </div></main>
 <script>
 (function(){const q=new URLSearchParams(location.search),type=String(q.get('type')||''),leader=q.get('leader_onboard')||'',ta=q.get('ta_onboard')||'',lang=q.get('lang')||localStorage.getItem('d2_lang')||'';
-const paths={Vendor:'/Vendor',Vaahak:'/vaahak','Service Partner':'/ServicePartner'};
-function dest(role){const p=new URLSearchParams();if(lang)p.set('lang',lang);if(leader)p.set('leader_onboard',leader);if(ta)p.set('ta_onboard',ta);return paths[role]+(p.toString()?'?'+p.toString():'')}
+function pathFor(role){if(leader)return role==='Vendor'?'/vendor.html':role==='Vaahak'?'/vaahak-standalone-v2.html':'/service-partner-onboarding-v3.html';if(ta)return role==='Vendor'?'/Vendor':role==='Vaahak'?'/vaahak-ta-onboarding-wrapper.html':'/service-partner-ta-onboarding-wrapper.html';return role==='Vendor'?'/Vendor':role==='Vaahak'?'/vaahak':'/ServicePartner'}
+function dest(role){const p=new URLSearchParams();if(lang)p.set('lang',lang);if(leader)p.set('leader_onboard',leader);if(ta)p.set('ta_onboard',ta);const path=pathFor(role);return path+(p.toString()?'?'+p.toString():'')}
 window.go=function(role){if((leader||ta)&&type&&role!==type)return;location.href=dest(role)};
 if(type&&paths[type]){document.querySelectorAll('.role').forEach(el=>{const match=el.dataset.role===type;el.style.display=match?'':'none';if(match)el.classList.add('selected')});document.getElementById('roleNote').textContent='Your DBest onboarding link is ready';document.querySelector('.grid').style.gridTemplateColumns='minmax(0,560px)';document.querySelector('.grid').style.justifyContent='center';const btn=document.querySelector('[data-role="'+type+'"] .cta');if(btn)btn.textContent='Start Secure '+type+' Onboarding →'}
 })();
