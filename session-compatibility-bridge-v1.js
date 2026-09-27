@@ -32,5 +32,5 @@ window.addEventListener('pageshow',sync);
 window.addEventListener('focus',sync);
 setInterval(sync,250);
 sync();
-window.DBEST_SESSION_COMPAT={version:VERSION,read,sync,isMember:()=>{const s=read();return ['guest','promoter','prime','leader'].includes(s.role)&&!!s.id},isLeader:()=>{const s=read();return s.role==='leader'&&!!s.id}};
+window.DBEST_SESSION_COMPAT={version:VERSION,read,sync,isMember:()=>{const s=read();return ['starter','guest','promoter','prime','leader'].includes(s.role)&&!!s.id},isLeader:()=>{const s=read();return s.role==='leader'&&!!s.id}};
 })();
