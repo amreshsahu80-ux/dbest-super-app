@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='20260928-carpool-v1';
+const VERSION='20260928-carpool-v3';
 const cfg=()=>window.DBEST_RUNTIME_CONFIG||{};
 const RECENT_KEY='dbest_cab_recent_places_v6';
 const IMG={
@@ -147,24 +147,43 @@ async function carpoolApi(action,extra={}){
  const d=await res.json().catch(()=>({}));if(!res.ok)throw new Error(d.error||'carpool_request_failed');return d
 }
 function poolStatusScreen(d,mobile){
- const pool=d.pool||{},req=d.request||{},poolStatus=d.poolStatus||pool.status||'Forming';
+ const pool=d.pool||{},req=d.request||{},job=d.job||{},driver=d.driver||{},poolStatus=d.poolStatus||pool.status||'Forming';
  const perSeat=Number(d.perSeatFare??req.seat_fare??pool.per_seat_fare??0);
  const seats=Number(d.seatsRequested??req.seats_requested??S.carpoolSeats??1);
  const total=Number(d.totalAmount??(perSeat*seats));
- const held=Number(d.heldSeats??pool.held_seats??seats);
- const confirmed=Number(d.confirmedSeats??pool.confirmed_seats??0);
+ const held=Number(d.heldSeats??pool.held_seats??seats),confirmed=Number(d.confirmedSeats??pool.confirmed_seats??0);
  const totalSeats=Number(d.totalSeats??pool.total_seats??(String(d.vehicleType||pool.vehicle_type)==='SUV'?5:3));
  const minReady=Number(d.minimumConfirmedSeats??(String(d.vehicleType||pool.vehicle_type)==='SUV'?3:2));
- const id=esc(d.id||req.id||S.carpoolRequestId||'');
- const vehicle=esc(d.vehicleType||pool.vehicle_type||S.carpoolVehicle||'');
- const scheduled=d.scheduledAt||pool.scheduled_at||req.scheduled_at||S.scheduledAt;
- const dt=new Date(scheduled),time=Number.isFinite(dt.getTime())?dt.toLocaleString():String(scheduled||'');
- const confirmedByUser=String(req.confirmation_status||'')==='Confirmed'||d.confirmed===true;
- const ready=String(poolStatus).toLowerCase()==='ready';
- screen(`<div class="cab6PoolSuccess"><div style="display:flex;justify-content:space-between;gap:10px;align-items:start"><div><div class="vhKicker" style="display:inline-block;padding:5px 8px;border-radius:999px;background:#eef4ff;color:#1f5cf3;font-size:9px;font-weight:900">CAR POOL</div><h2 style="margin-top:8px">${ready?'Pool Ready':'Pool Forming'}</h2></div><span style="padding:6px 9px;border-radius:999px;background:${ready?'#e9f9ef':'#fff6df'};color:${ready?'#17633f':'#8a5b00'};font-size:9px;font-weight:900">${esc(String(poolStatus).toUpperCase())}</span></div><div class="cab6PoolId">${id}</div><div class="cab6RouteRow"><small>Route</small><b>${esc(S.p?.label||req.pickup||pool.pickup||'')} → ${esc(S.d?.label||req.dropoff||pool.dropoff||'')}</b></div><div class="cab6RouteRow"><small>Schedule</small><b>${esc(time)}</b></div><div class="cab6Meta" style="margin-top:10px"><div><small>Vehicle</small><b>${vehicle}</b></div><div><small>Seats held</small><b>${held} / ${totalSeats}</b></div><div><small>Confirmed seats</small><b>${confirmed}</b></div><div><small>Ready from</small><b>${minReady} seats</b></div></div><div class="cab6Fare"><div><small style="color:#858da0;font-size:9px">Per-seat fare</small><strong>₹${perSeat}</strong></div><div style="text-align:right"><small style="color:#858da0;font-size:9px">Your total</small><div style="font-size:20px;font-weight:950;color:#172960">₹${total}</div></div></div><p style="font-size:10px;color:#68758b;line-height:1.5">${ready?'Minimum confirmed seats reached. DBest can now proceed to vehicle assignment.':'Your seats are held while the pool forms. Confirm to keep your seats. Co-passenger contact details remain private.'}</p>${confirmedByUser?'<button type="button" id="cab6PoolRefresh" class="cab6Book">Refresh Pool Status</button><button type="button" id="cab6PoolCancel" class="btn danger wide" style="margin-top:8px">Cancel Car Pool Request</button>':'<button type="button" id="cab6PoolConfirm" class="cab6Book">Confirm Seat • ₹'+total+'</button><button type="button" id="cab6PoolCancel" class="btn soft wide" style="margin-top:8px">Not Now / Cancel</button>'}</div>`,'DBEST_CAB_SELECTED_UI.open()');
- if($('cab6PoolConfirm'))$('cab6PoolConfirm').onclick=()=>confirmCarpool(id,mobile);
+ const id=String(d.id||req.id||S.carpoolRequestId||''),vehicle=String(d.vehicleType||pool.vehicle_type||S.carpoolVehicle||'');
+ const scheduled=d.scheduledAt||pool.scheduled_at||req.scheduled_at||S.scheduledAt,dt=new Date(scheduled),time=Number.isFinite(dt.getTime())?dt.toLocaleString():String(scheduled||'');
+ const paid=String(req.payment_status||d.paymentStatus||'')==='Paid'||d.carpoolPaymentVerified===true;
+ const ready=['Ready','Assigned','In Progress','Completed'].includes(String(poolStatus));
+ const assigned=!!driver?.name||String(poolStatus)==='Assigned'||String(poolStatus)==='In Progress';
+ const pin=d.startPin||'';
+ const jobStatus=job?.status||'';
+ screen(`<div class="cab6PoolSuccess"><div style="display:flex;justify-content:space-between;gap:10px;align-items:start"><div><div style="display:inline-block;padding:5px 8px;border-radius:999px;background:#eef4ff;color:#1f5cf3;font-size:9px;font-weight:900">CAR POOL</div><h2 style="margin-top:8px">${assigned?'Vaahak Assigned':ready?'Pool Ready':'Pool Forming'}</h2></div><span style="padding:6px 9px;border-radius:999px;background:${ready?'#e9f9ef':'#fff6df'};color:${ready?'#17633f':'#8a5b00'};font-size:9px;font-weight:900">${esc(String(poolStatus).toUpperCase())}</span></div><div class="cab6PoolId">${esc(id)}</div><div class="cab6RouteRow"><small>Route</small><b>${esc(S.p?.label||req.pickup||pool.pickup||'')} → ${esc(S.d?.label||req.dropoff||pool.dropoff||'')}</b></div><div class="cab6RouteRow"><small>Schedule</small><b>${esc(time)}</b></div><div class="cab6Meta" style="margin-top:10px"><div><small>Vehicle</small><b>${esc(vehicle)}</b></div><div><small>Seats held</small><b>${held} / ${totalSeats}</b></div><div><small>Paid seats</small><b>${confirmed}</b></div><div><small>Ready from</small><b>${minReady} seats</b></div></div><div class="cab6Fare"><div><small style="color:#858da0;font-size:9px">Per-seat fare</small><strong>₹${perSeat}</strong></div><div style="text-align:right"><small style="color:#858da0;font-size:9px">Your total</small><div style="font-size:20px;font-weight:950;color:#172960">₹${total}</div></div></div>${paid?'<div class="cab6RouteRow"><small>Payment</small><b style="color:#17633f">✓ Razorpay Verified</b></div>':''}${driver?.name?`<div class="cab6RouteRow"><small>Vaahak</small><b>${esc(driver.name)} • ${esc(driver.vehicle||vehicle)}${driver.vehicleNo?' • '+esc(driver.vehicleNo):''}</b></div>`:''}${pin?`<div style="margin:12px 0;padding:13px;border-radius:16px;background:#f2f6ff;text-align:center"><small style="display:block;color:#667085">POOL START PIN</small><b style="font-size:28px;letter-spacing:6px;color:#174da8">${esc(pin)}</b></div>`:''}${jobStatus?`<div class="cab6RouteRow"><small>Ride status</small><b>${esc(jobStatus)}</b></div>`:''}<p style="font-size:10px;color:#68758b;line-height:1.5">${paid?(ready?'Your paid seat is confirmed. The shared Vaahak job is being handled as one pooled ride.':'Your seat is paid and confirmed. DBest is waiting for enough paid seats to make this pool operational.'):'Paying confirms and reserves your seat. Unpaid seat holds are not counted for Vaahak dispatch.'}</p>${paid?'<button type="button" id="cab6PoolRefresh" class="cab6Book">Refresh Pool Status</button>':'<button type="button" id="cab6PoolPay" class="cab6Book">Pay & Confirm Seat • ₹'+total+'</button><button type="button" id="cab6PoolCancel" class="btn soft wide" style="margin-top:8px">Cancel Request</button>'}</div>`,'DBEST_CAB_SELECTED_UI.open()');
+ if($('cab6PoolPay'))$('cab6PoolPay').onclick=()=>payCarpoolSeat(id,mobile,total,req.name||S.carpoolName||'DBest Passenger');
  if($('cab6PoolRefresh'))$('cab6PoolRefresh').onclick=()=>refreshCarpool(id,mobile);
  if($('cab6PoolCancel'))$('cab6PoolCancel').onclick=()=>cancelCarpool(id,mobile)
+}
+async function carpoolJson(url,payload){
+ const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}),j=await r.json().catch(()=>({}));
+ if(!r.ok)throw new Error(j.error||j.message||('HTTP '+r.status));return j
+}
+async function payCarpoolSeat(id,mobile,total,name){
+ const btn=$('cab6PoolPay');if(btn){btn.disabled=true;btn.textContent='Opening Razorpay…'}
+ try{
+  const order=await carpoolJson('/api/razorpay/create-order',{kind:'carpool_seat',dbestRef:id,mobile,section:'Cab',sub:'Car Pool'});
+  if(Number(order.amount)!==Math.round(Number(total)*100))throw new Error('Secure Car Pool amount mismatch');
+  if(!window.Razorpay)await loadScript('https://checkout.razorpay.com/v1/checkout.js','cab6-razorpay');
+  await new Promise((resolve,reject)=>{
+   let settled=false;const done=(fn,v)=>{if(settled)return;settled=true;fn(v)};
+   const rz=new window.Razorpay({key:order.keyId,amount:order.amount,currency:order.currency||'INR',name:'DBest',description:'DBest Car Pool Seat',order_id:order.orderId,prefill:{name:name||'',contact:mobile||''},notes:{dbest_ref:id},handler:async response=>{try{const verified=await carpoolJson('/api/razorpay/verify-payment',{...response,dbestRef:id,kind:'carpool_seat'});if(!verified?.verified)throw new Error('Payment verification failed');done(resolve,verified)}catch(e){done(reject,e)}},modal:{ondismiss:()=>done(reject,new Error('Payment cancelled'))}});
+   rz.on('payment.failed',r=>done(reject,new Error(r?.error?.description||'Payment failed')));rz.open()
+  });
+  say('Car Pool seat payment verified.');await refreshCarpool(id,mobile)
+ }catch(e){say(String(e?.message||'Unable to complete Car Pool payment.'))}
+ finally{if(btn){btn.disabled=false;btn.textContent='Pay & Confirm Seat • ₹'+total}}
 }
 async function createCarpoolRequest(){
  const b=$('cab6Go');if(b){b.disabled=true;b.textContent='Finding pool…'}
@@ -182,7 +201,7 @@ async function refreshCarpool(id,mobile){
  try{const d=await carpoolApi('status',{id,mobile});poolStatusScreen(d,mobile)}catch(e){say('Unable to refresh Car Pool status.')}
 }
 async function cancelCarpool(id,mobile){
- try{await carpoolApi('decline',{id,mobile});try{localStorage.removeItem('dbest_carpool_last')}catch(_){}say('Car Pool request cancelled.');open()}catch(e){say('Unable to cancel Car Pool request.')}
+ try{await carpoolApi('decline',{id,mobile});try{localStorage.removeItem('dbest_carpool_last')}catch(_){}say('Car Pool request cancelled.');open()}catch(e){say(String(e?.message||'')==='paid_request_refund_required'?'Paid Car Pool cancellation requires a refund workflow. Please contact DBest support.':'Unable to cancel Car Pool request.')}
 }
 function roundRules(){try{const x=JSON.parse(localStorage.getItem('d2_ride_config')||'null'),r=x?.roundTripRules||{};return{sedan:{perKm:Number(r.sedan?.perKm||15),nightHalt:Number(r.sedan?.nightHalt||1000)},suv:{perKm:Number(r.suv?.perKm||18),nightHalt:Number(r.suv?.nightHalt||1500)}}}catch(e){return{sedan:{perKm:15,nightHalt:1000},suv:{perKm:18,nightHalt:1500}}}}function visibleVehicles(){return S.mode==='rental'||S.tripType!=='roundtrip'?VEH:VEH.filter(v=>v.id==='sedan'||v.id==='suv')}function totalKm(){const k=S.route?.km||S.rentalKm;return S.mode!=='rental'&&S.tripType==='roundtrip'?k*2:k}function totalMin(){if(S.mode==='rental')return S.rentalHours*60;const oneWay=realisticRoadMinutes(Number(S.route?.km||0),Number(S.route?.min||1));return S.tripType==='roundtrip'?oneWay*2:oneWay}function fare(v){const k=S.route?.km||S.rentalKm;if(S.mode!=='rental'&&S.tripType==='roundtrip'){const rr=roundRules()[v.id];if(!rr)return 0;return Math.round((k*2)*rr.perKm+(S.nightHalt?rr.nightHalt:0))}return Math.round(Math.max(v.min,v.base+v.km*k)+PLATFORM_FEE)}
 function pickupEta(v){const m={bike:4,auto:5,sedan:6,suv:7};return m[v.id]||6}
