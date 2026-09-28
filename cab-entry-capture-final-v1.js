@@ -1,8 +1,8 @@
 (function(){
 'use strict';
-const V='20260928-carpool-v2';
+const V='20260928-carpool-v3';
 if(window.DBEST_CAB_ENTRY_CAPTURE?.version===V)return;
-const ASSET_V='20260928-carpool-v2';
+const ASSET_V='20260928-carpool-v3';
 let opening=false,ensurePromise=null;
 
 function preload(src){
