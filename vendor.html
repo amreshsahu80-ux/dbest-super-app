@@ -160,18 +160,24 @@ function applyVendorHero(v){
  const t=String(v?.type||'other').toLowerCase(),img=document.getElementById('vendorHeroImg'),k=document.getElementById('vendorHeroKicker'),h=document.getElementById('vendorHeroTitle'),p=document.getElementById('vendorHeroText');
  if(!img||!k||!h||!p)return;
  const map={
-  restaurant:{pos:'right center',k:'Restaurant Partner',h:'Serve More. Manage Simply.',p:'Live orders, menu, offers and delivery flow from one clean dashboard.'},
-  grocery:{pos:'left center',k:'Grocery Partner',h:'Sell Smarter. Stay Stocked.',p:'Orders, catalogue, stock and offers from one simple dashboard.'},
-  medicine:{pos:'center center',k:'Pharmacy Partner',h:'Serve Faster. Manage Better.',p:'Medicine orders, catalogue, availability and delivery flow in one place.'},
-  pharmacy:{pos:'center center',k:'Pharmacy Partner',h:'Serve Faster. Manage Better.',p:'Medicine orders, catalogue, availability and delivery flow in one place.'},
-  fashion:{pos:'center center',k:'Retail Partner',h:'Show More. Sell More.',p:'Products, offers and customer orders from one simple dashboard.'},
-  electronics:{pos:'center center',k:'Electronics Partner',h:'List More. Sell Smarter.',p:'Products, stock, offers and orders from one clean dashboard.'},
-  other:{pos:'center center',k:'Marketplace Partner',h:'Sell More. Manage Simply.',p:'Orders, catalogue, offers and store control from one clean dashboard.'}
+  restaurant:{crop:'restaurant',k:'Restaurant Partner',h:'Serve More. Manage Simply.',p:'Live orders, menu, offers and delivery flow from one clean dashboard.'},
+  grocery:{crop:'grocery',k:'Grocery Partner',h:'Sell Smarter. Stay Stocked.',p:'Orders, catalogue, stock and offers from one simple dashboard.'},
+  medicine:{crop:'pharmacy',k:'Pharmacy Partner',h:'Serve Faster. Manage Better.',p:'Medicine orders, catalogue, availability and delivery flow in one place.'},
+  pharmacy:{crop:'pharmacy',k:'Pharmacy Partner',h:'Serve Faster. Manage Better.',p:'Medicine orders, catalogue, availability and delivery flow in one place.'},
+  fashion:{crop:'all',k:'Retail Partner',h:'Show More. Sell More.',p:'Products, offers and customer orders from one simple dashboard.'},
+  electronics:{crop:'all',k:'Electronics Partner',h:'List More. Sell Smarter.',p:'Products, stock, offers and orders from one clean dashboard.'},
+  other:{crop:'all',k:'Marketplace Partner',h:'Sell More. Manage Simply.',p:'Orders, catalogue, offers and store control from one clean dashboard.'}
  };
- const x=map[t]||map.other;img.style.objectPosition=x.pos;k.textContent=x.k;h.textContent=x.h;p.textContent=x.p
+ const x=map[t]||map.other;
+ img.style.top='0';img.style.height='100%';img.style.objectFit='cover';img.style.right='auto';
+ if(x.crop==='grocery'){img.style.width='300%';img.style.left='0%'}
+ else if(x.crop==='pharmacy'){img.style.width='300%';img.style.left='-100%'}
+ else if(x.crop==='restaurant'){img.style.width='300%';img.style.left='-200%'}
+ else{img.style.width='100%';img.style.left='0%'}
+ k.textContent=x.k;h.textContent=x.h;p.textContent=x.p
 }
 async function loadDashboard(force=false){clearTimeout(timer);if(!token())return show('login');try{const d=await api('vendor_dashboard',{},true);vendor=d.vendor;orders=d.orders||[];catalog=d.catalog||[];applyVendorHero(vendor);document.getElementById('vendorName').textContent='🏪 '+(vendor.name||'Vendor');document.getElementById('vendorMeta').textContent=(vendor.type||'Marketplace')+(vendor.city?' • '+vendor.city:'');if(document.getElementById('vendorMenuIdentity'))document.getElementById('vendorMenuIdentity').textContent=vendor.name||'Vendor';const approved=vendor.owner_approval==='Approved'&&vendor.active;document.getElementById('approvalDot').className='statusDot '+(approved?'live':'');document.getElementById('approvalText').textContent=approved?'Approved • Live':'Approval '+(vendor.owner_approval||'Pending');const n=orders.filter(isNew).length,a=orders.filter(isActive).length,h=orders.filter(isClosed).length;document.getElementById('currentCount').textContent=n+a;document.getElementById('catCount').textContent=catalog.length;document.getElementById('historyCount').textContent=h;if(n>lastNewCount&&lastNewCount>=0)note('🔔 New Marketplace order received.');lastNewCount=n;renderCurrentOrders();renderCatalog();renderHistory();renderAccount();showSection(section);timer=setTimeout(()=>loadDashboard(false),3000)}catch(x){if(/session/i.test(x.message)){localStorage.removeItem(TK);show('login');note('Session expired. Please login again.',false)}else{note('Dashboard update failed: '+x.message,false);timer=setTimeout(()=>loadDashboard(false),5000)}}}
 function openVendorMenu(){document.getElementById('vendorMenu')?.classList.add('open');document.getElementById('vendorMenu')?.setAttribute('aria-hidden','false');document.getElementById('vendorMenuShade')?.classList.remove('hidden')}function closeVendorMenu(){document.getElementById('vendorMenu')?.classList.remove('open');document.getElementById('vendorMenu')?.setAttribute('aria-hidden','true');document.getElementById('vendorMenuShade')?.classList.add('hidden')}document.getElementById('vendorMenuBtn').onclick=openVendorMenu;document.getElementById('vendorMenuClose').onclick=closeVendorMenu;document.getElementById('vendorMenuShade').onclick=closeVendorMenu;document.querySelectorAll('[data-vmenu-section]').forEach(b=>b.onclick=()=>{showSection(b.dataset.vmenuSection);closeVendorMenu()});document.getElementById('vendorMenuLogout').onclick=()=>{closeVendorMenu();logout()};document.getElementById('vendorMenuWhatsApp').onclick=()=>{document.getElementById('dbestWhatsAppEnable')?.click();closeVendorMenu()};document.getElementById('vendorMenuAlerts').onclick=()=>{document.getElementById('dbestPartnerAlertToggle')?.click();closeVendorMenu()};document.addEventListener('keydown',e=>{if(e.key==='Escape')closeVendorMenu()});if(token())show('dash');
 </script>
-<script src="/leader-partner-onboarding-attribution-v1.js?v=20260922-leader-v1"><\/script><script src="/dbest-whatsapp-client-v1.js?v=20260923-partner-wa-v1"></script></body>
+<script src="/leader-partner-onboarding-attribution-v1.js?v=20260922-leader-v1"><\/script><script src="/dbest-whatsapp-client-v1.js?v=20260923-partner-wa-v1"></script><script src="/partner-dashboard-simplify-v1.js?v=20260929-simplified-guard-v1"><\/script></body>
 </html>
