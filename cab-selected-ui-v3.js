@@ -139,19 +139,50 @@ async function continueRide(){
  const b=$('cab6Go');if(b){b.disabled=true;b.textContent='Checking route…'}
  try{if(!S.p)S.p=await geocodeText($('cab6P')?.value);if(S.mode!=='rental'&&!S.d)S.d=await geocodeText($('cab6D')?.value);if(S.mode!=='rental'){const stopTexts=qa('.cab6StopInput').map(x=>String(x.value||'').trim()).filter(Boolean).slice(0,3);S.stops=[];for(const t of stopTexts){const p=await geocodeText(t);if(!p)return say('Please enter a valid stop location.');S.stops.push(p)}}if(!S.p||S.mode!=='rental'&&!S.d)return say(S.mode==='rental'?'Please enter a valid pickup location.':'Please enter valid pickup and destination.');if(S.mode==='rental'){S.route={km:S.rentalKm,min:S.rentalHours*60,geo:[]};return vehicles()}S.route=await routeOSRM();saveRecent(S.d?.label||$('cab6D')?.value);if(S.tripType==='carpool')return createCarpoolRequest();vehicles()}catch(e){console.warn('Cab route error',e);say('Unable to calculate the route. Please try again.')}finally{if(b){b.disabled=false;b.textContent=S.tripType==='carpool'?'Find / Create Pool':'Search Cabs'}}
 }
+async function carpoolApi(action,extra={}){
+ const base=String(cfg().supabaseUrl||'').replace(/\/$/,'');
+ const key=String(cfg().supabasePublishableKey||'');
+ if(!base||!key)throw new Error('service_unavailable');
+ const res=await fetch(base+'/functions/v1/carpool-live',{method:'POST',cache:'no-store',headers:{apikey:key,Authorization:'Bearer '+key,'Content-Type':'application/json'},body:JSON.stringify({action,...extra})});
+ const d=await res.json().catch(()=>({}));if(!res.ok)throw new Error(d.error||'carpool_request_failed');return d
+}
+function poolStatusScreen(d,mobile){
+ const pool=d.pool||{},req=d.request||{},poolStatus=d.poolStatus||pool.status||'Forming';
+ const perSeat=Number(d.perSeatFare??req.seat_fare??pool.per_seat_fare??0);
+ const seats=Number(d.seatsRequested??req.seats_requested??S.carpoolSeats??1);
+ const total=Number(d.totalAmount??(perSeat*seats));
+ const held=Number(d.heldSeats??pool.held_seats??seats);
+ const confirmed=Number(d.confirmedSeats??pool.confirmed_seats??0);
+ const totalSeats=Number(d.totalSeats??pool.total_seats??(String(d.vehicleType||pool.vehicle_type)==='SUV'?5:3));
+ const minReady=Number(d.minimumConfirmedSeats??(String(d.vehicleType||pool.vehicle_type)==='SUV'?3:2));
+ const id=esc(d.id||req.id||S.carpoolRequestId||'');
+ const vehicle=esc(d.vehicleType||pool.vehicle_type||S.carpoolVehicle||'');
+ const scheduled=d.scheduledAt||pool.scheduled_at||req.scheduled_at||S.scheduledAt;
+ const dt=new Date(scheduled),time=Number.isFinite(dt.getTime())?dt.toLocaleString():String(scheduled||'');
+ const confirmedByUser=String(req.confirmation_status||'')==='Confirmed'||d.confirmed===true;
+ const ready=String(poolStatus).toLowerCase()==='ready';
+ screen(`<div class="cab6PoolSuccess"><div style="display:flex;justify-content:space-between;gap:10px;align-items:start"><div><div class="vhKicker" style="display:inline-block;padding:5px 8px;border-radius:999px;background:#eef4ff;color:#1f5cf3;font-size:9px;font-weight:900">CAR POOL</div><h2 style="margin-top:8px">${ready?'Pool Ready':'Pool Forming'}</h2></div><span style="padding:6px 9px;border-radius:999px;background:${ready?'#e9f9ef':'#fff6df'};color:${ready?'#17633f':'#8a5b00'};font-size:9px;font-weight:900">${esc(String(poolStatus).toUpperCase())}</span></div><div class="cab6PoolId">${id}</div><div class="cab6RouteRow"><small>Route</small><b>${esc(S.p?.label||req.pickup||pool.pickup||'')} → ${esc(S.d?.label||req.dropoff||pool.dropoff||'')}</b></div><div class="cab6RouteRow"><small>Schedule</small><b>${esc(time)}</b></div><div class="cab6Meta" style="margin-top:10px"><div><small>Vehicle</small><b>${vehicle}</b></div><div><small>Seats held</small><b>${held} / ${totalSeats}</b></div><div><small>Confirmed seats</small><b>${confirmed}</b></div><div><small>Ready from</small><b>${minReady} seats</b></div></div><div class="cab6Fare"><div><small style="color:#858da0;font-size:9px">Per-seat fare</small><strong>₹${perSeat}</strong></div><div style="text-align:right"><small style="color:#858da0;font-size:9px">Your total</small><div style="font-size:20px;font-weight:950;color:#172960">₹${total}</div></div></div><p style="font-size:10px;color:#68758b;line-height:1.5">${ready?'Minimum confirmed seats reached. DBest can now proceed to vehicle assignment.':'Your seats are held while the pool forms. Confirm to keep your seats. Co-passenger contact details remain private.'}</p>${confirmedByUser?'<button type="button" id="cab6PoolRefresh" class="cab6Book">Refresh Pool Status</button><button type="button" id="cab6PoolCancel" class="btn danger wide" style="margin-top:8px">Cancel Car Pool Request</button>':'<button type="button" id="cab6PoolConfirm" class="cab6Book">Confirm Seat • ₹'+total+'</button><button type="button" id="cab6PoolCancel" class="btn soft wide" style="margin-top:8px">Not Now / Cancel</button>'}</div>`,'DBEST_CAB_SELECTED_UI.open()');
+ if($('cab6PoolConfirm'))$('cab6PoolConfirm').onclick=()=>confirmCarpool(id,mobile);
+ if($('cab6PoolRefresh'))$('cab6PoolRefresh').onclick=()=>refreshCarpool(id,mobile);
+ if($('cab6PoolCancel'))$('cab6PoolCancel').onclick=()=>cancelCarpool(id,mobile)
+}
 async function createCarpoolRequest(){
  const b=$('cab6Go');if(b){b.disabled=true;b.textContent='Finding pool…'}
  try{
-  const base=String(cfg().supabaseUrl||'').replace(/\/$/,'');
-  const key=String(cfg().supabasePublishableKey||'');
-  if(!base||!key)throw new Error('service_unavailable');
-  const res=await fetch(base+'/functions/v1/carpool-live',{method:'POST',cache:'no-store',headers:{apikey:key,Authorization:'Bearer '+key,'Content-Type':'application/json'},body:JSON.stringify({action:'create',name:S.carpoolName,mobile:S.carpoolMobile,pickup:S.p?.label||'',dropoff:S.d?.label||'',pickupLat:S.p?.lat,pickupLng:S.p?.lng,dropLat:S.d?.lat,dropLng:S.d?.lng,distanceKm:S.route?.km||0,scheduledAt:S.scheduledAt,seatsRequested:S.carpoolSeats,vehiclePref:S.carpoolVehicle})});
-  const d=await res.json().catch(()=>({}));if(!res.ok)throw new Error(d.error||'carpool_request_failed');
-  S.carpoolRequestId=d.id||'';
-  const when=new Date(d.scheduledAt||S.scheduledAt);const time=Number.isFinite(when.getTime())?when.toLocaleString() : S.scheduledAt;
-  screen(`<div class="cab6PoolSuccess"><h2>🚘 Car Pool Request Created</h2><div class="cab6PoolId">${esc(d.id||'')}</div><div class="cab6RouteRow"><small>Route</small><b>${esc(S.p?.label||'')} → ${esc(S.d?.label||'')}</b></div><div class="cab6RouteRow"><small>Schedule</small><b>${esc(time)}</b></div><div class="cab6RouteRow"><small>Seats</small><b>${Number(d.seatsRequested||S.carpoolSeats)} • ${esc(d.vehiclePref||S.carpoolVehicle)}</b></div><div class="cab6RouteRow"><small>Compatible requests now</small><b>${Number(d.matches||0)}</b></div><p style="font-size:10px;color:#68758b;line-height:1.5">Your request is saved separately from normal cab dispatch. DBest will use compatible route/time requests for pooling. Co-passenger contact details are not shown.</p><button type="button" class="cab6Book" onclick="DBEST_CAB_SELECTED_UI.open()">Done</button></div>`,'DBEST_CAB_SELECTED_UI.open()');
- }catch(e){console.warn('Car Pool request failed',e);const m=String(e.message||'');say(m==='recent_request_already_exists'?'A recent Car Pool request already exists for this mobile.':m==='schedule_must_be_future'?'Choose a time at least 10 minutes from now.':'Unable to create Car Pool request. Please retry.')}
+  const d=await carpoolApi('create',{name:S.carpoolName,mobile:S.carpoolMobile,pickup:S.p?.label||'',dropoff:S.d?.label||'',pickupLat:S.p?.lat,pickupLng:S.p?.lng,dropLat:S.d?.lat,dropLng:S.d?.lng,distanceKm:S.route?.km||0,scheduledAt:S.scheduledAt,seatsRequested:S.carpoolSeats,vehiclePref:S.carpoolVehicle});
+  S.carpoolRequestId=d.id||'';try{localStorage.setItem('dbest_carpool_last',JSON.stringify({id:d.id,mobile:S.carpoolMobile}))}catch(_){}
+  poolStatusScreen(d,S.carpoolMobile);
+ }catch(e){console.warn('Car Pool request failed',e);const m=String(e.message||'');say(m==='recent_request_already_exists'?'A recent Car Pool request already exists for this mobile.':m==='schedule_must_be_future'?'Choose a time at least 10 minutes from now.':m==='seat_limit_for_vehicle'?'Sedan supports up to 3 pooled passenger seats.':'Unable to create Car Pool request. Please retry.')}
  finally{if(b){b.disabled=false;b.textContent='Find / Create Pool'}}
+}
+async function confirmCarpool(id,mobile){
+ try{const d=await carpoolApi('confirm',{id,mobile});d.confirmed=true;poolStatusScreen(d,mobile);say('Your Car Pool seat is confirmed.')}catch(e){const m=String(e.message||'');say(m==='confirmation_expired'?'Seat hold expired. Please create a new Car Pool request.':'Unable to confirm seat. Please retry.')}
+}
+async function refreshCarpool(id,mobile){
+ try{const d=await carpoolApi('status',{id,mobile});poolStatusScreen(d,mobile)}catch(e){say('Unable to refresh Car Pool status.')}
+}
+async function cancelCarpool(id,mobile){
+ try{await carpoolApi('decline',{id,mobile});try{localStorage.removeItem('dbest_carpool_last')}catch(_){}say('Car Pool request cancelled.');open()}catch(e){say('Unable to cancel Car Pool request.')}
 }
 function roundRules(){try{const x=JSON.parse(localStorage.getItem('d2_ride_config')||'null'),r=x?.roundTripRules||{};return{sedan:{perKm:Number(r.sedan?.perKm||15),nightHalt:Number(r.sedan?.nightHalt||1000)},suv:{perKm:Number(r.suv?.perKm||18),nightHalt:Number(r.suv?.nightHalt||1500)}}}catch(e){return{sedan:{perKm:15,nightHalt:1000},suv:{perKm:18,nightHalt:1500}}}}function visibleVehicles(){return S.mode==='rental'||S.tripType!=='roundtrip'?VEH:VEH.filter(v=>v.id==='sedan'||v.id==='suv')}function totalKm(){const k=S.route?.km||S.rentalKm;return S.mode!=='rental'&&S.tripType==='roundtrip'?k*2:k}function totalMin(){if(S.mode==='rental')return S.rentalHours*60;const oneWay=realisticRoadMinutes(Number(S.route?.km||0),Number(S.route?.min||1));return S.tripType==='roundtrip'?oneWay*2:oneWay}function fare(v){const k=S.route?.km||S.rentalKm;if(S.mode!=='rental'&&S.tripType==='roundtrip'){const rr=roundRules()[v.id];if(!rr)return 0;return Math.round((k*2)*rr.perKm+(S.nightHalt?rr.nightHalt:0))}return Math.round(Math.max(v.min,v.base+v.km*k)+PLATFORM_FEE)}
 function pickupEta(v){const m={bike:4,auto:5,sedan:6,suv:7};return m[v.id]||6}
