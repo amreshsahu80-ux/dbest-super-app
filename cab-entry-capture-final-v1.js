@@ -1,8 +1,8 @@
 (function(){
 'use strict';
-const V='20260923-cab-stops-v9';
+const V='20260928-carpool-v1';
 if(window.DBEST_CAB_ENTRY_CAPTURE?.version===V)return;
-const ASSET_V='20260923-cab-stops-v9';
+const ASSET_V='20260928-carpool-v1';
 let opening=false,ensurePromise=null;
 
 function preload(src){
@@ -45,7 +45,7 @@ async function openApproved(){
   try{
     const u=await ensureApproved();
     if(u&&typeof u.open==='function'){
-      window.DBEST_ACTIVE_CAB_VERSION='SELECTED_REALMAP_V16_FINAL';
+      window.DBEST_ACTIVE_CAB_VERSION='SELECTED_REALMAP_CARPOOL_V1';
       u.open();requestAnimationFrame(optimizeImages);return
     }
     throw new Error('Cab UI unavailable')
