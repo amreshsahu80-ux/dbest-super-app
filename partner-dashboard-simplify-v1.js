@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='20260929-simplified-guard-v1';
+const VERSION='20260929-simplified-guard-v3';
 function text(x){return String(x?.textContent||'').replace(/\s+/g,' ').trim()}
 function vendor(){
  const dash=document.getElementById('dash');if(!dash||dash.classList.contains('hidden'))return;
@@ -25,7 +25,10 @@ function vendor(){
 function vaahak(){
  const dash=document.getElementById('dash');if(!dash||dash.classList.contains('hidden'))return;
  document.querySelectorAll('.vhQuick,#dbestVaahakTabs,.dbv-tabs').forEach(x=>x.style.setProperty('display','none','important'));
- document.querySelectorAll('#dbestVaahakAgreementSection,#dbestPartnerKycSelfModal,#dbestVaahakVisualStatus,[data-dbest-kyc-self="vaahak"],#dbestVaahakPhotoBtn,#vaahakPhotoPickerLive').forEach(x=>x.remove());
+ const menu=document.getElementById('vaahakMenu');
+ ['dbestActivationCard','dbestWalletCard'].forEach(id=>{const x=document.getElementById(id);if(x&&dash.contains(x)&&menu)menu.appendChild(x)});
+ document.querySelectorAll('#dbestVaahakAgreementSection,#dbestVaahakVisualStatus,#dbestVaahakPhotoBtn,#vaahakPhotoPickerLive').forEach(x=>x.remove());
+ const kyc=document.querySelector('[data-dbest-kyc-self="vaahak"]');if(kyc&&dash.contains(kyc)&&menu?.querySelector('.menuList'))menu.querySelector('.menuList').appendChild(kyc);
  const driver=dash.querySelector('.driverMini');
  if(driver){
    [...driver.querySelectorAll('button')].forEach(b=>{if(/KYC Documents|Agreement Signed|Sign Vaahak Agreement|Add Photo|Photo$/i.test(text(b)))b.remove()});
