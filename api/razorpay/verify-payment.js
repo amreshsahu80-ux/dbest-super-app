@@ -75,6 +75,7 @@ async function persistTransaction({key,payment,order,notes}){
   await sbFetch('/rest/v1/transactions?on_conflict=transaction_id',key,{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(tx)});
   return {centralTransactionId:dbestRef,section,subsection,actorRef,actorName};
 }
+async function activateCarpoolSeat({key,payment,notes}){const id=safe(notes.dbest_ref,80);if(!id)return null;const q=new URLSearchParams({select:'id,mobile,pool_id,seat_fare,seats_requested,status,payment_status,confirmation_status',id:'eq.'+id,limit:'1'});const rows=await sbFetch('/rest/v1/carpool_requests_live?'+q.toString(),key),r=Array.isArray(rows)&&rows[0]?rows[0]:null;if(!r){const e=new Error('Paid Car Pool request could not be found');e.statusCode=404;throw e;}const expected=Math.round(Number(r.seat_fare||0)*Number(r.seats_requested||0)*100);if(expected!==Number(payment.amount||0)){const e=new Error('Paid Car Pool amount does not match seat fare');e.statusCode=400;throw e;}if(String(r.payment_status||'')==='Paid'){const sync=await sbFetch('/rest/v1/rpc/sync_carpool_pool',key,{method:'POST',body:JSON.stringify({p_pool_id:r.pool_id})});return {carpoolRequestId:id,carpoolPoolId:r.pool_id,carpoolAlreadyPaid:true,carpoolSync:sync};}const now=new Date().toISOString();await sbFetch('/rest/v1/carpool_requests_live?id=eq.'+encodeURIComponent(id),key,{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({payment_status:'Paid',payment_ref:String(payment.id||''),paid_at:now,confirmation_status:'Confirmed',confirmed_at:now,updated_at:now})});const sync=await sbFetch('/rest/v1/rpc/sync_carpool_pool',key,{method:'POST',body:JSON.stringify({p_pool_id:r.pool_id})});return {carpoolRequestId:id,carpoolPoolId:r.pool_id,carpoolPaymentVerified:true,carpoolSync:sync};}
 async function triggerVendorVoice(key,orderId){try{await fetch(SUPABASE_URL+'/functions/v1/partner-voice-alert',{method:'POST',headers:{apikey:key,'Content-Type':'application/json'},body:JSON.stringify({action:'vendor_order',orderId})});}catch(e){console.error('[vendor voice alert]',e)}}
 async function activateMarketplaceMaster({key,payment,notes}){
   const masterOrderId=safe(notes.master_order_id,80);if(!masterOrderId)return null;
@@ -118,16 +119,17 @@ module.exports=async function handler(req,res){
     if(payment.status==='authorized')payment=await rzFetch('/payments/'+encodeURIComponent(paymentId)+'/capture',keyId,keySecret,{method:'POST',body:JSON.stringify({amount:Number(order.amount),currency:String(order.currency||'INR')})});
     if(payment.status!=='captured')return res.status(409).json({error:'Payment is not captured yet',verified:false,status:payment.status||'unknown'});
     const key=serverKey();if(!key)return res.status(503).json({error:'Central DBest transaction storage is not configured',verified:false});
-    let persisted=null,marketplace=null;
+    let persisted=null,marketplace=null,carpool=null;
     if(String(notes.kind||'').toLowerCase()==='membership'){
       const user=await authenticatedUser(b.supabaseAccessToken,key);
       if(String(notes.user_id||'')&&String(notes.user_id)!==String(user.id||''))return res.status(403).json({error:'Authenticated user does not match payment order',verified:false});
       persisted=await persistMembership({key,user,payment,order,notes,tier:String(notes.tier||tier||'').toLowerCase(),b});
     }else{
       persisted=await persistTransaction({key,payment,order,notes});
-      marketplace=await activateMarketplaceMaster({key,payment,notes});
+      if(String(notes.kind||'').toLowerCase()==='carpool_seat')carpool=await activateCarpoolSeat({key,payment,notes});
+      else marketplace=await activateMarketplaceMaster({key,payment,notes});
     }
-    return res.status(200).json({verified:true,provider:'razorpay',paymentId,orderId,amount:Number(payment.amount||order.amount||0),currency:String(payment.currency||order.currency||'INR'),status:payment.status,method:String(payment.method||''),email:String(payment.email||''),contact:String(payment.contact||''),dbestRef:String(notes.dbest_ref||''),kind:String(notes.kind||''),tier:String(notes.tier||''),persisted:!!persisted,...(persisted||{}),...(marketplace||{})});
+    return res.status(200).json({verified:true,provider:'razorpay',paymentId,orderId,amount:Number(payment.amount||order.amount||0),currency:String(payment.currency||order.currency||'INR'),status:payment.status,method:String(payment.method||''),email:String(payment.email||''),contact:String(payment.contact||''),dbestRef:String(notes.dbest_ref||''),kind:String(notes.kind||''),tier:String(notes.tier||''),persisted:!!persisted,...(persisted||{}),...(marketplace||{}),...(carpool||{})});
   }catch(err){
     console.error('Razorpay verify-payment error',err);
     const sc=Number(err?.statusCode)||500;
