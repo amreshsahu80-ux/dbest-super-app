@@ -1,10 +1,10 @@
 (function(){
 'use strict';
-const VERSION='20260921-user-runtime-authority-v1';
+const VERSION='20260929-user-runtime-authority-v2-perf';
 if(window.DBEST_USER_RUNTIME_AUTHORITY?.version===VERSION)return;
 if(/^\/owner\/?$/i.test(location.pathname))return;
 
-let busy=false,timer=null,lastService='';
+let busy=false,timer=null,lastService='',lastAppliedAt=0;
 function currentService(){
   const root=document.querySelector('#m .sectionOverlay .sectionContent');
   if(!root)return'';
@@ -17,7 +17,8 @@ function currentService(){
   return'';
 }
 async function apply(){
-  if(busy)return;busy=true;
+  if(busy)return;
+  const now=Date.now();if(now-lastAppliedAt<120)return;lastAppliedAt=now;busy=true;
   try{
     try{window.DBEST_I18N?.apply?.()}catch(_){}
     try{window.DBEST_USER_I18N?.apply?.()}catch(_){}
@@ -41,7 +42,7 @@ function wrap(name){
     const args=[...arguments];
     if(name==='openService'&&args[0])lastService=String(args[0]);
     const out=fn.apply(this,args);
-    schedule(0);setTimeout(apply,80);setTimeout(apply,260);
+    schedule(24);
     return out;
   };
   w.__dbestAuthorityWrapped=true;window[name]=w;
@@ -50,8 +51,9 @@ function install(){
   ['sectionScreen','openService','openRidePlatform','showRideOptions','confirmRide','openCommerceHub','openMarketplace','openContentForm','paymentReview','txDetailsView','rideStatusScreen'].forEach(wrap);
   schedule(0);
 }
-let n=0,iv=setInterval(()=>{n++;install();if(n>60)clearInterval(iv)},100);
-new MutationObserver(()=>schedule(16)).observe(document.documentElement,{childList:true,subtree:true});
+let n=0,iv=setInterval(()=>{n++;install();if(window.openService?.__dbestAuthorityWrapped||n>20)clearInterval(iv)},150);
+const host=document.getElementById('m')||document.body;
+new MutationObserver(records=>{for(const r of records){if(r.addedNodes?.length||r.removedNodes?.length){schedule(90);break}}}).observe(host,{childList:true,subtree:true});
 document.addEventListener('change',e=>{if(e.target?.id==='lang'){schedule(0);setTimeout(apply,120)}},true);
 window.addEventListener('pageshow',()=>schedule(0));
 install();
