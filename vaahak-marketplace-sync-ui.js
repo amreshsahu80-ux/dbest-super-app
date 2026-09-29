@@ -27,6 +27,6 @@ if(typeof oldPay==='function')window.confirmPayment=async function(id,method){co
 const oldComplete=window.completeJob;
 if(typeof oldComplete==='function')window.completeJob=async function(id){const j=activeJob();if(!isMarketplaceDelivery(j))return oldComplete.apply(this,arguments);try{if(!isPaid(j)){try{typeof note==='function'&&note('Waiting for Customer Razorpay payment verification.',false)}catch(_){}return}const s=await handover(id);if(!s.customerConfirmed){try{typeof note==='function'&&note('Ask the Customer to tap “I Received My Order” first.',false)}catch(_){}return}await call(COM,'complete_delivery',{jobId:id});try{typeof note==='function'&&note('Delivery completed successfully after verified Razorpay payment and Customer confirmation.')}catch(_){}setTimeout(()=>syncStep(id,'complete'),120);try{typeof loadStatus==='function'&&loadStatus(true)}catch(_){}}catch(e){try{typeof note==='function'&&note('Delivery completion check failed: '+e.message,false)}catch(_){}}};
 new MutationObserver(()=>{const j=activeJob();if(isMarketplaceDelivery(j))decoratePayment(j)}).observe(document.documentElement,{childList:true,subtree:true});
-setInterval(()=>{const j=activeJob();if(isMarketplaceDelivery(j))decoratePayment(j)},700);
+setInterval(()=>{const j=activeJob();if(isMarketplaceDelivery(j))decoratePayment(j)},2500);
 window.DBEST_VAAHAK_MARKETPLACE_SYNC={version:VERSION,arrived:markArrived,sync:syncStep};
 })();
