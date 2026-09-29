@@ -1,7 +1,7 @@
 (function(){
 'use strict';
-const VERSION='1.3.0';
-const MEMBER_ROLES=new Set(['guest','promoter','prime','leader']);
+const VERSION='1.4.0-starter-ledger';
+const MEMBER_ROLES=new Set(['starter','guest','promoter','prime','leader']);
 const recent=new Map();
 let lastCreatedAt=0;
 
