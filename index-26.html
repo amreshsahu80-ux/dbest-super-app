@@ -1746,7 +1746,7 @@ function sectionTopBar(title,subtitle="",backJs="backHome()"){
   </div>`;
 }
 function returnToRoleScreen(){
-  if(["guest","promoter","prime","leader"].includes(session.role)&&session.id)return memberDash(session.id);
+  if(["starter","guest","promoter","prime","leader"].includes(session.role)&&session.id)return memberDash(session.id);
   if(session.role==="admin")return admin();
   if(session.role==="owner")return owner();
   return backHome();
@@ -2156,7 +2156,7 @@ if(session.role!=="visitor"&&u){
   gb.classList.remove("show");
   gt.textContent="";
 }
-if(u&&["guest","promoter","prime","leader"].includes(session.role)){
+if(u&&["starter","guest","promoter","prime","leader"].includes(session.role)){
   ms.classList.add("show");
   mw.textContent=`${u.id} • ${(tiers[u.tier]?.name)||"Member"} • ${u.email||u.mobile||""}`;
 }else{
@@ -2170,7 +2170,7 @@ function account(){
     let u=me();
     sectionScreen(`${sectionTopBar("👤 My Account",u?.name||session.role,"backHome()")}
       <div class="sectionContent"><div class="sectionHero"><b>${esc(u?.name||session.role)}</b><small>${esc((u&&tiers[u.tier]?.name)||session.role)}</small></div><div class="subs">
-      ${u&&["guest","promoter","prime","leader"].includes(session.role)?`<button class="sub" onclick="memberDash('${u.id}')"><b>🏠 My Dashboard</b><small>Profile, earnings, team and transactions</small></button><button class="sub" onclick="memberProfile('${u.id}')"><b>👤 My Profile</b><small>Membership and KYC details</small></button>`:""}
+      ${u&&["starter","guest","promoter","prime","leader"].includes(session.role)?`<button class="sub" onclick="memberDash('${u.id}')"><b>🏠 My Dashboard</b><small>Profile, earnings, team and transactions</small></button><button class="sub" onclick="memberProfile('${u.id}')"><b>👤 My Profile</b><small>Membership and KYC details</small></button>`:""}
       ${session.role==="admin"?`<button class="sub" onclick="admin()"><b>🛠 Super Admin</b><small>Operations & website controls</small></button>`:""}
       ${session.role==="owner"?`<button class="sub" onclick="owner()"><b>👑 Project Owner</b><small>Approvals, deeplinks & payout rules</small></button>`:""}
       <button class="sub" onclick="logout()"><b>↩ Logout</b><small>Return to visitor mode</small></button></div></div>`);
@@ -2349,7 +2349,7 @@ async function regGo(e,tier){
     </div>`);
 }
 function requireMember(){
-  if(!["guest","promoter","prime","leader"].includes(session.role)||!session.id){toast("Please register or login to transact");account();return false}
+  if(!["starter","guest","promoter","prime","leader"].includes(session.role)||!session.id){toast("Please register or login to transact");account();return false}
   let u=users.find(x=>x.id===session.id);
   if(!u||u.status!=="Active"||u.paymentStatus!=="Approved"){toast("Membership must be active before using member features.");memberDash(session.id);return false}
   return true
@@ -2384,7 +2384,7 @@ function openService(id){
   sectionScreen(`${sectionTopBar(`${s[2]} ${s[1]}`,s[4],"backHome()")}
     <div class="sectionContent">
       <div class="sectionHero"><b>${esc(s[1])}</b><small>${esc(s[4])}</small></div>
-      ${session.id&&["guest","promoter","prime","leader"].includes(session.role)?
+      ${session.id&&["starter","guest","promoter","prime","leader"].includes(session.role)?
         `<div class="notice" style="margin-bottom:14px">Hi <b>${esc(me()?.name||"Member")}</b>. All member-facing features in this section are available.</div>`:""}
       ${ex?`<div data-dbest-universal-deeplink="1" class="card" style="margin-bottom:16px;border:1px solid #cfe0ff;background:linear-gradient(135deg,#f7faff,#eef4ff)"><small>🔗 DBest Partner Deeplink</small><b style="font-size:18px;margin-top:5px">${esc(l?.partner||s[1]+" Partner")}</b><small>${l?.url?(l.enabled!==false?"Integrated and ready to continue":"Configured by Owner but currently disabled"):"No partner URL configured in this browser yet"}</small>${l?.url&&l.enabled!==false?`<button class="btn" style="margin-top:10px" onclick="externalGo('${id}')">${esc(l.buttonLabel||("Continue to "+(l.partner||"Partner")))} ↗</button>`:""}</div>`:""}
       <div class="subs">
