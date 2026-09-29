@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='2.0.0';
+const VERSION='2.1.0-fresh-device-sync';
 const esc2=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const keyFor=(id,i)=>Number.isInteger(i)?`${id}::${i}`:String(id||'');
 function linkFor(id,i){
@@ -86,14 +86,26 @@ function deeplinkCard(id,i){
   const inherited=Number.isInteger(i)&&!links?.[keyFor(id,i)]?.url;
   return `<div data-dbest-universal-deeplink="1" class="card" style="margin:10px 0 14px;border:1px solid #cfe0ff;background:linear-gradient(135deg,#f7faff,#eef4ff)"><small>🔗 DBest Partner Deeplink${inherited?' • Section default':''}</small><b style="font-size:17px;margin-top:4px">${esc2(l.partner||s[1]+' Partner')}</b><small>Tracked with a DBest Internal Transaction ID.</small><button class="btn" style="margin-top:9px" onclick="dbestUniversalExternalGo('${esc2(id)}'${Number.isInteger(i)?','+i:''})">${esc2(l.buttonLabel||'Continue to Partner')} ↗</button></div>`;
 }
+function injectNow(id,i){
+  try{
+    const h=deeplinkCard(id,i);if(!h)return false;
+    const roots=[...document.querySelectorAll('.sectionContent')];
+    const root=roots.filter(el=>{try{const s=getComputedStyle(el),r=el.getBoundingClientRect();return s.display!=='none'&&s.visibility!=='hidden'&&(r.width||r.height)}catch(e){return false}}).pop()||roots.pop();
+    if(!root||root.querySelector('[data-dbest-universal-deeplink]'))return !!root;
+    const hero=root.querySelector('.sectionHero');if(hero)hero.insertAdjacentHTML('afterend',h);else root.insertAdjacentHTML('afterbegin',h);
+    return true;
+  }catch(e){return false}
+}
 function inject(id,i){
+  [35,180,600,1400].forEach(ms=>setTimeout(()=>injectNow(id,i),ms));
+  // Fresh devices may have no local d2_links yet. Pull the shared Owner config,
+  // then render again so deeplinks never depend on browser-local history.
   setTimeout(()=>{
     try{
-      const h=deeplinkCard(id,i);if(!h)return;
-      const root=document.querySelector('.sectionContent');if(!root||root.querySelector('[data-dbest-universal-deeplink]'))return;
-      const hero=root.querySelector('.sectionHero');if(hero)hero.insertAdjacentHTML('afterend',h);else root.insertAdjacentHTML('afterbegin',h);
+      const p=window.DBEST_OWNER_CONTROL_LIVE?.refreshPublic?.();
+      if(p&&typeof p.then==='function')p.finally(()=>injectNow(id,i));
     }catch(e){}
-  },35);
+  },60);
 }
 const baseOpenService=window.openService;
 if(typeof baseOpenService==='function')window.openService=function(id){const out=baseOpenService.apply(this,arguments);inject(id,null);return out};
