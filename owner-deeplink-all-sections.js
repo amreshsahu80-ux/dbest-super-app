@@ -60,7 +60,7 @@ window.dbestUniversalExternalGo=function(id,i){
     const activeSession=(window.session&&window.session.id)?window.session:liveSession;
     if(!activeSession?.id||activeSession.role==='visitor'){
       if(typeof toast==='function')toast('Please login to continue to the partner service');
-      try{location.href='/preview-member-login-v2.html?return='+encodeURIComponent(location.pathname+location.search)}catch(e){}
+      try{if(typeof loginChoice==='function')loginChoice();else if(typeof account==='function')account();else location.href='/preview-member-login-v2.html?return='+encodeURIComponent(location.pathname+location.search)}catch(e){try{location.href='/preview-member-login-v2.html'}catch(_){}}
       return;
     }
     const s=sectionById(id);if(!s)return typeof toast==='function'&&toast('Section not found');
