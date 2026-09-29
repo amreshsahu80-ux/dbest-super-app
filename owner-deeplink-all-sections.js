@@ -56,15 +56,31 @@ window.dbestUniversalExternalGo=function(id,i){
     const idx=Number.isInteger(i)?i:null,l=linkFor(id,idx);
     if(!l?.url||l.enabled===false)return typeof toast==='function'&&toast('Deeplink is not configured or is disabled');
     const sub=idx!==null?(s[5]?.[idx]||'External Partner Transaction'):'External Partner Transaction';
-    const x=addTx(session.id,s[1],sub,'','Redirected / Pending',l.partner||'',{details:'External partner deeplink initiated',source:'Partner Deeplink',partnerUrl:l.url,sectionId:id,subIndex:idx,buttonLabel:l.buttonLabel||''});
-    let url=String(l.url).replaceAll('{DBEST_TX_ID}',x.id).replaceAll('{USER_ID}',session.id).replaceAll('{SECTION_ID}',String(id)).replaceAll('{SUBSECTION}',String(sub));
-    try{const u=new URL(url,location.href);u.searchParams.set('dbest_tx_id',x.id);u.searchParams.set('dbest_user_id',session.id);u.searchParams.set('dbest_section',String(id));u.searchParams.set('dbest_subsection',String(sub));url=u.toString()}catch(e){}
-    x.partnerUrl=url;if(typeof save==='function')save();
-    window.open(url,'_blank','noopener');
-    if(typeof transactionDetails==='function')setTimeout(()=>transactionDetails(x.id),80);
+    const userId=String(window.session?.id||'guest');
+    let txId='';
+    let url=String(l.url);
+    // Tracking must never prevent a valid partner handoff.
+    try{
+      if(typeof addTx==='function'&&window.session?.id){
+        const x=addTx(session.id,s[1],sub,'','Redirected / Pending',l.partner||'',{details:'External partner deeplink initiated',source:'Partner Deeplink',partnerUrl:l.url,sectionId:id,subIndex:idx,buttonLabel:l.buttonLabel||''});
+        txId=String(x?.id||'');
+        if(x)x.partnerUrl=url;
+        if(typeof save==='function')save();
+      }
+    }catch(trackErr){console.warn('DBest deeplink tracking skipped',trackErr)}
+    url=url.replaceAll('{DBEST_TX_ID}',txId).replaceAll('{USER_ID}',userId).replaceAll('{SECTION_ID}',String(id)).replaceAll('{SUBSECTION}',String(sub));
+    try{
+      const u=new URL(url,location.href);
+      if(txId)u.searchParams.set('dbest_tx_id',txId);
+      if(userId&&userId!=='guest')u.searchParams.set('dbest_user_id',userId);
+      u.searchParams.set('dbest_section',String(id));
+      u.searchParams.set('dbest_subsection',String(sub));
+      url=u.toString();
+    }catch(e){}
+    // Same-tab navigation is reliable in Android WebView/Chrome and avoids popup blocking.
+    try{window.location.assign(url)}catch(navErr){window.location.href=url}
   }catch(err){console.error(err);if(typeof toast==='function')toast('Could not open partner destination')}
 };
-
 function deeplinkCard(id,i){
   const s=sectionById(id),l=linkFor(id,i);if(!s||!l?.url||l.enabled===false)return '';
   const inherited=Number.isInteger(i)&&!links?.[keyFor(id,i)]?.url;
