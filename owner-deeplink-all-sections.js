@@ -1,12 +1,17 @@
 (function(){
 'use strict';
-const VERSION='2.2.0-live-placeholder-repair';
+const VERSION='2.3.0-central-runtime-source';
 const esc2=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const keyFor=(id,i)=>Number.isInteger(i)?`${id}::${i}`:String(id||'');
 function linkFor(id,i){
   try{
-    if(Number.isInteger(i)&&links?.[keyFor(id,i)]?.url)return links[keyFor(id,i)];
-    return links?.[String(id)]||null;
+    const central=(window.DBEST_PUBLIC_LINKS&&typeof window.DBEST_PUBLIC_LINKS==='object')?window.DBEST_PUBLIC_LINKS:null;
+    if(central){
+      if(Number.isInteger(i)&&central[keyFor(id,i)]?.url)return central[keyFor(id,i)];
+      if(central[String(id)]?.url)return central[String(id)];
+    }
+    if(Number.isInteger(i)&&typeof links!=='undefined'&&links?.[keyFor(id,i)]?.url)return links[keyFor(id,i)];
+    return typeof links!=='undefined'?(links?.[String(id)]||null):null;
   }catch(e){return null}
 }
 function sectionById(id){try{return services.find(s=>String(s?.[0])===String(id))||null}catch(e){return null}}
@@ -83,7 +88,7 @@ window.dbestUniversalExternalGo=function(id,i){
 };
 function deeplinkCard(id,i){
   const s=sectionById(id),l=linkFor(id,i);if(!s||!l?.url||l.enabled===false)return '';
-  const inherited=Number.isInteger(i)&&!links?.[keyFor(id,i)]?.url;
+  const inherited=Number.isInteger(i)&&!(window.DBEST_PUBLIC_LINKS?.[keyFor(id,i)]?.url||(typeof links!=='undefined'&&links?.[keyFor(id,i)]?.url));
   return `<div data-dbest-universal-deeplink="1" class="card" style="margin:10px 0 14px;border:1px solid #cfe0ff;background:linear-gradient(135deg,#f7faff,#eef4ff)"><small>🔗 DBest Partner Deeplink${inherited?' • Section default':''}</small><b style="font-size:17px;margin-top:4px">${esc2(l.partner||s[1]+' Partner')}</b><small>Tracked with a DBest Internal Transaction ID.</small><button class="btn" style="margin-top:9px" onclick="dbestUniversalExternalGo('${esc2(id)}'${Number.isInteger(i)?','+i:''})">${esc2(l.buttonLabel||'Continue to Partner')} ↗</button></div>`;
 }
 function injectNow(id,i){
