@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='20260922-owner-analytics-v1';
+const VERSION='20260929-owner-analytics-v2';
 if(window.DBEST_OWNER_ANALYTICS?.version===VERSION)return;
 const cfg=window.DBEST_RUNTIME_CONFIG||{},BASE=String(cfg.supabaseUrl||'').replace(/\/$/,''),KEY=String(cfg.supabasePublishableKey||'');
 if(!BASE||!KEY)return;
@@ -29,7 +29,7 @@ async function open(){
     '<div class="kpi"><small>Unique Browser Visitors</small><b>'+fmt(s.uniqueVisitors)+'</b></div>'+
     '<div class="kpi"><small>Today</small><b>'+fmt(s.todayPageViews)+'</b></div>'+
     '<div class="kpi"><small>This Month</small><b>'+fmt(s.monthPageViews)+'</b></div>'+
-    '<div class="kpi"><small>Logged-in Activity</small><b>'+fmt(s.loggedInActivity)+'</b></div>'+
+    '<div class="kpi"><small>Successful Logins</small><b>'+fmt(s.successfulLogins??s.loggedInActivity)+'</b></div>'+\n    '<div class="kpi"><small>Unique Logged-in Members</small><b>'+fmt(s.loggedInMembers)+'</b></div>'+
    '</div>'+
    '<div class="ownerPanelCard" style="margin-top:14px"><h3>Top Sections</h3>'+
    (top.length?'<div class="ownerList">'+top.map((x,i)=>'<div class="ownerRow"><div><label>#'+(i+1)+'</label><b>'+esc(x.section_key||'Unknown')+'</b></div><div><label>Views</label><b>'+fmt(x.views)+'</b></div></div>').join('')+'</div>':'<div class="notice">No section activity recorded yet.</div>')+
