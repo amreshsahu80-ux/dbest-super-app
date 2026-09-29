@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='1.1.0-dashboard-read';
+const VERSION='1.2.0-session-safe';
 const cfg=window.DBEST_RUNTIME_CONFIG||{},base=String(cfg.supabaseUrl||'').replace(/\/$/,''),
 key=String(cfg.supabasePublishableKey||''),TOKEN_KEY='dbest_member_live_token';
 function token(){return String(localStorage.getItem(TOKEN_KEY)||'')}
