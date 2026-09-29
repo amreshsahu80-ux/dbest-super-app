@@ -74,8 +74,8 @@ window.dbestPolicyPayDirect=function(txId,route,method){
   const x=txById(txId);if(!x)return;
   const isHome=route==='home_jobs',recipient=isHome?'Service Provider':'Partner';
   const m=method==='upi'?`UPI to ${recipient}`:`Cash to ${recipient}`;
-  x.paymentMethod=m;x.paymentMode=m;x.paymentStage=`Pay ${recipient} Directly`;
-  x.status=`Service Confirmed / ${m}`;
+  x.paymentMethod=m;x.paymentMode=m;x.paymentStage=`Payment Due to ${recipient}`;
+  x.status=`Service Confirmed / Payment Due to ${recipient}`;
   x.meta={...(x.meta||{}),paymentMethod:m,paymentPolicy:isHome?'home_jobs_direct_provider':'repairing_direct_partner',dormantGateway:'payu',dormantGatewayEnabled:false};
   try{if(typeof save==='function')save()}catch{}
   if(typeof toast==='function')toast(`${m} selected.`);
