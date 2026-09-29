@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='20260922-platform-analytics-v1';
+const VERSION='20260929-platform-analytics-v2';
 if(window.DBEST_PLATFORM_ANALYTICS?.version===VERSION)return;
 const cfg=window.DBEST_RUNTIME_CONFIG||{},BASE=String(cfg.supabaseUrl||'').replace(/\/$/,''),KEY=String(cfg.supabasePublishableKey||'');
 if(!BASE||!KEY)return;
@@ -12,7 +12,9 @@ function member(){try{return window.DBEST_SESSION_COMPAT?.read?.()||JSON.parse(l
 function browser(){const u=navigator.userAgent||'';if(/Edg\//i.test(u))return'Edge';if(/OPR\//i.test(u))return'Opera';if(/Chrome\//i.test(u))return'Chrome';if(/Safari\//i.test(u)&&!/Chrome/i.test(u))return'Safari';if(/Firefox\//i.test(u))return'Firefox';return'Other'}
 function device(){const u=navigator.userAgent||'';if(/iPad|Tablet|Android(?!.*Mobile)/i.test(u))return'tablet';if(/Mobi|Android|iPhone/i.test(u))return'mobile';return'desktop'}
 function refHost(){try{return document.referrer?new URL(document.referrer).hostname:''}catch(_){return''}}
+const sent=new Map();
 function send(event,section=''){
+ const dedupeKey=event+'|'+String(section||'')+'|'+location.pathname; const now=Date.now(); const last=Number(sent.get(dedupeKey)||0); const ttl=event==='dashboard_view'?5000:event==='section_view'?1200:0; if(ttl&&now-last<ttl)return; sent.set(dedupeKey,now);
  const s=member(),role=String(s.role||'visitor').toLowerCase(),id=role==='visitor'?'':String(s.id||'');
  const body={action:'track',event,visitorId,sessionId,memberId:id||null,memberRole:role,path:location.pathname,section:section||null,referrerHost:refHost(),language:String(localStorage.getItem('d2_lang')||navigator.language||'').slice(0,20),deviceType:device(),browserFamily:browser()};
  try{fetch(API,{method:'POST',keepalive:true,cache:'no-store',headers:{apikey:KEY,Authorization:'Bearer '+KEY,'Content-Type':'application/json'},body:JSON.stringify(body)}).catch(()=>{})}catch(_){}
