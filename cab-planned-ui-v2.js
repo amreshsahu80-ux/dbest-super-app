@@ -1,7 +1,7 @@
 (function(){
 'use strict';
 const BASE='20260905-selected-realmap-v6';
-const VERSION='20260929-live-fare-v3';
+const VERSION='20260929-live-fare-v4';
 const PACKS=[['2|20','2 Hours / 20 km'],['4|40','4 Hours / 40 km'],['8|80','8 Hours / 80 km'],['12|120','12 Hours / 120 km']];
 const VEH=[
  {id:'bike',name:'Bike',seats:1,base:35,km:8,min:45,img:'https://images.tractorjunction.com/GLOSS_BLACK_4c0619d5ab.png?format=webp&height=424&width=760'},
@@ -152,7 +152,9 @@ function renderConfirm(){
  try{window.DBEST_I18N?.apply?.();window.DBEST_USER_I18N?.apply?.()}catch(e){}
 }
 function book(id){
- const pay=q('input[name="cab13pay"]:checked')?.value||'cash',draft={pickup:F.p?.label||'',drop:F.mode==='rental'?F.rentalHours+' Hours / '+F.rentalKm+' km':F.d?.label||'',pickupCoords:Number.isFinite(F.p?.lat)?{lat:F.p.lat,lng:F.p.lng}:null,dropCoords:Number.isFinite(F.d?.lat)?{lat:F.d.lat,lng:F.d.lng}:null,stops:(F.stops||[]).map(s=>s?.label||'').filter(Boolean),stopCoords:(F.stops||[]).filter(s=>Number.isFinite(s?.lat)&&Number.isFinite(s?.lng)).map(s=>({lat:s.lat,lng:s.lng,label:s.label||''})),selected:id,schedule:F.schedule,scheduledAt:F.scheduledAt,rider:F.rider,riderName:F.riderName,riderMobile:F.riderMobile,bookingType:F.mode==='rental'?'Rental':(F.tripType==='roundtrip'?'Round Trip':'Ride'),tripType:F.tripType,roundTrip:F.tripType==='roundtrip',sameVehicle:F.tripType==='roundtrip',returnPickup:F.tripType==='roundtrip'?(F.d?.label||''):null,returnDrop:F.tripType==='roundtrip'?(F.p?.label||''):null,roundTripDistance:F.tripType==='roundtrip'?tripDistance():null,nightHalt:F.tripType==='roundtrip'&&F.nightHalt,tollsExtra:F.tripType==='roundtrip',distance:F.tripType==='roundtrip'?tripDistance():(F.route?.km||0),estimatedMinutes:F.tripType==='roundtrip'?tripMinutes():(F.route?.min||0),rental:F.mode==='rental',rentalHours:F.rentalHours,rentalKm:F.rentalKm,rentalPackage:F.mode==='rental'?{label:F.rentalHours+' Hours / '+F.rentalKm+' km',hours:F.rentalHours,includedKm:F.rentalKm}:null};
+ const quotedVehicle=liveVehicle(VEH.find(x=>x.id===id)||VEH[2]),quotedFare=fare(quotedVehicle);
+ if(!(Number(quotedFare)>0))return tell('Fare is still calculating. Please retry.');
+ const pay=q('input[name="cab13pay"]:checked')?.value||'cash',draft={quotedFare:Number(quotedFare),pickup:F.p?.label||'',drop:F.mode==='rental'?F.rentalHours+' Hours / '+F.rentalKm+' km':F.d?.label||'',pickupCoords:Number.isFinite(F.p?.lat)?{lat:F.p.lat,lng:F.p.lng}:null,dropCoords:Number.isFinite(F.d?.lat)?{lat:F.d.lat,lng:F.d.lng}:null,stops:(F.stops||[]).map(s=>s?.label||'').filter(Boolean),stopCoords:(F.stops||[]).filter(s=>Number.isFinite(s?.lat)&&Number.isFinite(s?.lng)).map(s=>({lat:s.lat,lng:s.lng,label:s.label||''})),selected:id,schedule:F.schedule,scheduledAt:F.scheduledAt,rider:F.rider,riderName:F.riderName,riderMobile:F.riderMobile,bookingType:F.mode==='rental'?'Rental':(F.tripType==='roundtrip'?'Round Trip':'Ride'),tripType:F.tripType,roundTrip:F.tripType==='roundtrip',sameVehicle:F.tripType==='roundtrip',returnPickup:F.tripType==='roundtrip'?(F.d?.label||''):null,returnDrop:F.tripType==='roundtrip'?(F.p?.label||''):null,roundTripDistance:F.tripType==='roundtrip'?tripDistance():null,nightHalt:F.tripType==='roundtrip'&&F.nightHalt,tollsExtra:F.tripType==='roundtrip',distance:F.tripType==='roundtrip'?tripDistance():(F.route?.km||0),estimatedMinutes:F.tripType==='roundtrip'?tripMinutes():(F.route?.min||0),rental:F.mode==='rental',rentalHours:F.rentalHours,rentalKm:F.rentalKm,rentalPackage:F.mode==='rental'?{label:F.rentalHours+' Hours / '+F.rentalKm+' km',hours:F.rentalHours,includedKm:F.rentalKm}:null};
  try{
    if(typeof rideDraft!=='undefined')Object.assign(rideDraft,draft);else window.rideDraft=draft;
    const overlay=$('dbestFinding'),btn=$('cab13Book');if(overlay)overlay.classList.add('show');if(btn)btn.disabled=true;
