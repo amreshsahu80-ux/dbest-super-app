@@ -82,7 +82,7 @@ window.dbestPolicyPayDirect=function(txId,route,method){
   if(typeof txDetailsView==='function')return txDetailsView(txId);
 };
 window.dbestCabPayDriver=function(txId,method){
-  const x=txById(txId);if(!x)return;const m=method==='upi'?'UPI to Driver':'Cash to Driver';x.paymentMethod=m;x.paymentMode=m;x.paymentStage='Pay Driver Directly';x.status='Ride Confirmed / '+m;x.meta={...(x.meta||{}),paymentMethod:m,paymentPolicy:'cab_direct_driver'};try{if(typeof save==='function')save()}catch{};if(typeof rideStatusScreen==='function')return rideStatusScreen(txId);if(typeof txDetailsView==='function')return txDetailsView(txId);
+  const x=txById(txId);if(!x)return;const m=method==='upi'?'UPI to Driver':'Cash to Driver';x.paymentMethod=m;x.paymentMode=m;x.paymentStage='Payment Due to Driver';x.status='Ride Confirmed / Driver Assigning';x.meta={...(x.meta||{}),paymentMethod:m,paymentPolicy:'cab_direct_driver',paymentStage:'Payment Due to Driver'};try{if(typeof save==='function')save()}catch{};if(typeof rideStatusScreen==='function')return rideStatusScreen(txId);if(typeof txDetailsView==='function')return txDetailsView(txId);
 };
 function wrap(name){
   const fn=window[name];if(typeof fn!=='function'||fn.__dbestPaymentPolicyWrapped)return;
