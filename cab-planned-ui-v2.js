@@ -1,7 +1,7 @@
 (function(){
 'use strict';
 const BASE='20260905-selected-realmap-v6';
-const VERSION='20260922-cab-roundtrip-v2';
+const VERSION='20260929-live-fare-v3';
 const PACKS=[['2|20','2 Hours / 20 km'],['4|40','4 Hours / 40 km'],['8|80','8 Hours / 80 km'],['12|120','12 Hours / 120 km']];
 const VEH=[
  {id:'bike',name:'Bike',seats:1,base:35,km:8,min:45,img:'https://images.tractorjunction.com/GLOSS_BLACK_4c0619d5ab.png?format=webp&height=424&width=760'},
@@ -90,7 +90,7 @@ async function realRoute(a,b){
  const adv=await mapplsRouteResource(a,b,'route_adv');if(adv)return adv;
  return estimated(a,b)
 }
-function readRideConfig(){try{const x=JSON.parse(localStorage.getItem('d2_ride_config')||'null');if(x&&Array.isArray(x.vehicles))return x}catch(e){}return null}
+function readRideConfig(){try{const live=window.DBEST_RIDE_CONFIG_LIVE?.get?.();if(live&&Array.isArray(live.vehicles))return live}catch(e){}try{const x=JSON.parse(localStorage.getItem('d2_ride_config')||'null');if(x&&Array.isArray(x.vehicles))return x}catch(e){}return null}
 function liveVehicle(v){const c=readRideConfig(),ov=(c?.vehicles||[]).find(x=>x.id===v.id)||{};return {...v,name:ov.name||v.name,seats:Number(ov.seats||v.seats||1),eta:Number(ov.eta||4),base:Number(ov.base??v.base),km:Number(ov.perKm??v.km),min:Number(ov.minFare??v.min)}}
 function roundRules(){const c=readRideConfig(),r=c?.roundTripRules||{};return{enabled:r.enabled!==false,tollsExtra:r.tollsExtra!==false,sameVehicle:r.sameVehicle!==false,sedan:{perKm:Number(r.sedan?.perKm||15),nightHalt:Number(r.sedan?.nightHalt||1000)},suv:{perKm:Number(r.suv?.perKm||18),nightHalt:Number(r.suv?.nightHalt||1500)}}}
 function visibleVehicles(){return F.tripType==='roundtrip'?VEH.filter(v=>v.id==='sedan'||v.id==='suv'):VEH}
