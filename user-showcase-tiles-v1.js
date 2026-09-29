@@ -35,7 +35,7 @@ const OWNER_FALLBACK=[
 {id:'tr-domestic',section:'travel',name:'Domestic Tour Packages',category:'Lowest Price, Best Service',description:'We Provide the best and Cheapest Tour pacakges allover India and Abroad.',image_url:'https://ydedmotbacnllkijzmvp.supabase.co/storage/v1/object/public/showcase-images/cards/5d7fae87-8a99-437f-ae50-319b0e9d595e.png',sort_order:30,is_visible:true},
 {id:'tr-intl',section:'travel',name:'International Holidays',category:'Travel The World',description:'Explore curated international destinations and package ideas at Lowest Cost, Guaranteed.',image_url:'https://ydedmotbacnllkijzmvp.supabase.co/storage/v1/object/public/showcase-images/cards/97d61c94-4666-49b7-a76f-c1b9e88c3700.png',sort_order:40,is_visible:true}
 ];
-let cards=null,loading=null,currentId='';
+let cards=null,loading=null,currentId='',renderTimer=null,lastRenderKey='';
 async function load(){
   if(cards)return cards;
   if(loading)return loading;
@@ -71,6 +71,9 @@ async function render(id){
   let box=root.querySelector('[data-dbest-safe-showcase]');
   if(!box){box=document.createElement('section');box.setAttribute('data-dbest-safe-showcase',kind);const subs=root.querySelector('.subs');if(subs)root.insertBefore(box,subs);else root.appendChild(box)}
   const [title,intro]=(TITLES[lang()]||TITLES.en)[kind]||[kind,''];
+  const renderKey=id+'|'+lang()+'|'+rows.map(c=>String(c.id)+':'+String(c.image_url||'')).join(',');
+  if(lastRenderKey===renderKey&&box.querySelector('.dbestSafeGrid'))return;
+  lastRenderKey=renderKey;
   box.innerHTML='<div class="dbestSafeIntro"><h2>'+esc(title)+'</h2><p>'+esc(intro)+'</p></div><div class="dbestSafeGrid">'+rows.map(c=>'<article class="dbestSafeCard" data-safe-card="'+esc(c.id)+'" tabindex="0"><img src="'+esc(c.image_url||fallback(c.name,kind,c.category))+'" alt="'+esc(c.name)+'"><div><b>'+esc(c.name)+'</b><small>'+esc(c.category||'')+'</small></div></article>').join('')+'</div>';
   box.querySelectorAll('.dbestSafeCard').forEach(el=>{const go=()=>{if(typeof window.dbestUniversalExternalGo==='function')window.dbestUniversalExternalGo(id)};el.onclick=go;el.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go()}}});
   try{window.DBEST_I18N?.apply?.()}catch(_){}
@@ -82,7 +85,8 @@ function install(){
   wrapped.__dbestSafeShowcase=true;window.openService=wrapped;
 }
 const st=document.createElement('style');st.textContent='.dbestSafeIntro{margin:18px 0 10px}.dbestSafeIntro h2{margin:0 0 4px;font-size:22px}.dbestSafeIntro p{margin:0;color:#687386}.dbestSafeGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:18px}.dbestSafeCard{overflow:hidden;background:#fff;border:1px solid #e2e8f2;border-radius:20px;box-shadow:0 10px 24px rgba(20,50,100,.07);cursor:pointer}.dbestSafeCard img{display:block;width:100%;height:128px;object-fit:cover}.dbestSafeCard div{padding:11px}.dbestSafeCard b{display:block;font-size:15px}.dbestSafeCard small{display:block;color:#687386;margin-top:4px}@media(max-width:520px){.dbestSafeGrid{gap:9px}.dbestSafeCard img{height:102px}.dbestSafeCard div{padding:9px}.dbestSafeCard b{font-size:13px}.dbestSafeCard small{font-size:10px}}';document.head.appendChild(st);
-let n=0,t=setInterval(()=>{n++;install();if(n>40)clearInterval(t)},100);
-new MutationObserver(()=>{install();if(currentId)setTimeout(()=>render(currentId),30)}).observe(document.documentElement,{childList:true,subtree:true});
+let n=0,t=setInterval(()=>{n++;install();if(window.openService?.__dbestSafeShowcase||n>20)clearInterval(t)},150);
+const host=document.getElementById('m')||document.body;
+new MutationObserver(records=>{let relevant=false;for(const r of records){for(const node of r.addedNodes||[]){if(node.nodeType===1&&(node.matches?.('.sectionOverlay,.sectionContent')||node.querySelector?.('.sectionOverlay,.sectionContent'))){relevant=true;break}}if(relevant)break}if(relevant&&currentId){clearTimeout(renderTimer);renderTimer=setTimeout(()=>render(currentId),100)}}).observe(host,{childList:true,subtree:true});
 window.DBEST_USER_SHOWCASE_SAFE={version:VERSION,render,load};
 })();
