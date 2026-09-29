@@ -2902,8 +2902,8 @@ function openContentForm(id,i){
   let schema=serviceSchema(id,i);
   sectionScreen(`${sectionTopBar(`${s[2]} ${esc(schema.title)}`,s[1],`openService('${id}')`)}
     <div class="sectionContent serviceFormPage">
-      <div class="sectionHero"><b>${esc(schema.title)}</b><small>${esc(s[1])} • Content-specific application • Complete the relevant details, upload required documents, then continue to PayU.</small></div>
-      <div class="feeStrip"><div><small>DBest Service / Processing Fee</small><b>₹${Number(schema.fee||0).toLocaleString("en-IN")}</b></div><small>Final payment is completed through PayU after application review.</small></div>
+      <div class="sectionHero"><b>${esc(schema.title)}</b><small>${esc(s[1])} • Content-specific application • Complete the relevant details, upload required documents, then continue to secure payment.</small></div>
+      <div class="feeStrip"><div><small>DBest Service / Processing Fee</small><b>₹${Number(schema.fee||0).toLocaleString("en-IN")}</b></div><small>Final payment uses Razorpay as primary; PayU remains available as fallback.</small></div>
       <form class="serviceFormCard" onsubmit="submitContentApplication(event,'${id}',${i})">
         <div class="serviceFormGrid">
           <div class="formSectionTitle">Application Details</div>
@@ -2981,7 +2981,7 @@ function paymentReview(txId){
   let m=x.meta||{},app=x.application||m.application||{},docs=x.documents||m.documents||{};
   sectionScreen(`${sectionTopBar("💳 Review & Payment",`${x.section} • ${x.sub}`,`openContentForm('${m.sectionId||""}',${Number(m.subIndex||0)})`)}
     <div class="sectionContent paymentPage">
-      <div class="sectionHero"><b>${esc(x.sub||"Service Application")}</b><small>Review your application before proceeding to PayU.</small></div>
+      <div class="sectionHero"><b>${esc(x.sub||"Service Application")}</b><small>Review your application before proceeding to secure payment.</small></div>
       <div class="paymentSummary">
         <div class="payCard">
           <h3>Application Summary</h3>
