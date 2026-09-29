@@ -7,7 +7,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
 });
 
 (function(){
-  const V='20260929-deeplink-runtime-v1';
+  const V='20260929-transaction-sync-v2';
 
   const applyRuntimeSecrets=()=>{
     const sec=window.DBEST_RUNTIME_SECRETS||{};
@@ -98,6 +98,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
     loadScript('/payout-engine-production-hardening.js?v='+V,'data-dbest-payout-engine-hardening');
     loadScript('/owner-payout-entry-visible.js?v='+V,'data-dbest-owner-payout-entry-visible');
     loadScript('/owner-deeplink-all-sections.js?v='+V,'data-dbest-owner-deeplinks-all');
+    loadScript('/transaction-ledger-client-v1.js?v='+V,'data-dbest-transaction-ledger-client');
     loadScript('/transaction-capture-universal.js?v='+V,'data-dbest-transaction-universal');
     loadScript('/transaction-final-cleanup.js?v='+V,'data-dbest-transaction-final-cleanup');
     loadScript('/transaction-invoice-receipt-v1.js?v='+V,'data-dbest-marketplace-invoice-receipt-v1');
