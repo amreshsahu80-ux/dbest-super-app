@@ -1428,8 +1428,9 @@ body.sectionOpen{overflow:hidden}
 <script>
 window.__DBEST_BUILD__="5.3-gps-dispatch-fixed";
 const $=id=>document.getElementById(id), esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const tiers={leader:{name:"Leader Promoter",price:999,badge:"👑"},prime:{name:"Prime Promoter",price:599,badge:"💎"},promoter:{name:"Promoter",price:299,badge:"🤝"},guest:{name:"Guest User",price:49,badge:"👤"}};
+const tiers={starter:{name:"Starter",price:0,badge:"✨"},leader:{name:"Leader Promoter",price:999,badge:"👑"},prime:{name:"Prime Promoter",price:599,badge:"💎"},promoter:{name:"Promoter",price:299,badge:"🤝"},guest:{name:"Guest User",price:49,badge:"👤"}};
 let membershipPlanConfig=JSON.parse(localStorage.getItem("d2_membership_plan_config")||"null")||{
+  starter:{price:0,validity:"Free",enabled:true,paymentRequired:false},
   leader:{price:999,validity:"Lifetime",enabled:true,paymentRequired:true},
   prime:{price:599,validity:"3 Years",enabled:true,paymentRequired:true},
   promoter:{price:299,validity:"1 Year",enabled:true,paymentRequired:true},
