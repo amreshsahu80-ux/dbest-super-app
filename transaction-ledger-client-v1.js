@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='1.0.0';
+const VERSION='1.1.0-dashboard-read';
 const cfg=window.DBEST_RUNTIME_CONFIG||{},base=String(cfg.supabaseUrl||'').replace(/\/$/,''),
 key=String(cfg.supabasePublishableKey||''),TOKEN_KEY='dbest_member_live_token';
 function token(){return String(localStorage.getItem(TOKEN_KEY)||'')}
@@ -27,5 +27,22 @@ async function syncAll(renderAfter=true){
  return merged;
 }
 window.DBEST_TRANSACTION_LEDGER={version:VERSION,record,syncAll,mine:()=>call({action:'mine'})};
-setTimeout(()=>{if(token())syncAll(false).catch(()=>{})},350);
+function installDashboardSync(){
+ try{
+  const fn=window.memberDash;
+  if(typeof fn!=='function'||fn.__dbestLiveTxSync)return false;
+  const wrapped=async function(){
+   try{await syncAll(false)}catch(e){console.warn('DBest live dashboard sync',e)}
+   return fn.apply(this,arguments);
+  };
+  wrapped.__dbestLiveTxSync=true;window.memberDash=wrapped;return true;
+ }catch(e){return false}
+}
+let tries=0,iv=setInterval(()=>{tries++;if(installDashboardSync()||tries>30)clearInterval(iv)},150);
+setTimeout(()=>{if(token())syncAll(false).catch(()=>{})},500);
+document.addEventListener('click',e=>{
+ const b=e.target?.closest?.('button,.sub,[role="button"]');if(!b)return;
+ const t=String(b.textContent||'').toLowerCase();
+ if(/dashboard|my transactions|direct business/.test(t)&&token())syncAll(false).catch(()=>{});
+},true);
 })();
