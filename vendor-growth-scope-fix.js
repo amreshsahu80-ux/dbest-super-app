@@ -1,8 +1,8 @@
 (function(){
 'use strict';
-const VERSION='1.1.0';
+const VERSION='1.2.0-audit';
 const VTK='dbest_vendor_live_token';
-let mounting=false;
+let mounting=false,lastMountAt=0;
 function hasVendorToken(){try{return !!localStorage.getItem(VTK)}catch(_){return false}}
 function directVendor(){const p=location.pathname.toLowerCase().replace(/\/$/,'');if(!(p==='/vendor'||p.endsWith('/vendor.html')))return false;const d=document.getElementById('dash');return !!d&&!d.classList.contains('hidden')&&hasVendorToken()}
 function integratedVendor(){
@@ -18,14 +18,14 @@ function purge(){const card=document.getElementById('dbestVendorGrowthCard');if(
 function guardApi(){const api=window.DBEST_VENDOR_GROWTH;if(!api||api.__scopeGuarded)return;api.__scopeGuarded=true;if(typeof api.refreshVendorGrowth==='function'){const old=api.refreshVendorGrowth;api.refreshVendorGrowth=async function(){if(!allowed()){purge();return null}return old.apply(this,arguments)}}}
 async function mount(){
   purge();guardApi();
-  if(!allowed()||document.getElementById('dbestVendorGrowthCard')||mounting)return;
+  if(!allowed()||document.getElementById('dbestVendorGrowthCard')||mounting||Date.now()-lastMountAt<1500)return;
   const api=window.DBEST_VENDOR_GROWTH;if(!api||typeof api.refreshVendorGrowth!=='function')return;
-  mounting=true;
+  mounting=true;lastMountAt=Date.now();
   try{await api.refreshVendorGrowth()}catch(e){console.warn('DBest Vendor Promotion Center mount',e)}finally{setTimeout(()=>{mounting=false},250)}
 }
 function hookDashboard(){
   const fn=window.vendorDashboard;if(typeof fn!=='function'||fn.__dbestVendorGrowthMountWrapped)return;
-  const wrapped=function(){const r=fn.apply(this,arguments);setTimeout(mount,60);setTimeout(mount,250);setTimeout(mount,700);return r};
+  const wrapped=function(){const r=fn.apply(this,arguments);setTimeout(mount,120);return r};
   wrapped.__dbestVendorGrowthMountWrapped=true;wrapped.__dbestOriginal=fn;window.vendorDashboard=wrapped;
 }
 function run(){purge();guardApi();hookDashboard();if(allowed())mount()}
