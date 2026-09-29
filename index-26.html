@@ -3451,7 +3451,15 @@ function earningSourcesHtml(u){
 }
 async function memberDash(id){
   try{const synced=await window.DBEST_TRANSACTION_LEDGER?.syncAll?.(false);if(Array.isArray(synced)&&Array.isArray(txs)){txs.splice(0,txs.length,...synced);try{localStorage.setItem("d2_txs",JSON.stringify(txs))}catch(_){}}}catch(e){console.warn('DBest dashboard transaction sync skipped',e)}
-  let u=users.find(x=>x.id===id);if(!u)return toast("Member not found");
+  let u=users.find(x=>x.id===id);
+  if(!u&&String(id||"")===String(session.id||"")){
+    try{
+      const live=await window.DBEST_MEMBER_DASHBOARD_LIVE?.refresh?.();
+      const found=(live?.members||[]).find(x=>String(x.id||"")===String(id||""));
+      if(found){users.push(found);u=found;try{localStorage.setItem("d2_users",JSON.stringify(users))}catch(_){}}
+    }catch(e){console.warn("DBest dashboard member hydration skipped",e)}
+  }
+  if(!u)return toast("Member profile is still syncing. Please reopen Dashboard.");
   if(session.id!==u.id&&!['admin','owner'].includes(session.role))return toast("Not authorised");
   let my=txs.filter(x=>x.userId===id),ownSuccess=ownQualifyingTx(u),team=u.ref?descendants(u.ref):[],teamtx=viewerTeamTx(u);
   let teamVolume=teamtx.reduce((a,x)=>a+Number(x.amount||0),0),ownVolume=ownSuccess.reduce((a,x)=>a+Number(x.amount||0),0),teamPayout=teamtx.reduce((a,x)=>a+payoutForTx(u,x),0),ownPayout=ownSuccess.reduce((a,x)=>a+directEarningForTx(x),0);
