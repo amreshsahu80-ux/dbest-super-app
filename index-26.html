@@ -2668,7 +2668,7 @@ function rideStatusScreen(txId){
       <div class="tripSteps">${steps.map((s,i)=>`<div class="tripStep ${i<stage?"done":i===stage?"active":""}">${s}</div>`).join("")}</div>
       <div class="txDetailGrid"><div class="txDetailCell"><small>Fare</small><b>₹${Number(x.amount||0)}</b></div><div class="txDetailCell"><small>Payment</small><b>${esc(r.paymentMethod||"")}</b></div><div class="txDetailCell"><small>Distance</small><b>${Number(r.distance||0).toFixed(1)} km</b></div><div class="txDetailCell"><small>Status</small><b>${esc(x.status)}</b></div></div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px">
-        ${stage<3?`<button class="btn" onclick="advanceRide('${esc(x.id)}')">Demo: Advance Trip Status</button>`:""}
+        
         ${stage<3?`<button class="btn soft" onclick="cancelRide('${esc(x.id)}')">Cancel Ride</button>`:""}
         <button class="btn soft" onclick="txDetailsView('${esc(x.id)}')">Transaction Details</button>
       </div>
