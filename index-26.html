@@ -2627,7 +2627,7 @@ function bookRide(e,vehicleId){
     source:"DBest Ride Platform",flow:"ride",paymentStage:payment==="payu"?"Pending PayU":"Pay on Trip",
     ride:{
       pickup:rideDraft.pickup,pickupCoords:rideDraft.pickupCoords||null,drop:rideDraft.drop,dropCoords:rideDraft.dropCoords||null,
-      stops:[...(rideDraft.stops||[])],distance:rideDraft.distance,vehicleId:v.id,vehicleName:v.name,
+      stops:[...(rideDraft.stops||[])],stopCoords:[...(rideDraft.stopCoords||[])],distance:rideDraft.distance,vehicleId:v.id,vehicleName:v.name,
       paymentMethod:payment,stage:0,tripType:isRound?"roundtrip":"oneway",roundTrip:isRound,
       sameVehicle:isRound,returnPickup:isRound?(rideDraft.returnPickup||rideDraft.drop):null,
       returnDrop:isRound?(rideDraft.returnDrop||rideDraft.pickup):null,
