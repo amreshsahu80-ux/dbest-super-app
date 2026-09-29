@@ -3449,7 +3449,7 @@ function earningSourcesHtml(u){
     </button>`).join("")}
   </div>`;
 }
-async async function memberDash(id){
+async function memberDash(id){
   try{await window.DBEST_TRANSACTION_LEDGER?.syncAll?.(false)}catch(e){console.warn('DBest dashboard transaction sync skipped',e)}
   let u=users.find(x=>x.id===id);if(!u)return toast("Member not found");
   if(session.id!==u.id&&!['admin','owner'].includes(session.role))return toast("Not authorised");
