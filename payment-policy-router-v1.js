@@ -7,7 +7,7 @@ const POLICY={
   cab:['cash_to_driver','upi_to_driver'],
   home_jobs:['cash_to_service_provider','upi_to_service_provider'],
   repairing:['cash_to_partner','upi_to_partner'],
-  forms:['payu'],
+  forms:['razorpay','payu'],
   dormant:{home_jobs:'payu',repairing:'payu'}
 };
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -50,7 +50,7 @@ function gatewayHtml(tx,route){
   if(route==='cab')return `<div class="ownerPanelCard dbestPolicyCard" data-dbest-policy="cab"><h3>Pay Driver Directly</h3>${head}<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><button class="btn" onclick="dbestCabPayDriver('${id}','cash')">💵 Cash to Driver</button><button class="btn soft" onclick="dbestCabPayDriver('${id}','upi')">📱 UPI to Driver</button></div><small style="display:block;margin-top:8px">No Razorpay or PayU gateway is used for Cab rides.</small></div>`;
   if(route==='home_jobs'||route==='repairing')return directCard(tx,route);
   if(route==='ecommerce')return `<div class="ownerPanelCard dbestPolicyCard" data-dbest-policy="ecommerce"><h3>Choose Payment Gateway</h3>${head}<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">${razorButton(tx.id,true)}${payuButton(tx.id,true)}</div><small style="display:block;margin-top:8px">Razorpay is primary. PayU is the alternate gateway.</small></div>`;
-  if(route==='forms')return `<div class="ownerPanelCard dbestPolicyCard" data-dbest-policy="forms"><h3>PayU Payment</h3>${head}<div>${payuButton(tx.id,false)}</div><small style="display:block;margin-top:8px">Forms use PayU only.</small></div>`;
+  if(route==='forms')return `<div class="ownerPanelCard dbestPolicyCard" data-dbest-policy="forms"><h3>Choose Payment Gateway</h3>${head}<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">${razorButton(tx.id,true)}${payuButton(tx.id,true)}</div><small style="display:block;margin-top:8px">Razorpay is primary. PayU is the fallback gateway.</small></div>`;
   return '';
 }
 function hideLegacyGateway(root){
