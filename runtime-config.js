@@ -7,7 +7,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
 });
 
 (function(){
-  const V='20260929-transaction-sync-v2';
+  const V='20260929-transaction-sync-v3';
 
   const applyRuntimeSecrets=()=>{
     const sec=window.DBEST_RUNTIME_SECRETS||{};
