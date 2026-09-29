@@ -99,6 +99,7 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
     loadScript('/owner-payout-entry-visible.js?v='+V,'data-dbest-owner-payout-entry-visible');
     loadScript('/owner-deeplink-all-sections.js?v='+V,'data-dbest-owner-deeplinks-all');
     loadScript('/transaction-ledger-client-v1.js?v='+V,'data-dbest-transaction-ledger-client');
+    loadScript('/member-private-profile-documents-v1.js?v='+V,'data-dbest-member-private-profile-documents');
     loadScript('/transaction-capture-universal.js?v='+V,'data-dbest-transaction-universal');
     loadScript('/transaction-final-cleanup.js?v='+V,'data-dbest-transaction-final-cleanup');
     loadScript('/transaction-invoice-receipt-v1.js?v='+V,'data-dbest-marketplace-invoice-receipt-v1');
