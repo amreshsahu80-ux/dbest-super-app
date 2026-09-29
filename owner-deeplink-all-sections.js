@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='2.1.0-fresh-device-sync';
+const VERSION='2.2.0-live-placeholder-repair';
 const esc2=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const keyFor=(id,i)=>Number.isInteger(i)?`${id}::${i}`:String(id||'');
 function linkFor(id,i){
@@ -91,7 +91,14 @@ function injectNow(id,i){
     const h=deeplinkCard(id,i);if(!h)return false;
     const roots=[...document.querySelectorAll('.sectionContent')];
     const root=roots.filter(el=>{try{const s=getComputedStyle(el),r=el.getBoundingClientRect();return s.display!=='none'&&s.visibility!=='hidden'&&(r.width||r.height)}catch(e){return false}}).pop()||roots.pop();
-    if(!root||root.querySelector('[data-dbest-universal-deeplink]'))return !!root;
+    if(!root)return false;
+    const existing=root.querySelector('[data-dbest-universal-deeplink]');
+    if(existing){
+      // Core UI can render an empty placeholder before central links finish loading.
+      // Replace it with the live configured card instead of treating it as complete.
+      existing.outerHTML=h;
+      return true;
+    }
     const hero=root.querySelector('.sectionHero');if(hero)hero.insertAdjacentHTML('afterend',h);else root.insertAdjacentHTML('afterbegin',h);
     return true;
   }catch(e){return false}
@@ -100,12 +107,13 @@ function inject(id,i){
   [35,180,600,1400].forEach(ms=>setTimeout(()=>injectNow(id,i),ms));
   // Fresh devices may have no local d2_links yet. Pull the shared Owner config,
   // then render again so deeplinks never depend on browser-local history.
-  setTimeout(()=>{
+  [60,450,1200,2400].forEach(ms=>setTimeout(()=>{
     try{
       const p=window.DBEST_OWNER_CONTROL_LIVE?.refreshPublic?.();
       if(p&&typeof p.then==='function')p.finally(()=>injectNow(id,i));
-    }catch(e){}
-  },60);
+      else injectNow(id,i);
+    }catch(e){injectNow(id,i)}
+  },ms));
 }
 const baseOpenService=window.openService;
 if(typeof baseOpenService==='function')window.openService=function(id){const out=baseOpenService.apply(this,arguments);inject(id,null);return out};
