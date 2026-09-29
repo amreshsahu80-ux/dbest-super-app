@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='2.3.0-central-runtime-source';
+const VERSION='2.4.0-new-user-external-access';
 const esc2=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const keyFor=(id,i)=>Number.isInteger(i)?`${id}::${i}`:String(id||'');
 function linkFor(id,i){
@@ -56,18 +56,24 @@ window.ownerDeeplinkStudio=function(){
 
 window.dbestUniversalExternalGo=function(id,i){
   try{
-    if(typeof requireMember==='function'&&!requireMember())return;
+    const liveSession=(()=>{try{return JSON.parse(localStorage.getItem('d2_session')||'{}')}catch(e){return{}}})();
+    const activeSession=(window.session&&window.session.id)?window.session:liveSession;
+    if(!activeSession?.id||activeSession.role==='visitor'){
+      if(typeof toast==='function')toast('Please login to continue to the partner service');
+      try{location.href='/preview-member-login-v2.html?return='+encodeURIComponent(location.pathname+location.search)}catch(e){}
+      return;
+    }
     const s=sectionById(id);if(!s)return typeof toast==='function'&&toast('Section not found');
     const idx=Number.isInteger(i)?i:null,l=linkFor(id,idx);
     if(!l?.url||l.enabled===false)return typeof toast==='function'&&toast('Deeplink is not configured or is disabled');
     const sub=idx!==null?(s[5]?.[idx]||'External Partner Transaction'):'External Partner Transaction';
-    const userId=String(window.session?.id||'guest');
+    const userId=String(activeSession?.id||'guest');
     let txId='';
     let url=String(l.url);
     // Tracking must never prevent a valid partner handoff.
     try{
-      if(typeof addTx==='function'&&window.session?.id){
-        const x=addTx(session.id,s[1],sub,'','Redirected / Pending',l.partner||'',{details:'External partner deeplink initiated',source:'Partner Deeplink',partnerUrl:l.url,sectionId:id,subIndex:idx,buttonLabel:l.buttonLabel||''});
+      if(typeof addTx==='function'&&activeSession?.id){
+        const x=addTx(activeSession.id,s[1],sub,'','Redirected / Pending',l.partner||'',{details:'External partner deeplink initiated',source:'Partner Deeplink',partnerUrl:l.url,sectionId:id,subIndex:idx,buttonLabel:l.buttonLabel||''});
         txId=String(x?.id||'');
         if(x)x.partnerUrl=url;
         if(typeof save==='function')save();
