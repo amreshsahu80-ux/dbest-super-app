@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='1.1.0',BUILD='20260826-1945-server-delivery';
+const VERSION='1.2.0-points',BUILD='20260826-1945-server-delivery';
 const cfg=window.DBEST_RUNTIME_CONFIG||{},BASE=String(cfg.supabaseUrl||'').replace(/\/$/,''),KEY=cfg.supabasePublishableKey||'';
 const API=BASE+'/functions/v1/marketplace-live',ORDER_API=BASE+'/functions/v1/marketplace-order-live-v2';
 let submitting=false;
@@ -45,7 +45,7 @@ async function createLiveOrders(txId){
     try{
       const d=await api('create_order',{
         parentTxId:String(x.id),vendorId:String(vendorId),marketType:type,
-        customerName,customerMobile,customerEmail,
+        customerName,customerMobile,customerEmail,customerMemberId:String(u.id||session?.id||''),usePoints:!!window.DBEST_POINTS?.enabled?.('marketplace'),
         deliveryAddress:address,
         dropLat:o.liveLocation?.lat,dropLng:o.liveLocation?.lng,
         items:items.map(i=>({id:String(i.id||''),name:String(i.name||'Item'),qty:Number(i.qty||1),price:Number(i.price||0)})),
