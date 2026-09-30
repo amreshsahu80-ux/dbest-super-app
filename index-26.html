@@ -2351,7 +2351,7 @@ async function regGo(e,tier){
 function requireMember(){
   if(!["starter","guest","promoter","prime","leader"].includes(session.role)||!session.id){toast("Please register or login to transact");account();return false}
   let u=users.find(x=>x.id===session.id);
-  if(!u||u.status!=="Active"||u.paymentStatus!=="Approved"){toast("Membership must be active before using member features.");memberDash(session.id);return false}
+  if(!u||u.status!=="Active"||!["approved","razorpay verified","payu verified","verified","starter free"].includes(String(u.paymentStatus||"").toLowerCase())){toast("Membership must be active before using member features.");memberDash(session.id);return false}
   return true
 }
 function addTx(uid,section,sub,amt,status,partner="",meta={}){let u=users.find(x=>x.id===uid),now=new Date(),x={id:"TX"+Date.now().toString().slice(-9)+Math.floor(Math.random()*90+10),userId:uid,user:u?.name||"",section,sub,amount:amt||"",status,partner,created:now.toLocaleString("en-IN"),createdISO:now.toISOString(),details:meta.details||"",contactName:meta.contactName||"",contactMobile:meta.contactMobile||"",source:meta.source||"DBest",partnerUrl:meta.partnerUrl||"",meta:meta||{}};txs.unshift(x);save();return x}
@@ -3453,7 +3453,8 @@ function earningSourcesHtml(u){
 }
 async function memberDash(id){
   try{const synced=await window.DBEST_TRANSACTION_LEDGER?.syncAll?.(false);if(Array.isArray(synced)&&Array.isArray(txs)){txs.splice(0,txs.length,...synced);try{localStorage.setItem("d2_txs",JSON.stringify(txs))}catch(_){}}}catch(e){console.warn('DBest dashboard transaction sync skipped',e)}
-  let u=users.find(x=>x.id===id);
+  let u=users.find(x=>String(x.id||"")===String(id||""));
+  if(!u){try{const saved=JSON.parse(localStorage.getItem("d2_users")||"[]");const found=Array.isArray(saved)?saved.find(x=>String(x.id||"")===String(id||"")):null;if(found){users.push(found);u=found}}catch(_){}}
   if(!u&&String(id||"")===String(session.id||"")){
     try{
       const live=await window.DBEST_MEMBER_DASHBOARD_LIVE?.refresh?.();
@@ -3467,7 +3468,7 @@ async function memberDash(id){
   let my=txs.filter(x=>x.userId===id),ownSuccess=ownQualifyingTx(u),team=u.ref?descendants(u.ref):[],teamtx=viewerTeamTx(u);
   let teamVolume=teamtx.reduce((a,x)=>a+Number(x.amount||0),0),ownVolume=ownSuccess.reduce((a,x)=>a+Number(x.amount||0),0),teamPayout=teamtx.reduce((a,x)=>a+payoutForTx(u,x),0),ownPayout=ownSuccess.reduce((a,x)=>a+directEarningForTx(x),0);
   let eToday=combinedEarningsForPeriod(u,"today"),eMonth=combinedEarningsForPeriod(u,"month"),eYear=combinedEarningsForPeriod(u,"year"),eAll=combinedEarningsForPeriod(u,"all");
-  sectionScreen(`${sectionTopBar(`🏢 ${esc(u.name)}`,`${u.id} • ${tiers[u.tier].badge} ${tiers[u.tier].name} • ${esc(u.email||"No email")}`,"backHome()")}
+  sectionScreen(`${sectionTopBar(`🏢 ${esc(u.name)}`,`${u.id} • ${tiers[u.tier]?.badge||"👤"} ${tiers[u.tier]?.name||u.tier||"Member"} • ${esc(u.email||"No email")}`,"backHome()")}
     <div class="sectionContent classicDash">
       <div class="memberMiniHead"><div><b>Member Business Dashboard</b><small>${esc(u.name)} • ${esc(u.id)} • ${esc(tiers[u.tier]?.name||u.tier)}</small></div><span class="memberStatus">${esc(u.status||"Member")}</span></div>
       <div class="earnGrid">
