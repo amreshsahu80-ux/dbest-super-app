@@ -6,7 +6,7 @@ const money=v=>'₹'+Math.round(Number(v||0)).toLocaleString('en-IN');
 let refreshBusy=false,lastDashboardRefresh=0;
 function sid(){try{return typeof session!=='undefined'?String(session?.id||''):''}catch(e){return''}}
 function role(){try{return typeof session!=='undefined'?String(session?.role||''):''}catch(e){return''}}
-function isMember(){return ['guest','promoter','prime','leader'].includes(role())&&!!sid()}
+function isMember(){return ['starter','guest','promoter','prime','leader'].includes(role())&&!!sid()}
 function viewer(){try{return (typeof users!=='undefined'&&Array.isArray(users))?users.find(u=>String(u.id||'')===sid()):null}catch(e){return null}}
 function team(v){try{if(v?.ref&&typeof descendants==='function')return descendants(v.ref)||[]}catch(e){}return []}
 function depth(v,userId){if(String(userId)===String(v?.id||''))return 0;try{if(typeof memberDepthFrom==='function')return Number(memberDepthFrom(v,userId)||0)}catch(e){}return 0}
@@ -25,9 +25,9 @@ function visiblePageTx(){if(!isMember())return null;const text=document.body?.in
 function injectTransactionBadge(){const x=visiblePageTx();if(!x)return false;const root=document.querySelector('.sectionContent');if(!root||document.getElementById('dbestInternalTxBadge'))return false;const n=document.createElement('div');n.id='dbestInternalTxBadge';n.className='notice';n.style.cssText='margin:10px 0;border:1px solid #cfdcff;background:#f6f9ff;padding:12px;border-radius:14px';n.innerHTML=`<b>🧾 Transaction ID</b><br><span style="font-size:17px;font-weight:900;color:#175cff">${esc(x.internalTransactionId||x.id)}</span>`;const hero=root.querySelector('.sectionHero,.orderStatusCard,.payCard');if(hero?.parentElement===root)hero.insertAdjacentElement('afterend',n);else root.prepend(n);return true}
 function removeFloating(){document.getElementById('dbestLedgerFloating')?.remove()}
 function maintain(){removeFloating();if(!isMember())return;injectDashboard();injectTransactionBadge();if(findDashboard())refreshDashboard(false)}
-const obs=new MutationObserver(()=>setTimeout(maintain,30));obs.observe(document.documentElement,{childList:true,subtree:true});
+let maintainQueued=false;const obs=new MutationObserver(()=>{if(maintainQueued)return;maintainQueued=true;requestAnimationFrame(()=>{maintainQueued=false;maintain()})});obs.observe(document.documentElement,{childList:true,subtree:true});
 document.addEventListener('click',e=>{const b=e.target.closest?.('button');if(!b)return;if(/dashboard|account|profile|order|transaction|payment/i.test(b.textContent||''))setTimeout(()=>{maintain();refreshDashboard(true)},120)},true);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(()=>refreshDashboard(true),100)});
-setInterval(maintain,1800);setTimeout(maintain,100);setTimeout(()=>refreshDashboard(true),900);
+setInterval(()=>{if(!document.hidden&&findDashboard())maintain()},10000);setTimeout(maintain,100);setTimeout(()=>refreshDashboard(true),900);
 window.DBEST_MEMBER_TRANSACTION_LEDGER_VISIBLE={version:VERSION,open:openLedger,maintain,refresh:refreshDashboard,injectTransactionBadge};
 })();
