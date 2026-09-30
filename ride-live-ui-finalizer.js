@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='3.3.0-dispatch-refresh';
+const VERSION='3.4.0-single-waiting';
 if(window.DBEST_RIDE_LIVE_UI_FINALIZER?.version===VERSION)return;
 const POLL=1500,cfg=window.DBEST_RUNTIME_CONFIG||{},BASE=String(cfg.supabaseUrl||'').replace(/\/$/,''),KEY=cfg.supabasePublishableKey||'',RIDE_API=BASE+'/functions/v1/vaahak-live',PROFILE=BASE+'/functions/v1/vaahak-profile-live',SESSION=BASE+'/functions/v1/vaahak-customer-session-live',DISPATCH=BASE+'/functions/v1/vaahak-dispatch-live';
 let timer=null,currentTx='',photoCache={},lastPartner=null,lastStatus='',recovering=false,searchDeadline=0,countdownTimer=null,terminalStatus='',lastDispatchTick=0;
@@ -16,11 +16,11 @@ function userList(){try{if(Array.isArray(window.users))return window.users}catch
 function findTx(tx){return txList().find(v=>String(v?.id)===String(tx))||null}
 function recoveryPayload(tx){const x=findTx(tx);if(!x)return null;const r=x.ride||x.meta?.ride||{},u=userList().find(v=>String(v?.id)===String(x.userId))||{};const p={action:'recover',txId:String(tx),customerMemberId:String(u.id||x.userId||''),customerMobile:String(u.mobile||x.customerMobile||''),pickup:String(r.pickup||r.from||'').trim(),drop:String(r.drop||r.dropoff||r.to||'').trim(),fare:Number(x.amount||x.total||r.fare||0)};return p.customerMemberId&&p.customerMobile&&p.pickup&&p.drop&&p.fare>0?p:null}
 async function recoverToken(tx){if(recovering||!SESSION)return'';const p=recoveryPayload(tx);if(!p)return'';recovering=true;try{const r=await fetch(SESSION,{method:'POST',cache:'no-store',headers:headers(),body:JSON.stringify(p)}),d=await r.json().catch(()=>({}));if(r.ok&&d.customerToken){saveToken(tx,d.customerToken);return String(d.customerToken)}return''}catch(e){return''}finally{recovering=false}}
-async function dispatchTick(tx){if(!tx||!DISPATCH||Date.now()-lastDispatchTick<5000)return;lastDispatchTick=Date.now();try{await fetch(DISPATCH,{method:'POST',cache:'no-store',headers:headers(),body:JSON.stringify({action:'tick',txId:String(tx)})})}catch(e){}}
+async function dispatchTick(tx){if(!tx||!DISPATCH||Date.now()-lastDispatchTick<5000)return;lastDispatchTick=Date.now();try{const r=await fetch(DISPATCH,{method:'POST',cache:'no-store',headers:headers(),body:JSON.stringify({action:'tick',txId:String(tx)})});if(!r.ok){const d=await r.json().catch(()=>({}));console.warn('DBest dispatch tick failed',r.status,d?.error||'request_failed')}}catch(e){console.warn('DBest dispatch tick network error',e?.message||e)}}
 async function rideStatus(tx,tok){if(!tx||!tok||!RIDE_API)return null;try{const r=await fetch(RIDE_API,{method:'POST',cache:'no-store',headers:headers(),body:JSON.stringify({action:'ride_status',txId:String(tx),customerToken:tok})}),d=await r.json().catch(()=>({}));if(!r.ok)return null;return d}catch(e){return null}}
 async function profile(tx,tok){if(!tx||!tok||!PROFILE)return null;const key=tx+'|'+tok.slice(-8);if(photoCache[key]&&Date.now()-photoCache[key].at<5000)return photoCache[key].p;try{const r=await fetch(PROFILE,{method:'POST',cache:'no-store',headers:headers(),body:JSON.stringify({action:'partner_for_customer',txId:String(tx),customerToken:tok})}),d=await r.json().catch(()=>({}));if(!r.ok)return null;photoCache[key]={at:Date.now(),p:d.partner||null};return d.partner||null}catch(e){return null}}
 function css(){if(document.getElementById('dbestRideIdentityV26Css'))return;const s=document.createElement('style');s.id='dbestRideIdentityV26Css';s.textContent=`
-.ridePage button[onclick*="advanceRide("],.ridePage .driverCard,.ridePage .vaahakStatusList,.ridePage .dispatchPending{display:none!important}
+.ridePage button[onclick*="advanceRide("],.ridePage .driverCard,.ridePage .vaahakStatusList,.ridePage .dispatchPending{display:none!important}\n.ridePage.dbestLiveRideWaiting .rideStatus,.ridePage.dbestLiveRideWaiting .rideFinding,.ridePage.dbestLiveRideWaiting [data-ride-finding]{display:none!important}
 .ridePage:not(.dbestLiveRideBound) .tripSteps{display:none!important}.ridePage.dbestLiveRideWaiting .tripSteps{display:none!important}
 .ridePage .tripSteps .tripStep.done{background:linear-gradient(135deg,#e9f9ef,#dff6e8)!important;border-color:#9ed7b5!important;color:#17633f!important;box-shadow:inset 0 0 0 1px #cfead9!important}
 .ridePage .tripSteps .tripStep.done *{color:#17633f!important}
