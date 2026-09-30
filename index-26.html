@@ -2607,7 +2607,7 @@ function requestLiveRideJob(txId){
   const run=()=>{tries++;const fn=window.DBEST_CAB_LIVE_HANDOFF?.createLiveJob;if(typeof fn==="function"){Promise.resolve(fn(id)).catch(()=>{});return}if(tries<30)setTimeout(run,150)};
   run();
 }
-function bookRide(e,vehicleId){
+async function bookRide(e,vehicleId){
   e.preventDefault();if(window.rideDraft&&window.rideDraft!==rideDraft){try{Object.assign(rideDraft,window.rideDraft)}catch(_){}}
   if(!requireMember())return;
   let v=rideConfig.vehicles.find(x=>x.id===vehicleId);if(!v)return;
@@ -2635,6 +2635,7 @@ function bookRide(e,vehicleId){
       estimatedMinutes:Number(rideDraft.estimatedMinutes||0)
     }
   });
+  if(window.DBEST_POINTS?.eligible?.()&&window.DBEST_POINTS?.enabled?.('cab')){try{const q=await window.DBEST_POINTS.quote('cab',fare),r=await window.DBEST_POINTS.redeem('cab',x.id,fare,q.maxPoints);if(Number(r?.discount||0)>0){x.meta.points={service:'cab',pointsUsed:Number(r.pointsUsed||0),discount:Number(r.discount||0),originalFare:fare};x.amount=Math.max(0,Math.round((fare-Number(r.discount))*100)/100);x.meta.ride.pointsDiscount=Number(r.discount);x.meta.ride.originalFare=fare}}catch(err){console.warn('DBest cab points not applied',err)}}
   x.ride=x.meta.ride;x.paymentStage=x.meta.paymentStage;save();
   if(payment==="payu")return ridePaymentScreen(x.id);
   rideStatusScreen(x.id);requestLiveRideJob(x.id);
