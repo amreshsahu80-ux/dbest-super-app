@@ -43,7 +43,7 @@ async function saveProfile(e){
  btn.disabled=true;btn.textContent='Saving…';msg.textContent='Encrypting connection and uploading privately…';
  try{
   const r=await fetch(base+'/functions/v1/member-profile-documents',{method:'POST',headers:{apikey:key,Authorization:'Bearer '+key,'x-dbest-member-token':token},body:fd});
-  const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'save_failed');
+  const d=await r.json().catch(()=>({}));if(!r.ok){if(r.status===401||/session_invalid/i.test(String(d.error||'')))window.dispatchEvent(new CustomEvent('dbest:member-session-invalid'));throw new Error(d.error||'save_failed')};
   const u=member();if(u){if(d.aadhaarLast4)u.aad='••••••••'+d.aadhaarLast4;if(d.bank?.accountLast4)u.bank='••••'+d.bank.accountLast4;if(d.bank?.ifsc)u.ifsc=d.bank.ifsc;try{save()}catch(_){}}
   msg.style.color='#087a42';msg.textContent='Saved securely.';btn.textContent='Saved';
   setTimeout(()=>{document.getElementById('dbestPrivateProfileOverlay')?.remove();try{memberProfile(session.id)}catch(_){}},700);
