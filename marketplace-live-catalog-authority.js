@@ -26,7 +26,7 @@ function installMarketplaceSwitch(){try{if(S.originalOpen){if(S.controllerOpen&&
 function medicineReady(){if(currentType()==='medicine'&&marketOpen())renderCurrentOnce()}
 function boot(){installStableSectionRenderer();installGpsControl();installMarketplaceSwitch();cleanGpsUi();if(!S.ready&&!S.loading)loadSnapshot(false)}
 window.DBEST_MARKETPLACE_CONTROLLER_V3={version:VERSION,build:BUILD,state:S,boot,loadSnapshot,customerLocation:()=>S.location,onMedicineReady:medicineReady};
-boot();let tries=0;const installer=setInterval(()=>{tries++;boot();if(tries>50)clearInterval(installer)},100);
+boot();let tries=0;const installAgain=()=>{tries++;boot();if(tries<12&&!S.originalOpen)setTimeout(installAgain,250)};if(!S.originalOpen)setTimeout(installAgain,250);
 window.addEventListener('dbest-location-changed',()=>{const l=readKnownLocation();if(l&&adoptLocation(l))loadSnapshot(true).then(()=>renderCurrentOnce())});
 window.addEventListener('focus',()=>{boot();const l=readKnownLocation();if(l&&adoptLocation(l))loadSnapshot(true)});
 try{if(!document.querySelector('script[data-dbest-meds-preview]')){const s=document.createElement('script');s.src='./dbest-meds-preview-catalog.js?v='+BUILD;s.setAttribute('data-dbest-meds-preview','1');(document.body||document.documentElement).appendChild(s)}}catch(e){console.warn('DBest Meds preview loader',e)}
