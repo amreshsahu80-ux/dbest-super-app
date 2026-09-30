@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='20260922-session-compat-v1';
+const VERSION='20260930-session-stable-v2';
 if(window.DBEST_SESSION_COMPAT?.version===VERSION)return;
 const KEY='d2_session';
 function read(){
@@ -26,11 +26,8 @@ function sync(){
   return s;
 }
 window.addEventListener('storage',e=>{if(e.key===KEY)sync()});
-document.addEventListener('click',()=>setTimeout(sync,0),true);
-document.addEventListener('submit',()=>setTimeout(sync,0),true);
 window.addEventListener('pageshow',sync);
 window.addEventListener('focus',sync);
-setInterval(sync,250);
 sync();
 window.DBEST_SESSION_COMPAT={version:VERSION,read,sync,isMember:()=>{const s=read();return ['starter','guest','promoter','prime','leader'].includes(s.role)&&!!s.id},isLeader:()=>{const s=read();return s.role==='leader'&&!!s.id}};
 })();
