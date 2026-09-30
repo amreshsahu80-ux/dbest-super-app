@@ -85,7 +85,7 @@ function install(){
   wrapped.__dbestSafeShowcase=true;window.openService=wrapped;
 }
 const st=document.createElement('style');st.textContent='.dbestSafeIntro{margin:18px 0 10px}.dbestSafeIntro h2{margin:0 0 4px;font-size:22px}.dbestSafeIntro p{margin:0;color:#687386}.dbestSafeGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:18px}.dbestSafeCard{overflow:hidden;background:#fff;border:1px solid #e2e8f2;border-radius:20px;box-shadow:0 10px 24px rgba(20,50,100,.07);cursor:pointer}.dbestSafeCard img{display:block;width:100%;height:128px;object-fit:cover}.dbestSafeCard div{padding:11px}.dbestSafeCard b{display:block;font-size:15px}.dbestSafeCard small{display:block;color:#687386;margin-top:4px}@media(max-width:520px){.dbestSafeGrid{gap:9px}.dbestSafeCard img{height:102px}.dbestSafeCard div{padding:9px}.dbestSafeCard b{font-size:13px}.dbestSafeCard small{font-size:10px}}';document.head.appendChild(st);
-let n=0,t=setInterval(()=>{n++;install();if(window.openService?.__dbestSafeShowcase||n>20)clearInterval(t)},150);
+let n=0;const retryInstall=()=>{n++;install();if(!window.openService?.__dbestSafeShowcase&&n<12)setTimeout(retryInstall,250)};retryInstall();
 const host=document.getElementById('m')||document.body;
 new MutationObserver(records=>{let relevant=false;for(const r of records){for(const node of r.addedNodes||[]){if(node.nodeType===1&&(node.matches?.('.sectionOverlay,.sectionContent')||node.querySelector?.('.sectionOverlay,.sectionContent'))){relevant=true;break}}if(relevant)break}if(relevant&&currentId){clearTimeout(renderTimer);renderTimer=setTimeout(()=>render(currentId),100)}}).observe(host,{childList:true,subtree:true});
 window.DBEST_USER_SHOWCASE_SAFE={version:VERSION,render,load};
