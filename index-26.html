@@ -2170,7 +2170,7 @@ function account(){
     let u=me();
     sectionScreen(`${sectionTopBar("👤 My Account",u?.name||session.role,"backHome()")}
       <div class="sectionContent"><div class="sectionHero"><b>${esc(u?.name||session.role)}</b><small>${esc((u&&tiers[u.tier]?.name)||session.role)}</small></div><div class="subs">
-      ${u&&["starter","guest","promoter","prime","leader"].includes(session.role)?`<button class="sub" onclick="memberDash('${u.id}')"><b>🏠 My Dashboard</b><small>Profile, earnings, team and transactions</small></button><button class="sub" onclick="memberProfile('${u.id}')"><b>👤 My Profile</b><small>Membership and KYC details</small></button>`:""}
+      ${u&&["starter","guest","promoter","prime","leader"].includes(session.role)?`<button id="dbestNativeWalletBtn" class="sub" onclick="window.DBEST_MEMBER_WALLET_SUMMARY?.open?.()"><b>💰 My Wallet</b><small>Balance, earnings and payout requests</small></button><button class="sub" onclick="memberDash('${u.id}')"><b>🏠 My Dashboard</b><small>Profile, earnings, team and transactions</small></button><button class="sub" onclick="memberProfile('${u.id}')"><b>👤 My Profile</b><small>Membership and KYC details</small></button>`:""}
       ${session.role==="admin"?`<button class="sub" onclick="admin()"><b>🛠 Super Admin</b><small>Operations & website controls</small></button>`:""}
       ${session.role==="owner"?`<button class="sub" onclick="owner()"><b>👑 Project Owner</b><small>Approvals, deeplinks & payout rules</small></button>`:""}
       <button class="sub" onclick="logout()"><b>↩ Logout</b><small>Return to visitor mode</small></button></div></div>`);
