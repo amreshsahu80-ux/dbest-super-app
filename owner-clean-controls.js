@@ -72,7 +72,7 @@
     if(t.includes('payout studio')||t==='payouts'||t.startsWith('payout rules')){if(typeof window.ownerPayoutStudio==='function'){e.preventDefault();e.stopImmediatePropagation();cleanOverlays();return window.ownerPayoutStudio();}}
   }
   document.addEventListener('click',routeOwnerControl,true);
-  const observer=new MutationObserver(()=>{cleanOverlays();addSectionControls();});observer.observe(document.body,{childList:true,subtree:true});
+  let ownerUiQueued=false;const observer=new MutationObserver(records=>{if(ownerUiQueued)return;let relevant=false;for(const r of records){for(const n of r.addedNodes||[]){if(n.nodeType===1&&(n.matches?.('.sectionContent,.ownerMasterPage,.classicDash,.sub,.card')||n.querySelector?.('.sectionContent,.ownerMasterPage,.classicDash'))){relevant=true;break}}if(relevant)break}if(!relevant)return;ownerUiQueued=true;requestAnimationFrame(()=>{ownerUiQueued=false;cleanOverlays();addSectionControls()})});observer.observe(document.body,{childList:true,subtree:true});
   setTimeout(addSectionControls,250);
   window.DBEST_OWNER_CLEAN_CONTROLS={refresh:addSectionControls,insurance:window.ownerInsuranceSectionControl,mutualFund:window.ownerMutualFundSectionControl,vaahakRevenue:window.ownerVaahakRevenueControl,quickAdd:{user:window.ownerQuickAddUser,vendor:window.ownerQuickAddVendor,vaahak:window.ownerQuickAddVaahak}};
 })();
