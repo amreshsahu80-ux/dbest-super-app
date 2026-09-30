@@ -75,5 +75,5 @@ function install(){
 }
 let tries=0;const timer=setInterval(()=>{tries++;install();if(tries>120)clearInterval(timer)},100);
 document.addEventListener('click',()=>setTimeout(()=>{install();const id=window.session?.id;if(id)load(false).then(d=>{paintMember(d,id);paintDirect(d,id)}).catch(()=>{})},120),true);
-window.DBEST_MEMBER_DASHBOARD_LIVE={version:VERSION,refresh:async()=>{const d=await load(true);const id=window.session?.id;paintMember(d,id);paintDirect(d,id);return d}};
+window.DBEST_MEMBER_DASHBOARD_LIVE={version:VERSION,refresh:async()=>{const d=await load(true);const id=(window.DBEST_SESSION_COMPAT?.read?.()||window.session||{}).id;paintMember(d,id);paintDirect(d,id);return d}};
 })();
