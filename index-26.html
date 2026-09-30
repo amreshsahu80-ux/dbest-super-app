@@ -2146,6 +2146,7 @@ function renderTile(s){
     </div>
   </button>`;
 }
+let initialOwnerSyncDone=false;
 function render(){let t=T[lang]||T.en,q=($("q").value||"").toLowerCase();$("lang").value=lang;$("ht").textContent=t.ht;$("hd").textContent=t.hd;$("all").textContent=t.all;$("sub").textContent=t.sub;let u=me();$("account").textContent=session.role==="visitor"?"👤 "+t.acc:"👤 "+(u?.name||session.role);
 let gb=$("greetingBar"),gt=$("greetingText");
 let ms=$("memberStrip"),mw=$("memberWho");
@@ -2162,7 +2163,7 @@ if(u&&["starter","guest","promoter","prime","leader"].includes(session.role)){
 }else{
   ms.classList.remove("show");
   mw.textContent="";
-}let a=services.filter(s=>serviceVisible(s[0])&&(s[1]+" "+s[4]+" "+s[5].join(" ")).toLowerCase().includes(q));let ph=$("publicHero");
+}let a=initialOwnerSyncDone?services.filter(s=>serviceVisible(s[0])&&(s[1]+" "+s[4]+" "+s[5].join(" ")).toLowerCase().includes(q)):[];let ph=$("publicHero");
 if(ph) ph.style.display = session.role==="visitor" ? "" : "none";
 $("grid").className="grid "+(view==="side"?"side":"");$("grid").innerHTML=a.map(renderTile).join("");initTileVideos();$("tv").classList.toggle("on",view==="tile");$("sv").classList.toggle("on",view==="side")}
 function account(){
@@ -3748,9 +3749,10 @@ async function syncOwnerMasterConfig(silent=false){
     const def=pr.find(x=>x.beneficiary_type==="member"&&String(x.service).toUpperCase()==="ALL");
     if(def)payout={self:Number(def.direct||0),l1:Number(def.level1||0),l2:Number(def.level2||0),l3:Number(def.level3||0)};
     window.DBEST_LIVE_PAYOUT_RULES=pr;
+    initialOwnerSyncDone=true;
     if(!silent){try{toast("Owner changes synced")}catch(e){}}
     render();
-  }catch(e){console.warn("DBest Owner sync failed",e);if(!silent)try{toast("Owner sync unavailable - showing last local settings")}catch(_){}}
+  }catch(e){initialOwnerSyncDone=true;console.warn("DBest Owner sync failed",e);if(!silent)try{toast("Owner sync unavailable - showing last local settings")}catch(_){}}
   finally{ownerSyncBusy=false;}
 }
 window.syncOwnerMasterConfig=syncOwnerMasterConfig;
