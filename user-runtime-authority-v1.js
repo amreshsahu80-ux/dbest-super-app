@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='20260929-user-runtime-authority-v2-perf';
+const VERSION='20260930-user-runtime-authority-v3-stable';
 if(window.DBEST_USER_RUNTIME_AUTHORITY?.version===VERSION)return;
 if(/^\/owner\/?$/i.test(location.pathname))return;
 
@@ -53,7 +53,7 @@ function install(){
 }
 let n=0,iv=setInterval(()=>{n++;install();if(window.openService?.__dbestAuthorityWrapped||n>20)clearInterval(iv)},150);
 const host=document.getElementById('m')||document.body;
-new MutationObserver(records=>{for(const r of records){if(r.addedNodes?.length||r.removedNodes?.length){schedule(90);break}}}).observe(host,{childList:true,subtree:true});
+new MutationObserver(records=>{if(document.querySelector('.classicDash'))return;const id=currentService();if(!['insurance','flights','mf'].includes(id))return;for(const r of records){if(r.addedNodes?.length||r.removedNodes?.length){schedule(90);break}}}).observe(host,{childList:true,subtree:true});
 document.addEventListener('change',e=>{if(e.target?.id==='lang'){schedule(0);setTimeout(apply,120)}},true);
 window.addEventListener('pageshow',()=>schedule(0));
 install();
