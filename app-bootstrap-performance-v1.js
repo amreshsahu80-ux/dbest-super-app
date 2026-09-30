@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const V='20260921-wallet-ledger-authority-v12';
+const V='20261001-platform-loader-v13';
 if(window.DBEST_PERFORMANCE_BOOTSTRAP?.version===V)return;
 
 const EARLY=['cab-entry-capture-final-v1.js','ux-performance-bridge.js'];
@@ -83,7 +83,7 @@ function loadOne(name){
   if(existing){const p=Promise.resolve();loaded.set(name,p);return p}
   const p=new Promise(resolve=>{
     const s=document.createElement('script');
-    s.src=srcFor(name);s.async=true;s.dataset.dbestPerfAsset=name;
+    s.src=srcFor(name);s.async=false;s.dataset.dbestPerfAsset=name;
     s.onload=()=>resolve();
     s.onerror=()=>{console.warn('DBest deferred asset failed:',name);resolve()};
     (document.body||document.documentElement).appendChild(s)
