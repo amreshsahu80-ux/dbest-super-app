@@ -33,7 +33,14 @@
     const verify=async()=>{const code=String(wrap.querySelector('#dbestMemberLoginOtp').value||'').replace(/\D/g,'');if(!/^\d{6}$/.test(code)){msg.style.color='#b91c1c';msg.textContent='Enter the 6-digit OTP.';return}const btn=wrap.querySelector('#dbestMemberVerifyLogin');btn.disabled=true;btn.textContent='Verifying…';try{const data=await verifyOtp(login,code);if(complete(data))removeOverlay()}catch(err){msg.style.color='#b91c1c';msg.textContent=err.status===401?'Invalid or expired OTP. Please try again.':'Login verification could not complete. Please retry.'}finally{btn.disabled=false;btn.textContent='Verify & Login'}};
     wrap.querySelector('#dbestMemberVerifyLogin').onclick=verify;wrap.querySelector('#dbestMemberLoginOtp').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();verify()}});setTimeout(()=>wrap.querySelector('#dbestMemberLoginOtp')?.focus(),80);
   }
-  window.DBEST_MEMBER_LIVE={getToken:()=>{try{return localStorage.getItem(TOKEN_KEY)||''}catch(e){return''}},clear:()=>{try{localStorage.removeItem(TOKEN_KEY)}catch(e){}},requestOtp,verifyOtp};
+  function invalidateMemberSession(message='Your DBest session has expired. Please login again.'){
+  try{localStorage.removeItem(TOKEN_KEY)}catch(e){}
+  try{if(typeof session==='object'&&session){session={role:'visitor',id:''};if(typeof save==='function')save()}}catch(e){}
+  try{if(typeof toast==='function')toast(message)}catch(e){}
+  try{if(typeof render==='function')render()}catch(e){}
+}
+window.addEventListener('dbest:member-session-invalid',()=>invalidateMemberSession());
+window.DBEST_MEMBER_LIVE={getToken:()=>{try{return localStorage.getItem(TOKEN_KEY)||''}catch(e){return''}},clear:invalidateMemberSession,invalidate:invalidateMemberSession,requestOtp,verifyOtp};
   window.memberGo=async function(e){
     e.preventDefault();const form=e.target,btn=form.querySelector('button');if(btn){btn.disabled=true;btn.textContent='Sending OTP…'}
     try{const v=String(new FormData(form).get('id')||'').trim();const data=await requestOtp(v);showOtp(v,data.maskedEmail);if(typeof toast==='function')toast('Login OTP sent to your registered email');}
