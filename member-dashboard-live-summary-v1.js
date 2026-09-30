@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='20260930-stable-dashboard-v5';
+const VERSION='20260930-event-dashboard-v6';
 if(window.DBEST_MEMBER_DASHBOARD_LIVE?.version===VERSION)return;
 const cfg=window.DBEST_RUNTIME_CONFIG||{};
 const BASE=String(cfg.supabaseUrl||'').replace(/\/$/,'');
@@ -70,11 +70,11 @@ function paintDirect(d,id){
 function install(){
  if(typeof window.qualifyingTx==='function'&&!window.qualifyingTx.__dbestVerifiedPatched){const old=window.qualifyingTx;const patched=function(x){return old(x)||(String(x?.section||'')!=='Membership'&&/Verified/i.test(String(x?.status||''))&&!/(Failed|Rejected|Cancelled|Pending)/i.test(String(x?.status||'')))};patched.__dbestVerifiedPatched=true;window.qualifyingTx=patched}
  let ok=false;
- if(typeof window.memberDash==='function'&&!window.memberDash.__dbestLiveWrapped){const original=window.memberDash;const wrapped=function(id){const activeId=String(id||window.session?.id||'');let r;try{r=original.apply(this,arguments)}catch(e){console.warn('DBest base member dashboard',e)}setTimeout(()=>load(true).then(d=>{if(activeId)paintMember(d,activeId)}).catch(e=>console.warn('DBest live member dashboard',e)),60);return r};wrapped.__dbestLiveWrapped=true;window.memberDash=wrapped;try{memberDash=wrapped}catch(_){}ok=true}
- if(typeof window.directBusinessDashboard==='function'&&!window.directBusinessDashboard.__dbestWalletWrapped){const original=window.directBusinessDashboard;const wrapped=function(id){const r=original.apply(this,arguments);setTimeout(()=>load(true).then(d=>paintDirect(d,id)).catch(e=>console.warn('DBest direct wallet summary',e)),80);return r};wrapped.__dbestWalletWrapped=true;window.directBusinessDashboard=wrapped;ok=true}
+ if(typeof window.memberDash==='function'&&!window.memberDash.__dbestLiveWrapped){const original=window.memberDash;const wrapped=function(id){const activeId=String(id||window.session?.id||'');let r;try{r=original.apply(this,arguments)}catch(e){console.warn('DBest base member dashboard',e)}Promise.resolve().then(()=>load(true)).then(d=>{if(activeId)paintMember(d,activeId)}).catch(e=>console.warn('DBest live member dashboard',e));return r};wrapped.__dbestLiveWrapped=true;window.memberDash=wrapped;try{memberDash=wrapped}catch(_){}ok=true}
+ if(typeof window.directBusinessDashboard==='function'&&!window.directBusinessDashboard.__dbestWalletWrapped){const original=window.directBusinessDashboard;const wrapped=function(id){const r=original.apply(this,arguments);Promise.resolve().then(()=>load(true)).then(d=>paintDirect(d,id)).catch(e=>console.warn('DBest direct wallet summary',e));return r};wrapped.__dbestWalletWrapped=true;window.directBusinessDashboard=wrapped;ok=true}
  return ok;
 }
-let tries=0;const timer=setInterval(()=>{tries++;const ok=install();if(ok||tries>30)clearInterval(timer)},200);
+if(!install()){const obs=new MutationObserver(()=>{if(install())obs.disconnect()});obs.observe(document.documentElement,{childList:true,subtree:true});document.addEventListener('DOMContentLoaded',install,{once:true})}
 window.addEventListener('dbest:session-sync',()=>{install()});
 window.DBEST_MEMBER_DASHBOARD_LIVE={version:VERSION,refresh:async()=>{const d=await load(true);const id=(window.DBEST_SESSION_COMPAT?.read?.()||window.session||{}).id;paintMember(d,id);paintDirect(d,id);return d}};
 })();
