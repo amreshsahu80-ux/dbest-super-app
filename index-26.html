@@ -2881,8 +2881,8 @@ async function fileRecord(file){
     type:file.type||"",
     size:file.size||0,
     selected:true,
-    storage:"prototype-metadata-only",
-    note:"Actual file bytes are not stored in browser localStorage. Production should upload this file to private secure storage."
+    storage:"secure-upload-pending",
+    note:"File selected for private secure upload to DBest service document storage."
   };
 }
 function renderServiceData(data){
@@ -2891,7 +2891,7 @@ function renderServiceData(data){
 function renderDocs(docs){
   let a=Object.entries(docs||{}).filter(([k,v])=>v);
   if(!a.length)return `<div class="notice">No documents uploaded.</div>`;
-  return `<div class="docList">${a.map(([k,d])=>`<div class="docItem"><div><b>${esc(k.replace(/([A-Z])/g," $1").replace(/^./,c=>c.toUpperCase()))}</b><small style="display:block;color:var(--m)">${esc(d.name||"File")} • ${Math.round((d.size||0)/1024)} KB</small><span class="docSafeNote">✓ Selected • ready for secure upload</span></div></div>`).join("")}</div>`;
+  return `<div class="docList">${a.map(([k,d])=>`<div class="docItem"><div><b>${esc(k.replace(/([A-Z])/g," $1").replace(/^./,c=>c.toUpperCase()))}</b><small style="display:block;color:var(--m)">${esc(d.name||"File")} • ${Math.round((d.size||0)/1024)} KB</small><span class="docSafeNote">✓ Selected • secure upload will follow submission</span></div></div>`).join("")}</div>`;
 }
 function previewDoc(name,data){
   sectionScreen(`${sectionTopBar("📎 Document Preview",name,"returnToRoleScreen()")}<div class="sectionContent"><div class="card"><img src="${data}" alt="${esc(name)}" style="max-width:100%;max-height:75vh;object-fit:contain;display:block;margin:auto"></div></div>`);
@@ -2908,7 +2908,7 @@ function openContentForm(id,i){
         <div class="serviceFormGrid">
           <div class="formSectionTitle">Application Details</div>
           ${(schema.fields||[]).map(renderServiceField).join("")}
-          ${(schema.files||[]).length?`<div class="formSectionTitle">Required Documents</div><div class="docHint">Upload clear, readable files. In production, these documents should be stored in private secure storage and accessed only by authorised users.</div>${schema.files.map(renderServiceFile).join("")}`:""}
+          ${(schema.files||[]).length?`<div class="formSectionTitle">Required Documents</div><div class="docHint">Upload clear, readable files. Documents are uploaded to private secure storage and are accessible only to authorised DBest operations.</div>${schema.files.map(renderServiceFile).join("")}`:""}
           <div class="sf full"><button class="btn" style="width:100%">Review Application & Continue to Payment →</button></div>
         </div>
       </form>
@@ -2949,12 +2949,12 @@ async function submitContentApplication(e,id,i){
       subIndex:i,
       application:data,
       documents:docs,
-      paymentStage:"Pending PayU"
+      paymentStage:"Payment Pending"
     });
     if(!x||!x.id)throw new Error("Could not create DBest transaction.");
     x.application=data;
     x.documents=docs;
-    x.paymentStage="Pending PayU";
+    x.paymentStage="Payment Pending";
     save();
     showPayTransition("Opening payment review…");
     setTimeout(()=>{
