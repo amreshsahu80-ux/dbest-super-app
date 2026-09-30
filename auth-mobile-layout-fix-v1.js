@@ -45,9 +45,11 @@
   }
 
   const root=document.getElementById('m')||document.body;
-  new MutationObserver(apply).observe(root,{childList:true,subtree:true});
-  window.addEventListener('resize',apply,{passive:true});
-  setInterval(apply,700);
+  let queued=false;
+  const schedule=()=>{if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;apply()})};
+  new MutationObserver(schedule).observe(root,{childList:true,subtree:true});
+  window.addEventListener('resize',schedule,{passive:true});
+  window.addEventListener('pageshow',schedule,{passive:true});
   apply();
-  window.__DBEST_AUTH_LAYOUT_FIX__={version:'1.0',apply};
+  window.__DBEST_AUTH_LAYOUT_FIX__={version:'1.1-event-driven',apply:schedule};
 })();
