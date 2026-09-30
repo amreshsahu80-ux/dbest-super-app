@@ -1,17 +1,19 @@
 (function(){
 'use strict';
-const VERSION='1.2.0-audit';
+const VERSION='1.3.0-member-isolation';
 const VTK='dbest_vendor_live_token';
 let mounting=false,lastMountAt=0;
 function hasVendorToken(){try{return !!localStorage.getItem(VTK)}catch(_){return false}}
 function directVendor(){const p=location.pathname.toLowerCase().replace(/\/$/,'');if(!(p==='/vendor'||p.endsWith('/vendor.html')))return false;const d=document.getElementById('dash');return !!d&&!d.classList.contains('hidden')&&hasVendorToken()}
+function memberScreen(){try{const s=window.DBEST_SESSION_COMPAT?.read?.()||window.session||{};if(['starter','guest','promoter','prime','leader'].includes(String(s.role||'').toLowerCase())&&s.id)return true}catch(_){}return !!document.querySelector('.classicDash')||[...document.querySelectorAll('.sectionContent')].some(x=>/My Account|My Dashboard|Member Business Dashboard|Membership and KYC details/i.test(String(x.innerText||'')))}
 function integratedVendor(){
-  if(!hasVendorToken())return false;
+  if(memberScreen()||!hasVendorToken())return false;
   let id='';
   try{if(typeof vendorSession!=='undefined'&&vendorSession)id=String(vendorSession.vendorId||'');else id=String(window.vendorSession?.vendorId||'')}catch(_){}
+  if(!id)return false;
   const strong=!!(document.getElementById('dbestLiveVendorOrders')||document.getElementById('dbestMultiCatalogCard'));
   const heading=[...document.querySelectorAll('.sectionContent h1,.sectionContent h2,.sectionContent h3')].some(x=>/vendor dashboard|catalogue proposals|submit new catalogue item|marketplace vendor/i.test(String(x.textContent||'')));
-  return strong||(!!id&&heading);
+  return strong||heading;
 }
 function allowed(){return directVendor()||integratedVendor()}
 function purge(){const card=document.getElementById('dbestVendorGrowthCard');if(card&&!allowed())card.remove()}
