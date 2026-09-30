@@ -42,6 +42,6 @@ let maintainQueued=false;const obs=new MutationObserver(()=>{if(maintainQueued)r
 document.addEventListener('click',e=>{const b=e.target.closest?.('button');if(!b)return;if(/My Dashboard|Dashboard/i.test(b.textContent||''))setTimeout(()=>{maintain();refreshNetwork(true).then(()=>maintain())},120)},true);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden){syncAll(false);setTimeout(maintain,100)}});
 setInterval(()=>{if(!document.hidden)syncAll(false)},30000);
-setTimeout(()=>{ensureToken().then(()=>{syncAll(true);refreshNetwork(true).then(()=>maintain())});maintain()},700);
+maintain();Promise.resolve(ensureToken()).then(()=>{syncAll(true);return refreshNetwork(true)}).then(()=>maintain()).catch(()=>{});
 window.DBEST_TRANSACTION_LEDGER={version:VERSION,syncAll,refreshNetwork,record,decorate,open:openLedger,maintain};
 })();
