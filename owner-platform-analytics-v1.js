@@ -45,7 +45,7 @@ function inject(){
   const roots=[...document.querySelectorAll('.sectionContent')],r=roots.find(x=>/Project Owner|Owner Operations|Master Control/i.test(x.innerText||''));
   if(!r||r.querySelector('#dbestOwnerAnalyticsButton'))return;
   const b=document.createElement('button');b.id='dbestOwnerAnalyticsButton';b.className='ownerControl';b.innerHTML='<span>📊</span><b>Platform Analytics</b><small>Lifetime visits, unique visitors, today/month traffic and top sections.</small>';b.onclick=open;
-  const holder=r.querySelector('.ownerControlGrid,.subs,.cards');if(holder)holder.prepend(b);else r.prepend(b);
+  const holder=r.querySelector('.owner55Grid,.ownerControlGrid,.subs,.cards');if(holder){b.className=holder.classList.contains('owner55Grid')?'owner55Action':'ownerControl';holder.prepend(b)}else r.prepend(b);
  }catch(_){}
 }
 new MutationObserver(()=>setTimeout(inject,50)).observe(document.documentElement,{childList:true,subtree:true});
