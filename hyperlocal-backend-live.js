@@ -56,6 +56,6 @@ function approvalClick(btn){const row=btn.closest('.ownerQueueRow');if(!row)retu
 document.addEventListener('submit',e=>{const f=e.target;if(f instanceof HTMLFormElement&&f.id==='dbestServicePartnerForm')syncRegistration(f)},false);
 document.addEventListener('click',e=>{const b=e.target?.closest?.('button');if(b)approvalClick(b)},false);
 [50,250,700,1500,3000].forEach(ms=>setTimeout(()=>{installPortalPatch();installJobWrap();enhancePortal()},ms));
-new MutationObserver(()=>{installPortalPatch();installJobWrap()}).observe(document.documentElement,{childList:true,subtree:true});
+const host=document.getElementById('m')||document.body;new MutationObserver(records=>{for(const r of records){for(const n of r.addedNodes||[]){if(n.nodeType===1&&(n.matches?.('.sectionContent,#dbestServicePartnerForm,.servicePartnerPortal')||n.querySelector?.('#dbestServicePartnerForm,.servicePartnerPortal'))){installPortalPatch();installJobWrap();return}}}}).observe(host,{childList:true,subtree:true});
 window.DBEST_HYPERLOCAL_BACKEND={version:VERSION,api,enhancePortal};
 })();
