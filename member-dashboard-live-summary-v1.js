@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='20260921-wallet-ledger-authority-v4';
+const VERSION='20260930-stable-dashboard-v5';
 if(window.DBEST_MEMBER_DASHBOARD_LIVE?.version===VERSION)return;
 const cfg=window.DBEST_RUNTIME_CONFIG||{};
 const BASE=String(cfg.supabaseUrl||'').replace(/\/$/,'');
@@ -73,7 +73,7 @@ function install(){
  if(typeof window.directBusinessDashboard==='function'&&!window.directBusinessDashboard.__dbestWalletWrapped){const original=window.directBusinessDashboard;const wrapped=function(id){const r=original.apply(this,arguments);setTimeout(()=>load(true).then(d=>paintDirect(d,id)).catch(e=>console.warn('DBest direct wallet summary',e)),80);return r};wrapped.__dbestWalletWrapped=true;window.directBusinessDashboard=wrapped;ok=true}
  return ok;
 }
-let tries=0;const timer=setInterval(()=>{tries++;install();if(tries>120)clearInterval(timer)},100);
-document.addEventListener('click',()=>setTimeout(()=>{install();const id=window.session?.id;if(id)load(false).then(d=>{paintMember(d,id);paintDirect(d,id)}).catch(()=>{})},120),true);
+let tries=0;const timer=setInterval(()=>{tries++;const ok=install();if(ok||tries>30)clearInterval(timer)},200);
+window.addEventListener('dbest:session-sync',()=>{install()});
 window.DBEST_MEMBER_DASHBOARD_LIVE={version:VERSION,refresh:async()=>{const d=await load(true);const id=(window.DBEST_SESSION_COMPAT?.read?.()||window.session||{}).id;paintMember(d,id);paintDirect(d,id);return d}};
 })();
