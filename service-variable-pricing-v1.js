@@ -2,7 +2,7 @@
 'use strict';
 const V='20260914-variable-service-pricing-v1';
 if(window.DBEST_VARIABLE_SERVICE_PRICING?.version===V)return;
-const VARIABLE=new Set(['govt','jobs','repair','insurance','travel','flights','loans','rail','vahan','other']);
+const VARIABLE=new Set(['govt','jobs','repair','insurance','travel','flights','loans','rail','vahan','other','friends']);
 const isVariable=id=>VARIABLE.has(String(id||'').toLowerCase());
 
 function patchSchema(){
