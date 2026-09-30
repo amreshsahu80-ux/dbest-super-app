@@ -3457,8 +3457,9 @@ async function memberDash(id){
   if(!u&&String(id||"")===String(session.id||"")){
     try{
       const live=await window.DBEST_MEMBER_DASHBOARD_LIVE?.refresh?.();
-      const found=(live?.members||[]).find(x=>String(x.id||"")===String(id||""));
-      if(found){users.push(found);u=found;try{localStorage.setItem("d2_users",JSON.stringify(users))}catch(_){}}
+      const candidates=[live?.member,live?.viewer,...(Array.isArray(live?.members)?live.members:[]),...(Array.isArray(live?.network)?live.network:[])].filter(Boolean);
+      const found=candidates.find(x=>String(x.id||x.member_id||"")===String(id||""));
+      if(found){const normalized={...found,id:String(found.id||found.member_id||id),tier:String(found.tier||found.role||session.role||"starter").toLowerCase(),name:String(found.name||found.member_name||id),email:String(found.email||"")};users.push(normalized);u=normalized;try{localStorage.setItem("d2_users",JSON.stringify(users))}catch(_){}}
     }catch(e){console.warn("DBest dashboard member hydration skipped",e)}
   }
   if(!u)return toast("Member profile is still syncing. Please reopen Dashboard.");
