@@ -2900,7 +2900,7 @@ function previewDoc(name,data){
 function openContentForm(id,i){
   let s=services.find(x=>x[0]===id),z=s?.[5]?.[i];
   if(!s||z===undefined)return;
-  try{const l=window.DBEST_UNIVERSAL_DEEPLINKS?.linkFor?.(id,Number(i));if(l?.url&&l.enabled!==false){window.dbestUniversalExternalGo?.(id,Number(i));return}}catch(_){}
+  if(externalIds.includes(id)){try{const l=window.DBEST_UNIVERSAL_DEEPLINKS?.linkFor?.(id,Number(i));if(l?.url&&l.enabled!==false){window.dbestUniversalExternalGo?.(id,Number(i));return}}catch(_){}}
   let schema=serviceSchema(id,i);
   sectionScreen(`${sectionTopBar(`${s[2]} ${esc(schema.title)}`,s[1],`openService('${id}')`)}
     <div class="sectionContent serviceFormPage">
