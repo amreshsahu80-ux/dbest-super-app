@@ -14,15 +14,27 @@ function hideBuildBadges(root=document){
   root?.querySelectorAll?.('.buildBadge').forEach(b=>b.style.setProperty('display','none','important'));
 }
 
-/* DBest session policy: no inactivity-based logout.
-   A valid logged-in user remains signed in until the user explicitly chooses Logout
-   or the application's authentication/session itself becomes invalid for another reason. */
-
+/* DBest session policy: lock the shared logged-in shell after 5 minutes of inactivity.
+   This uses one resettable timeout and no polling loop. */
+const IDLE_MS=5*60*1000;
+let idleTimer=0;
+function idleLogout(){
+  if(!isLoggedIn())return;
+  try{localStorage.setItem('d2_session',JSON.stringify({role:'visitor',id:''}))}catch(_){}
+  try{window.dispatchEvent(new CustomEvent('dbest:idle-logout'))}catch(_){}
+  try{window.dispatchEvent(new CustomEvent('dbest:member-session-invalid'))}catch(_){}
+  try{location.href='/'}catch(_){}
+}
+function resetIdle(){
+  if(idleTimer)clearTimeout(idleTimer);
+  if(isLoggedIn())idleTimer=setTimeout(idleLogout,IDLE_MS);
+}
+for(const ev of ['pointerdown','keydown','touchstart'])window.addEventListener(ev,resetIdle,{passive:true});
 document.addEventListener('visibilitychange',()=>{
-  if(document.visibilityState==='visible')hideBuildBadges();
+  if(document.visibilityState==='visible'){hideBuildBadges();resetIdle()}
 });
 window.addEventListener('storage',e=>{
-  if(e.key==='d2_session')hideBuildBadges();
+  if(e.key==='d2_session'){hideBuildBadges();resetIdle()}
 });
 
 const observer=new MutationObserver(records=>{
@@ -36,5 +48,6 @@ const observer=new MutationObserver(records=>{
 });
 observer.observe(document.body||document.documentElement,{childList:true,subtree:true});
 hideBuildBadges();
-window.DBEST_SESSION_HARDENING={version:'2.0.0',idleLogout:false,reset:()=>{}};
+resetIdle();
+window.DBEST_SESSION_HARDENING={version:'3.0.0',idleLogout:true,idleMs:IDLE_MS,reset:resetIdle};
 })();
