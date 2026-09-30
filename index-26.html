@@ -1466,7 +1466,8 @@ function applyServiceControl(){
     if(Array.isArray(o.subsections)&&o.subsections.length)s[5]=o.subsections;
   });
 }
-function serviceVisible(id){return serviceControl[id]?.visible!==false}
+let ownerVisibilityReady=false;
+function serviceVisible(id){return ownerVisibilityReady===true&&serviceControl[id]?.visible!==false}
 const externalIds=["insurance","flights","mf","loans"];
 let users=JSON.parse(localStorage.getItem("d2_users")||"null")||[ 
 {id:"PR1001",name:"Demo Leader Promoter",mobile:"9000001001",email:"leader1001@dbest.demo",tier:"leader",ref:"DB1001",upline:"",status:"Active",kyc:"Approved",card:true,photo:"",paymentStatus:"Approved",paidAmount:999,paymentRef:"DEMO-LDR-1001"},
@@ -3679,7 +3680,7 @@ async function syncOwnerMasterConfig(silent=false){
   try{
     const r=await fetch(DBEST_SUPABASE_URL+"/rest/v1/rpc/get_master_app_config",{method:"POST",headers:{apikey:DBEST_SUPABASE_KEY,Authorization:"Bearer "+DBEST_SUPABASE_KEY,"Content-Type":"application/json"},body:"{}",cache:"no-store"});
     if(!r.ok)throw new Error("Owner sync HTTP "+r.status);
-    const cfg=await r.json(); liveOwnerConfig=cfg||{};
+    const cfg=await r.json(); liveOwnerConfig=cfg||{}; ownerVisibilityReady=false;
     // Membership plans
     (cfg.plans||[]).forEach(p=>{if(tiers[p.code]){tiers[p.code].price=Number(p.fee||0);tiers[p.code].validity=p.validity||tiers[p.code].validity;tiers[p.code].enabled=p.enabled!==false;tiers[p.code].paymentRequired=p.payment_required!==false;}});
     // Sections / subsections / ordering
@@ -3729,6 +3730,7 @@ async function syncOwnerMasterConfig(silent=false){
       try{localStorage.setItem("d2_service_control",JSON.stringify(serviceControl))}catch(_){}
       applyServiceControl();
     }catch(e){console.warn("DBest Owner visibility overlay",e)}
+    ownerVisibilityReady=true;
     if(os.payu){payuSettings={...payuSettings,enabled:os.payu.enabled!==false,mode:String(os.payu.mode||payuSettings.mode).toLowerCase(),merchantKey:os.payu.merchant_key||payuSettings.merchantKey,createEndpoint:os.payu.endpoint||payuSettings.createEndpoint,verifiedReturnUrl:os.payu.return_url||payuSettings.verifiedReturnUrl,buttonLabel:os.payu.button_label||payuSettings.buttonLabel};}
     if(os.links&&typeof os.links==="object")links={...links,...os.links};
     if(os.rideConfig&&typeof os.rideConfig==="object"){
@@ -3750,7 +3752,7 @@ async function syncOwnerMasterConfig(silent=false){
     window.DBEST_LIVE_PAYOUT_RULES=pr;
     if(!silent){try{toast("Owner changes synced")}catch(e){}}
     render();
-  }catch(e){console.warn("DBest Owner sync failed",e);if(!silent)try{toast("Owner sync unavailable - showing last local settings")}catch(_){}}
+  }catch(e){ownerVisibilityReady=false;console.warn("DBest Owner sync failed",e);if(!silent)try{toast("Owner sync unavailable - hidden until Owner visibility loads")}catch(_){}}
   finally{ownerSyncBusy=false;}
 }
 window.syncOwnerMasterConfig=syncOwnerMasterConfig;
