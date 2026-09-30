@@ -1,13 +1,13 @@
 (()=>{
 'use strict';
-const VERSION='1.1-direct-service-payments';
+const VERSION='1.2-razorpay-primary-direct-service-payments';
 const POLICY={
   registrations:{user:['razorpay'],vaahak:['razorpay'],service_partner:['razorpay'],vendor:['razorpay']},
-  ecommerce:['razorpay','payu'],
+  ecommerce:['razorpay'],
   cab:['cash_to_driver','upi_to_driver'],
   home_jobs:['cash_to_service_provider','upi_to_service_provider'],
   repairing:['cash_to_partner','upi_to_partner'],
-  forms:['razorpay','payu'],
+  forms:['razorpay'],
   dormant:{home_jobs:'payu',repairing:'payu'}
 };
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -49,8 +49,8 @@ function gatewayHtml(tx,route){
   const id=esc(tx.id),amount=money(tx.amount),head=`<div class="notice" style="margin-bottom:10px">DBest Ref: <b>${id}</b> • Amount: <b>${amount}</b></div>`;
   if(route==='cab')return `<div class="ownerPanelCard dbestPolicyCard" data-dbest-policy="cab"><h3>Pay Driver Directly</h3>${head}<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><button class="btn" onclick="dbestCabPayDriver('${id}','cash')">💵 Cash to Driver</button><button class="btn soft" onclick="dbestCabPayDriver('${id}','upi')">📱 UPI to Driver</button></div><small style="display:block;margin-top:8px">No Razorpay or PayU gateway is used for Cab rides.</small></div>`;
   if(route==='home_jobs'||route==='repairing')return directCard(tx,route);
-  if(route==='ecommerce')return `<div class="ownerPanelCard dbestPolicyCard" data-dbest-policy="ecommerce"><h3>Choose Payment Gateway</h3>${head}<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">${razorButton(tx.id,true)}${payuButton(tx.id,true)}</div><small style="display:block;margin-top:8px">Razorpay is primary. PayU is the alternate gateway.</small></div>`;
-  if(route==='forms')return `<div class="ownerPanelCard dbestPolicyCard" data-dbest-policy="forms"><h3>Choose Payment Gateway</h3>${head}<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">${razorButton(tx.id,true)}${payuButton(tx.id,true)}</div><small style="display:block;margin-top:8px">Razorpay is primary. PayU is the fallback gateway.</small></div>`;
+  if(route==='ecommerce')return `<div class="ownerPanelCard dbestPolicyCard" data-dbest-policy="ecommerce"><h3>Secure Online Payment</h3>${head}<div>${razorButton(tx.id,true)}</div><small style="display:block;margin-top:8px">Razorpay is the active online payment gateway.</small></div>`;
+  if(route==='forms')return `<div class="ownerPanelCard dbestPolicyCard" data-dbest-policy="forms"><h3>Secure Online Payment</h3>${head}<div>${razorButton(tx.id,true)}</div><small style="display:block;margin-top:8px">Razorpay is the active online payment gateway.</small></div>`;
   return '';
 }
 function hideLegacyGateway(root){
@@ -93,8 +93,7 @@ function patchRegistrations(){
   const vaahak=document.querySelector('form[onsubmit*="addVaahakPartner"]');if(vaahak&&!vaahak.querySelector('.dbestRegistrationGatewayNotice')){const n=document.createElement('div');n.className='notice dbestRegistrationGatewayNotice';n.innerHTML='<b>Registration Gateway: Razorpay only</b><br><small>Razorpay will be used whenever a Vaahak registration fee is configured by the Project Owner.</small>';vaahak.prepend(n);}
 }
 function install(){restorePayU();['paymentReview','ridePaymentScreen','groceryPaymentScreen','marketPaymentScreen'].forEach(wrap);patchRegistrations();}
-install();checkPayU();
-new MutationObserver(()=>{install();refreshPolicyCards()}).observe(document.documentElement,{childList:true,subtree:true});
-setInterval(()=>{install();restorePayU()},1800);
+install();
+let policyQueued=false;new MutationObserver(()=>{if(policyQueued)return;policyQueued=true;requestAnimationFrame(()=>{policyQueued=false;install();refreshPolicyCards()})}).observe(document.documentElement,{childList:true,subtree:true});
 window.DBEST_PAYMENT_POLICY={version:VERSION,policy:POLICY,classify,decorate,checkPayU};
 })();
