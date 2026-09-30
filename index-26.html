@@ -3452,7 +3452,6 @@ function earningSourcesHtml(u){
   </div>`;
 }
 async function memberDash(id){
-  try{const synced=await window.DBEST_TRANSACTION_LEDGER?.syncAll?.(false);if(Array.isArray(synced)&&Array.isArray(txs)){txs.splice(0,txs.length,...synced);try{localStorage.setItem("d2_txs",JSON.stringify(txs))}catch(_){}}}catch(e){console.warn('DBest dashboard transaction sync skipped',e)}
   let u=users.find(x=>String(x.id||"")===String(id||""));
   if(!u){try{const saved=JSON.parse(localStorage.getItem("d2_users")||"[]");const found=Array.isArray(saved)?saved.find(x=>String(x.id||"")===String(id||"")):null;if(found){users.push(found);u=found}}catch(_){}}
   if(!u&&String(id||"")===String(session.id||"")){
@@ -3493,6 +3492,13 @@ async function memberDash(id){
       ${u.ref?`<h3>Team by Level</h3><div class="notice">Tap Level 1, Level 2 or Level 3 to open every member and every transaction at that exact level.</div>${levelCardsHtml(u)}<h3>All Direct Branches</h3><div class="notice">Open any direct branch to drill through its subtree, transactions, business and payout contribution.</div>${branchCardsHtml(u)}<h3>Consolidated Downline Payout Calculation</h3>${payoutCalculationTable(u,teamtx)}`:""}
       <h3>My Own Transactions</h3>${txTable(my)}
     </div>`);
+  if(!memberDash.__liveRefresh){
+    memberDash.__liveRefresh=true;
+    Promise.resolve(window.DBEST_TRANSACTION_LEDGER?.syncAll?.(false)).then(synced=>{
+      if(Array.isArray(synced)&&Array.isArray(txs)){txs.splice(0,txs.length,...synced);try{localStorage.setItem("d2_txs",JSON.stringify(txs))}catch(_){}}
+      return window.DBEST_MEMBER_DASHBOARD_LIVE?.refresh?.();
+    }).catch(e=>console.warn('DBest dashboard background sync skipped',e)).finally(()=>{memberDash.__liveRefresh=false});
+  }
 }
 function txTable(a){return a.length?`<div class="table"><table><tr><th>Transaction ID</th><th>User</th><th>Section / Service</th><th>Date</th><th>Amount</th><th>Status</th><th>Details</th></tr>${a.map(x=>`<tr><td><b>${esc(x.id)}</b></td><td>${esc(x.user||"")}</td><td>${esc(x.section)}<br><small>${esc(x.sub||"")}</small></td><td>${esc(x.created||"")}</td><td>${Number(x.amount||0)?("₹"+Number(x.amount).toLocaleString("en-IN")):"—"}</td><td>${esc(x.status||"")}</td><td><button class="mini" onclick="txDetailsView('${esc(x.id)}')">View</button></td></tr>`).join("")}</table></div>`:`<div class="notice">No transactions yet.</div>`}
 function txDetailsView(txId){
