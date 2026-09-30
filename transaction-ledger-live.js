@@ -11,7 +11,7 @@ const money=v=>'₹'+Math.round(Number(v||0)).toLocaleString('en-IN');
 function token(){try{return window.DBEST_MEMBER_LIVE?.getToken?.()||localStorage.getItem(TOKEN_KEY)||''}catch(e){return''}}
 function currentId(){try{return String(session?.id||'')}catch(e){return''}}
 function currentRole(){try{return String(session?.role||'')}catch(e){return''}}
-function memberRole(){return ['guest','promoter','prime','leader'].includes(currentRole())&&!!currentId()}
+function memberRole(){return ['starter','guest','promoter','prime','leader'].includes(currentRole())&&!!currentId()}
 function baseHeaders(){const h={'apikey':KEY,'Content-Type':'application/json'};if(String(KEY).startsWith('eyJ'))h.Authorization='Bearer '+KEY;return h}
 function headers(){const h=baseHeaders(),t=token();if(t)h['x-dbest-member-token']=t;return h}
 async function ensureToken(){if(token())return token();if(!memberRole()||bootstrapping)return '';bootstrapping=true;try{const r=await fetch(LOGIN,{method:'POST',cache:'no-store',headers:baseHeaders(),body:JSON.stringify({login:currentId()})}),d=await r.json().catch(()=>({}));if(r.ok&&d.token){localStorage.setItem(TOKEN_KEY,String(d.token));return String(d.token)}return ''}catch(e){return ''}finally{bootstrapping=false}}
@@ -38,10 +38,10 @@ function decorate(id=currentId()){try{if(!memberRole()||String(id)!==currentId()
 function installAddTxHook(){const fn=window.addTx;if(typeof fn!=='function'||fn.__dbestLedgerWrapped)return;const w=function(){const x=markInternal(fn.apply(this,arguments));try{typeof save==='function'&&save()}catch(e){}setTimeout(()=>record(x).then(()=>{const h=hashes();h[x.id]=sig(x);saveHashes(h)}).catch(()=>{}),30);return x};w.__dbestLedgerWrapped=true;window.addTx=w}
 function installDashHook(){const fn=window.memberDash;if(typeof fn!=='function'||fn.__dbestLedgerWrapped)return;const w=function(id){const r=fn.apply(this,arguments);setTimeout(()=>{decorate(id);refreshNetwork(true).then(()=>{document.getElementById('dbestLedgerDashboardBanner')?.remove();decorate(id)})},80);return r};w.__dbestLedgerWrapped=true;window.memberDash=w}
 function maintain(){installAddTxHook();installDashHook();decorate(currentId())}
-const obs=new MutationObserver(()=>maintain());obs.observe(document.documentElement,{childList:true,subtree:true});
+let maintainQueued=false;const obs=new MutationObserver(()=>{if(maintainQueued)return;maintainQueued=true;requestAnimationFrame(()=>{maintainQueued=false;maintain()})});obs.observe(document.documentElement,{childList:true,subtree:true});
 document.addEventListener('click',e=>{const b=e.target.closest?.('button');if(!b)return;if(/My Dashboard|Dashboard/i.test(b.textContent||''))setTimeout(()=>{maintain();refreshNetwork(true).then(()=>maintain())},120)},true);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden){syncAll(false);setTimeout(maintain,100)}});
-setInterval(()=>{syncAll(false);maintain()},10000);
+setInterval(()=>{if(!document.hidden)syncAll(false)},30000);
 setTimeout(()=>{ensureToken().then(()=>{syncAll(true);refreshNetwork(true).then(()=>maintain())});maintain()},700);
 window.DBEST_TRANSACTION_LEDGER={version:VERSION,syncAll,refreshNetwork,record,decorate,open:openLedger,maintain};
 })();
