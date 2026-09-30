@@ -1,6 +1,6 @@
 (()=>{
 'use strict';
-const VERSION='1.6-ecommerce-visible-diagnostics';
+const VERSION='1.7-ecommerce-event-driven';
 let payu={checked:false,configured:false},busy=false,checkoutPromise=null;
 
 function say(msg){try{if(typeof toast==='function')toast(msg);else alert(msg)}catch{alert(msg)}}
@@ -46,5 +46,5 @@ async function directPay(form,route,btn){if(busy)return;const method=String(form
 function captureClick(e){const btn=e.target?.closest?.('button');if(!btn)return;const form=btn.closest('form');if(!form)return;const route=routeOf(form);if(!route)return;if(btn.classList.contains('mini'))return;if(btn.dataset.dbestDirectRazorpay==='1'||btn.classList.contains('btn')){e.preventDefault();e.stopImmediatePropagation();directPay(form,route,btn)}}
 function blockLegacySubmit(e){const form=e.target;if(!(form instanceof HTMLFormElement))return;const route=routeOf(form);if(!route)return;const method=String(form.querySelector('input[name="payment"]:checked')?.value||'razorpay').toLowerCase();if(method==='razorpay'){e.preventDefault();e.stopImmediatePropagation();directPay(form,route,form.querySelector('[data-dbest-direct-razorpay="1"]')||form.querySelector('button.btn'))}}
 
-readPayU();patchForms();document.addEventListener('click',captureClick,true);document.addEventListener('submit',blockLegacySubmit,true);new MutationObserver(patchForms).observe(document.documentElement,{childList:true,subtree:true});setInterval(patchForms,700);window.DBEST_RAZORPAY_CHECKOUT_POLICY={version:VERSION,patchForms,readPayU,directPay};
+readPayU();patchForms();document.addEventListener('click',captureClick,true);document.addEventListener('submit',blockLegacySubmit,true);let patchQueued=false;new MutationObserver(()=>{if(patchQueued)return;patchQueued=true;requestAnimationFrame(()=>{patchQueued=false;patchForms()})}).observe(document.documentElement,{childList:true,subtree:true});window.DBEST_RAZORPAY_CHECKOUT_POLICY={version:VERSION,patchForms,readPayU,directPay};
 })();
