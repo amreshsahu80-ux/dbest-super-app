@@ -307,7 +307,7 @@
 
   const initial=currentLang();
   try{if(typeof originalSetLang==='function')originalSetLang(initial)}catch(e){}
-  const obs=new MutationObserver(schedule);obs.observe(document.documentElement,{childList:true,subtree:true,characterData:true});
+  const obs=new MutationObserver(records=>{if(document.querySelector('.classicDash'))return;for(const r of records){if(r.addedNodes?.length||r.removedNodes?.length){schedule();break}}});obs.observe(document.documentElement,{childList:true,subtree:true});
   document.addEventListener('change',e=>{if(e.target?.id==='lang')setTimeout(applyLanguage,0)},true);
   window.addEventListener('load',applyLanguage);
   setTimeout(applyLanguage,0);setTimeout(applyLanguage,250);setTimeout(applyLanguage,900);
