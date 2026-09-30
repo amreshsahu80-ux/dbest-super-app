@@ -388,6 +388,6 @@ function preserveLinks(){
 let queued=false;function sync(){queued=false;refreshLang();addTelugu();addStandaloneSwitcher();walk(document.body);preserveLinks()}
 function queue(){if(queued)return;queued=true;requestAnimationFrame(sync)}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(sync,60),{once:true});else setTimeout(sync,60);
-new MutationObserver(queue).observe(document.documentElement,{childList:true,subtree:true,characterData:true});
+if(!window.DBEST_I18N)new MutationObserver(queue).observe(document.documentElement,{childList:true,subtree:true,characterData:true});
 window.addEventListener('pageshow',queue);window.DBEST_USER_I18N={get lang(){return refreshLang()},apply:sync,norm,refreshLang};
 })();
