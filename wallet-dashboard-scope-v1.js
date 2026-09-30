@@ -68,8 +68,9 @@ function apply(){
   }
   hideLegacyBranchPayout();
 }
-let timer;function schedule(){clearTimeout(timer);timer=setTimeout(apply,35)}
+let queued=false;function schedule(){if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;apply()})}
 new MutationObserver(schedule).observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['style','class']});
-document.addEventListener('click',()=>setTimeout(apply,45),true);
-[0,100,300,700,1400,2500].forEach(ms=>setTimeout(apply,ms));
+document.addEventListener('click',schedule,true);
+document.addEventListener('DOMContentLoaded',schedule,{once:true});
+schedule();
 })();
