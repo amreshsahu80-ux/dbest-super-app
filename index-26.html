@@ -2651,7 +2651,7 @@ function ridePaymentScreen(txId){
   let x=txs.find(t=>t.id===txId);if(!x)return;
   sectionScreen(`${sectionTopBar("💳 Ride Payment",x.id,"showRideOptions()")}
     <div class="sectionContent paymentPage"><div class="payCard" style="max-width:720px;margin:auto">
-      <span class="payuBadge">🔒 PayU Secure Payment</span><h2>Pay ₹${Number(x.amount||0).toLocaleString("en-IN")}</h2>
+      <span class="payuBadge">🔒 Razorpay Secure Payment</span><h2>Pay ₹${Number(x.amount||0).toLocaleString("en-IN")}</h2>
       <p>${esc(x.ride?.pickup||"")} → ${esc(x.ride?.drop||"")}</p>
       <div class="notice">DBest Ride Ref: <b>${esc(x.id)}</b></div>
       <button class="btn" style="width:100%;margin-top:12px" onclick="startPayU('${esc(x.id)}')">${esc(payuSettings.buttonLabel||"Pay Securely with PayU")} →</button>
@@ -2995,9 +2995,9 @@ function paymentReview(txId){
           <div class="payRef">${esc(x.id)}</div>
           <h3 style="margin-top:18px">Amount Payable</h3>
           <div class="payAmount">₹${Number(x.amount||0).toLocaleString("en-IN")}</div>
-          <p style="color:var(--m);line-height:1.55">After successful server-verified PayU payment, this transaction will be marked paid and the PayU reference ID will be stored against the DBest transaction.</p>
+          <p style="color:var(--m);line-height:1.55">After successful server-verified Razorpay payment, this transaction will be marked paid and the Razorpay payment ID will be stored against the DBest transaction.</p>
           <button class="btn" style="width:100%;margin-top:8px" onclick="startPayU('${esc(x.id)}')">${esc(payuSettings.buttonLabel||"Pay Securely with PayU")} →</button>
-          ${!payuSettings.enabled?`<div class="notice" style="margin-top:12px">PayU is currently disabled in Owner settings. The payment screen is ready, but Owner must enable the integration.</div>`:""}
+          
           <button class="btn soft" style="width:100%;margin-top:8px" onclick="txDetailsView('${esc(x.id)}')">View DBest Transaction</button>
         </div>
       </div>
