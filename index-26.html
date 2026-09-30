@@ -2991,13 +2991,13 @@ function paymentReview(txId){
           ${renderDocs(docs)}
         </div>
         <div class="payCard">
-          <span class="payuBadge">🔒 PayU Secure Payment</span><div class="notice" style="margin-top:10px">✓ Application saved • DBest transaction created • Ready for payment</div>
+          <span class="payuBadge">🔒 Razorpay Secure Payment</span><div class="notice" style="margin-top:10px">✓ Application saved • DBest transaction created • Ready for payment</div>
           <h3 style="margin-top:12px">DBest Reference</h3>
           <div class="payRef">${esc(x.id)}</div>
           <h3 style="margin-top:18px">Amount Payable</h3>
           <div class="payAmount">₹${Number(x.amount||0).toLocaleString("en-IN")}</div>
           <p style="color:var(--m);line-height:1.55">After successful server-verified Razorpay payment, this transaction will be marked paid and the Razorpay payment ID will be stored against the DBest transaction.</p>
-          <button class="btn" style="width:100%;margin-top:8px" onclick="startPayU('${esc(x.id)}')">${esc(payuSettings.buttonLabel||"Pay Securely with PayU")} →</button>
+          <button class="btn" style="width:100%;margin-top:8px" onclick="window.DBEST_RAZORPAY?.start?.(\'${esc(x.id)}\')||startPayU(\'${esc(x.id)}\')">Pay Securely with Razorpay →</button>
           
           <button class="btn soft" style="width:100%;margin-top:8px" onclick="txDetailsView('${esc(x.id)}')">View DBest Transaction</button>
         </div>
