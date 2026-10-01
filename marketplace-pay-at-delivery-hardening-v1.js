@@ -24,9 +24,27 @@ function inferType(){
 }
 function loc(){try{return commerceLocation&&typeof commerceLocation==='object'?commerceLocation:{}}catch(_){return{}}}
 async function post(body){
-  const token=tok();if(!token)throw new Error('Secure member session is required. Please login again.');
-  const r=await fetch('/api/marketplace/pay-at-delivery-order',{method:'POST',cache:'no-store',headers:{'Content-Type':'application/json','x-dbest-member-token':token},body:JSON.stringify(body)});
-  const d=await r.json().catch(()=>({}));if(r.status===401){try{window.dispatchEvent(new CustomEvent('dbest:member-session-invalid'))}catch(_){}throw new Error('Your secure DBest login session has expired. Please login once and retry the order.');}if(!r.ok||!d.ok)throw new Error(d.detail||d.error||'Could not save pay-at-delivery order.');return d;
+  let token=tok();
+  if(!token){
+    try{token=String(await window.DBEST_MARKETPLACE_SECURE_SESSION?.ensure?.()||'')}catch(_){}
+  }
+  if(!token)throw new Error('Secure member session is required. Please verify your login and retry.');
+  const request=async t=>{
+    const r=await fetch('/api/marketplace/pay-at-delivery-order',{method:'POST',cache:'no-store',headers:{'Content-Type':'application/json','x-dbest-member-token':t},body:JSON.stringify(body)});
+    const d=await r.json().catch(()=>({}));
+    return {r,d};
+  };
+  let out=await request(token);
+  if(out.r.status===401){
+    try{localStorage.removeItem('dbest_member_live_token')}catch(_){}
+    try{
+      const fresh=String(await window.DBEST_MARKETPLACE_SECURE_SESSION?.ensure?.()||'');
+      if(fresh)out=await request(fresh);
+    }catch(_){}
+  }
+  if(out.r.status===401){try{window.dispatchEvent(new CustomEvent('dbest:member-session-invalid'))}catch(_){}throw new Error('Your secure DBest login session has expired. Please verify your login once and retry the order.');}
+  if(!out.r.ok||!out.d.ok)throw new Error(out.d.detail||out.d.error||'Could not save pay-at-delivery order.');
+  return out.d;
 }
 async function secureConfirm(e){
   e?.preventDefault?.();e?.stopPropagation?.();
@@ -62,5 +80,5 @@ function guardUi(){
 }
 [100,300,700,1400,3000].forEach(ms=>setTimeout(guardUi,ms));
 new MutationObserver(()=>setTimeout(guardUi,20)).observe(document.documentElement,{childList:true,subtree:true});
-window.DBEST_PAD_HARDENING={version:'1.1.0-session-authority',allowed:[...ALLOWED],inferType,secureConfirm};
+window.DBEST_PAD_HARDENING={version:'1.2.0-session-refresh-retry',allowed:[...ALLOWED],inferType,secureConfirm};
 })();
