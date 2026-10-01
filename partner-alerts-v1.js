@@ -35,12 +35,12 @@ function installMarketplaceCompleteButton(){
   new MutationObserver(enforce).observe(document.documentElement,{childList:true,subtree:true,characterData:true});
   setInterval(enforce,500);
 }
-installMarketplaceCompleteButton();
+if(!/\/vaahak(?:-standalone-v2\.html|\.html)?\/?$/i.test(location.pathname)&&!/\/Vaahak\/?$/i.test(location.pathname))installMarketplaceCompleteButton();
 const IS_VAAHAK_ROUTE=/\/vaahak(?:-standalone-v2\.html|\.html)?\/?$/i.test(location.pathname)||/\/Vaahak\/?$/i.test(location.pathname);
 if(IS_VAAHAK_ROUTE){
  load('/vaahak-dashboard-tabs-v1.js?v=20260929-simplified-tabs-v3','data-dbest-vaahak-dashboard-tabs')
   .then(()=>load('/vaahak-wallet-razorpay-ui-v1.js?v=20260929-simplified-wallet-v2','data-dbest-vaahak-wallet-razorpay'))
   .catch(e=>console.warn('DBest Vaahak dashboard/wallet loader',e));
 }
-load('/partner-alerts-core-v1.js?v=20260914-vaahak-actions-v1','data-dbest-partner-alerts-core').then(()=>{if(!/\/vaahak-standalone-v2\.html\/?$/i.test(location.pathname))return;return load('/vaahak-compact-actions-v1.js?v=20260914-vaahak-activity-v1','data-dbest-vaahak-compact-actions').then(()=>load('/vaahak-strict-dispatch-v1.js?v=20260914-strict-dispatch-v1','data-dbest-vaahak-strict-dispatch')).then(()=>load('/vaahak-active-job-fix-v1.js?v=20260914-active-job-v1','data-dbest-vaahak-active-job-fix')).then(()=>load('/vaahak-completion-recovery-v1.js?v=20260914-completion-recovery-v1','data-dbest-vaahak-completion-recovery')).then(()=>load('/vaahak-complete-job-fix-v1.js?v=20260914-complete-fix-v2','data-dbest-vaahak-complete-fix'))}).catch(e=>console.warn('DBest partner alerts loader',e));
+if(!IS_VAAHAK_ROUTE)load('/partner-alerts-core-v1.js?v=20260914-vaahak-actions-v1','data-dbest-partner-alerts-core').catch(e=>console.warn('DBest partner alerts loader',e));
 })();
