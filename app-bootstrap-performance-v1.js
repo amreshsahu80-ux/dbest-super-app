@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const V='20261001-platform-loader-v13';
+const V='20261001-platform-loader-v14';
 if(window.DBEST_PERFORMANCE_BOOTSTRAP?.version===V)return;
 
 const EARLY=['cab-entry-capture-final-v1.js','ux-performance-bridge.js'];
