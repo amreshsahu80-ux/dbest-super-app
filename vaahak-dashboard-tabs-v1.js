@@ -29,6 +29,6 @@ async function saveProfile(){const msg=document.getElementById('dbvProfileMsg');
 async function changePin(){const msg=document.getElementById('dbvPinMsg'),currentPin=String(document.getElementById('dbvCurrentPin').value||''),newPin=String(document.getElementById('dbvNewPin').value||'');try{const d=await api(URLS.core,'change_pin',{currentPin,newPin});msg.innerHTML='<div class="dbv-note dbv-good">PIN changed. Please login again.</div>';if(d.relogin){setTimeout(()=>{localStorage.removeItem(TK);location.reload()},1200)}}catch(e){msg.innerHTML='<div class="dbv-note dbv-bad">PIN change failed: '+esc(e.message)+'</div>'}}
 async function render(which){if(which==='dashboard'){showDashboard();return}showOnlyPanel();if(which==='history')return renderHistory();if(which==='earnings')return renderEarnings();if(which==='profile')return renderProfile()}
 function boot(){if(!install())return;render('dashboard')}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();setInterval(()=>{if(!document.getElementById('dbestVaahakTabs'))boot()},1500);
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 window.DBEST_VAAHAK_DASH_TABS={version:VERSION,render};
 })();
