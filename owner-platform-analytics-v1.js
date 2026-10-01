@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='20260929-owner-analytics-v2';
+const VERSION='20261001-owner-analytics-v3-role-guard';
 if(window.DBEST_OWNER_ANALYTICS?.version===VERSION)return;
 const cfg=window.DBEST_RUNTIME_CONFIG||{},BASE=String(cfg.supabaseUrl||'').replace(/\/$/,''),KEY=String(cfg.supabasePublishableKey||'');
 if(!BASE||!KEY)return;
@@ -42,6 +42,9 @@ async function open(){
 }
 function inject(){
  try{
+  if(!token())return;
+  const sess=(()=>{try{return window.DBEST_SESSION_COMPAT?.read?.()||JSON.parse(localStorage.getItem('d2_session')||'{}')}catch(_){return{}}})();
+  const role=String(sess?.role||'').toLowerCase();if(role&&!['owner','super admin','superadmin'].includes(role))return;
   const roots=[...document.querySelectorAll('.sectionContent')],r=roots.find(x=>/Project Owner|Owner Operations|Master Control/i.test(x.innerText||''));
   if(!r||r.querySelector('#dbestOwnerAnalyticsButton'))return;
   const b=document.createElement('button');b.id='dbestOwnerAnalyticsButton';b.className='ownerControl';b.innerHTML='<span>📊</span><b>Platform Analytics</b><small>Lifetime visits, unique visitors, today/month traffic and top sections.</small>';b.onclick=open;
