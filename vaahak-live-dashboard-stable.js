@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='20261001-active-job-authority-v4';
+const VERSION='20261001-active-job-authority-v5';
 const REFRESH=2500;
 const cfg=window.DBEST_RUNTIME_CONFIG||{};
 const BASE=String(cfg.supabaseUrl||'').replace(/\/$/,'');
