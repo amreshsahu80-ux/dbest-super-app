@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='20260929-simplified-guard-v3';
+const VERSION='20261001-simplified-event-v4';
 function text(x){return String(x?.textContent||'').replace(/\s+/g,' ').trim()}
 function vendor(){
  const dash=document.getElementById('dash');if(!dash||dash.classList.contains('hidden'))return;
@@ -44,7 +44,7 @@ function vaahak(){
 function run(){vendor();vaahak()}
 let q=false;const queue=()=>{if(q)return;q=true;requestAnimationFrame(()=>{q=false;run()})};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run,{once:true});else run();
-new MutationObserver(queue).observe(document.documentElement,{childList:true,subtree:true,characterData:true});
-setInterval(run,1200);
+const root=document.getElementById('dash')||document.body;new MutationObserver(queue).observe(root,{childList:true,subtree:true});
+document.addEventListener('dbest:dashboard-refresh',queue);
 window.DBEST_PARTNER_DASHBOARD_SIMPLIFY={version:VERSION,run};
 })();
