@@ -56,11 +56,12 @@ body:not(.publicEntry) .shell{padding-bottom:88px}
 </style>
 <script>
 (()=>{const K='dbest_vaahak_diag_v1';const keep=[];function log(type,data){try{const row={t:Date.now(),type,data:String(data??'').slice(0,500)};keep.push(row);while(keep.length>80)keep.shift();localStorage.setItem(K,JSON.stringify(keep));}catch(e){}}
-window.__DBEST_VAAHAK_DIAG__={log,dump:()=>{try{return JSON.parse(localStorage.getItem(K)||'[]')}catch(e){return[]}}};
-log('boot','diagnostic-start');
-window.addEventListener('error',e=>log('error',(e.message||'')+' @ '+(e.filename||'')+':'+(e.lineno||'')));
-window.addEventListener('unhandledrejection',e=>log('rejection',e.reason?.message||e.reason||'unknown'));
-let last=performance.now();setInterval(()=>{const now=performance.now(),gap=Math.round(now-last-1000);if(gap>350)log('main-thread-gap',gap+'ms');last=now},1000);
+let lastSend=0;function send(reason){try{const now=Date.now();if(now-lastSend<2500)return;lastSend=now;const body=JSON.stringify({reason,events:keep.slice(-80)});if(navigator.sendBeacon){navigator.sendBeacon('/api/vaahak-diag',new Blob([body],{type:'application/json'}));}else{fetch('/api/vaahak-diag',{method:'POST',headers:{'content-type':'application/json'},body,keepalive:true}).catch(()=>{});}}catch(e){}}
+window.__DBEST_VAAHAK_DIAG__={log,send,dump:()=>{try{return JSON.parse(localStorage.getItem(K)||'[]')}catch(e){return[]}}};
+log('boot','diagnostic-start');setTimeout(()=>send('startup-snapshot'),4500);
+window.addEventListener('error',e=>{log('error',(e.message||'')+' @ '+(e.filename||'')+':'+(e.lineno||''));send('window-error')});
+window.addEventListener('unhandledrejection',e=>{log('rejection',e.reason?.message||e.reason||'unknown');send('unhandled-rejection')});
+let last=performance.now();setInterval(()=>{const now=performance.now(),gap=Math.round(now-last-1000);if(gap>350){log('main-thread-gap',gap+'ms');send('main-thread-gap:'+gap)}last=now},1000);
 const of=window.fetch;window.fetch=async function(...a){const u=String(a[0]?.url||a[0]||'');const st=performance.now();log('fetch-start',u);try{const r=await of.apply(this,a);log('fetch-end',r.status+' '+Math.round(performance.now()-st)+'ms '+u);return r}catch(e){log('fetch-error',(e.message||e)+' '+u);throw e}};
 document.addEventListener('click',e=>log('click',e.target?.id||e.target?.textContent?.trim()?.slice(0,80)||e.target?.tagName),true);
 document.addEventListener('visibilitychange',()=>log('visibility',document.visibilityState));
