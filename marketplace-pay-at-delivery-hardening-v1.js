@@ -3,7 +3,7 @@
 const ALLOWED=new Set(['grocery','restaurant','medicine']);
 let installing=false;
 function say(m){try{typeof toast==='function'?toast(m):alert(m)}catch(_){alert(m)}}
-function tok(){try{return window.DBEST_MEMBER_LIVE?.getToken?.()||localStorage.getItem('dbest_member_live_token')||''}catch(_){return''}}
+function tok(){try{return localStorage.getItem('dbest_member_live_token')||window.DBEST_MEMBER_LIVE?.getToken?.()||''}catch(_){return''}}
 function rows(type){try{return (marketCart(type)||[]).filter(r=>Number(r.qty)>0)}catch(_){return[]}}
 function total(type){try{return Number(marketTotals(type)?.total||0)}catch(_){return 0}}
 function inferType(){
@@ -26,7 +26,7 @@ function loc(){try{return commerceLocation&&typeof commerceLocation==='object'?c
 async function post(body){
   const token=tok();if(!token)throw new Error('Secure member session is required. Please login again.');
   const r=await fetch('/api/marketplace/pay-at-delivery-order',{method:'POST',cache:'no-store',headers:{'Content-Type':'application/json','x-dbest-member-token':token},body:JSON.stringify(body)});
-  const d=await r.json().catch(()=>({}));if(!r.ok||!d.ok)throw new Error(d.detail||d.error||'Could not save pay-at-delivery order.');return d;
+  const d=await r.json().catch(()=>({}));if(r.status===401){try{window.dispatchEvent(new CustomEvent('dbest:member-session-invalid'))}catch(_){}throw new Error('Your secure DBest login session has expired. Please login once and retry the order.');}if(!r.ok||!d.ok)throw new Error(d.detail||d.error||'Could not save pay-at-delivery order.');return d;
 }
 async function secureConfirm(e){
   e?.preventDefault?.();e?.stopPropagation?.();
@@ -62,5 +62,5 @@ function guardUi(){
 }
 [100,300,700,1400,3000].forEach(ms=>setTimeout(guardUi,ms));
 new MutationObserver(()=>setTimeout(guardUi,20)).observe(document.documentElement,{childList:true,subtree:true});
-window.DBEST_PAD_HARDENING={version:'1.0.0',allowed:[...ALLOWED],inferType,secureConfirm};
+window.DBEST_PAD_HARDENING={version:'1.1.0-session-authority',allowed:[...ALLOWED],inferType,secureConfirm};
 })();
