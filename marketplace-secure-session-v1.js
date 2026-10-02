@@ -1,6 +1,6 @@
 (()=>{
 'use strict';
-const VERSION='1.0-marketplace-secure-session';
+const VERSION='1.1-no-checkout-otp';
 let refreshing=null;
 function say(m){try{typeof toast==='function'?toast(m):alert(m)}catch(_){alert(m)}}
 function getToken(){try{return window.DBEST_MEMBER_LIVE?.getToken?.()||''}catch(_){return''}}
@@ -12,7 +12,7 @@ function overlay(login,masked,resolve,reject){document.getElementById('dbestMark
   const verify=async()=>{const code=String(inp.value||'').replace(/\D/g,'');if(!/^\d{6}$/.test(code)){msg.style.color='#b91c1c';msg.textContent='Enter the 6-digit OTP.';return}btn.disabled=true;btn.textContent='Verifying…';try{const d=await window.DBEST_MEMBER_LIVE.verifyOtp(login,code);const t=String(d?.token||getToken()||'');if(!t)throw new Error('Secure session token was not created.');close();status('Secure member session refreshed ✓ • continuing to Razorpay','ok');resolve(t)}catch(e){msg.style.color='#b91c1c';msg.textContent=e?.status===401?'Invalid or expired OTP. Please try again.':String(e?.message||'Could not refresh secure session.')}finally{btn.disabled=false;btn.textContent='Verify & Continue to Razorpay'}};
   btn.onclick=verify;inp.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();verify()}});setTimeout(()=>inp.focus(),80)
 }
-async function ensure(){const t=getToken();if(t)return t;if(refreshing)return refreshing;refreshing=(async()=>{const live=window.DBEST_MEMBER_LIVE;if(!live?.requestOtp||!live?.verifyOtp)throw new Error('Secure member login service is not ready.');const u=currentMember();const login=String(u?.email||u?.id||session?.id||'').trim();if(!login)throw new Error('Current DBest member could not be identified.');status('Refreshing secure member session…');const d=await live.requestOtp(login);return await new Promise((resolve,reject)=>overlay(login,d?.maskedEmail,resolve,reject))})().finally(()=>{refreshing=null});return refreshing}
+async function ensure(){const t=getToken();if(t)return t;throw new Error('Your DBest login session has expired. Please login again to continue.')}
 function install(){fixSecondaryLabel();const api=window.DBEST_MASTER_RAZORPAY;if(!api||typeof api.submit!=='function'||api.submit.__dbestSecureSession)return false;const old=api.submit;const wrapped=async function(e){if(!getToken()){e?.preventDefault?.();try{await ensure()}catch(err){status(String(err?.message||err),'error');say(String(err?.message||err));return false}}return old.apply(this,arguments)};wrapped.__dbestSecureSession=true;api.submit=wrapped;if(window.DBEST_MASTER_MARKET)window.DBEST_MASTER_MARKET.submit=wrapped;return true}
 [100,300,700,1400,3000,6000].forEach(ms=>setTimeout(install,ms));new MutationObserver(()=>{fixSecondaryLabel();install()}).observe(document.documentElement,{childList:true,subtree:true});window.DBEST_MARKETPLACE_SECURE_SESSION={version:VERSION,ensure,install};
 })();
