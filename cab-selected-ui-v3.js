@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='20261004-local-discovery-v6';
+const VERSION='20261004-icon-nav-v7';
 const cfg=()=>window.DBEST_RUNTIME_CONFIG||{};
 const RECENT_KEY='dbest_cab_recent_places_v6';
 const IMG={
@@ -92,8 +92,9 @@ body:has(.cab6Page) #dbestServicePartnerQuick,body:has(.cab6Page) .floatingServi
 @media(max-width:700px){.cab6Wrap{padding-top:9px}.cab6Search{border-radius:29px}.cab6Top{min-height:60px}.cab6Top button{width:42px;height:42px}}
 
 .cab6Nearby{margin:13px 0 3px}.cab6NearbyHead{display:flex;justify-content:space-between;align-items:end;margin:0 3px 8px}.cab6NearbyHead b{font-size:12px;color:#202947}.cab6NearbyHead small{font-size:8.5px;color:#8a93a8}.cab6NearbyRail{display:flex;gap:9px;overflow-x:auto;padding:2px 2px 8px;scrollbar-width:none}.cab6NearbyRail::-webkit-scrollbar{display:none}.cab6Place{position:relative;flex:0 0 128px;height:88px;border:0;border-radius:17px;overflow:hidden;padding:0;background:linear-gradient(135deg,#6366f1,#22c1c3);box-shadow:0 9px 22px rgba(40,49,100,.13);text-align:left}.cab6Place img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}.cab6Place:after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,transparent 25%,rgba(8,15,38,.82))}.cab6Place span{position:absolute;z-index:2;left:9px;right:8px;bottom:8px;color:#fff;font-size:10px;font-weight:900;text-shadow:0 1px 3px #000}.cab6Place.loading{display:grid;place-items:center;color:#fff;font-size:9px;font-weight:850}.cab6Place.loading:after{display:none}
+.cab6Top.cab6IconNav{grid-template-columns:48px 1fr 48px;min-height:58px;padding:6px 16px}.cab6Top.cab6IconNav button{width:44px;height:44px;font-size:0!important}.cab6Top.cab6IconNav button:first-child:after{content:'←';font-size:25px!important}.cab6Top.cab6IconNav button:last-child:after{content:'⌂';font-size:23px!important}.cab6Top.cab6IconNav>div{min-height:1px}
 `;document.head.appendChild(x)}
-function header(back){return `<div class="cab6Top"><button type="button" aria-label="Back" onclick="${back}">Back</button><div class="cab6TopTitle"><b>Cab Booking</b><small>Fast • Simple • Live</small></div><button type="button" aria-label="Home" onclick="backHome()">Home</button></div>`}
+function header(back){return `<div class="cab6Top cab6IconNav"><button type="button" aria-label="Back" title="Back" onclick="${back}">Back</button><div aria-hidden="true"></div><button type="button" aria-label="Home" title="Home" onclick="backHome()">Home</button></div>`}
 function screen(body,back='backHome()'){css();destroyMap();sectionScreen(`<div class="cab6Page">${header(back)}<div class="cab6Wrap">${body}</div></div>`)}
 function destroyMap(){try{if(S.map&&S.map.remove)S.map.remove()}catch(e){}try{if(S.entryMap&&S.entryMap.remove)S.entryMap.remove()}catch(e){}S.map=null;S.layer=null;S.entryMap=null}
 function minLocal(){const d=new Date(Date.now()+15*60000);d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,16)}
