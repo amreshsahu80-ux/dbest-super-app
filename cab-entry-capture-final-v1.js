@@ -1,8 +1,8 @@
 (function(){
 'use strict';
-const V='20261004-ultra-modern-v4';
+const V='20261004-vibrant-v5';
 if(window.DBEST_CAB_ENTRY_CAPTURE?.version===V)return;
-const ASSET_V='20261004-ultra-modern-v4';
+const ASSET_V='20261004-vibrant-v5';
 let opening=false,ensurePromise=null;
 
 function preload(src){
