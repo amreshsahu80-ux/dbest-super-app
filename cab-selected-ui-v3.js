@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='20261004-ultra-modern-v4';
+const VERSION='20261004-vibrant-v5';
 const cfg=()=>window.DBEST_RUNTIME_CONFIG||{};
 const RECENT_KEY='dbest_cab_recent_places_v6';
 const IMG={
@@ -65,6 +65,31 @@ body:has(.cab6Page) #dbestServicePartnerQuick,body:has(.cab6Page) .floatingServi
 @media(max-width:480px){.cab6Wrap{padding:8px 8px 18px}.cab6MapFrame{height:235px;margin-bottom:14px;border-radius:22px}.cab6ConfirmMap .cab6MapFrame{height:205px;margin-bottom:0;border-radius:21px}.cab6Confirm{margin:10px 2px 0;padding:13px;border-radius:22px}.cab6Sheet{margin-top:0;clear:both}.cab6EntryMapWrap{height:195px;margin:0 0 8px;border-radius:20px}.cab6EntryMapBadge{left:10px;top:9px;padding:5px 8px}.cab6EntryLocate{right:10px;bottom:9px;width:36px;height:36px;border-radius:12px}.cab6Search.cab6EntrySheet{margin:0 2px;padding:9px 10px 11px;border-radius:21px}.cab6EntryHandle{margin-bottom:6px}.cab6EntryHeading{margin-bottom:4px}.cab6Search.cab6EntrySheet .cab6Field{margin:5px 0}.cab6Search.cab6EntrySheet .cab6Field input{min-height:45px}.cab6StopBar{margin:0 1px 3px}.cab6AddStop{font-size:9.5px;padding:2px}.cab6StopRow{grid-template-columns:1fr 32px;gap:5px}.cab6StopRemove{height:32px}.cab6TripType{margin:7px 0 8px}.cab6TripType button{min-height:39px}.cab6Search.cab6EntrySheet .cab6Quick{margin:7px 0 8px;gap:6px}.cab6Search.cab6EntrySheet .cab6Quick button{font-size:8px;min-height:50px;padding:6px 3px}.cab6Quick span{width:28px;height:28px;margin-bottom:4px}.cab6Tools{margin:5px 0}.cab6Go{min-height:48px!important;margin-top:7px!important}}
 
 @media(max-width:390px){.cab6Top{grid-template-columns:70px 1fr 70px}.cab6Top button{font-size:10px}.cab6Logo{width:100px}.cab6Veh{flex-basis:112px}.cab6MapFrame{height:220px;margin-bottom:14px;border-radius:22px}.cab6Sheet{margin:0 2px 0;border-radius:24px;clear:both}.cab6Meta{margin-top:2px}}
+
+/* Vibrant V5 visual layer — presentation only */
+.cab6Page{background:radial-gradient(circle at 12% 4%,rgba(99,102,241,.15),transparent 26%),radial-gradient(circle at 92% 18%,rgba(14,165,233,.13),transparent 25%),linear-gradient(180deg,#f8faff 0%,#f5f7ff 48%,#fff 100%)}
+.cab6Top{background:rgba(255,255,255,.86);border-bottom:1px solid rgba(99,102,241,.12);box-shadow:0 10px 30px rgba(46,54,104,.08)}
+.cab6Top button{border:1px solid rgba(99,102,241,.16);background:linear-gradient(145deg,#fff,#f3f5ff);color:#4f46e5;box-shadow:0 7px 20px rgba(79,70,229,.10)}
+.cab6TopTitle b{font-size:16px;background:linear-gradient(90deg,#111827,#4f46e5);-webkit-background-clip:text;color:transparent}.cab6TopTitle small{color:#8187a2}
+.cab6EntryMapWrap,.cab6MapFrame{border:1px solid rgba(99,102,241,.14);box-shadow:0 20px 50px rgba(48,55,112,.16)}
+.cab6Search{border:1px solid rgba(99,102,241,.12);background:linear-gradient(145deg,rgba(255,255,255,.98),rgba(247,248,255,.97));box-shadow:0 24px 60px rgba(52,58,120,.14)}
+.cab6EntrySheet{backdrop-filter:blur(18px)}
+.cab6EntryHandle{background:linear-gradient(90deg,#818cf8,#22d3ee)!important}
+.cab6EntryHeading b{background:linear-gradient(90deg,#111827,#4f46e5);-webkit-background-clip:text;color:transparent}
+.cab6Field input,.cab6Field select{border:1px solid #e0e4f2;background:rgba(255,255,255,.96);box-shadow:0 7px 20px rgba(42,51,101,.06)}
+.cab6Field.pick input{border-left:6px solid #10b981}.cab6Field.drop input{border-left:6px solid #fb4f72}
+.cab6Field input:focus,.cab6Field select:focus{border-color:#818cf8;box-shadow:0 0 0 4px rgba(99,102,241,.10),0 8px 22px rgba(79,70,229,.08)}
+.cab6TripType{padding:5px;border:1px solid #e5e7f3;border-radius:19px;background:rgba(244,246,255,.88)}
+.cab6TripType button{border:0;background:transparent;border-radius:14px}
+.cab6TripType button.on{background:linear-gradient(135deg,#4f46e5,#7c3aed 58%,#2563eb);box-shadow:0 10px 24px rgba(79,70,229,.25)}
+.cab6Quick button{border:1px solid #e2e5f1;background:linear-gradient(145deg,#fff,#f8f9ff);box-shadow:0 9px 22px rgba(40,48,95,.07);transition:transform .15s ease,box-shadow .15s ease}
+.cab6Quick button:active{transform:scale(.97)}.cab6Quick span{background:linear-gradient(145deg,#eef2ff,#e0e7ff);color:#4f46e5}
+.cab6Quick button:nth-child(2) span{background:linear-gradient(145deg,#ecfeff,#cffafe);color:#0891b2}.cab6Quick button:nth-child(3) span{background:linear-gradient(145deg,#faf5ff,#ede9fe);color:#7c3aed}
+.cab6AddStop{color:#4f46e5}.cab6Tools button{background:rgba(255,255,255,.92);box-shadow:0 6px 16px rgba(42,51,101,.06)}
+.cab6Go,.cab6Book{background:linear-gradient(105deg,#4f46e5 0%,#7c3aed 48%,#2563eb 100%);box-shadow:0 16px 34px rgba(79,70,229,.30);letter-spacing:.1px}
+.cab6Sheet,.cab6Confirm{border:1px solid rgba(99,102,241,.12);box-shadow:0 22px 54px rgba(48,55,112,.13)}
+.cab6Veh.on{border-color:#6366f1;background:linear-gradient(145deg,#f5f3ff,#eef2ff);box-shadow:0 0 0 2px rgba(99,102,241,.10),0 10px 22px rgba(79,70,229,.10)}
+@media(max-width:700px){.cab6Wrap{padding-top:9px}.cab6Search{border-radius:29px}.cab6Top{min-height:60px}.cab6Top button{width:42px;height:42px}}
 `;document.head.appendChild(x)}
 function header(back){return `<div class="cab6Top"><button type="button" aria-label="Back" onclick="${back}">Back</button><div class="cab6TopTitle"><b>Cab Booking</b><small>Fast • Simple • Live</small></div><button type="button" aria-label="Home" onclick="backHome()">Home</button></div>`}
 function screen(body,back='backHome()'){css();destroyMap();sectionScreen(`<div class="cab6Page">${header(back)}<div class="cab6Wrap">${body}</div></div>`)}
