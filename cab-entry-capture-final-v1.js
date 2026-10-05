@@ -1,8 +1,8 @@
 (function(){
 'use strict';
-const V='20261004-hero-nav-v8';
+const V='20261005-local-smart-search-v9';
 if(window.DBEST_CAB_ENTRY_CAPTURE?.version===V)return;
-const ASSET_V='20261004-hero-nav-v8';
+const ASSET_V='20261005-local-smart-search-v9';
 let opening=false,ensurePromise=null;
 
 function preload(src){
