@@ -17,10 +17,12 @@ function mount(){
  // New home owns branding/greeting/language; suppress legacy header duplicates only on Home.
  ['.top','.greeting','.nav'].forEach(sel=>{const n=document.querySelector(sel);if(n)n.classList.add('dbuhLegacyHeaderHidden')});
  // Hide only legacy home presentation blocks. Functional DOM remains mounted for existing handlers/scripts.
- const legacy=[document.querySelector('.hero'),document.querySelector('.head'),oldGrid];
- legacy.forEach(n=>{if(n)n.classList.add('dbuhLegacyHidden')});
+ const legacyRoot=oldGrid.parentElement;
+ const legacy=[];
+ if(legacyRoot){[...legacyRoot.children].forEach(n=>{if(n!==shell)n.classList.add('dbuhLegacyHidden')})}
+ document.querySelectorAll('.hero,.head,.grid,.toggle,.cards,.subs').forEach(n=>{if(!shell.contains(n))n.classList.add('dbuhLegacyHidden')});
  document.querySelectorAll('.dbuh [data-s]').forEach(b=>b.addEventListener('click',()=>callService(b.dataset.s)));
- shell.querySelector('.dbuhView').onclick=()=>{legacy.forEach(n=>{if(n)n.classList.remove('dbuhLegacyHidden')});shell.style.display='none'};
+ shell.querySelector('.dbuhView').onclick=()=>{document.querySelectorAll('.dbuhLegacyHidden').forEach(n=>n.classList.remove('dbuhLegacyHidden'));shell.style.display='none'};
  const lang=shell.querySelector('.dbuhLang');try{lang.value=localStorage.getItem('d2_lang')||'en'}catch(e){}lang.onchange=()=>{try{localStorage.setItem('d2_lang',lang.value)}catch(e){};const sels=[...document.querySelectorAll('select')].filter(s=>s!==lang&&[...s.options].some(o=>o.value===lang.value));if(sels[0]){sels[0].value=lang.value;sels[0].dispatchEvent(new Event('change',{bubbles:true}))}};
 }
 function css(){if(document.getElementById('dbuhCss'))return;let s=el('style');s.id='dbuhCss';s.textContent=`
