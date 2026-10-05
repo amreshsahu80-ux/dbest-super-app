@@ -147,12 +147,30 @@ async function renderEntryMap(){
  }catch(e){console.warn('Entry map failed',e)}
 }
 async function searchLocations(term){
- if(term.length<2)return[];await initSearchProvider();
- const hasGoogle=!!(window.google&&google.maps); const origin=(hasGoogle&&S.p&&Number.isFinite(S.p.lat)&&Number.isFinite(S.p.lng))?new google.maps.LatLng(S.p.lat,S.p.lng):null;
- if(S.provider==='google'&&window.google?.maps?.places){return await new Promise(resolve=>{const req={input:term,componentRestrictions:{country:'in'}};if(origin){req.location=origin;req.radius=50000;req.origin=origin}new google.maps.places.AutocompleteService().getPlacePredictions(req,(rows,status)=>{let a=status===google.maps.places.PlacesServiceStatus.OK?(rows||[]):[];a=a.map(x=>({label:x.description,placeId:x.place_id,distanceMeters:Number(x.distance_meters||0)}));if(origin)a.sort((x,y)=>(x.distanceMeters||999999999)-(y.distanceMeters||999999999));resolve(a.slice(0,8))})})}
+ term=String(term||'').trim();if(term.length<2)return[];await initSearchProvider();
+ const hasOrigin=S.p&&Number.isFinite(Number(S.p.lat))&&Number.isFinite(Number(S.p.lng));
+ const lat=hasOrigin?Number(S.p.lat):null,lng=hasOrigin?Number(S.p.lng):null;
+ if(S.provider==='google'&&window.google?.maps?.places){
+   try{return await new Promise(resolve=>{
+     const req={input:term,componentRestrictions:{country:'in'}};
+     if(hasOrigin){req.location=new google.maps.LatLng(lat,lng);req.radius=50000;req.origin=req.location}
+     new google.maps.places.AutocompleteService().getPlacePredictions(req,(rows,status)=>{
+       let a=status===google.maps.places.PlacesServiceStatus.OK?(rows||[]):[];
+       a=a.map(x=>({label:x.description,placeId:x.place_id,distanceMeters:Number(x.distance_meters||0)}));
+       if(hasOrigin)a.sort((x,y)=>(x.distanceMeters||999999999)-(y.distanceMeters||999999999));resolve(a.slice(0,8))
+     })
+   })}catch(e){}
+ }
  const base=String(cfg().supabaseUrl||'').replace(/\/$/,''),key=String(cfg().supabasePublishableKey||cfg().supabaseAnonKey||'');
- if(base){try{const r=await fetch(base+'/functions/v1/location-search-live',{method:'POST',headers:{'content-type':'application/json',apikey:key},body:JSON.stringify({q:term,lat:S.p?.lat||null,lng:S.p?.lng||null})});const j=await r.json();const a=(j.results||[]).slice(0,8).map(x=>({label:x.label||x.detail,lat:+x.lat,lng:+(x.lon??x.lng)}));if(a.length)return a}catch(e){}}
- try{const r=await fetch('https://nominatim.openstreetmap.org/search?format=json&countrycodes=in&limit=8&q='+encodeURIComponent(term),{headers:{Accept:'application/json'}});const j=await r.json();return (j||[]).map(x=>({label:x.display_name,lat:+x.lat,lng:+x.lon}))}catch(e){return[]}
+ if(base){try{const r=await fetch(base+'/functions/v1/location-search-live',{method:'POST',headers:{'content-type':'application/json',apikey:key},body:JSON.stringify({q:term,lat,lng,radius_km:50})});const j=await r.json();const a=(j.results||[]).slice(0,8).map(x=>({label:x.label||x.detail,lat:+x.lat,lng:+(x.lon??x.lng)}));if(a.length)return a}catch(e){}}
+ try{
+   const view=hasOrigin?'&viewbox='+encodeURIComponent((lng-.7)+','+(lat+.7)+','+(lng+.7)+','+(lat-.7))+'&bounded=0':'';
+   const localQ=hasOrigin?term:term+', India';
+   const r=await fetch('https://nominatim.openstreetmap.org/search?format=json&countrycodes=in&addressdetails=1&limit=10'+view+'&q='+encodeURIComponent(localQ),{headers:{Accept:'application/json'}});
+   let a=(await r.json()||[]).map(x=>({label:x.display_name,lat:+x.lat,lng:+x.lon}));
+   if(hasOrigin){const d=(p)=>{const dy=(p.lat-lat)*111,dx=(p.lng-lng)*111*Math.cos(lat*Math.PI/180);return Math.sqrt(dx*dx+dy*dy)};a.sort((x,y)=>d(x)-d(y))}
+   return a.slice(0,8)
+ }catch(e){return[]}
 }
 async function resolvePlace(x){if(x?.lat!=null)return x;if(S.provider==='google'&&x?.placeId){return await new Promise(resolve=>{const svc=new google.maps.places.PlacesService(document.createElement('div'));svc.getDetails({placeId:x.placeId,fields:['geometry','formatted_address','name']},(p,status)=>{if(status===google.maps.places.PlacesServiceStatus.OK&&p.geometry?.location)resolve({label:p.formatted_address||p.name||x.label,lat:p.geometry.location.lat(),lng:p.geometry.location.lng()});else resolve(null)})})}return null}
 async function geocodeText(v){v=String(v||'').trim();if(v.length<3)return null;await initSearchProvider();if(S.provider==='google'&&window.google?.maps?.Geocoder){try{return await new Promise(resolve=>new google.maps.Geocoder().geocode({address:v,componentRestrictions:{country:'IN'}},(rows,status)=>{const r=rows?.[0],l=r?.geometry?.location;resolve(status==='OK'&&l?{label:r.formatted_address||v,lat:l.lat(),lng:l.lng()}:null)}))}catch(e){}}const a=await searchLocations(v);return a[0]?resolvePlace(a[0]):null}
