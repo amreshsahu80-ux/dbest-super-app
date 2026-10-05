@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='20261006-preview-location-v10';
+const VERSION='20261006-preview-direct-v12';
 const cfg=()=>window.DBEST_RUNTIME_CONFIG||{};
 const RECENT_KEY='dbest_cab_recent_places_v6';
 const IMG={
