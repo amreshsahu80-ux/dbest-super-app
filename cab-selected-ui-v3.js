@@ -151,7 +151,7 @@ async function searchLocations(term){
  const hasOrigin=S.p&&Number.isFinite(Number(S.p.lat))&&Number.isFinite(Number(S.p.lng));
  const lat=hasOrigin?Number(S.p.lat):null,lng=hasOrigin?Number(S.p.lng):null;
  if(S.provider==='google'&&window.google?.maps?.places){
-   try{return await new Promise(resolve=>{
+   try{const ga=await new Promise(resolve=>{
      const req={input:term,componentRestrictions:{country:'in'}};
      if(hasOrigin){req.location=new google.maps.LatLng(lat,lng);req.radius=50000;req.origin=req.location}
      new google.maps.places.AutocompleteService().getPlacePredictions(req,(rows,status)=>{
@@ -159,7 +159,7 @@ async function searchLocations(term){
        a=a.map(x=>({label:x.description,placeId:x.place_id,distanceMeters:Number(x.distance_meters||0)}));
        if(hasOrigin)a.sort((x,y)=>(x.distanceMeters||999999999)-(y.distanceMeters||999999999));resolve(a.slice(0,8))
      })
-   })}catch(e){}
+   });if(ga.length)return ga}catch(e){}
  }
  const base=String(cfg().supabaseUrl||'').replace(/\/$/,''),key=String(cfg().supabasePublishableKey||cfg().supabaseAnonKey||'');
  if(base){try{const r=await fetch(base+'/functions/v1/location-search-live',{method:'POST',headers:{'content-type':'application/json',apikey:key},body:JSON.stringify({q:term,lat,lng,radius_km:50})});const j=await r.json();const a=(j.results||[]).slice(0,8).map(x=>({label:x.label||x.detail,lat:+x.lat,lng:+(x.lon??x.lng)}));if(a.length)return a}catch(e){}}
