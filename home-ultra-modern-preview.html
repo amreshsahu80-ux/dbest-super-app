@@ -4,7 +4,7 @@
  if(id==='car'){try{
    if(!window.DBEST_RUNTIME_CONFIG){await new Promise((ok,bad)=>{var s=document.createElement('script');s.src='/runtime-config.js?v=20261006-preview-direct-v13';s.onload=ok;s.onerror=bad;document.head.appendChild(s)})}
    if(window.DBEST_RUNTIME_READY)try{await window.DBEST_RUNTIME_READY}catch(e){}
-   await new Promise((ok,bad)=>{var s=document.createElement('script');s.src='/cab-selected-ui-v3.js?v=20261006-preview-direct-v13&t='+Date.now();s.setAttribute('data-preview-cab-v13','1');s.onload=ok;s.onerror=bad;document.body.appendChild(s)});
+   await new Promise((ok,bad)=>{var s=document.createElement('script');s.src='/cab-selected-ui-v3.js?v=20261006-preview-direct-v12&t='+Date.now();s.setAttribute('data-preview-cab-v13','1');s.onload=ok;s.onerror=bad;document.body.appendChild(s)});
    if(window.DBEST_CAB_SELECTED_UI&&typeof window.DBEST_CAB_SELECTED_UI.open==='function')return window.DBEST_CAB_SELECTED_UI.open();
    throw new Error('Cab V13 unavailable')
  }catch(e){console.error('Preview direct Cab',e);alert('Latest Cab preview could not open. Please refresh and retry.');return}}
