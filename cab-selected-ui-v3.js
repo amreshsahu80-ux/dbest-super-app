@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='20261007-nearby-resilient-v18';
+const VERSION='20261007-nearby-images-v19';
 const cfg=()=>window.DBEST_RUNTIME_CONFIG||{};
 const RECENT_KEY='dbest_cab_recent_places_v6';
 const IMG={
@@ -127,7 +127,8 @@ async function initLeaflet(){
 }
 async function reverseGoogle(lat,lng){if(S.provider!=='google'||!window.google?.maps?.Geocoder)return'';try{return await new Promise(resolve=>new google.maps.Geocoder().geocode({location:{lat,lng}},(rows,status)=>resolve(status==='OK'&&rows?.[0]?.formatted_address?rows[0].formatted_address:'')))}catch(e){return''}}
 async function reverseNominatim(lat,lng){try{const r=await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`,{headers:{Accept:'application/json'}});const j=await r.json();return j.display_name||''}catch(e){return''}}
-function placePhotoUrl(lat,lng,name){return 'https://maps.googleapis.com/maps/api/streetview?size=360x220&location='+encodeURIComponent(lat+','+lng)+'&fov=80&pitch=0&key='+encodeURIComponent(googleKey())}
+function placePhotoUrl(lat,lng,name){return 'https://maps.googleapis.com/maps/api/streetview?size=360x220&location='+encodeURIComponent(lat+','+lng)+'&fov=80&pitch=0&radius=120&return_error_code=true&key='+encodeURIComponent(googleKey())}
+function categoryVisual(cat){cat=String(cat||'').toLowerCase();const e=cat.includes('airport')?'✈️':cat.includes('rail')?'🚆':cat.includes('metro')?'🚇':cat.includes('hospital')?'🏥':cat.includes('mall')?'🛍️':cat.includes('hotel')?'🏨':cat.includes('park')?'🌳':'📍';return '<div class="cab6PlaceFallback">'+e+'</div>'}
 async function loadNearbyPlaces(lat,lng){
  const rail=$('cab6NearbyRail');if(!rail||!Number.isFinite(lat)||!Number.isFinite(lng))return;
  const near=p=>{const a=(Number(p.lat)-lat)*111.2,b=(Number(p.lng)-lng)*111.2*Math.cos(lat*Math.PI/180);return Math.hypot(a,b)};
