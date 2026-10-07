@@ -128,7 +128,33 @@ async function initLeaflet(){
 async function reverseGoogle(lat,lng){if(S.provider!=='google'||!window.google?.maps?.Geocoder)return'';try{return await new Promise(resolve=>new google.maps.Geocoder().geocode({location:{lat,lng}},(rows,status)=>resolve(status==='OK'&&rows?.[0]?.formatted_address?rows[0].formatted_address:'')))}catch(e){return''}}
 async function reverseNominatim(lat,lng){try{const r=await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`,{headers:{Accept:'application/json'}});const j=await r.json();return j.display_name||''}catch(e){return''}}
 function placePhotoUrl(lat,lng,name){return 'https://maps.googleapis.com/maps/api/streetview?size=360x220&location='+encodeURIComponent(lat+','+lng)+'&fov=80&pitch=0&key='+encodeURIComponent(googleKey())}
-async function loadNearbyPlaces(lat,lng){const rail=$('cab6NearbyRail');if(!rail||!Number.isFinite(lat)||!Number.isFinite(lng))return;await initSearchProvider();let rows=[];if(S.provider==='google'&&window.google?.maps?.places){try{const host=document.createElement('div'),svc=new google.maps.places.PlacesService(host);rows=await new Promise(resolve=>svc.nearbySearch({location:{lat,lng},radius:12000,type:'tourist_attraction'},(r,status)=>resolve(status===google.maps.places.PlacesServiceStatus.OK?(r||[]):[])))}catch(e){}}if(!rows.length){try{const terms=['attraction','landmark','museum','park','mall'];for(const term of terms){const q=await searchLocations(term);rows.push(...(q||[]).filter(x=>Number.isFinite(Number(x.lat))&&Number.isFinite(Number(x.lng))).map(x=>({name:String(x.label||'').split(',')[0],geometry:{location:{lat:()=>Number(x.lat),lng:()=>Number(x.lng)}}})));if(rows.length>=6)break}}catch(e){}}rows=(rows||[]).filter(x=>x?.name).slice(0,6);if(!rows.length){rail.innerHTML='<div style="font-size:9px;color:#8a93a8;padding:7px 2px">Type a destination to see local suggestions.</div>';return}rail.innerHTML=rows.map((r,i)=>{const la=typeof r.geometry?.location?.lat==='function'?r.geometry.location.lat():Number(r.lat),ln=typeof r.geometry?.location?.lng==='function'?r.geometry.location.lng():Number(r.lng),photo=r.photos?.[0]?.getUrl?r.photos[0].getUrl({maxWidth:360,maxHeight:220}):(googleKey()?placePhotoUrl(la,ln,r.name):'');return '<button type="button" class="cab6Place" data-place="'+esc(r.name)+'" data-lat="'+la+'" data-lng="'+ln+'">'+(photo?'<img loading="lazy" src="'+esc(photo)+'" alt="">':'<div class="cab6PlaceFallback">📍</div>')+'<span>'+esc(r.name)+'</span></button>'}).join('');qa('.cab6Place',rail).forEach(b=>b.onclick=()=>{const d=$('cab6D');if(!d)return;d.value=b.dataset.place||'';S.d={label:d.value,lat:Number(b.dataset.lat),lng:Number(b.dataset.lng)};d.dispatchEvent(new Event('input',{bubbles:true}))})}
+async function loadNearbyPlaces(lat,lng){
+ const rail=$('cab6NearbyRail');if(!rail||!Number.isFinite(lat)||!Number.isFinite(lng))return;
+ const near=(p)=>{const a=(Number(p.lat)-lat)*111.2,b=(Number(p.lng)-lng)*111.2*Math.cos(lat*Math.PI/180);return Math.hypot(a,b)};
+ const deadline=(p,ms)=>Promise.race([p,new Promise(resolve=>setTimeout(()=>resolve([]),ms))]);
+ let rows=[];
+ try{
+  await deadline(initSearchProvider(),3200);
+  if(S.provider==='google'&&window.google?.maps?.places){
+   rows=await deadline(new Promise(resolve=>{
+    try{const host=document.createElement('div'),svc=new google.maps.places.PlacesService(host);
+     svc.nearbySearch({location:{lat,lng},radius:12000,type:'tourist_attraction'},(r,status)=>resolve(status===google.maps.places.PlacesServiceStatus.OK?(r||[]):[]))
+    }catch(e){resolve([])}
+   }),4500);
+  }
+  if(!rows.length){
+   const terms=['tourist attraction','museum','shopping mall','park'];
+   const found=await Promise.all(terms.map(t=>deadline(searchLocations(t).catch(()=>[]),4500)));
+   rows=found.flat().filter(p=>Number.isFinite(Number(p.lat))&&Number.isFinite(Number(p.lng))&&near(p)<=20).map(p=>({name:String(p.label||'').split(',')[0],lat:Number(p.lat),lng:Number(p.lng)}));
+  }
+  const seen=new Set();rows=rows.map(p=>{const loc=p.geometry?.location;return {...p,lat:typeof loc?.lat==='function'?loc.lat():Number(p.lat),lng:typeof loc?.lng==='function'?loc.lng():Number(p.lng)}}).filter(p=>p.name&&Number.isFinite(p.lat)&&Number.isFinite(p.lng)&&near(p)<=20).sort((a,b)=>near(a)-near(b)).filter(p=>{const k=p.name.toLowerCase();if(seen.has(k))return false;seen.add(k);return true}).slice(0,6);
+  if(!rows.length){rail.innerHTML='<div class="cab6PlaceFallback" style="padding:18px;border-radius:15px;font-size:12px">Nearby places are temporarily unavailable. You can still search destinations above.</div>';return}
+  rail.innerHTML=rows.map(p=>{let photo='';try{if(p.photos?.[0]?.getUrl)photo=p.photos[0].getUrl({maxWidth:360,maxHeight:220});else if(String(cfg().googleMapsApiKey||'').trim())photo=placePhotoUrl(p.lat,p.lng,p.name)}catch(e){}
+   return '<button type="button" class="cab6Place" data-place="'+esc(p.name)+'" data-lat="'+p.lat+'" data-lng="'+p.lng+'">'+(photo?'<img loading="lazy" src="'+esc(photo)+'" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'grid\'" alt=""><div class="cab6PlaceFallback" style="display:none">📍</div>':'<div class="cab6PlaceFallback">📍</div>')+'<span>'+esc(p.name)+'</span></button>'
+  }).join('');
+  qa('.cab6Place',rail).forEach(b=>b.onclick=()=>{const d=$('cab6D');if(!d)return;S.d={label:b.dataset.place||'',lat:Number(b.dataset.lat),lng:Number(b.dataset.lng)};d.value=S.d.label;const suggestions=$('cab6DS');if(suggestions)suggestions.classList.remove('show')});
+ }catch(e){console.warn('Nearby places failed',e);rail.innerHTML='<div style="padding:12px;font-size:12px">Nearby places unavailable. Try destination search.</div>'}
+}
 async function useGps(noisy){if(!navigator.geolocation){if(noisy)say('Location is not supported on this device.');return}navigator.geolocation.getCurrentPosition(async p=>{await initSearchProvider();const lat=p.coords.latitude,lng=p.coords.longitude;const label=await reverseGoogle(lat,lng)||await reverseNominatim(lat,lng)||`Current location (${lat.toFixed(5)}, ${lng.toFixed(5)})`;S.p={lat,lng,label};if($('cab6P'))$('cab6P').value=label;renderEntryMap();loadNearbyPlaces(lat,lng)},()=>{if(noisy)say('Please allow location access or enter pickup manually.')},{enableHighAccuracy:true,timeout:12000,maximumAge:30000})}
 async function renderEntryMap(){
  const el=$('cab6EntryMap');if(!el)return;
