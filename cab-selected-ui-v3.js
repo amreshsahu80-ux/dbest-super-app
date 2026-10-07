@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='20261007-entry-stability-v17';
+const VERSION='20261007-nearby-resilient-v18';
 const cfg=()=>window.DBEST_RUNTIME_CONFIG||{};
 const RECENT_KEY='dbest_cab_recent_places_v6';
 const IMG={
@@ -130,30 +130,30 @@ async function reverseNominatim(lat,lng){try{const r=await fetch(`https://nomina
 function placePhotoUrl(lat,lng,name){return 'https://maps.googleapis.com/maps/api/streetview?size=360x220&location='+encodeURIComponent(lat+','+lng)+'&fov=80&pitch=0&key='+encodeURIComponent(googleKey())}
 async function loadNearbyPlaces(lat,lng){
  const rail=$('cab6NearbyRail');if(!rail||!Number.isFinite(lat)||!Number.isFinite(lng))return;
- const near=(p)=>{const a=(Number(p.lat)-lat)*111.2,b=(Number(p.lng)-lng)*111.2*Math.cos(lat*Math.PI/180);return Math.hypot(a,b)};
+ const near=p=>{const a=(Number(p.lat)-lat)*111.2,b=(Number(p.lng)-lng)*111.2*Math.cos(lat*Math.PI/180);return Math.hypot(a,b)};
  const deadline=(p,ms)=>Promise.race([p,new Promise(resolve=>setTimeout(()=>resolve([]),ms))]);
- let rows=[];
+ const add=(bag,rows,cat)=>{for(const p of (rows||[])){const loc=p.geometry?.location,plat=typeof loc?.lat==='function'?loc.lat():Number(p.lat),plng=typeof loc?.lng==='function'?loc.lng():Number(p.lng);const name=String(p.name||p.label||'').split(',')[0].trim();if(name&&Number.isFinite(plat)&&Number.isFinite(plng))bag.push({...p,name,lat:plat,lng:plng,cat})}};
+ let bag=[];
  try{
-  await deadline(initSearchProvider(),3200);
+  await deadline(initSearchProvider(),3500);
   if(S.provider==='google'&&window.google?.maps?.places){
-   rows=await deadline(new Promise(resolve=>{
-    try{const host=document.createElement('div'),svc=new google.maps.places.PlacesService(host);
-     svc.nearbySearch({location:{lat,lng},radius:12000,type:'tourist_attraction'},(r,status)=>resolve(status===google.maps.places.PlacesServiceStatus.OK?(r||[]):[]))
-    }catch(e){resolve([])}
-   }),4500);
+   const svc=new google.maps.places.PlacesService(document.createElement('div'));
+   const types=[['airport','Airport'],['train_station','Railway'],['subway_station','Metro'],['hospital','Hospital'],['shopping_mall','Mall'],['lodging','Hotel'],['tourist_attraction','Attraction'],['park','Park']];
+   const groups=await Promise.all(types.map(([type,cat])=>deadline(new Promise(resolve=>{try{svc.nearbySearch({location:{lat,lng},radius:18000,type},(r,status)=>resolve(status===google.maps.places.PlacesServiceStatus.OK?(r||[]):[]))}catch(e){resolve([])}}),5000).then(rows=>({rows,cat}))));
+   groups.forEach(g=>add(bag,g.rows,g.cat));
   }
-  if(!rows.length){
-   const terms=['tourist attraction','museum','shopping mall','park'];
-   const found=await Promise.all(terms.map(t=>deadline(searchLocations(t).catch(()=>[]),4500)));
-   rows=found.flat().filter(p=>Number.isFinite(Number(p.lat))&&Number.isFinite(Number(p.lng))&&near(p)<=20).map(p=>({name:String(p.label||'').split(',')[0],lat:Number(p.lat),lng:Number(p.lng)}));
-  }
-  const seen=new Set();rows=rows.map(p=>{const loc=p.geometry?.location;return {...p,lat:typeof loc?.lat==='function'?loc.lat():Number(p.lat),lng:typeof loc?.lng==='function'?loc.lng():Number(p.lng)}}).filter(p=>p.name&&Number.isFinite(p.lat)&&Number.isFinite(p.lng)&&near(p)<=20).sort((a,b)=>near(a)-near(b)).filter(p=>{const k=p.name.toLowerCase();if(seen.has(k))return false;seen.add(k);return true}).slice(0,6);
-  if(!rows.length){rail.innerHTML='<div style="padding:10px 12px;border:1px solid #e5e7eb;border-radius:14px;background:#fff;font-size:11px;color:#64748b">No nearby suggestions right now. Pickup and destination search remain available.</div>';return}
-  rail.innerHTML=rows.map(p=>{let photo='';try{if(p.photos?.[0]?.getUrl)photo=p.photos[0].getUrl({maxWidth:360,maxHeight:220});else if(String(cfg().googleMapsApiKey||'').trim())photo=placePhotoUrl(p.lat,p.lng,p.name)}catch(e){}
-   return '<button type="button" class="cab6Place" data-place="'+esc(p.name)+'" data-lat="'+p.lat+'" data-lng="'+p.lng+'">'+(photo?'<img loading="lazy" src="'+esc(photo)+'" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'grid\'" alt=""><div class="cab6PlaceFallback" style="display:none">📍</div>':'<div class="cab6PlaceFallback">📍</div>')+'<span>'+esc(p.name)+'</span></button>'
-  }).join('');
-  qa('.cab6Place',rail).forEach(b=>b.onclick=()=>{const d=$('cab6D');if(!d)return;S.d={label:b.dataset.place||'',lat:Number(b.dataset.lat),lng:Number(b.dataset.lng)};d.value=S.d.label;const suggestions=$('cab6DS');if(suggestions)suggestions.classList.remove('show')});
- }catch(e){console.warn('Nearby places failed',e);rail.innerHTML='<div style="padding:10px 12px;border:1px solid #e5e7eb;border-radius:14px;background:#fff;font-size:11px;color:#64748b">No nearby suggestions right now. Pickup and destination search remain available.</div>'}
+  const fallbackTerms=['airport','railway station','metro station','hospital','shopping mall','hotel','tourist attraction','park'];
+  const fall=await Promise.all(fallbackTerms.map(term=>deadline(searchLocations(term).catch(()=>[]),6000).then(rows=>({rows,cat:term}))));
+  fall.forEach(g=>add(bag,g.rows,g.cat));
+  const seen=new Set(),cats=new Set();
+  let rows=bag.filter(p=>near(p)<=25).sort((x,y)=>near(x)-near(y)).filter(p=>{const k=p.name.toLowerCase();if(seen.has(k))return false;seen.add(k);return true});
+  const diverse=[];for(const p of rows){const cat=String(p.cat||'other');if(!cats.has(cat)){diverse.push(p);cats.add(cat)}if(diverse.length>=6)break}
+  if(diverse.length<6)for(const p of rows){if(!diverse.includes(p))diverse.push(p);if(diverse.length>=6)break}
+  rows=diverse;
+  if(!rows.length){rail.innerHTML='<div style="padding:10px 12px;border:1px solid #e5e7eb;border-radius:14px;background:#fff;font-size:11px;color:#64748b">Nearby suggestions are refreshing. Pickup and destination search remain available.</div>';setTimeout(()=>{if(S.p&&Math.abs(Number(S.p.lat)-lat)<.001&&Math.abs(Number(S.p.lng)-lng)<.001)loadNearbyPlaces(lat,lng)},5000);return}
+  rail.innerHTML=rows.map(p=>{let photo='';try{if(p.photos?.[0]?.getUrl)photo=p.photos[0].getUrl({maxWidth:360,maxHeight:220});else if(String(cfg().googleMapsApiKey||'').trim())photo=placePhotoUrl(p.lat,p.lng,p.name)}catch(e){}return '<button type="button" class="cab6Place" data-place="'+esc(p.name)+'" data-lat="'+p.lat+'" data-lng="'+p.lng+'">'+(photo?'<img loading="lazy" src="'+esc(photo)+'" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'grid\'" alt=""><div class="cab6PlaceFallback" style="display:none">📍</div>':'<div class="cab6PlaceFallback">📍</div>')+'<span>'+esc(p.name)+'</span></button>'}).join('');
+  qa('.cab6Place',rail).forEach(btn=>btn.onclick=()=>{const d=$('cab6D');if(!d)return;S.d={label:btn.dataset.place||'',lat:Number(btn.dataset.lat),lng:Number(btn.dataset.lng)};d.value=S.d.label;$('cab6DS')?.classList.remove('show')});
+ }catch(e){console.warn('Nearby places failed',e);rail.innerHTML='<div style="padding:10px 12px;border:1px solid #e5e7eb;border-radius:14px;background:#fff;font-size:11px;color:#64748b">Nearby suggestions are refreshing. Pickup and destination search remain available.</div>'}
 }
 async function useGps(noisy){if(!navigator.geolocation){if(noisy)say('Location is not supported on this device.');return}navigator.geolocation.getCurrentPosition(async p=>{await initSearchProvider();const lat=p.coords.latitude,lng=p.coords.longitude;const label=await reverseGoogle(lat,lng)||await reverseNominatim(lat,lng)||`Current location (${lat.toFixed(5)}, ${lng.toFixed(5)})`;S.p={lat,lng,label};if($('cab6P'))$('cab6P').value=label;renderEntryMap();loadNearbyPlaces(lat,lng)},()=>{if(noisy)say('Please allow location access or enter pickup manually.')},{enableHighAccuracy:true,timeout:12000,maximumAge:30000})}
 async function renderEntryMap(){
