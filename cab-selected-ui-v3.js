@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='20261005-local-smart-search-v9';
+const VERSION='20261006-preview-direct-v12';
 const cfg=()=>window.DBEST_RUNTIME_CONFIG||{};
 const RECENT_KEY='dbest_cab_recent_places_v6';
 const IMG={
@@ -91,7 +91,7 @@ body:has(.cab6Page) #dbestServicePartnerQuick,body:has(.cab6Page) .floatingServi
 .cab6Veh.on{border-color:#6366f1;background:linear-gradient(145deg,#f5f3ff,#eef2ff);box-shadow:0 0 0 2px rgba(99,102,241,.10),0 10px 22px rgba(79,70,229,.10)}
 @media(max-width:700px){.cab6Wrap{padding-top:9px}.cab6Search{border-radius:29px}.cab6Top{min-height:60px}.cab6Top button{width:42px;height:42px}}
 
-.cab6Nearby{margin:13px 0 3px}.cab6NearbyHead{display:flex;justify-content:space-between;align-items:end;margin:0 3px 8px}.cab6NearbyHead b{font-size:12px;color:#202947}.cab6NearbyHead small{font-size:8.5px;color:#8a93a8}.cab6NearbyRail{display:flex;gap:9px;overflow-x:auto;padding:2px 2px 8px;scrollbar-width:none}.cab6NearbyRail::-webkit-scrollbar{display:none}.cab6Place{position:relative;flex:0 0 128px;height:88px;border:0;border-radius:17px;overflow:hidden;padding:0;background:linear-gradient(135deg,#6366f1,#22c1c3);box-shadow:0 9px 22px rgba(40,49,100,.13);text-align:left}.cab6Place img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}.cab6Place:after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,transparent 25%,rgba(8,15,38,.82))}.cab6Place span{position:absolute;z-index:2;left:9px;right:8px;bottom:8px;color:#fff;font-size:10px;font-weight:900;text-shadow:0 1px 3px #000}.cab6Place.loading{display:grid;place-items:center;color:#fff;font-size:9px;font-weight:850}.cab6Place.loading:after{display:none}
+.cab6Nearby{margin:13px 0 3px}.cab6NearbyHead{display:flex;justify-content:space-between;align-items:end;margin:0 3px 8px}.cab6NearbyHead b{font-size:12px;color:#202947}.cab6NearbyHead small{font-size:8.5px;color:#8a93a8}.cab6NearbyRail{display:flex;gap:9px;overflow-x:auto;padding:2px 2px 8px;scrollbar-width:none}.cab6NearbyRail::-webkit-scrollbar{display:none}.cab6Place{position:relative;flex:0 0 128px;height:88px;border:0;border-radius:17px;overflow:hidden;padding:0;background:linear-gradient(135deg,#6366f1,#22c1c3);box-shadow:0 9px 22px rgba(40,49,100,.13);text-align:left}.cab6Place img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}.cab6Place:after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,transparent 25%,rgba(8,15,38,.82))}.cab6PlaceFallback{position:absolute;inset:0;display:grid;place-items:center;font-size:38px;background:linear-gradient(145deg,#dbeafe,#ede9fe)}.cab6Place span{position:absolute;z-index:2;left:9px;right:8px;bottom:8px;color:#fff;font-size:10px;font-weight:900;text-shadow:0 1px 3px #000}.cab6Place.loading{display:grid;place-items:center;color:#fff;font-size:9px;font-weight:850}.cab6Place.loading:after{display:none}
 .cab6Top.cab6IconNav{grid-template-columns:48px 1fr 48px;min-height:58px;padding:6px 16px}.cab6Top.cab6IconNav button{width:44px;height:44px;font-size:0!important}.cab6Top.cab6IconNav button:first-child:after{content:'←';font-size:25px!important}.cab6Top.cab6IconNav button:last-child:after{content:'⌂';font-size:23px!important}.cab6Top.cab6IconNav>div{min-height:1px}
 .cab6Top.cab6HeroNav{grid-template-columns:48px 1fr 48px;min-height:78px;padding:8px 16px;background:linear-gradient(105deg,rgba(255,255,255,.96),rgba(246,245,255,.95) 48%,rgba(239,248,255,.96));border-bottom:1px solid rgba(99,102,241,.10)}.cab6HeroCopy{text-align:center;line-height:1.08}.cab6HeroCopy .cab6HeroEyebrow{display:inline-block;margin-bottom:3px;padding:3px 8px;border-radius:999px;background:linear-gradient(90deg,#ede9fe,#e0f2fe);color:#5b4ce6;font-size:7.5px;font-weight:950;letter-spacing:.9px;text-transform:uppercase}.cab6HeroCopy b{display:block;font-size:17px;letter-spacing:-.35px;background:linear-gradient(90deg,#17203d,#6d3df5 55%,#1677ef);-webkit-background-clip:text;color:transparent}.cab6HeroCopy small{display:block;margin-top:4px;color:#8a93a8;font-size:8.5px;font-weight:800}.cab6Top.cab6HeroNav button{background:rgba(255,255,255,.92);border-color:rgba(99,102,241,.14);box-shadow:0 8px 22px rgba(79,70,229,.10)}
 .cab6Suggest button b{display:block;font-size:11px;color:#202947}.cab6Suggest button small{display:block;margin-top:3px;color:#8b94a8;font-size:8.5px}.cab6NearbyHead b{font-size:14px}.cab6NearbyRail{gap:11px;padding-bottom:10px}.cab6Place{flex-basis:154px;height:106px;border-radius:19px}.cab6Place span{font-size:11px;bottom:10px}.cab6Nearby{margin-top:16px;margin-bottom:8px}
@@ -128,7 +128,33 @@ async function initLeaflet(){
 async function reverseGoogle(lat,lng){if(S.provider!=='google'||!window.google?.maps?.Geocoder)return'';try{return await new Promise(resolve=>new google.maps.Geocoder().geocode({location:{lat,lng}},(rows,status)=>resolve(status==='OK'&&rows?.[0]?.formatted_address?rows[0].formatted_address:'')))}catch(e){return''}}
 async function reverseNominatim(lat,lng){try{const r=await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`,{headers:{Accept:'application/json'}});const j=await r.json();return j.display_name||''}catch(e){return''}}
 function placePhotoUrl(lat,lng,name){return 'https://maps.googleapis.com/maps/api/streetview?size=360x220&location='+encodeURIComponent(lat+','+lng)+'&fov=80&pitch=0&key='+encodeURIComponent(googleKey())}
-async function loadNearbyPlaces(lat,lng){const rail=$('cab6NearbyRail');if(!rail||!Number.isFinite(lat)||!Number.isFinite(lng))return;await initSearchProvider();let rows=[];if(S.provider==='google'&&window.google?.maps?.places){try{const host=document.createElement('div'),svc=new google.maps.places.PlacesService(host);rows=await new Promise(resolve=>svc.nearbySearch({location:{lat,lng},radius:12000,type:'tourist_attraction'},(r,status)=>resolve(status===google.maps.places.PlacesServiceStatus.OK?(r||[]):[])))}catch(e){}}if(!rows.length){try{const q=await searchLocations('landmark');rows=(q||[]).filter(x=>Number.isFinite(Number(x.lat))&&Number.isFinite(Number(x.lng))).slice(0,6).map(x=>({name:String(x.label||'').split(',')[0],geometry:{location:{lat:()=>Number(x.lat),lng:()=>Number(x.lng)}}}))}catch(e){}}rows=(rows||[]).filter(x=>x?.name).slice(0,6);if(!rows.length){rail.innerHTML='<div style="font-size:9px;color:#8a93a8;padding:7px 2px">Type a destination to see local suggestions.</div>';return}rail.innerHTML=rows.map((r,i)=>{const la=typeof r.geometry?.location?.lat==='function'?r.geometry.location.lat():Number(r.lat),ln=typeof r.geometry?.location?.lng==='function'?r.geometry.location.lng():Number(r.lng),photo=r.photos?.[0]?.getUrl?r.photos[0].getUrl({maxWidth:360,maxHeight:220}):(googleKey()?placePhotoUrl(la,ln,r.name):'');return '<button type="button" class="cab6Place" data-place="'+esc(r.name)+'" data-lat="'+la+'" data-lng="'+ln+'">'+(photo?'<img loading="lazy" src="'+esc(photo)+'" alt="">':'')+'<span>'+esc(r.name)+'</span></button>'}).join('');qa('.cab6Place',rail).forEach(b=>b.onclick=()=>{const d=$('cab6D');if(!d)return;d.value=b.dataset.place||'';S.d={label:d.value,lat:Number(b.dataset.lat),lng:Number(b.dataset.lng)};d.dispatchEvent(new Event('input',{bubbles:true}))})}
+async function loadNearbyPlaces(lat,lng){
+ const rail=$('cab6NearbyRail');if(!rail||!Number.isFinite(lat)||!Number.isFinite(lng))return;
+ const near=(p)=>{const a=(Number(p.lat)-lat)*111.2,b=(Number(p.lng)-lng)*111.2*Math.cos(lat*Math.PI/180);return Math.hypot(a,b)};
+ const deadline=(p,ms)=>Promise.race([p,new Promise(resolve=>setTimeout(()=>resolve([]),ms))]);
+ let rows=[];
+ try{
+  await deadline(initSearchProvider(),3200);
+  if(S.provider==='google'&&window.google?.maps?.places){
+   rows=await deadline(new Promise(resolve=>{
+    try{const host=document.createElement('div'),svc=new google.maps.places.PlacesService(host);
+     svc.nearbySearch({location:{lat,lng},radius:12000,type:'tourist_attraction'},(r,status)=>resolve(status===google.maps.places.PlacesServiceStatus.OK?(r||[]):[]))
+    }catch(e){resolve([])}
+   }),4500);
+  }
+  if(!rows.length){
+   const terms=['tourist attraction','museum','shopping mall','park'];
+   const found=await Promise.all(terms.map(t=>deadline(searchLocations(t).catch(()=>[]),4500)));
+   rows=found.flat().filter(p=>Number.isFinite(Number(p.lat))&&Number.isFinite(Number(p.lng))&&near(p)<=20).map(p=>({name:String(p.label||'').split(',')[0],lat:Number(p.lat),lng:Number(p.lng)}));
+  }
+  const seen=new Set();rows=rows.map(p=>{const loc=p.geometry?.location;return {...p,lat:typeof loc?.lat==='function'?loc.lat():Number(p.lat),lng:typeof loc?.lng==='function'?loc.lng():Number(p.lng)}}).filter(p=>p.name&&Number.isFinite(p.lat)&&Number.isFinite(p.lng)&&near(p)<=20).sort((a,b)=>near(a)-near(b)).filter(p=>{const k=p.name.toLowerCase();if(seen.has(k))return false;seen.add(k);return true}).slice(0,6);
+  if(!rows.length){rail.innerHTML='<div class="cab6PlaceFallback" style="padding:18px;border-radius:15px;font-size:12px">Nearby places are temporarily unavailable. You can still search destinations above.</div>';return}
+  rail.innerHTML=rows.map(p=>{let photo='';try{if(p.photos?.[0]?.getUrl)photo=p.photos[0].getUrl({maxWidth:360,maxHeight:220});else if(String(cfg().googleMapsApiKey||'').trim())photo=placePhotoUrl(p.lat,p.lng,p.name)}catch(e){}
+   return '<button type="button" class="cab6Place" data-place="'+esc(p.name)+'" data-lat="'+p.lat+'" data-lng="'+p.lng+'">'+(photo?'<img loading="lazy" src="'+esc(photo)+'" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'grid\'" alt=""><div class="cab6PlaceFallback" style="display:none">📍</div>':'<div class="cab6PlaceFallback">📍</div>')+'<span>'+esc(p.name)+'</span></button>'
+  }).join('');
+  qa('.cab6Place',rail).forEach(b=>b.onclick=()=>{const d=$('cab6D');if(!d)return;S.d={label:b.dataset.place||'',lat:Number(b.dataset.lat),lng:Number(b.dataset.lng)};d.value=S.d.label;const suggestions=$('cab6DS');if(suggestions)suggestions.classList.remove('show')});
+ }catch(e){console.warn('Nearby places failed',e);rail.innerHTML='<div style="padding:12px;font-size:12px">Nearby places unavailable. Try destination search.</div>'}
+}
 async function useGps(noisy){if(!navigator.geolocation){if(noisy)say('Location is not supported on this device.');return}navigator.geolocation.getCurrentPosition(async p=>{await initSearchProvider();const lat=p.coords.latitude,lng=p.coords.longitude;const label=await reverseGoogle(lat,lng)||await reverseNominatim(lat,lng)||`Current location (${lat.toFixed(5)}, ${lng.toFixed(5)})`;S.p={lat,lng,label};if($('cab6P'))$('cab6P').value=label;renderEntryMap();loadNearbyPlaces(lat,lng)},()=>{if(noisy)say('Please allow location access or enter pickup manually.')},{enableHighAccuracy:true,timeout:12000,maximumAge:30000})}
 async function renderEntryMap(){
  const el=$('cab6EntryMap');if(!el)return;
@@ -147,12 +173,30 @@ async function renderEntryMap(){
  }catch(e){console.warn('Entry map failed',e)}
 }
 async function searchLocations(term){
- if(term.length<2)return[];await initSearchProvider();
- const origin=(S.p&&Number.isFinite(S.p.lat)&&Number.isFinite(S.p.lng))?new google.maps.LatLng(S.p.lat,S.p.lng):null;
- if(S.provider==='google'&&window.google?.maps?.places){return await new Promise(resolve=>{const req={input:term,componentRestrictions:{country:'in'}};if(origin){req.location=origin;req.radius=50000;req.origin=origin}new google.maps.places.AutocompleteService().getPlacePredictions(req,(rows,status)=>{let a=status===google.maps.places.PlacesServiceStatus.OK?(rows||[]):[];a=a.map(x=>({label:x.description,placeId:x.place_id,distanceMeters:Number(x.distance_meters||0)}));if(origin)a.sort((x,y)=>(x.distanceMeters||999999999)-(y.distanceMeters||999999999));resolve(a.slice(0,8))})})}
+ term=String(term||'').trim();if(term.length<2)return[];await initSearchProvider();
+ const hasOrigin=S.p&&Number.isFinite(Number(S.p.lat))&&Number.isFinite(Number(S.p.lng));
+ const lat=hasOrigin?Number(S.p.lat):null,lng=hasOrigin?Number(S.p.lng):null;
+ if(S.provider==='google'&&window.google?.maps?.places){
+   try{const ga=await new Promise(resolve=>{
+     const req={input:term,componentRestrictions:{country:'in'}};
+     if(hasOrigin){req.location=new google.maps.LatLng(lat,lng);req.radius=50000;req.origin=req.location}
+     new google.maps.places.AutocompleteService().getPlacePredictions(req,(rows,status)=>{
+       let a=status===google.maps.places.PlacesServiceStatus.OK?(rows||[]):[];
+       a=a.map(x=>({label:x.description,placeId:x.place_id,distanceMeters:Number(x.distance_meters||0)}));
+       if(hasOrigin)a.sort((x,y)=>(x.distanceMeters||999999999)-(y.distanceMeters||999999999));resolve(a.slice(0,8))
+     })
+   });if(ga.length)return ga}catch(e){}
+ }
  const base=String(cfg().supabaseUrl||'').replace(/\/$/,''),key=String(cfg().supabasePublishableKey||cfg().supabaseAnonKey||'');
- if(base){try{const r=await fetch(base+'/functions/v1/location-search-live',{method:'POST',headers:{'content-type':'application/json',apikey:key},body:JSON.stringify({q:term})});const j=await r.json();const a=(j.results||[]).slice(0,8).map(x=>({label:x.label||x.detail,lat:+x.lat,lng:+(x.lon??x.lng)}));if(a.length)return a}catch(e){}}
- try{const r=await fetch('https://nominatim.openstreetmap.org/search?format=json&countrycodes=in&limit=8&q='+encodeURIComponent(term),{headers:{Accept:'application/json'}});const j=await r.json();return (j||[]).map(x=>({label:x.display_name,lat:+x.lat,lng:+x.lon}))}catch(e){return[]}
+ if(base){try{const r=await fetch(base+'/functions/v1/location-search-live',{method:'POST',headers:{'content-type':'application/json',apikey:key},body:JSON.stringify({q:term,lat,lon:lng,radius_km:50})});const j=await r.json();const a=(j.results||[]).slice(0,8).map(x=>({label:x.label||x.detail,lat:+x.lat,lng:+(x.lon??x.lng)}));if(a.length)return a}catch(e){}}
+ try{
+   const view=hasOrigin?'&viewbox='+encodeURIComponent((lng-.7)+','+(lat+.7)+','+(lng+.7)+','+(lat-.7))+'&bounded=0':'';
+   const localQ=hasOrigin?term:term+', India';
+   const r=await fetch('https://nominatim.openstreetmap.org/search?format=json&countrycodes=in&addressdetails=1&limit=10'+view+'&q='+encodeURIComponent(localQ),{headers:{Accept:'application/json'}});
+   let a=(await r.json()||[]).map(x=>({label:x.display_name,lat:+x.lat,lng:+x.lon}));
+   if(hasOrigin){const d=(p)=>{const dy=(p.lat-lat)*111,dx=(p.lng-lng)*111*Math.cos(lat*Math.PI/180);return Math.sqrt(dx*dx+dy*dy)};a.sort((x,y)=>d(x)-d(y))}
+   return a.slice(0,8)
+ }catch(e){return[]}
 }
 async function resolvePlace(x){if(x?.lat!=null)return x;if(S.provider==='google'&&x?.placeId){return await new Promise(resolve=>{const svc=new google.maps.places.PlacesService(document.createElement('div'));svc.getDetails({placeId:x.placeId,fields:['geometry','formatted_address','name']},(p,status)=>{if(status===google.maps.places.PlacesServiceStatus.OK&&p.geometry?.location)resolve({label:p.formatted_address||p.name||x.label,lat:p.geometry.location.lat(),lng:p.geometry.location.lng()});else resolve(null)})})}return null}
 async function geocodeText(v){v=String(v||'').trim();if(v.length<3)return null;await initSearchProvider();if(S.provider==='google'&&window.google?.maps?.Geocoder){try{return await new Promise(resolve=>new google.maps.Geocoder().geocode({address:v,componentRestrictions:{country:'IN'}},(rows,status)=>{const r=rows?.[0],l=r?.geometry?.location;resolve(status==='OK'&&l?{label:r.formatted_address||v,lat:l.lat(),lng:l.lng()}:null)}))}catch(e){}}const a=await searchLocations(v);return a[0]?resolvePlace(a[0]):null}
