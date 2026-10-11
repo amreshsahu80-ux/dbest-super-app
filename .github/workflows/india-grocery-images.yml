@@ -1,0 +1,33 @@
+name: Build India Grocery Photo Catalogue (Staging)
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - home-modern-production-staging-20261007
+    paths:
+      - scripts/fetch_india_grocery_images.py
+      - .github/workflows/india-grocery-images.yml
+permissions:
+  contents: write
+jobs:
+  catalogue:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: home-modern-production-staging-20261007
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Fetch verified India front-pack photographs
+        run: python scripts/fetch_india_grocery_images.py
+      - name: Commit staging catalogue if updated
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add grocery-india-images.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Populate India grocery photo catalogue from Open Food Facts"
+            git push origin HEAD:home-modern-production-staging-20261007
+          fi
