@@ -1,0 +1,34 @@
+name: Persist Verified Indian Restaurant Photos (Staging)
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - home-modern-production-staging-20261007
+    paths:
+      - scripts/import_restaurant_photos.py
+      - .github/workflows/import-restaurant-photos.yml
+permissions:
+  contents: write
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: home-modern-production-staging-20261007
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Match and persist Commons images
+        run: python scripts/import_restaurant_photos.py
+      - name: Commit catalogue with images
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add restaurant-india-catalog.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Persist matched Indian restaurant product images"
+            git pull --rebase origin home-modern-production-staging-20261007
+            git push origin HEAD:home-modern-production-staging-20261007
+          fi
