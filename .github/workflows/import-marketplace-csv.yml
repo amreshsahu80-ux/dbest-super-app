@@ -1,0 +1,34 @@
+name: Import Marketplace CSV Sources (Staging)
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - home-modern-production-staging-20261007
+    paths:
+      - scripts/import_marketplace_categories.py
+      - .github/workflows/import-marketplace-csv.yml
+permissions:
+  contents: write
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: home-modern-production-staging-20261007
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Download public category CSV sources for staging review
+        run: python scripts/import_marketplace_categories.py
+      - name: Commit review datasets
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add grocery-openmrp-review.json restaurant-india-catalog.json medicine-india-catalog-review.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Stage marketplace CSV category data for review"
+            git pull --rebase origin home-modern-production-staging-20261007
+            git push origin HEAD:home-modern-production-staging-20261007
+          fi
