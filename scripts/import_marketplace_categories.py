@@ -54,6 +54,6 @@ def grocery_openmrp():
         if len(out)>=10000:break
     write("grocery-openmrp-review.json",out,"OpenMRP","Open data requires ODbL attribution/share-alike; images separately CC BY-SA; vendor prices must be supplied independently.")
 if __name__=="__main__":
-    for fn in (grocery_openmrp,restaurant,medicines):
+    for fn in (medicines,grocery_openmrp):
         try:fn()
         except Exception as e:print("SOURCE_UNAVAILABLE",fn.__name__,str(e))
