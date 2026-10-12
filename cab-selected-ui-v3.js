@@ -139,12 +139,25 @@ async function loadNearbyPlaces(lat,lng){
   qa('.cab6Place',rail).forEach(btn=>btn.onclick=()=>{const d=$('cab6D');if(!d)return;d.value=btn.dataset.place;S.d={label:d.value,lat:Number(btn.dataset.lat),lng:Number(btn.dataset.lng)};$('cab6DS')?.classList.remove('show')});
  };
  const browserGoogleNearby=async()=>{
-  await Promise.race([initSearchProvider(),new Promise(resolve=>setTimeout(resolve,5500))]);
+  await initSearchProvider();
   if(!window.google?.maps?.importLibrary)throw Error('Google Maps JavaScript not loaded');
   const {Place,SearchNearbyRankPreference}=await google.maps.importLibrary('places');
-  const result=await Place.searchNearby({fields:['displayName','location'],locationRestriction:{center:{lat,lng},radius:12000},maxResultCount:12,rankPreference:SearchNearbyRankPreference.POPULARITY});
-  const seen=new Set();
-  return (result.places||[]).map(p=>({name:String(p.displayName||'').trim(),lat:Number(typeof p.location?.lat==='function'?p.location.lat():p.location?.lat),lng:Number(typeof p.location?.lng==='function'?p.location.lng():p.location?.lng)})).filter(p=>{const k=p.name.toLowerCase();if(!k||seen.has(k)||!Number.isFinite(p.lat)||!Number.isFinite(p.lng))return false;seen.add(k);return true});
+  const seen=new Set(),all=[];
+  for(const radius of [12000,25000,45000]){
+   try{
+    const result=await Place.searchNearby({fields:['displayName','location'],locationRestriction:{center:{lat,lng},radius},maxResultCount:20,rankPreference:SearchNearbyRankPreference.DISTANCE});
+    for(const p of result.places||[]){
+     const name=String(p.displayName||'').trim();
+     const plat=Number(typeof p.location?.lat==='function'?p.location.lat():p.location?.lat);
+     const plng=Number(typeof p.location?.lng==='function'?p.location.lng():p.location?.lng);
+     const key=name.toLowerCase();
+     if(!key||seen.has(key)||!Number.isFinite(plat)||!Number.isFinite(plng))continue;
+     seen.add(key);all.push({name,lat:plat,lng:plng,distanceKm:Math.round(radius/1000)});
+    }
+    if(all.length>=8)break;
+   }catch(e){console.warn('DBest Places radius '+radius+'m failed',e);if(all.length)break}
+  }
+  return all;
  };
  const timer=setTimeout(()=>render([]),20000);
  try{
