@@ -147,6 +147,7 @@ async function reverseNominatim(lat,lng){
  }catch(e){console.warn('Pickup OSM reverse geocode failed',e);return ''}finally{clearTimeout(timer)}
 }
 function placePhotoUrl(lat,lng,name){return 'https://maps.googleapis.com/maps/api/streetview?size=360x220&location='+encodeURIComponent(lat+','+lng)+'&fov=80&pitch=0&key='+encodeURIComponent(googleKey())}
+/* Photo overlays are attached to the matching Google Place, never a generic image. */
 const CAB_PUBLIC_TYPES=['train_station','transit_station','bus_station','bus_stop','airport','hospital','university','college','school','shopping_mall','supermarket','market','park','tourist_attraction','museum','stadium','government_office','city_hall'];
 const CAB_PUBLIC_NAME=/\b(station|railway|airport|airstrip|hospital|medical|clinic|college|university|school|campus|mall|market|bazaar|park|garden|museum|stadium|bus stand|bus stop|terminal|tourist|temple|mandir|fort|zoo|shopping|government|court|district|police|bank|post office)\b/i;
 function cabPublicPlace(name,types){
@@ -159,7 +160,7 @@ async function loadNearbyPlaces(lat,lng){
  const requestId=String(Date.now())+'-'+Math.random();rail.dataset.requestId=requestId;
  const render=rows=>{if(!rail.isConnected||rail.dataset.requestId!==requestId)return;
   if(!rows.length){rail.innerHTML='<div style="padding:12px;color:#687386;font-size:12px">Nearby places are unavailable right now. You can enter a destination above.</div>';return}
-  rail.innerHTML=rows.slice(0,8).map(p=>'<button type="button" class="cab6Place" data-place="'+esc(p.name)+'" data-lat="'+p.lat+'" data-lng="'+p.lng+'"><span>'+esc(p.name)+'</span></button>').join('');
+  rail.innerHTML=rows.slice(0,8).map(p=>'<button type="button" class="cab6Place" data-place="'+esc(p.name)+'" data-lat="'+p.lat+'" data-lng="'+p.lng+'">'+(p.photo?'<img class="cab6PlacePhoto" alt="" loading="lazy" src="'+esc(p.photo)+'">':'')+'<span>'+esc(p.name)+'</span>'+(p.attribution?'<small class="cab6PhotoCredit">'+esc(p.attribution)+'</small>':'')+'</button>').join('');
   qa('.cab6Place',rail).forEach(btn=>btn.onclick=()=>{const d=$('cab6D');if(!d)return;d.value=btn.dataset.place;S.d={label:d.value,lat:Number(btn.dataset.lat),lng:Number(btn.dataset.lng)};$('cab6DS')?.classList.remove('show')});
  };
  const browserGoogleNearby=async()=>{
@@ -173,12 +174,12 @@ async function loadNearbyPlaces(lat,lng){
    const plng=Number(typeof p.location?.lng==='function'?p.location.lng():p.location?.lng);
    const key=name.toLowerCase();
    if(!cabPublicPlace(name,[p.primaryType,...(p.types||[])])||seen.has(key)||!Number.isFinite(plat)||!Number.isFinite(plng))continue;
-   seen.add(key);all.push({name,lat:plat,lng:plng});
+   const photo=p.photos?.[0];let photoUrl='';try{if(photo?.getURI)photoUrl=photo.getURI({maxWidth:480,maxHeight:320})}catch(e){}const attribution=(photo?.authorAttributions||[]).map(a=>a.displayName).filter(Boolean).join(', ');seen.add(key);all.push({name,lat:plat,lng:plng,photo:photoUrl,attribution});
   }};
   let lastError;
   for(const radius of [12000,25000,45000]){
    try{
-    const result=await Place.searchNearby({fields:['displayName','location','primaryType','types'],includedTypes:['train_station','bus_station','airport','hospital','university','school','shopping_mall','park','tourist_attraction'],locationRestriction:{center:{lat,lng},radius},maxResultCount:20,rankPreference:SearchNearbyRankPreference.DISTANCE});
+    const result=await Place.searchNearby({fields:['displayName','location','primaryType','types','photos'],includedTypes:['train_station','bus_station','airport','hospital','university','school','shopping_mall','park','tourist_attraction'],locationRestriction:{center:{lat,lng},radius},maxResultCount:20,rankPreference:SearchNearbyRankPreference.DISTANCE});
     add(result.places);
     if(all.length>=8)break;
    }catch(e){lastError=e;console.warn('DBest Places radius '+radius+'m failed',e);break}
@@ -186,7 +187,7 @@ async function loadNearbyPlaces(lat,lng){
   if(all.length<5&&typeof Place.searchByText==='function'){
    for(const query of ['railway station bus station airport hospital','college university shopping mall park garden']){
     try{
-     const result=await Place.searchByText({textQuery:query,fields:['displayName','location','primaryType','types'],locationRestriction:{center:{lat,lng},radius:25000},maxResultCount:12});
+     const result=await Place.searchByText({textQuery:query,fields:['displayName','location','primaryType','types','photos'],locationRestriction:{center:{lat,lng},radius:25000},maxResultCount:12});
      add(result.places);
      if(all.length>=8)break;
     }catch(e){lastError=e;console.warn('DBest Places text fallback failed',e)}
