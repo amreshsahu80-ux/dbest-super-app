@@ -1,7 +1,7 @@
 (function(){
 'use strict';
 const VERSION='20261005-local-smart-search-v9';
-const cfg=()=>window.DBEST_RUNTIME_CONFIG||{};
+const cfg=()=>({...window.DBEST_RUNTIME_CONFIG,...window.DBEST_RUNTIME_SECRETS});
 const RECENT_KEY='dbest_cab_recent_places_v6';
 const IMG={
  bike:'https://www.nicepng.com/png/full/693-6933025_shine-png.png',
