@@ -138,6 +138,14 @@ async function loadNearbyPlaces(lat,lng){
   rail.innerHTML=rows.slice(0,8).map(p=>'<button type="button" class="cab6Place" data-place="'+esc(p.name)+'" data-lat="'+p.lat+'" data-lng="'+p.lng+'"><span>'+esc(p.name)+'</span></button>').join('');
   qa('.cab6Place',rail).forEach(btn=>btn.onclick=()=>{const d=$('cab6D');if(!d)return;d.value=btn.dataset.place;S.d={label:d.value,lat:Number(btn.dataset.lat),lng:Number(btn.dataset.lng)};$('cab6DS')?.classList.remove('show')});
  };
+ const browserGoogleNearby=async()=>{
+  await Promise.race([ensureSearchProvider(),new Promise(resolve=>setTimeout(resolve,5500))]);
+  if(!window.google?.maps?.importLibrary)throw Error('Google Maps JavaScript not loaded');
+  const {Place,SearchNearbyRankPreference}=await google.maps.importLibrary('places');
+  const result=await Place.searchNearby({fields:['displayName','location'],locationRestriction:{center:{lat,lng},radius:12000},maxResultCount:12,rankPreference:SearchNearbyRankPreference.POPULARITY});
+  const seen=new Set();
+  return (result.places||[]).map(p=>({name:String(p.displayName||'').trim(),lat:Number(typeof p.location?.lat==='function'?p.location.lat():p.location?.lat),lng:Number(typeof p.location?.lng==='function'?p.location.lng():p.location?.lng)})).filter(p=>{const k=p.name.toLowerCase();if(!k||seen.has(k)||!Number.isFinite(p.lat)||!Number.isFinite(p.lng))return false;seen.add(k);return true});
+ };
  const timer=setTimeout(()=>render([]),14000);
  try{
   const controller=new AbortController(),abort=setTimeout(()=>controller.abort(),12500);
@@ -148,7 +156,11 @@ async function loadNearbyPlaces(lat,lng){
    render((data.places||[]).filter(p=>p.name&&Number.isFinite(p.lat)&&Number.isFinite(p.lng)));
   }finally{clearTimeout(abort)}
 
- }catch(e){console.warn('DBest nearby places lookup failed',e);render([])}
+ }catch(e){
+  console.warn('DBest nearby server lookup failed, trying browser Places',e);
+  try{const rows=await Promise.race([browserGoogleNearby(),new Promise((_,reject)=>setTimeout(()=>reject(Error('Browser Places timeout')),9500))]);render(rows)}
+  catch(ge){console.warn('DBest browser Google Places lookup failed',ge);render([])}
+ }
  finally{clearTimeout(timer)}
 }
 async function useGps(noisy){if(!navigator.geolocation){if(noisy)say('Location is not supported on this device.');return}navigator.geolocation.getCurrentPosition(async p=>{const lat=p.coords.latitude,lng=p.coords.longitude;loadNearbyPlaces(lat,lng).catch(e=>console.warn('Nearby lookup failed',e));const label=await reverseGoogle(lat,lng)||await reverseNominatim(lat,lng)||`Current location (${lat.toFixed(5)}, ${lng.toFixed(5)})`;S.p={lat,lng,label};if($('cab6P'))$('cab6P').value=label;renderEntryMap();loadNearbyPlaces(lat,lng)},()=>{if(noisy)say('Please allow location access or enter pickup manually.')},{enableHighAccuracy:true,timeout:12000,maximumAge:30000})}
