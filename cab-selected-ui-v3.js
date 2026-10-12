@@ -154,11 +154,22 @@ function cabPublicPlace(name,types){
  const n=String(name||'').trim();if(!n||/^(home|house|residence|private|my home|address|plot|flat|room)\b/i.test(n))return false;
  return (types||[]).some(t=>CAB_PUBLIC_TYPES.includes(t))||CAB_PUBLIC_NAME.test(n);
 }
+function cabPlacePriority(p){
+ const t=(p.types||[]).map(x=>String(x).toLowerCase()),n=String(p.name||'').toLowerCase();
+ if(t.includes('hospital')||/hospital|medical college hospital|clinic|nursing home/.test(n))return 0;
+ if(t.includes('train_station')||/railway station|rail station|junction/.test(n))return 1;
+ if(t.some(x=>['bus_station','bus_stop'].includes(x))||/bus stand|bus station|bus terminal|bus depot/.test(n))return 2;
+ if(t.includes('airport')||/airport|airstrip|aerodrome/.test(n))return 3;
+ if(t.some(x=>['university','college'].includes(x))||/college|university|campus/.test(n))return 4;
+ if(t.includes('park')||/park|garden/.test(n))return 5;
+ return 6;
+}
 async function loadNearbyPlaces(lat,lng){
  const rail=$('cab6NearbyRail');if(!rail)return;
  if(!Number.isFinite(lat)||!Number.isFinite(lng)){rail.textContent='Select a pickup location to see nearby places.';return}
  const requestId=String(Date.now())+'-'+Math.random();rail.dataset.requestId=requestId;
  const render=rows=>{if(!rail.isConnected||rail.dataset.requestId!==requestId)return;
+  const distance=p=>Math.hypot((p.lat-lat)*111.2,(p.lng-lng)*111.2*Math.cos(lat*Math.PI/180));rows=[...rows].sort((a,b)=>cabPlacePriority(a)-cabPlacePriority(b)||distance(a)-distance(b));
   if(!rows.length){rail.innerHTML='<div style="padding:12px;color:#687386;font-size:12px">Nearby places are unavailable right now. You can enter a destination above.</div>';return}
   rail.innerHTML=rows.slice(0,8).map(p=>'<button type="button" class="cab6Place" data-place="'+esc(p.name)+'" data-lat="'+p.lat+'" data-lng="'+p.lng+'">'+(p.photo?'<img class="cab6PlacePhoto" alt="" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;border-radius:inherit;z-index:0" onerror="this.style.display=\'none\'" src="'+esc(p.photo)+'">':'')+'<span style="position:absolute;bottom:12px;left:12px;right:8px;z-index:2;color:white;font-weight:700;text-shadow:0 1px 4px #000">'+esc(p.name)+'</span>'+(p.attribution?'<small class="cab6PhotoCredit" style="position:absolute;top:6px;right:6px;left:6px;z-index:2;font-size:9px;color:white;text-align:right;text-shadow:0 1px 4px #000;pointer-events:none">Photo: '+esc(p.attribution)+'</small>':'')+'</button>').join('');
   qa('.cab6Place',rail).forEach(btn=>btn.onclick=()=>{const d=$('cab6D');if(!d)return;d.value=btn.dataset.place;S.d={label:d.value,lat:Number(btn.dataset.lat),lng:Number(btn.dataset.lng)};$('cab6DS')?.classList.remove('show')});
@@ -174,14 +185,14 @@ async function loadNearbyPlaces(lat,lng){
    const plng=Number(typeof p.location?.lng==='function'?p.location.lng():p.location?.lng);
    const key=name.toLowerCase();
    if(!cabPublicPlace(name,[p.primaryType,...(p.types||[])])||seen.has(key)||!Number.isFinite(plat)||!Number.isFinite(plng))continue;
-   const photo=p.photos?.[0];let photoUrl='';try{if(photo?.getURI)photoUrl=photo.getURI({maxWidth:480,maxHeight:320})}catch(e){}const attribution=(photo?.authorAttributions||[]).map(a=>a.displayName).filter(Boolean).join(', ');seen.add(key);all.push({name,lat:plat,lng:plng,photo:photoUrl,attribution});
+   const photo=p.photos?.[0];let photoUrl='';try{if(photo?.getURI)photoUrl=photo.getURI({maxWidth:480,maxHeight:320})}catch(e){}const attribution=(photo?.authorAttributions||[]).map(a=>a.displayName).filter(Boolean).join(', ');seen.add(key);all.push({name,lat:plat,lng:plng,types:[p.primaryType,...(p.types||[])],photo:photoUrl,attribution});
   }};
   let lastError;
   for(const radius of [12000,25000,45000]){
    try{
     const result=await Place.searchNearby({fields:['displayName','location','primaryType','types','photos'],includedTypes:['train_station','bus_station','airport','hospital','university','school','shopping_mall','park','tourist_attraction'],locationRestriction:{center:{lat,lng},radius},maxResultCount:20,rankPreference:SearchNearbyRankPreference.DISTANCE});
     add(result.places);
-    if(all.length>=8)break;
+    if(all.length>=18)break;
    }catch(e){lastError=e;console.warn('DBest Places radius '+radius+'m failed',e);break}
   }
   if(all.length<5&&typeof Place.searchByText==='function'){
@@ -195,7 +206,7 @@ async function loadNearbyPlaces(lat,lng){
   }
   if(!all.length&&lastError)throw lastError;
   const dist=p=>{const dy=(p.lat-lat)*111.2,dx=(p.lng-lng)*111.2*Math.cos(lat*Math.PI/180);return Math.hypot(dx,dy)};
-  return all.filter(p=>dist(p)<=50).sort((a,b)=>dist(a)-dist(b)).slice(0,12);
+  return all.filter(p=>dist(p)<=50).sort((a,b)=>cabPlacePriority(a)-cabPlacePriority(b)||dist(a)-dist(b)).slice(0,20);
  };
  const timer=setTimeout(()=>{if(rail.isConnected&&rail.dataset.requestId===requestId&&!rail.querySelector('.cab6Place:not(.loading)')){rail.innerHTML='<div style="font-size:12px;color:#687386;padding:12px">Nearby search is taking longer than expected.</div>'}},30000);
  try{
