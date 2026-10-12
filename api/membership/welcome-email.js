@@ -3,10 +3,10 @@ module.exports=async function handler(req,res){
   if(req.method!=='POST'){res.setHeader('Allow','POST');return res.status(405).json({error:'Method not allowed'});}
   try{
     // The caller cannot select a recipient, membership tier or activation status.
-    const bearer=String(req.headers?.authorization||'').match(/^Bearer\\s+(.+)$/i);
+    const bearer=String(req.headers?.authorization||'').match(/^Bearer\s+(.+)$/i);
     const token=bearer?.[1]?.trim();
     if(!token)return res.status(401).json({error:'Authenticated membership session required'});
-    const url=String(process.env.SUPABASE_URL||'https://ydedmotbacnllkijzmvp.supabase.co').replace(/\\/+$/,'');
+    const url=String(process.env.SUPABASE_URL||'https://ydedmotbacnllkijzmvp.supabase.co').replace(/\/+$/,'');
     const key=String(process.env.SUPABASE_SERVICE_ROLE_KEY||process.env.SUPABASE_SECRET_KEY||'').trim();
     if(!key)return res.status(503).json({error:'Membership verification unavailable'});
     const auth=await fetch(url+'/auth/v1/user',{headers:{apikey:key,Authorization:'Bearer '+token}});
@@ -15,7 +15,7 @@ module.exports=async function handler(req,res){
     const email=String(user?.email||'').trim().toLowerCase().slice(0,180);
     if(!email)return res.status(403).json({error:'Verified email required'});
     const query=new URLSearchParams({select:'external_id,name,category,status,payment_status,payload',kind:'eq.member',email:'eq.'+email,status:'eq.Active',deleted_at:'is.null',limit:'1'});
-    const record=await fetch(url+'/rest/v1/registrations?'+query.toString(),{headers:{apikey:key,Authorization:'Bearer '+key}});
+    const record=await fetch(url+'/rest/v1/onboarding_records?'+query.toString(),{headers:{apikey:key,Authorization:'Bearer '+key}});
     if(!record.ok)return res.status(503).json({error:'Unable to verify active membership'});
     const members=await record.json(),member=Array.isArray(members)?members[0]:null;
     if(!member)return res.status(403).json({error:'Active membership required'});
