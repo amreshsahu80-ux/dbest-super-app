@@ -143,21 +143,34 @@ async function loadNearbyPlaces(lat,lng){
   if(!window.google?.maps?.importLibrary)throw Error('Google Maps JavaScript not loaded');
   const {Place,SearchNearbyRankPreference}=await google.maps.importLibrary('places');
   const seen=new Set(),all=[];
+  const add=places=>{for(const p of places||[]){
+   const name=String(p.displayName||'').trim();
+   const plat=Number(typeof p.location?.lat==='function'?p.location.lat():p.location?.lat);
+   const plng=Number(typeof p.location?.lng==='function'?p.location.lng():p.location?.lng);
+   const key=name.toLowerCase();
+   if(!key||seen.has(key)||!Number.isFinite(plat)||!Number.isFinite(plng))continue;
+   seen.add(key);all.push({name,lat:plat,lng:plng});
+  }};
+  let lastError;
   for(const radius of [12000,25000,45000]){
    try{
     const result=await Place.searchNearby({fields:['displayName','location'],locationRestriction:{center:{lat,lng},radius},maxResultCount:20,rankPreference:SearchNearbyRankPreference.DISTANCE});
-    for(const p of result.places||[]){
-     const name=String(p.displayName||'').trim();
-     const plat=Number(typeof p.location?.lat==='function'?p.location.lat():p.location?.lat);
-     const plng=Number(typeof p.location?.lng==='function'?p.location.lng():p.location?.lng);
-     const key=name.toLowerCase();
-     if(!key||seen.has(key)||!Number.isFinite(plat)||!Number.isFinite(plng))continue;
-     seen.add(key);all.push({name,lat:plat,lng:plng,distanceKm:Math.round(radius/1000)});
-    }
+    add(result.places);
     if(all.length>=8)break;
-   }catch(e){console.warn('DBest Places radius '+radius+'m failed',e);if(all.length)break}
+   }catch(e){lastError=e;console.warn('DBest Places radius '+radius+'m failed',e);break}
   }
-  return all;
+  if(all.length<5&&typeof Place.searchByText==='function'){
+   for(const query of ['hospital railway station bus stand market shopping','restaurants hotels attractions']){
+    try{
+     const result=await Place.searchByText({textQuery:query,fields:['displayName','location'],locationBias:{center:{lat,lng},radius:25000},maxResultCount:12});
+     add(result.places);
+     if(all.length>=8)break;
+    }catch(e){lastError=e;console.warn('DBest Places text fallback failed',e)}
+   }
+  }
+  if(!all.length&&lastError)throw lastError;
+  const dist=p=>{const dy=(p.lat-lat)*111.2,dx=(p.lng-lng)*111.2*Math.cos(lat*Math.PI/180);return Math.hypot(dx,dy)};
+  return all.filter(p=>dist(p)<=50).sort((a,b)=>dist(a)-dist(b)).slice(0,12);
  };
  const timer=setTimeout(()=>render([]),20000);
  try{
