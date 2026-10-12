@@ -161,7 +161,8 @@ async function loadNearbyPlaces(lat,lng){
  };
  const timer=setTimeout(()=>render([]),20000);
  try{
-  const googlePromise=browserGoogleNearby().then(rows=>{if(rows.length){render(rows);return true}return false}).catch(e=>{console.warn('DBest browser Places failed',e);return false});
+  let nearbyFailure='';
+ const googlePromise=browserGoogleNearby().then(rows=>{if(rows.length){render(rows);return true}nearbyFailure='Google returned no places';return false}).catch(e=>{nearbyFailure=String(e?.message||e||'Google Places error').slice(0,140);console.warn('DBest browser Places failed',e);return false});
   const serverPromise=(async()=>{
    const controller=new AbortController(),abort=setTimeout(()=>controller.abort(),8500);
    try{
@@ -173,7 +174,7 @@ async function loadNearbyPlaces(lat,lng){
    finally{clearTimeout(abort)}
   })();
   const outcomes=await Promise.all([googlePromise,serverPromise]);
-  if(!outcomes.some(Boolean))render([]);
+  if(!outcomes.some(Boolean)){render([]);if(rail.isConnected&&rail.dataset.requestId===requestId){const diagnostic=document.createElement('div');diagnostic.style.cssText='font-size:11px;color:#64748b;padding:0 12px 12px';diagnostic.textContent='Diagnostic: '+(nearbyFailure||'No nearby results')+' · server unavailable';rail.appendChild(diagnostic)}}
  }finally{clearTimeout(timer)}
 }
 async function useGps(noisy){if(!navigator.geolocation){if(noisy)say('Location is not supported on this device.');return}navigator.geolocation.getCurrentPosition(async p=>{const lat=p.coords.latitude,lng=p.coords.longitude;loadNearbyPlaces(lat,lng).catch(e=>console.warn('Nearby lookup failed',e));const label=await reverseGoogle(lat,lng)||await reverseNominatim(lat,lng)||`Current location (${lat.toFixed(5)}, ${lng.toFixed(5)})`;S.p={lat,lng,label};if($('cab6P'))$('cab6P').value=label;renderEntryMap();loadNearbyPlaces(lat,lng)},()=>{if(noisy)say('Please allow location access or enter pickup manually.')},{enableHighAccuracy:true,timeout:12000,maximumAge:30000})}
