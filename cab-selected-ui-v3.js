@@ -141,14 +141,18 @@ async function loadNearbyPlaces(lat,lng){
  const timer=setTimeout(()=>render([]),8500);
  try{
   const query='[out:json][timeout:7];(nwr(around:12000,'+lat+','+lng+')[name][amenity~"hospital|bus_station|marketplace|college|university|place_of_worship"];nwr(around:12000,'+lat+','+lng+')[name][railway=station];nwr(around:12000,'+lat+','+lng+')[name][tourism~"attraction|hotel|museum"];);out center 30;';
-  const controller=new AbortController();const abort=setTimeout(()=>controller.abort(),7000);
-  try{
-   const response=await fetch('https://overpass.kumi.systems/api/interpreter',{method:'POST',body:new URLSearchParams({data:query}),signal:controller.signal});
-   if(!response.ok)throw Error('POI status '+response.status);
-   const json=await response.json();const seen=new Set();
-   const rows=(json.elements||[]).map(x=>({name:String(x.tags?.name||'').trim(),lat:Number(x.lat??x.center?.lat),lng:Number(x.lon??x.center?.lon)})).filter(x=>{const k=x.name.toLowerCase();if(!k||seen.has(k)||!Number.isFinite(x.lat)||!Number.isFinite(x.lng))return false;seen.add(k);return true});
-   render(rows);
-  }finally{clearTimeout(abort)}
+  const endpoints=['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter','https://overpass.nchc.org.tw/api/interpreter'];
+  const results=await Promise.allSettled(endpoints.map(async endpoint=>{
+   const controller=new AbortController(),abort=setTimeout(()=>controller.abort(),6500);
+   try{const response=await fetch(endpoint+'?data='+encodeURIComponent(query),{signal:controller.signal});if(!response.ok)throw Error('POI '+response.status);const json=await response.json();return json.elements||[]}
+   finally{clearTimeout(abort)}
+  }));
+  const elements=results.filter(x=>x.status==='fulfilled').flatMap(x=>x.value);
+  const seen=new Set();
+  const rows=elements.map(x=>({name:String(x.tags?.name||'').trim(),lat:Number(x.lat??x.center?.lat),lng:Number(x.lon??x.center?.lon)})).filter(x=>{const k=x.name.toLowerCase();if(!k||seen.has(k)||!Number.isFinite(x.lat)||!Number.isFinite(x.lng))return false;seen.add(k);return true});
+  if(!rows.length)console.warn('Nearby POI services returned no usable places',results.map(x=>x.status==='rejected'?String(x.reason):x.value.length));
+  render(rows);
+
  }catch(e){console.warn('DBest nearby places lookup failed',e);render([])}
  finally{clearTimeout(timer)}
 }
