@@ -147,6 +147,12 @@ async function reverseNominatim(lat,lng){
  }catch(e){console.warn('Pickup OSM reverse geocode failed',e);return ''}finally{clearTimeout(timer)}
 }
 function placePhotoUrl(lat,lng,name){return 'https://maps.googleapis.com/maps/api/streetview?size=360x220&location='+encodeURIComponent(lat+','+lng)+'&fov=80&pitch=0&key='+encodeURIComponent(googleKey())}
+const CAB_PUBLIC_TYPES=['train_station','transit_station','bus_station','bus_stop','airport','hospital','university','college','school','shopping_mall','supermarket','market','park','tourist_attraction','museum','stadium','government_office','city_hall'];
+const CAB_PUBLIC_NAME=/\\b(station|railway|airport|airstrip|hospital|medical|clinic|college|university|school|campus|mall|market|bazaar|park|garden|museum|stadium|bus stand|bus stop|terminal|tourist|temple|mandir|fort|zoo|shopping|government|court|district|police|bank|post office)\\b/i;
+function cabPublicPlace(name,types){
+ const n=String(name||'').trim();if(!n||/^(home|house|residence|private|my home|address|plot|flat|room)\\b/i.test(n))return false;
+ return (types||[]).some(t=>CAB_PUBLIC_TYPES.includes(t))||CAB_PUBLIC_NAME.test(n);
+}
 async function loadNearbyPlaces(lat,lng){
  const rail=$('cab6NearbyRail');if(!rail)return;
  if(!Number.isFinite(lat)||!Number.isFinite(lng)){rail.textContent='Select a pickup location to see nearby places.';return}
@@ -166,21 +172,21 @@ async function loadNearbyPlaces(lat,lng){
    const plat=Number(typeof p.location?.lat==='function'?p.location.lat():p.location?.lat);
    const plng=Number(typeof p.location?.lng==='function'?p.location.lng():p.location?.lng);
    const key=name.toLowerCase();
-   if(!key||seen.has(key)||!Number.isFinite(plat)||!Number.isFinite(plng))continue;
+   if(!cabPublicPlace(name,[p.primaryType,...(p.types||[])])||seen.has(key)||!Number.isFinite(plat)||!Number.isFinite(plng))continue;
    seen.add(key);all.push({name,lat:plat,lng:plng});
   }};
   let lastError;
   for(const radius of [12000,25000,45000]){
    try{
-    const result=await Place.searchNearby({fields:['displayName','location'],locationRestriction:{center:{lat,lng},radius},maxResultCount:20,rankPreference:SearchNearbyRankPreference.DISTANCE});
+    const result=await Place.searchNearby({fields:['displayName','location','primaryType','types'],includedTypes:CAB_PUBLIC_TYPES,locationRestriction:{center:{lat,lng},radius},maxResultCount:20,rankPreference:SearchNearbyRankPreference.DISTANCE});
     add(result.places);
     if(all.length>=8)break;
    }catch(e){lastError=e;console.warn('DBest Places radius '+radius+'m failed',e);break}
   }
   if(all.length<5&&typeof Place.searchByText==='function'){
-   for(const query of ['hospital railway station bus stand market shopping','restaurants hotels attractions']){
+   for(const query of ['railway station bus station airport hospital','college university shopping mall park garden']){
     try{
-     const result=await Place.searchByText({textQuery:query,fields:['displayName','location'],locationBias:{center:{lat,lng},radius:25000},maxResultCount:12});
+     const result=await Place.searchByText({textQuery:query,fields:['displayName','location','primaryType','types'],locationBias:{center:{lat,lng},radius:25000},maxResultCount:12});
      add(result.places);
      if(all.length>=8)break;
     }catch(e){lastError=e;console.warn('DBest Places text fallback failed',e)}
@@ -199,7 +205,7 @@ async function loadNearbyPlaces(lat,lng){
    try{
     const response=await fetch('/api/runtime-config?mode=nearby&lat='+encodeURIComponent(lat)+'&lng='+encodeURIComponent(lng),{signal:controller.signal});
     if(!response.ok)throw Error('Nearby server HTTP '+response.status);
-    const data=await response.json();const rows=(data.places||[]).filter(p=>p.name&&Number.isFinite(p.lat)&&Number.isFinite(p.lng));
+    const data=await response.json();const rows=(data.places||[]).filter(p=>cabPublicPlace(p.name,p.types||[])&&Number.isFinite(p.lat)&&Number.isFinite(p.lng));
     if(rows.length){render(rows);return true}return false;
    }catch(e){console.warn('DBest nearby server failed',e);return false}
    finally{clearTimeout(abort)}
