@@ -148,9 +148,9 @@ async function reverseNominatim(lat,lng){
 }
 function placePhotoUrl(lat,lng,name){return 'https://maps.googleapis.com/maps/api/streetview?size=360x220&location='+encodeURIComponent(lat+','+lng)+'&fov=80&pitch=0&key='+encodeURIComponent(googleKey())}
 const CAB_PUBLIC_TYPES=['train_station','transit_station','bus_station','bus_stop','airport','hospital','university','college','school','shopping_mall','supermarket','market','park','tourist_attraction','museum','stadium','government_office','city_hall'];
-const CAB_PUBLIC_NAME=/\\b(station|railway|airport|airstrip|hospital|medical|clinic|college|university|school|campus|mall|market|bazaar|park|garden|museum|stadium|bus stand|bus stop|terminal|tourist|temple|mandir|fort|zoo|shopping|government|court|district|police|bank|post office)\\b/i;
+const CAB_PUBLIC_NAME=/\b(station|railway|airport|airstrip|hospital|medical|clinic|college|university|school|campus|mall|market|bazaar|park|garden|museum|stadium|bus stand|bus stop|terminal|tourist|temple|mandir|fort|zoo|shopping|government|court|district|police|bank|post office)\b/i;
 function cabPublicPlace(name,types){
- const n=String(name||'').trim();if(!n||/^(home|house|residence|private|my home|address|plot|flat|room)\\b/i.test(n))return false;
+ const n=String(name||'').trim();if(!n||/^(home|house|residence|private|my home|address|plot|flat|room)\b/i.test(n))return false;
  return (types||[]).some(t=>CAB_PUBLIC_TYPES.includes(t))||CAB_PUBLIC_NAME.test(n);
 }
 async function loadNearbyPlaces(lat,lng){
