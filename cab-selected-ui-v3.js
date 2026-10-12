@@ -178,7 +178,7 @@ async function loadNearbyPlaces(lat,lng){
   let lastError;
   for(const radius of [12000,25000,45000]){
    try{
-    const result=await Place.searchNearby({fields:['displayName','location','primaryType','types'],includedTypes:CAB_PUBLIC_TYPES,locationRestriction:{center:{lat,lng},radius},maxResultCount:20,rankPreference:SearchNearbyRankPreference.DISTANCE});
+    const result=await Place.searchNearby({fields:['displayName','location','primaryType','types'],includedTypes:['train_station','bus_station','airport','hospital','university','school','shopping_mall','park','tourist_attraction'],locationRestriction:{center:{lat,lng},radius},maxResultCount:20,rankPreference:SearchNearbyRankPreference.DISTANCE});
     add(result.places);
     if(all.length>=8)break;
    }catch(e){lastError=e;console.warn('DBest Places radius '+radius+'m failed',e);break}
@@ -186,7 +186,7 @@ async function loadNearbyPlaces(lat,lng){
   if(all.length<5&&typeof Place.searchByText==='function'){
    for(const query of ['railway station bus station airport hospital','college university shopping mall park garden']){
     try{
-     const result=await Place.searchByText({textQuery:query,fields:['displayName','location','primaryType','types'],locationBias:{center:{lat,lng},radius:25000},maxResultCount:12});
+     const result=await Place.searchByText({textQuery:query,fields:['displayName','location','primaryType','types'],locationRestriction:{center:{lat,lng},radius:25000},maxResultCount:12});
      add(result.places);
      if(all.length>=8)break;
     }catch(e){lastError=e;console.warn('DBest Places text fallback failed',e)}
