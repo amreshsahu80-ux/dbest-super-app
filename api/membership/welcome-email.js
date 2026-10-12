@@ -2,14 +2,28 @@ module.exports=async function handler(req,res){
   res.setHeader('Cache-Control','no-store, max-age=0, must-revalidate');
   if(req.method!=='POST'){res.setHeader('Allow','POST');return res.status(405).json({error:'Method not allowed'});}
   try{
-    const body=req.body&&typeof req.body==='object'?req.body:{};
-    const name=String(body.name||'DBest Member').slice(0,120);
-    const email=String(body.email||'').trim().toLowerCase().slice(0,180);
-    const memberId=String(body.memberId||'').slice(0,80);
-    const tier=String(body.tier||'DBest Membership').slice(0,120);
-    const referralCode=String(body.referralCode||'').slice(0,80);
-    const profileUrl=String(body.profileUrl||'https://dbest4u.com').slice(0,500);
-    if(!email||!email.includes('@'))return res.status(400).json({error:'Valid email is required'});
+    // The caller cannot select a recipient, membership tier or activation status.
+    const bearer=String(req.headers?.authorization||'').match(/^Bearer\\s+(.+)$/i);
+    const token=bearer?.[1]?.trim();
+    if(!token)return res.status(401).json({error:'Authenticated membership session required'});
+    const url=String(process.env.SUPABASE_URL||'https://ydedmotbacnllkijzmvp.supabase.co').replace(/\\/+$/,'');
+    const key=String(process.env.SUPABASE_SERVICE_ROLE_KEY||process.env.SUPABASE_SECRET_KEY||'').trim();
+    if(!key)return res.status(503).json({error:'Membership verification unavailable'});
+    const auth=await fetch(url+'/auth/v1/user',{headers:{apikey:key,Authorization:'Bearer '+token}});
+    if(!auth.ok)return res.status(401).json({error:'Invalid membership session'});
+    const user=await auth.json();
+    const email=String(user?.email||'').trim().toLowerCase().slice(0,180);
+    if(!email)return res.status(403).json({error:'Verified email required'});
+    const query=new URLSearchParams({select:'external_id,name,category,status,payment_status,payload',kind:'eq.member',email:'eq.'+email,status:'eq.Active',deleted_at:'is.null',limit:'1'});
+    const record=await fetch(url+'/rest/v1/registrations?'+query.toString(),{headers:{apikey:key,Authorization:'Bearer '+key}});
+    if(!record.ok)return res.status(503).json({error:'Unable to verify active membership'});
+    const members=await record.json(),member=Array.isArray(members)?members[0]:null;
+    if(!member)return res.status(403).json({error:'Active membership required'});
+    const name=String(member.name||'DBest Member').slice(0,120);
+    const memberId=String(member.external_id||'').slice(0,80);
+    const tier=String(member.category||'DBest Membership').slice(0,120);
+    const referralCode=String(member.payload?.referral_code||'').slice(0,80);
+    const profileUrl='https://dbest4u.com';
     const apiKey=process.env.RESEND_API_KEY||'';
     const from=process.env.DBEST_WELCOME_FROM||'';
     if(!apiKey||!from)return res.status(200).json({sent:false,configured:false});
