@@ -190,7 +190,26 @@ async function loadNearbyPlaces(lat,lng){
   if(!outcomes.some(Boolean)){render([]);if(rail.isConnected&&rail.dataset.requestId===requestId){const diagnostic=document.createElement('div');diagnostic.style.cssText='font-size:11px;color:#64748b;padding:0 12px 12px';diagnostic.textContent='Diagnostic: '+(nearbyFailure||'No nearby results')+' · server unavailable';rail.appendChild(diagnostic)}}
  }finally{clearTimeout(timer)}
 }
-async function useGps(noisy){if(!navigator.geolocation){if(noisy)say('Location is not supported on this device.');return}navigator.geolocation.getCurrentPosition(async p=>{const lat=p.coords.latitude,lng=p.coords.longitude;loadNearbyPlaces(lat,lng).catch(e=>console.warn('Nearby lookup failed',e));const label=await reverseGoogle(lat,lng)||await reverseNominatim(lat,lng)||`Current location (${lat.toFixed(5)}, ${lng.toFixed(5)})`;S.p={lat,lng,label};if($('cab6P'))$('cab6P').value=label;renderEntryMap();loadNearbyPlaces(lat,lng)},()=>{if(noisy)say('Please allow location access or enter pickup manually.')},{enableHighAccuracy:true,timeout:12000,maximumAge:30000})}
+async function useGps(noisy){
+ const input=$('cab6P');
+ if(!navigator.geolocation){if(noisy)say('Location is not supported on this device.');return}
+ navigator.geolocation.getCurrentPosition(async p=>{
+  const lat=p.coords.latitude,lng=p.coords.longitude;
+  const fallback='Current location ('+lat.toFixed(5)+', '+lng.toFixed(5)+')';
+  S.p={lat,lng,label:fallback};
+  if(input&&input.isConnected&&!input.value.trim())input.value=fallback;
+  loadNearbyPlaces(lat,lng).catch(e=>console.warn('Nearby lookup failed',e));
+  renderEntryMap();
+  try{
+   const lookup=Promise.resolve().then(async()=>await reverseGoogle(lat,lng)||await reverseNominatim(lat,lng));
+   const label=await Promise.race([lookup,new Promise(resolve=>setTimeout(()=>resolve(''),4500))])||fallback;
+   if(S.p&&S.p.lat===lat&&S.p.lng===lng){
+    S.p.label=label;
+    if(input&&input.isConnected&&(input.value===fallback||!input.value.trim()))input.value=label;
+   }
+  }catch(e){console.warn('Pickup reverse geocoding failed',e)}
+ },e=>{if(noisy)say('Please allow location access or enter pickup manually.');console.warn('DBest pickup GPS unavailable',e?.code)},{enableHighAccuracy:true,timeout:12000,maximumAge:30000});
+}
 async function renderEntryMap(){
  const el=$('cab6EntryMap');if(!el)return;
  let pos=null;
