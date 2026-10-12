@@ -138,20 +138,15 @@ async function loadNearbyPlaces(lat,lng){
   rail.innerHTML=rows.slice(0,8).map(p=>'<button type="button" class="cab6Place" data-place="'+esc(p.name)+'" data-lat="'+p.lat+'" data-lng="'+p.lng+'"><span>'+esc(p.name)+'</span></button>').join('');
   qa('.cab6Place',rail).forEach(btn=>btn.onclick=()=>{const d=$('cab6D');if(!d)return;d.value=btn.dataset.place;S.d={label:d.value,lat:Number(btn.dataset.lat),lng:Number(btn.dataset.lng)};$('cab6DS')?.classList.remove('show')});
  };
- const timer=setTimeout(()=>render([]),8500);
+ const timer=setTimeout(()=>render([]),14000);
  try{
-  const query='[out:json][timeout:7];(nwr(around:12000,'+lat+','+lng+')[name][amenity~"hospital|bus_station|marketplace|college|university|place_of_worship"];nwr(around:12000,'+lat+','+lng+')[name][railway=station];nwr(around:12000,'+lat+','+lng+')[name][tourism~"attraction|hotel|museum"];);out center 30;';
-  const endpoints=['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter','https://overpass.nchc.org.tw/api/interpreter'];
-  const results=await Promise.allSettled(endpoints.map(async endpoint=>{
-   const controller=new AbortController(),abort=setTimeout(()=>controller.abort(),6500);
-   try{const response=await fetch(endpoint+'?data='+encodeURIComponent(query),{signal:controller.signal});if(!response.ok)throw Error('POI '+response.status);const json=await response.json();return json.elements||[]}
-   finally{clearTimeout(abort)}
-  }));
-  const elements=results.filter(x=>x.status==='fulfilled').flatMap(x=>x.value);
-  const seen=new Set();
-  const rows=elements.map(x=>({name:String(x.tags?.name||'').trim(),lat:Number(x.lat??x.center?.lat),lng:Number(x.lon??x.center?.lon)})).filter(x=>{const k=x.name.toLowerCase();if(!k||seen.has(k)||!Number.isFinite(x.lat)||!Number.isFinite(x.lng))return false;seen.add(k);return true});
-  if(!rows.length)console.warn('Nearby POI services returned no usable places',results.map(x=>x.status==='rejected'?String(x.reason):x.value.length));
-  render(rows);
+  const controller=new AbortController(),abort=setTimeout(()=>controller.abort(),12500);
+  try{
+   const response=await fetch('/api/cab-nearby?lat='+encodeURIComponent(lat)+'&lng='+encodeURIComponent(lng),{signal:controller.signal});
+   const data=await response.json();
+   if(!response.ok)throw Error(data.error||'Nearby service HTTP '+response.status);
+   render((data.places||[]).filter(p=>p.name&&Number.isFinite(p.lat)&&Number.isFinite(p.lng)));
+  }finally{clearTimeout(abort)}
 
  }catch(e){console.warn('DBest nearby places lookup failed',e);render([])}
  finally{clearTimeout(timer)}
