@@ -139,7 +139,7 @@ async function loadNearbyPlaces(lat,lng){
   qa('.cab6Place',rail).forEach(btn=>btn.onclick=()=>{const d=$('cab6D');if(!d)return;d.value=btn.dataset.place;S.d={label:d.value,lat:Number(btn.dataset.lat),lng:Number(btn.dataset.lng)};$('cab6DS')?.classList.remove('show')});
  };
  const browserGoogleNearby=async()=>{
-  await Promise.race([ensureSearchProvider(),new Promise(resolve=>setTimeout(resolve,5500))]);
+  await Promise.race([initSearchProvider(),new Promise(resolve=>setTimeout(resolve,5500))]);
   if(!window.google?.maps?.importLibrary)throw Error('Google Maps JavaScript not loaded');
   const {Place,SearchNearbyRankPreference}=await google.maps.importLibrary('places');
   const result=await Place.searchNearby({fields:['displayName','location'],locationRestriction:{center:{lat,lng},radius:12000},maxResultCount:12,rankPreference:SearchNearbyRankPreference.POPULARITY});
