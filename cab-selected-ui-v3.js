@@ -126,8 +126,26 @@ async function initLeaflet(){
  if(window.L)return window.L;if(leafletPromise)return leafletPromise;
  loadCss('https://unpkg.com/leaflet@1.9.4/dist/leaflet.css','cab6-leaflet-css');leafletPromise=loadScript('https://unpkg.com/leaflet@1.9.4/dist/leaflet.js','cab6-leaflet').then(()=>window.L);return leafletPromise
 }
-async function reverseGoogle(lat,lng){if(S.provider!=='google'||!window.google?.maps?.Geocoder)return'';try{return await new Promise(resolve=>new google.maps.Geocoder().geocode({location:{lat,lng}},(rows,status)=>resolve(status==='OK'&&rows?.[0]?.formatted_address?rows[0].formatted_address:'')))}catch(e){return''}}
-async function reverseNominatim(lat,lng){try{const r=await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`,{headers:{Accept:'application/json'}});const j=await r.json();return j.display_name||''}catch(e){return''}}
+async function reverseGoogle(lat,lng){
+ try{
+  await Promise.race([initSearchProvider(),new Promise(resolve=>setTimeout(resolve,2500))]);
+  if(!window.google?.maps?.Geocoder)return '';
+  return await new Promise(resolve=>{
+   const timer=setTimeout(()=>resolve(''),6500);
+   new google.maps.Geocoder().geocode({location:{lat,lng}},(rows,status)=>{
+    clearTimeout(timer);resolve(status==='OK'&&rows?.[0]?.formatted_address?rows[0].formatted_address:'');
+   });
+  });
+ }catch(e){console.warn('Pickup Google reverse geocode failed',e);return ''}
+}
+async function reverseNominatim(lat,lng){
+ const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),8500);
+ try{
+  const r=await fetch('https://nominatim.openstreetmap.org/reverse?format=jsonv2&addressdetails=1&lat='+encodeURIComponent(lat)+'&lon='+encodeURIComponent(lng),{headers:{Accept:'application/json'},signal:controller.signal});
+  if(!r.ok)return '';
+  const j=await r.json();return String(j.display_name||'').trim();
+ }catch(e){console.warn('Pickup OSM reverse geocode failed',e);return ''}finally{clearTimeout(timer)}
+}
 function placePhotoUrl(lat,lng,name){return 'https://maps.googleapis.com/maps/api/streetview?size=360x220&location='+encodeURIComponent(lat+','+lng)+'&fov=80&pitch=0&key='+encodeURIComponent(googleKey())}
 async function loadNearbyPlaces(lat,lng){
  const rail=$('cab6NearbyRail');if(!rail)return;
@@ -201,8 +219,10 @@ async function useGps(noisy){
   loadNearbyPlaces(lat,lng).catch(e=>console.warn('Nearby lookup failed',e));
   renderEntryMap();
   try{
-   const lookup=Promise.resolve().then(async()=>await reverseGoogle(lat,lng)||await reverseNominatim(lat,lng));
-   const label=await Promise.race([lookup,new Promise(resolve=>setTimeout(()=>resolve(''),4500))])||fallback;
+   const googleLookup=reverseGoogle(lat,lng);
+   const osmLookup=reverseNominatim(lat,lng);
+   let label=await Promise.race([Promise.any([googleLookup,osmLookup].map(p=>p.then(v=>{if(!v)throw Error('No address');return v}))).catch(()=>''),new Promise(resolve=>setTimeout(()=>resolve(''),9000))]);
+   if(!label)label=fallback;
    if(S.p&&S.p.lat===lat&&S.p.lng===lng){
     S.p.label=label;
     if(input&&input.isConnected&&(input.value===fallback||!input.value.trim()))input.value=label;
