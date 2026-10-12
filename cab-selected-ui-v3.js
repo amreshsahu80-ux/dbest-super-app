@@ -142,7 +142,7 @@ async function loadNearbyPlaces(lat,lng){
  try{
   const controller=new AbortController(),abort=setTimeout(()=>controller.abort(),12500);
   try{
-   const response=await fetch('/api/cab-nearby?lat='+encodeURIComponent(lat)+'&lng='+encodeURIComponent(lng),{signal:controller.signal});
+   const response=await fetch('/api/runtime-config?mode=nearby&lat='+encodeURIComponent(lat)+'&lng='+encodeURIComponent(lng),{signal:controller.signal});
    const data=await response.json();
    if(!response.ok)throw Error(data.error||'Nearby service HTTP '+response.status);
    render((data.places||[]).filter(p=>p.name&&Number.isFinite(p.lat)&&Number.isFinite(p.lng)));
