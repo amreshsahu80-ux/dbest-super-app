@@ -22,7 +22,7 @@ function openUpload(type){
 }
 function mount(){
  const root=document.querySelector('.shopPage');if(!root)return;
- const type=category();if(!type)return;
+ const type=category();if(!type){root.querySelector('[data-dbest-list-upload]')?.remove();return;}
  let btn=root.querySelector('[data-dbest-list-upload]');if(btn){if(btn.dataset.dbestListUpload===type)return;btn.remove();}
  btn=document.createElement('button');btn.type='button';btn.dataset.dbestListUpload=type;btn.textContent='📎 '+TYPES[type];btn.style.cssText='display:block;margin:12px auto;padding:12px 18px;border-radius:12px;border:1px solid #1564b5;background:#eaf4ff;color:#123e70;font-weight:700;max-width:95%';
  btn.onclick=()=>openUpload(type);
