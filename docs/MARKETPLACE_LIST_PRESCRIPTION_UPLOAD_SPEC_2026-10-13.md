@@ -3,7 +3,7 @@
 Status: proposed enhancement; not yet implemented or deployed.
 
 ## Customer
-- Display Upload Shopping List for Grocery and Upload Prescription / Medicine List for Medicine; optionally Bulk Order List for Restaurant.
+- Display Upload Shopping List for Grocery and Upload Prescription / Medicine List for Medicine; Upload Food Order List for Restaurant (including bulk and customised orders).
 - Accept JPG, PNG and PDF from camera, gallery or file picker. Validate file type, size and count server-side.
 - Show selected vendor, delivery address, contact details, upload preview and consent before submission.
 - Submission creates a quote request, **not** a paid order or dispatch job.
@@ -20,4 +20,10 @@ Status: proposed enhancement; not yet implemented or deployed.
 - Maintain current catalogue-based checkout unchanged; PayU deferred.
 
 ## Regression
-- Grocery list and medicine prescription upload; invalid files; unauthorized access; rejected/expired quote; price confirmation; Razorpay payment; Vendor handover; Vaahak delivery; duplicate submission.
+- Grocery list, medicine prescription and restaurant food-order list uploads; invalid files; unauthorized access; rejected/expired quote; price confirmation; Razorpay payment; Vendor handover; Vaahak delivery; duplicate submission.
+
+## Restaurant-specific quotation
+- Place Upload Food Order List below Restaurant search beside catalogue ordering.
+- Allow event date/time, number of people, preparation notes and optional delivery instructions.
+- Restaurant confirms item quantities, substitutions, availability, preparation/delivery time and total quote before customer approval.
+- Use the same secure upload, quotation and verified-payment lifecycle as Grocery and Medicine.
