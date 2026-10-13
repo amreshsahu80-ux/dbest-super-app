@@ -71,3 +71,10 @@ This is a living audit register, not a claim that a complete 100% audit or publi
 - pg_policies returned no policies for the six member payout/wallet tables; service-role-only access appears intended, but must be confirmed by access tests and privilege review. owner_audit_log has an authenticated-role ALL policy; review its USING/WITH CHECK predicates and grants before approval.
 - Live member-wallet function derives member identity from an unexpired hashed member session; it rejects Starter wallet and payouts, and invokes RPC for payout business rules. Payout RPC implementation inspection was blocked; do not claim database transition or replay logic verified.
 - All checks read-only; no PayU tests or modifications, no production deployment.
+
+## Critical audit-log privilege remediation — 2026-10-13
+- Confirmed owner_audit_log RLS policy owner_manage_audit_log restricts authenticated row operations using JWT email comparison to designated owner. Avoid printing email in public audit summary.
+- Discovered TRUNCATE privilege granted to anon and authenticated on owner_audit_log; TRUNCATE bypasses RLS and represented a real integrity risk.
+- Applied production Supabase migration restrict_owner_audit_log_truncate_privileges_20261013: REVOKE TRUNCATE ON TABLE public.owner_audit_log FROM anon, authenticated;
+- Verified has_table_privilege for TRUNCATE: anon=false, authenticated=false, service_role=true. SELECT grants remain, with RLS still governing row-level access.
+- Remaining: review authenticated DELETE/UPDATE/INSERT grants on audit log for append-only design; consider moving to server-only write model after confirming consumers. Negative-auth execution tests and gateway settlement remain outstanding. This migration modified permissions only; no row data changed. PayU untouched.
