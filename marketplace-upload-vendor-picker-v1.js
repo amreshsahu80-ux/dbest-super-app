@@ -6,7 +6,7 @@ function approved(v,category){
  return v&&v.type===category&&v.owner_approval==='Approved'&&v.active===true&&v.operational_hold===false;
 }
 function normalize(rows,category){
- return (Array.isArray(rows)?rows:[]).filter(v=>approved(v,category)).map(v=>({id:String(v.id),name:String(v.shop_name||v.name||v.business_name||v.id)}));
+ return (Array.isArray(rows)?rows:[]).filter(v=>approved(v,category)).map(v=>({id:String(v.id),name:String(v.name||v.id)}));
 }
 function render(select,rows,category){
  const list=normalize(rows,category);select.replaceChildren();
