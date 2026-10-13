@@ -15,6 +15,14 @@ async function request(action,body){
  if(!r.ok||!result.ok)throw Error(result.error||'Request failed');
  return result;
 }
+async function availableVendors(category){
+ if(!['grocery','medicine','restaurant'].includes(category))throw Error('Invalid category');
+ if(!base||!key)throw Error('Marketplace upload service is not configured.');
+ const response=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json',apikey:key},body:JSON.stringify({action:'available_vendors',category})});
+ const data=await response.json().catch(()=>({error:'invalid_server_response'}));
+ if(!response.ok||!data.ok)throw Error(data.error||'Vendor lookup failed');
+ return data.vendors||[];
+}
 async function submit({category,vendorId,file}){
  if(!file||!mimeTypes.has(file.type)||file.size<1||file.size>8*1024*1024)throw Error('Choose a JPG, PNG or PDF up to 8 MB.');
  const created=await request('create_request',{category,vendorId,filename:file.name,mimeType:file.type,fileSize:file.size});
@@ -25,5 +33,5 @@ async function submit({category,vendorId,file}){
 }
 async function status(requestId){return request('customer_status',{requestId})}
 async function accept(requestId,quoteVersion){return request('customer_accept',{requestId,quoteVersion})}
-window.DBEST_MARKETPLACE_UPLOAD_API=Object.freeze({submit,status,accept});
+window.DBEST_MARKETPLACE_UPLOAD_API=Object.freeze({availableVendors,submit,status,accept});
 })();
