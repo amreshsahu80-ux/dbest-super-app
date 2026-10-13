@@ -3,7 +3,7 @@
 const TYPES={grocery:'Upload Shopping List',medicine:'Upload Prescription / Medicine List',restaurant:'Upload Food Order List'};
 const MAX_BYTES=8*1024*1024;
 function category(){
- const active=document.querySelector('.shopPage .marketTypeTab.on');\n const tab=String(active?.getAttribute('onclick')||'').match(/type:'(grocery|restaurant|medicine)'/);\n if(tab)return tab[1];\n const text=[location.hash,location.search,document.querySelector('.shopPage .sectionHero')?.textContent||''].join(' ').toLowerCase();
+ const active=document.querySelector('.shopPage .marketTypeTab.on');\n const tab=String(active?.getAttribute('onclick')||'').match(/type:'(grocery|restaurant|medicine)'/);\n if(tab)return tab[1];\n const text=[location.hash,location.search].join(' ').toLowerCase();
  return Object.keys(TYPES).find(x=>text.includes(x))||'';
 }
 function openUpload(type){
@@ -28,7 +28,7 @@ function openUpload(type){
  overlay.append(panel);overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.remove()});document.body.append(overlay);
 }
 function mount(){
- const root=document.querySelector('.shopPage');if(!root)return;
+ const root=[...document.querySelectorAll('.shopPage')].reverse().find(el=>el.querySelector('.marketTypeTab.on'));if(!root)return;
  const type=category();if(!type){root.querySelector('[data-dbest-list-upload]')?.remove();return;}
  let btn=root.querySelector('[data-dbest-list-upload]');if(btn){if(btn.dataset.dbestListUpload===type)return;btn.remove();}
  btn=document.createElement('button');btn.type='button';btn.dataset.dbestListUpload=type;btn.textContent='📎 '+TYPES[type];btn.style.cssText='display:block;margin:12px auto;padding:12px 18px;border-radius:12px;border:1px solid #1564b5;background:#eaf4ff;color:#123e70;font-weight:700;max-width:95%';
