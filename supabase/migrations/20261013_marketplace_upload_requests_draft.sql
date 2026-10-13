@@ -9,7 +9,7 @@ create table if not exists public.marketplace_upload_requests_live (
  original_filename text not null,
  mime_type text not null check(mime_type in ('image/jpeg','image/png','application/pdf')),
  file_size_bytes integer not null check(file_size_bytes between 1 and 8388608),
- status text not null default 'Submitted' check(status in ('Submitted','Vendor Reviewing','Quote Ready','Customer Accepted','Payment Pending','Verified/Paid','Fulfilment','Completed','Cancelled','Expired')),
+ status text not null default 'Pending Upload' check(status in ('Pending Upload','Submitted','Vendor Reviewing','Quote Ready','Customer Accepted','Payment Pending','Verified/Paid','Fulfilment','Completed','Cancelled','Expired')),
  quote_items jsonb,
  quoted_total numeric(12,2),
  customer_approved_at timestamptz,
@@ -22,3 +22,8 @@ create index if not exists marketplace_upload_requests_vendor_status_idx on publ
 -- Files must be stored in a PRIVATE Supabase Storage bucket.
 -- Access only through server-validated customer/vendor sessions and short-lived signed URLs.
 -- Do not expose private prescription files through public URLs.
+
+-- Private bucket: no public download access. Server-generated signed upload URLs only.
+insert into storage.buckets(id,name,public,file_size_limit,allowed_mime_types)
+values ('marketplace-private-uploads','marketplace-private-uploads',false,8388608,array['image/jpeg','image/png','application/pdf'])
+on conflict (id) do nothing;
