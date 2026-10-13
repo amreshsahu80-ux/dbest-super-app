@@ -55,3 +55,11 @@ This is a living audit register, not a claim that a complete 100% audit or publi
 - Payouts: one ₹10 request, status Failed; events Requested → Approved → Processing → Failed. Corresponding hold/release is consistent with returned wallet funds. No successful bank payout verified; authorization and replay controls still need end-to-end tests.
 - PayU is expressly DEFERRED by owner; do not test, modify, or enable live PayU in this audit phase.
 - All verification above is read-only. No production deployment or database mutation.
+
+## Owner and wallet access review — 2026-10-13
+- Inspected deployed Supabase Edge Function source for owner-control-live and member-wallet-live (read-only).
+- owner-control-live requires x-dbest-owner-token validated via validate_owner_session RPC before get_owner/save_snapshot; get_public intentionally returns a subset of configuration without owner authentication. Review whether public subset contains sensitive settings.
+- member-wallet-live validates hashed, unexpired member session against active member record for wallet/status and payout requests; explicitly excludes Starter. Owner payout listing, payout decisions and rule editing all validate x-dbest-owner-token using validate_owner_session RPC.
+- Database metadata: dbest_member_request_payout, dbest_member_wallet_summary, dbest_owner_update_member_payout and validate_owner_session are SECURITY DEFINER functions; anon and authenticated roles have no EXECUTE privileges on these four RPCs. This supports service-role-only access to sensitive financial RPCs.
+- No live negative-auth requests were issued. Remaining gates: inspect RPC implementation, owner token/session revocation, public config exposure, unauthorized-role denial tests, race/replay controls, bank payout evidence.
+- PayU remains deferred by owner; no PayU changes or tests.
