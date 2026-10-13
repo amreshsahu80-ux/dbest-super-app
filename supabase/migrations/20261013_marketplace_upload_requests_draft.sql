@@ -18,6 +18,18 @@ create table if not exists public.marketplace_upload_requests_live (
 );
 alter table public.marketplace_upload_requests_live enable row level security;
 revoke all on public.marketplace_upload_requests_live from anon,authenticated;
+-- Enforce authenticated customer ownership for member-originated requests.
+alter table public.marketplace_upload_requests_live
+ add constraint marketplace_upload_member_required check (customer_member_id is not null and length(trim(customer_member_id)) > 0);
+-- A quote cannot be approved without a nonnegative server-calculated amount.
+alter table public.marketplace_upload_requests_live
+ add constraint marketplace_upload_approved_quote_required check (
+  status not in ('Customer Accepted','Payment Pending','Verified/Paid','Fulfilment','Completed')
+  or (quoted_total is not null and quoted_total >= 0 and customer_approved_at is not null)
+ );
+-- Bound retention cleanup and Vendor/customer dashboard queries.
+create index if not exists marketplace_upload_requests_customer_created_idx on public.marketplace_upload_requests_live(customer_member_id,created_at desc);
+create index if not exists marketplace_upload_requests_status_created_idx on public.marketplace_upload_requests_live(status,created_at);
 create index if not exists marketplace_upload_requests_vendor_status_idx on public.marketplace_upload_requests_live(vendor_id,status,created_at desc);
 -- Files must be stored in a PRIVATE Supabase Storage bucket.
 -- Access only through server-validated customer/vendor sessions and short-lived signed URLs.
