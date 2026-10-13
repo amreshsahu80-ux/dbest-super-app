@@ -12,6 +12,39 @@ Deno.serve(async(req:Request)=>{
   if(!url||!key)return json({error:"server_not_configured"},503);
   const db=createClient(url,key,{auth:{persistSession:false}});
   const body=await req.json(),action=String(body.action||"");
+  if(action==="create_request"){
+   const memberToken=String(req.headers.get("x-dbest-member-token")||"").trim();
+   if(!memberToken)return json({error:"member_session_required"},401);
+   const {data:memberSession}=await db.from("member_sessions_live").select("member_id").eq("token_hash",await sha(memberToken)).gt("expires_at",new Date().toISOString()).maybeSingle();
+   if(!memberSession)return json({error:"member_session_invalid"},401);
+   const category=String(body.category||"").toLowerCase(),vendorId=String(body.vendorId||"").trim();
+   const mime=String(body.mimeType||""),size=Number(body.fileSize),filename=String(body.filename||"").slice(0,180);
+   if(!["grocery","medicine","restaurant"].includes(category)||!vendorId||!filename||!["image/jpeg","image/png","application/pdf"].includes(mime)||!Number.isInteger(size)||size<1||size>8388608)return json({error:"invalid_request"},400);
+   const {data:v}=await db.from("marketplace_vendors_live").select("id,type").eq("id",vendorId).eq("owner_approval","Approved").eq("active",true).eq("operational_hold",false).maybeSingle();
+   if(!v||String(v.type||"").toLowerCase()!==category)return json({error:"vendor_unavailable"},409);
+   const requestId=crypto.randomUUID(),ext=mime==="application/pdf"?"pdf":mime==="image/png"?"png":"jpg",objectPath=memberSession.member_id+"/"+requestId+"."+ext;
+   const {data:upload,error:signError}=await db.storage.from("marketplace-private-uploads").createSignedUploadUrl(objectPath);
+   if(signError||!upload)return json({error:"upload_unavailable"},503);
+   const {error:insertError}=await db.from("marketplace_upload_requests_live").insert({id:requestId,category,vendor_id:vendorId,customer_member_id:memberSession.member_id,object_path:objectPath,original_filename:filename,mime_type:mime,file_size_bytes:size,status:"Pending Upload"});
+   if(insertError)return json({error:"request_creation_failed"},503);
+   return json({ok:true,requestId,uploadToken:upload.token,objectPath});
+  }
+  if(action==="finalize_upload"){
+   const memberToken=String(req.headers.get("x-dbest-member-token")||"").trim(),requestId=String(body.requestId||"").trim();
+   if(!memberToken||!requestId)return json({error:"member_session_required"},401);
+   const {data:memberSession}=await db.from("member_sessions_live").select("member_id").eq("token_hash",await sha(memberToken)).gt("expires_at",new Date().toISOString()).maybeSingle();
+   if(!memberSession)return json({error:"member_session_invalid"},401);
+   const {data:request}=await db.from("marketplace_upload_requests_live").select("id,object_path,mime_type,file_size_bytes").eq("id",requestId).eq("customer_member_id",memberSession.member_id).eq("status","Pending Upload").maybeSingle();
+   if(!request)return json({error:"request_not_found"},404);
+   const prefix=request.object_path.split("/").slice(0,-1).join("/"),name=request.object_path.split("/").pop();
+   const {data:objects,error:listError}=await db.storage.from("marketplace-private-uploads").list(prefix,{search:name,limit:10});
+   if(listError)return json({error:"file_check_failed"},503);
+   const obj=(objects||[]).find(x=>x.name===name);
+   if(!obj||Number(obj.metadata?.size)!==Number(request.file_size_bytes)||String(obj.metadata?.mimetype||"")!==request.mime_type)return json({error:"file_metadata_mismatch"},409);
+   const {data,error}=await db.from("marketplace_upload_requests_live").update({status:"Submitted",updated_at:new Date().toISOString()}).eq("id",requestId).eq("customer_member_id",memberSession.member_id).eq("status","Pending Upload").select("id,status").maybeSingle();
+   if(error||!data)return json({error:"request_update_failed"},409);
+   return json({ok:true,request:data});
+  }
   const token=String(req.headers.get("x-vendor-token")||"").trim();
   if(!token)return json({error:"vendor_session_required"},401);
   const {data:session}=await db.from("marketplace_vendor_sessions_live").select("vendor_id,expires_at").eq("token_hash",await sha(token)).gt("expires_at",new Date().toISOString()).maybeSingle();
