@@ -86,3 +86,9 @@ This is a living audit register, not a claim that a complete 100% audit or publi
 - Razorpay: 22 internally Verified records; all have non-null reference; 0 duplicate references. Gateway settlement remains unverified.
 - Owner audit-log TRUNCATE fix applied and confirmed in previous section.
 - Public GO BLOCKED until payment-authority integrity, cross-role negative tests, Cab and Marketplace complete lifecycles, and payout/settlement evidence are verified. PayU remains deferred and untouched.
+
+## Marketplace deployed-code review (13 October 2026)
+- create_order trusts the caller's prepaid flag or payment status, and accepts extra amounts above the server-priced catalogue subtotal. Require server-verified payment evidence and a server-derived delivery quote.
+- vendor_catalog_save upserts a caller-supplied global item ID without checking ownership of an existing record. Implement an ownership-scoped update and a separate safe insert, then test cross-vendor attempts.
+- vendor_order_action validates vendor session and vendor ID and checks workflow states, but concurrent transitions need regression tests.
+- No Marketplace production code changed. These are launch blockers until fixed and verified in staging. PayU remains deferred.
