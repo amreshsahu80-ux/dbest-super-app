@@ -45,6 +45,23 @@ Deno.serve(async(req:Request)=>{
    if(error||!data)return json({error:"request_update_failed"},409);
    return json({ok:true,request:data});
   }
+  if(action==="customer_status"||action==="customer_accept"){
+   const memberToken=String(req.headers.get("x-dbest-member-token")||"").trim(),requestId=String(body.requestId||"").trim();
+   if(!memberToken||!requestId)return json({error:"member_session_required"},401);
+   const {data:memberSession}=await db.from("member_sessions_live").select("member_id").eq("token_hash",await sha(memberToken)).gt("expires_at",new Date().toISOString()).maybeSingle();
+   if(!memberSession)return json({error:"member_session_invalid"},401);
+   if(action==="customer_status"){
+    const {data,error}=await db.from("marketplace_upload_requests_live").select("id,category,vendor_id,status,quote_items,quoted_total,created_at,updated_at").eq("id",requestId).eq("customer_member_id",memberSession.member_id).maybeSingle();
+    if(error||!data)return json({error:"request_not_found"},404);
+    return json({ok:true,request:data});
+   }
+   const {data:current}=await db.from("marketplace_upload_requests_live").select("id,quoted_total,updated_at").eq("id",requestId).eq("customer_member_id",memberSession.member_id).eq("status","Quote Ready").maybeSingle();
+   if(!current)return json({error:"quote_not_available"},409);
+   if(String(body.quoteVersion||"")!==String(current.updated_at))return json({error:"quote_changed_refresh_required"},409);
+   const {data,error}=await db.from("marketplace_upload_requests_live").update({status:"Customer Accepted",customer_approved_at:new Date().toISOString(),updated_at:new Date().toISOString()}).eq("id",requestId).eq("customer_member_id",memberSession.member_id).eq("status","Quote Ready").eq("updated_at",current.updated_at).select("id,status,quoted_total").maybeSingle();
+   if(error||!data)return json({error:"quote_changed_refresh_required"},409);
+   return json({ok:true,request:data,paymentReady:false});
+  }
   const token=String(req.headers.get("x-vendor-token")||"").trim();
   if(!token)return json({error:"vendor_session_required"},401);
   const {data:session}=await db.from("marketplace_vendor_sessions_live").select("vendor_id,expires_at").eq("token_hash",await sha(token)).gt("expires_at",new Date().toISOString()).maybeSingle();
