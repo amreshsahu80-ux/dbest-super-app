@@ -92,3 +92,8 @@ This is a living audit register, not a claim that a complete 100% audit or publi
 - vendor_catalog_save upserts a caller-supplied global item ID without checking ownership of an existing record. Implement an ownership-scoped update and a separate safe insert, then test cross-vendor attempts.
 - vendor_order_action validates vendor session and vendor ID and checks workflow states, but concurrent transitions need regression tests.
 - No Marketplace production code changed. These are launch blockers until fixed and verified in staging. PayU remains deferred.
+
+## Additional ride and member access review (2026-10-13)
+- Reviewed deployed ride-cancel-live, member-ride-history, vaahak-location-live and member-network-live; inspected protected operations have session/token validation.
+- ride-cancel-live validates customer token or Vaahak session and status before cancellation. Its final UPDATE filters by job ID only rather than also requiring the status seen in the preceding SELECT; concurrent Trip Started/Completed transitions could be overwritten by a cancellation. Use conditional status compare-and-swap, check affected rows, and test concurrency.
+- No production function edits; needs regression testing before GO.
