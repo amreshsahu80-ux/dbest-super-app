@@ -29,6 +29,9 @@ function mount(){
  const anchor=root.querySelector('input[type=search]')?.parentElement||root.querySelector('h2')||root.firstElementChild;
  if(anchor?.parentNode)anchor.insertAdjacentElement('afterend',btn);else root.prepend(btn);
 }
-const obs=new MutationObserver(()=>{if(document.querySelector('.shopPage')&&!document.querySelector('[data-dbest-list-upload]'))mount()});
-document.addEventListener('DOMContentLoaded',()=>{mount();obs.observe(document.body,{childList:true,subtree:true})});
+let scheduled=false;
+function scheduleMount(){if(scheduled)return;scheduled=true;setTimeout(()=>{scheduled=false;mount()},120)}
+const obs=new MutationObserver(scheduleMount);
+function start(){mount();obs.observe(document.body,{childList:true,subtree:true})}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
