@@ -78,3 +78,11 @@ This is a living audit register, not a claim that a complete 100% audit or publi
 - Applied production Supabase migration restrict_owner_audit_log_truncate_privileges_20261013: REVOKE TRUNCATE ON TABLE public.owner_audit_log FROM anon, authenticated;
 - Verified has_table_privilege for TRUNCATE: anon=false, authenticated=false, service_role=true. SELECT grants remain, with RLS still governing row-level access.
 - Remaining: review authenticated DELETE/UPDATE/INSERT grants on audit log for append-only design; consider moving to server-only write model after confirming consumers. Negative-auth execution tests and gateway settlement remain outstanding. This migration modified permissions only; no row data changed. PayU untouched.
+
+## Cross-section audit finding — 2026-10-13
+- Inspected deployed transaction-ledger-live, marketplace-live, vaahak-dispatch-live, owner-report-data and member-login-live. All contain session/token handling in inspected portions; this is NOT a full functional verification.
+- P0 candidate: transaction-ledger-live action=record accepts client-supplied transaction amount, payment_status, payment_mode and metadata for newly created transactions; preserves authoritative evidence only for existing transactions. Member session authentication is present but does not establish payment authority. Server should restrict client-created records to nonauthoritative statuses, prohibit client-supplied payout/commission authority, and preserve server-confirmed statuses atomically. Must assess dependent UI and test before deploying.
+- Read-only count: 277 transactions; 28 statuses containing verified/paid/captured/received; 6 of these use non-Razorpay/non-PayU modes (may be legitimate cash/other flows; no fraud conclusion).
+- Razorpay: 22 internally Verified records; all have non-null reference; 0 duplicate references. Gateway settlement remains unverified.
+- Owner audit-log TRUNCATE fix applied and confirmed in previous section.
+- Public GO BLOCKED until payment-authority integrity, cross-role negative tests, Cab and Marketplace complete lifecycles, and payout/settlement evidence are verified. PayU remains deferred and untouched.
