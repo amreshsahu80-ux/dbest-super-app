@@ -45,3 +45,13 @@ PayU live: intentionally DISABLED; test mode only. Razorpay existing flows must 
 8. Release only after every P0 is closed, critical P1 scenarios pass and owner signs off.
 
 This is a living audit register, not a claim that a complete 100% audit or public-launch certification has been achieved.
+
+## Read-only financial verification — 2026-10-13
+- All nine member wallet account available balances individually reconcile to the signed wallet ledger: 0 mismatches (threshold ₹0.009).
+- Ledger totals: 70 Earning Credit entries ₹2,995.91; 6 Earning Reversal entries -₹95.40; one ₹10 Payout Hold and one ₹10 Payout Release; net ₹2,900.51.
+- 70 earning allocations have non-null idempotency keys; no duplicate keys; no orphan Earning Credit ledger rows; no linked earning-credit/allocation amount mismatch; no duplicate credited source/beneficiary/earning-level tuples found.
+- Fifteen wallet ledger entries lack a match in transactions.transaction_id, but all 15 match member_earning_allocations.source_transaction_id; 11 credits ₹113.26 and 4 reversals -₹75.40. Their underlying original service records remain unverified. Marketplace allocations include cab_completed labels; investigate event naming and source semantics before treating as a defect.
+- Razorpay: 22 transactions internally marked Verified, sum ₹7,296; independent Razorpay gateway settlement not verified.
+- Payouts: one ₹10 request, status Failed; events Requested → Approved → Processing → Failed. Corresponding hold/release is consistent with returned wallet funds. No successful bank payout verified; authorization and replay controls still need end-to-end tests.
+- PayU is expressly DEFERRED by owner; do not test, modify, or enable live PayU in this audit phase.
+- All verification above is read-only. No production deployment or database mutation.
