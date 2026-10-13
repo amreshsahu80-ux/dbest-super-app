@@ -12,6 +12,13 @@ Deno.serve(async(req:Request)=>{
   if(!url||!key)return json({error:"server_not_configured"},503);
   const db=createClient(url,key,{auth:{persistSession:false}});
   const body=await req.json(),action=String(body.action||"");
+  if(action==="available_vendors"){
+   const category=String(body.category||"").trim().toLowerCase();
+   if(!["grocery","medicine","restaurant"].includes(category))return json({error:"invalid_category"},400);
+   const {data,error}=await db.from("marketplace_vendors_live").select("id,name,type").eq("type",category).eq("owner_approval","Approved").eq("active",true).eq("operational_hold",false).order("name",{ascending:true}).limit(100);
+   if(error)return json({error:"vendor_list_unavailable"},503);
+   return json({ok:true,vendors:data||[]});
+  }
   if(action==="create_request"){
    const memberToken=String(req.headers.get("x-dbest-member-token")||"").trim();
    if(!memberToken)return json({error:"member_session_required"},401);
