@@ -63,3 +63,11 @@ This is a living audit register, not a claim that a complete 100% audit or publi
 - Database metadata: dbest_member_request_payout, dbest_member_wallet_summary, dbest_owner_update_member_payout and validate_owner_session are SECURITY DEFINER functions; anon and authenticated roles have no EXECUTE privileges on these four RPCs. This supports service-role-only access to sensitive financial RPCs.
 - No live negative-auth requests were issued. Remaining gates: inspect RPC implementation, owner token/session revocation, public config exposure, unauthorized-role denial tests, race/replay controls, bank payout evidence.
 - PayU remains deferred by owner; no PayU changes or tests.
+
+## Payout account and RLS checks — 2026-10-13
+- Two member_payout_accounts records: one status Verified, one other status. Do not expose bank account details in audit reports.
+- One payout request, status Failed, with no bank_reference and no paid_at; no successful bank payout evidence.
+- RLS is enabled on member_payout_accounts, member_payout_requests, member_payout_events, member_wallet_accounts, member_wallet_ledger, member_wallet_payout_rules, owner_audit_log.
+- pg_policies returned no policies for the six member payout/wallet tables; service-role-only access appears intended, but must be confirmed by access tests and privilege review. owner_audit_log has an authenticated-role ALL policy; review its USING/WITH CHECK predicates and grants before approval.
+- Live member-wallet function derives member identity from an unexpired hashed member session; it rejects Starter wallet and payouts, and invokes RPC for payout business rules. Payout RPC implementation inspection was blocked; do not claim database transition or replay logic verified.
+- All checks read-only; no PayU tests or modifications, no production deployment.
