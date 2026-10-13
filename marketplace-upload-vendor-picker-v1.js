@@ -3,7 +3,7 @@
 (function(){
 'use strict';
 function approved(v,category){
- return v&&v.type===category&&v.owner_approval==='Approved'&&v.active===true&&v.operational_hold===false;
+ // The server returns only approved, active, non-held Vendors; do not require omitted columns.\n return v&&v.type===category&&typeof v.id!=='undefined'&&!!v.name;
 }
 function normalize(rows,category){
  return (Array.isArray(rows)?rows:[]).filter(v=>approved(v,category)).map(v=>({id:String(v.id),name:String(v.name||v.id)}));
