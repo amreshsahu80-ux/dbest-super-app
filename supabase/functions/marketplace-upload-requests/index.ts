@@ -73,6 +73,15 @@ Deno.serve(async(req:Request)=>{
    if(error)return json({error:"requests_unavailable"},503);
    return json({ok:true,requests:data||[]});
   }
+  if(action==="vendor_document_url"){
+   const requestId=String(body.requestId||"").trim();
+   if(!requestId)return json({error:"request_id_required"},400);
+   const {data:request,error:lookupError}=await db.from("marketplace_upload_requests_live").select("id,object_path,mime_type,original_filename,status").eq("id",requestId).eq("vendor_id",vendor.id).in("status",["Submitted","Vendor Reviewing","Quote Ready","Customer Accepted","Payment Pending","Verified/Paid","Fulfilment","Completed"]).maybeSingle();
+   if(lookupError||!request)return json({error:"request_not_found"},404);
+   const {data:link,error:linkError}=await db.storage.from("marketplace-private-uploads").createSignedUrl(request.object_path,120);
+   if(linkError||!link)return json({error:"document_unavailable"},503);
+   return json({ok:true,url:link.signedUrl,expiresInSeconds:120,mimeType:request.mime_type,filename:request.original_filename});
+  }
   if(action==="vendor_quote"){
    const requestId=String(body.requestId||"").trim();
    const items=Array.isArray(body.items)?body.items:[];
