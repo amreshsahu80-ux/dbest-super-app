@@ -67,6 +67,19 @@ function mount(){mountVendorQuote();
  const anchor=root.querySelector('input[type=search]')?.parentElement||root.querySelector('h2')||root.firstElementChild;
  if(anchor?.parentNode)anchor.insertAdjacentElement('afterend',btn);else root.prepend(btn);
 }
+function mountVendorQuotes(){
+ if(!/\\.vercel\\.app$/i.test(location.hostname))return;
+ const head=document.querySelector('.vendorDashboardHead');if(!head||document.getElementById('dbestVendorQuotes'))return;
+ const api=window.DBEST_MARKETPLACE_UPLOAD_API;if(!api)return;
+ const root=document.createElement('section');root.id='dbestVendorQuotes';root.style.cssText='padding:16px;margin:16px 0;border:1px solid #c8d7eb;border-radius:12px;background:#f6faff;color:#182b43';
+ const title=document.createElement('h3');title.textContent='📋 Uploaded Lists & Quotations (Test)';root.append(title);
+ const message=document.createElement('p');message.setAttribute('aria-live','polite');root.append(message);
+ const login=document.createElement('div');const id=document.createElement('input');id.placeholder='Vendor ID';id.autocomplete='username';id.style.cssText='padding:10px;margin:4px;width:44%';const pin=document.createElement('input');pin.type='password';pin.placeholder='Vendor PIN';pin.autocomplete='current-password';pin.style.cssText='padding:10px;margin:4px;width:44%';const auth=document.createElement('button');auth.type='button';auth.textContent='Secure Login & Load Requests';login.append(id,pin,auth);root.append(login);
+ const results=document.createElement('div');root.append(results);
+ async function load(){results.replaceChildren();const data=await api.vendorList();message.textContent=(data.requests||[]).length+' uploaded request(s)';for(const request of data.requests||[]){const card=document.createElement('div');card.style.cssText='padding:12px;margin:10px 0;border:1px solid #ddd;border-radius:10px;background:white';const label=document.createElement('p');label.textContent=request.category+' • '+request.status+' • '+request.id;card.append(label);const doc=document.createElement('button');doc.textContent='Open Uploaded Document';doc.onclick=async()=>{try{const x=await api.vendorDocumentUrl(request.id);window.open(x.url,'_blank','noopener,noreferrer')}catch(e){message.textContent=String(e.message||e)}};card.append(doc);if(['Submitted','Vendor Reviewing','Quote Ready'].includes(request.status)){const lines=document.createElement('textarea');lines.rows=4;lines.style.cssText='display:block;width:100%;margin:8px 0';lines.placeholder='One item per line: Item name | Quantity | Price (₹)';card.append(lines);const send=document.createElement('button');send.textContent='Send Item-wise Quotation';send.onclick=async()=>{try{const items=lines.value.split(/\\r?\\n/).filter(Boolean).map(line=>{const p=line.split('|').map(x=>x.trim());return{name:p[0],qty:Number(p[1]),price:Number(p[2])}});if(!items.length||items.some(x=>!x.name||!Number.isInteger(x.qty)||x.qty<1||!Number.isFinite(x.price)||x.price<0))throw Error('Use Item | Quantity | Price for each line');send.disabled=true;await api.vendorQuote(request.id,items);await load()}catch(e){message.textContent=String(e.message||e);send.disabled=false}};card.append(send)}results.append(card)}}
+ auth.onclick=async()=>{auth.disabled=true;message.textContent='Authenticating Vendor…';try{const vendor=await api.secureVendorLogin(id.value.trim(),pin.value);pin.value='';if(typeof vendorSession!=='undefined'&&vendorSession.vendorId&&vendorSession.vendorId!==vendor.id)throw Error('Vendor ID does not match dashboard');login.remove();await load()}catch(e){message.textContent=String(e.message||e);auth.disabled=false}};
+ head.insertAdjacentElement('afterend',root);
+}
 let scheduled=false;
 function scheduleMount(){if(scheduled)return;scheduled=true;setTimeout(()=>{scheduled=false;mount()},120)}
 const obs=new MutationObserver(scheduleMount);
