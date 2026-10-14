@@ -69,11 +69,16 @@ Deno.serve(async(req:Request)=>{
    if(error||!data)return json({error:"request_update_failed"},409);
    return json({ok:true,request:data});
   }
-  if(action==="customer_status"||action==="customer_accept"){
+  if(action==="customer_list"||action==="customer_status"||action==="customer_accept"){
    const memberToken=String(req.headers.get("x-dbest-member-token")||"").trim(),requestId=String(body.requestId||"").trim();
    if(!memberToken||!requestId)return json({error:"member_session_required"},401);
    const {data:memberSession}=await db.from("member_sessions_live").select("member_id").eq("token_hash",await sha(memberToken)).gt("expires_at",new Date().toISOString()).maybeSingle();
    if(!memberSession)return json({error:"member_session_invalid"},401);
+   if(action==="customer_list"){
+    const {data,error}=await db.from("marketplace_upload_requests_live").select("id,category,vendor_id,status,quote_items,quoted_total,created_at,updated_at").eq("customer_member_id",memberSession.member_id).neq("status","Pending Upload").order("created_at",{ascending:false}).limit(50);
+    if(error)return json({error:"request_list_unavailable"},503);
+    return json({ok:true,requests:data||[]});
+   }
    if(action==="customer_status"){
     const {data,error}=await db.from("marketplace_upload_requests_live").select("id,category,vendor_id,status,quote_items,quoted_total,created_at,updated_at").eq("id",requestId).eq("customer_member_id",memberSession.member_id).maybeSingle();
     if(error||!data)return json({error:"request_not_found"},404);
