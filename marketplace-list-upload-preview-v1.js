@@ -23,8 +23,21 @@ function openUpload(type){
  const submit=document.createElement('button');submit.type='button';submit.textContent='Submit List for Quotation';submit.disabled=true;submit.style.cssText='padding:10px 16px;border:0;border-radius:8px;background:#145ba0;color:white;opacity:.7';panel.append(submit);
  const api=window.DBEST_MARKETPLACE_UPLOAD_API;
  const enabled=/\.vercel\.app$/i.test(location.hostname)&&!!api;
- if(enabled){const gps=typeof commerceLocation!=='undefined'?commerceLocation:null; if(!gps||!Number.isFinite(Number(gps.lat))||!Number.isFinite(Number(gps.lng))||gps.lat==null||gps.lng==null){initial.textContent='Waiting for delivery GPS — close and retry';status.textContent='Allow location access and wait for GPS lock.';}else api.availableVendors(type,{lat:gps.lat,lng:gps.lng}).then(vendors=>{const picker=window.DBEST_MARKETPLACE_VENDOR_PICKER;if(picker)picker.render(vendorSelect,vendors,type);else{vendorSelect.replaceChildren();for(const v of vendors){const o=document.createElement('option');o.value=v.id;o.textContent=v.name;vendorSelect.append(o)}}submit.disabled=!vendorSelect.value;vendorSelect.onchange=()=>{submit.disabled=!vendorSelect.value}}).catch(e=>{initial.textContent='Vendor lookup unavailable';status.textContent=String(e.message||e)})}
- else initial.textContent='Quotation submission not yet enabled';
+ if(enabled){
+  const loadVendors=(gps)=>api.availableVendors(type,{lat:gps.lat,lng:gps.lng}).then(vendors=>{
+   const picker=window.DBEST_MARKETPLACE_VENDOR_PICKER;
+   if(picker)picker.render(vendorSelect,vendors,type);
+   else{vendorSelect.replaceChildren();const placeholder=document.createElement('option');placeholder.value='';placeholder.textContent='Select approved Vendor';vendorSelect.append(placeholder);for(const v of vendors){const o=document.createElement('option');o.value=v.id;o.textContent=v.name;vendorSelect.append(o)}}
+   submit.disabled=!vendorSelect.value;vendorSelect.onchange=()=>{submit.disabled=!vendorSelect.value};
+   if(!vendors.length)status.textContent='No approved Vendors with verified coordinates within the delivery radius.';
+  }).catch(e=>{vendorSelect.replaceChildren();const o=document.createElement('option');o.textContent='Vendor lookup unavailable';vendorSelect.append(o);status.textContent=String(e.message||e)});
+  const gps=typeof commerceLocation!=='undefined'?commerceLocation:null;
+  if(gps&&gps.lat!=null&&gps.lng!=null){loadVendors(gps)}
+  else if(navigator.geolocation){
+   initial.textContent='Fetching current delivery location…';
+   navigator.geolocation.getCurrentPosition(pos=>loadVendors({lat:pos.coords.latitude,lng:pos.coords.longitude}),err=>{initial.textContent='Delivery GPS unavailable';status.textContent='Enable location permission and reopen upload: '+err.message},{enableHighAccuracy:true,timeout:15000,maximumAge:30000});
+  }else{initial.textContent='GPS unavailable';status.textContent='Location services are required for Vendor selection.'}
+ }
  submit.onclick=async()=>{const file=input.files?.[0];if(!enabled||!vendorSelect.value||!file)return;submit.disabled=true;status.textContent='Uploading securely…';try{const result=await api.submit({category:type,vendorId:vendorSelect.value,file,location:typeof commerceLocation!=='undefined'?commerceLocation:null});status.textContent='Submitted. Request '+result.request.id;submit.textContent='Submitted'}catch(e){status.textContent=String(e.message||e);submit.disabled=false}};
  const note=document.createElement('p');note.style.cssText='font-size:12px;color:#795400';note.textContent=enabled?'TEST MODE — submitting will upload your document privately for the selected approved Vendor. No payment or delivery will be initiated.':'Preview only — no document is uploaded or shared yet.';panel.append(note);
  const close=document.createElement('button');close.type='button';close.textContent='Close';close.style.cssText='padding:10px 20px;border:0;border-radius:9px;background:#e7eaf0';close.onclick=()=>overlay.remove();panel.append(close);
