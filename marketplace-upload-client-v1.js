@@ -15,10 +15,10 @@ async function request(action,body){
  if(!r.ok||!result.ok)throw Error(result.error||'Request failed');
  return result;
 }
-async function availableVendors(category){
+async function availableVendors(category,location){
  if(!['grocery','medicine','restaurant'].includes(category))throw Error('Invalid category');
  if(!base||!key)throw Error('Marketplace upload service is not configured.');
- const response=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json',apikey:key},body:JSON.stringify({action:'available_vendors',category})});
+ const response=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json',apikey:key},body:JSON.stringify({action:'available_vendors',category,lat:location?.lat,lng:location?.lng})});
  const data=await response.json().catch(()=>({error:'invalid_server_response'}));
  if(!response.ok||!data.ok)throw Error(data.error||'Vendor lookup failed');
  return data.vendors||[];
