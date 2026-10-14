@@ -48,6 +48,12 @@ Deno.serve(async(req:Request)=>{
    if(listError)return json({error:"file_check_failed"},503);
    const obj=(objects||[]).find(x=>x.name===name);
    if(!obj||Number(obj.metadata?.size)!==Number(request.file_size_bytes)||String(obj.metadata?.mimetype||"")!==request.mime_type)return json({error:"file_metadata_mismatch"},409);
+   const {data:download,error:downloadError}=await db.storage.from("marketplace-private-uploads").download(request.object_path);
+   if(downloadError||!download)return json({error:"file_verification_failed"},503);
+   const bytes=new Uint8Array(await download.slice(0,16).arrayBuffer());
+   const mime=String(request.mime_type);
+   const valid=mime==="application/pdf"?bytes.length>=5&&[37,80,68,70,45].every((v,i)=>bytes[i]===v):mime==="image/png"?bytes.length>=8&&[137,80,78,71,13,10,26,10].every((v,i)=>bytes[i]===v):bytes.length>=3&&bytes[0]===255&&bytes[1]===216&&bytes[2]===255;
+   if(!valid)return json({error:"file_content_invalid"},409);
    const {data,error}=await db.from("marketplace_upload_requests_live").update({status:"Submitted",updated_at:new Date().toISOString()}).eq("id",requestId).eq("customer_member_id",memberSession.member_id).eq("status","Pending Upload").select("id,status").maybeSingle();
    if(error||!data)return json({error:"request_update_failed"},409);
    return json({ok:true,request:data});
