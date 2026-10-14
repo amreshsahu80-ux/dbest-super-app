@@ -47,5 +47,15 @@ function clearVendorSecureToken(){sessionStorage.removeItem('dbest_marketplace_v
 async function vendorList(){return vendorRequest('vendor_list')}
 async function vendorDocumentUrl(requestId){return vendorRequest('vendor_document_url',{requestId})}
 async function vendorQuote(requestId,items){return vendorRequest('vendor_quote',{requestId,items})}
-window.DBEST_MARKETPLACE_UPLOAD_API=Object.freeze({availableVendors,submit,status,accept,vendorList,vendorDocumentUrl,vendorQuote,setVendorSecureToken,clearVendorSecureToken});
+async function secureVendorLogin(login,pin){
+ if(!base||!key)throw Error('Marketplace service unavailable');
+ const response=await fetch(base+'/functions/v1/marketplace-live',{method:'POST',headers:{'Content-Type':'application/json',apikey:key},body:JSON.stringify({action:'vendor_login',login,pin})});
+ const data=await response.json().catch(()=>({error:'invalid_server_response'}));
+ if(!response.ok||!data.ok||!data.token)throw Error(data.error||'Vendor login failed');
+ if(data.vendor?.owner_approval!=='Approved'||data.vendor?.active!==true||data.vendor?.operational_hold===true)throw Error('Vendor not approved or active');
+ setVendorSecureToken(data.token);
+ sessionStorage.setItem('dbest_marketplace_vendor_secure_id',data.vendor.id);
+ return data.vendor;
+}
+window.DBEST_MARKETPLACE_UPLOAD_API=Object.freeze({availableVendors,submit,status,accept,vendorList,vendorDocumentUrl,vendorQuote,setVendorSecureToken,clearVendorSecureToken,secureVendorLogin});
 })();
