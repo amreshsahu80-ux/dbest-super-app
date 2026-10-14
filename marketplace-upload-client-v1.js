@@ -23,9 +23,9 @@ async function availableVendors(category,location){
  if(!response.ok||!data.ok)throw Error(data.error||'Vendor lookup failed');
  return data.vendors||[];
 }
-async function submit({category,vendorId,file}){
+async function submit({category,vendorId,file,location}){
  if(!file||!mimeTypes.has(file.type)||file.size<1||file.size>8*1024*1024)throw Error('Choose a JPG, PNG or PDF up to 8 MB.');
- const created=await request('create_request',{category,vendorId,filename:file.name,mimeType:file.type,fileSize:file.size});
+ const created=await request('create_request',{category,vendorId,filename:file.name,mimeType:file.type,fileSize:file.size,lat:location?.lat,lng:location?.lng});
  const uploadUrl=base+'/storage/v1/object/upload/sign/'+bucket+'/'+created.objectPath+'?token='+encodeURIComponent(created.uploadToken);
  const response=await fetch(uploadUrl,{method:'PUT',headers:{'Content-Type':file.type},body:file});
  if(!response.ok)throw Error('File upload failed. Please retry with a new request.');
