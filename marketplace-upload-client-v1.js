@@ -6,7 +6,7 @@ const key=String(cfg.supabasePublishableKey||'');
 const endpoint=base+'/functions/v1/marketplace-upload-requests';
 const bucket='marketplace-private-uploads';
 const mimeTypes=new Set(['image/jpeg','image/png','application/pdf']);
-function memberToken(){return String(localStorage.getItem('dbest_member_live_token')||'')}
+function memberToken(){try{return String(window.DBEST_MEMBER_LIVE?.getToken?.()||localStorage.getItem('dbest_member_live_token')||'')}catch(_){return''}}
 async function request(action,body){
  const token=memberToken();if(!token)throw Error('Please log in to upload or review your request.');
  if(!base||!key)throw Error('Marketplace upload service is not configured.');
