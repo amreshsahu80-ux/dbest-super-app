@@ -33,5 +33,17 @@ async function submit({category,vendorId,file,location}){
 }
 async function status(requestId){return request('customer_status',{requestId})}
 async function accept(requestId,quoteVersion){return request('customer_accept',{requestId,quoteVersion})}
-window.DBEST_MARKETPLACE_UPLOAD_API=Object.freeze({availableVendors,submit,status,accept});
+async function vendorRequest(action,body={}){
+ const token=String(sessionStorage.getItem('dbest_marketplace_vendor_secure_token')||'');
+ if(!token)throw Error('Secure Vendor authentication required. The existing Vendor PIN login is not sufficient.');
+ if(!base||!key)throw Error('Marketplace upload service is not configured.');
+ const response=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json',apikey:key,'x-vendor-token':token},body:JSON.stringify({action,...body})});
+ const data=await response.json().catch(()=>({error:'invalid_server_response'}));
+ if(!response.ok||!data.ok)throw Error(data.error||'Vendor request failed');
+ return data;
+}
+async function vendorList(){return vendorRequest('vendor_list')}
+async function vendorDocumentUrl(requestId){return vendorRequest('vendor_document_url',{requestId})}
+async function vendorQuote(requestId,items){return vendorRequest('vendor_quote',{requestId,items})}
+window.DBEST_MARKETPLACE_UPLOAD_API=Object.freeze({availableVendors,submit,status,accept,vendorList,vendorDocumentUrl,vendorQuote});
 })();
