@@ -34,6 +34,12 @@ Deno.serve(async(req:Request)=>{
    if(!["grocery","medicine","restaurant"].includes(category)||!vendorId||!filename||!["image/jpeg","image/png","application/pdf"].includes(mime)||!Number.isInteger(size)||size<1||size>8388608)return json({error:"invalid_request"},400);
    const {data:v}=await db.from("marketplace_vendors_live").select("id,type").eq("id",vendorId).eq("owner_approval","Approved").eq("active",true).eq("operational_hold",false).maybeSingle();
    if(!v||String(v.type||"").toLowerCase()!==category)return json({error:"vendor_unavailable"},409);
+   const lat=Number(body.lat),lng=Number(body.lng);
+   if(body.lat==null||body.lng==null||!Number.isFinite(lat)||!Number.isFinite(lng)||Math.abs(lat)>90||Math.abs(lng)>180)return json({error:"delivery_location_required"},400);
+   const {data:geo}=await db.from("marketplace_vendors_live").select("lat,lng").eq("id",vendorId).maybeSingle();
+   if(geo?.lat==null||geo?.lng==null)return json({error:"vendor_location_unavailable"},409);
+   const rad=Math.PI/180,dLat=(Number(geo.lat)-lat)*rad,dLng=(Number(geo.lng)-lng)*rad,h=Math.sin(dLat/2)**2+Math.cos(lat*rad)*Math.cos(Number(geo.lat)*rad)*Math.sin(dLng/2)**2;
+   if(6371*2*Math.atan2(Math.sqrt(h),Math.sqrt(1-h))>(category==="grocery"?10:15))return json({error:"vendor_outside_delivery_radius"},409);
    const requestId=crypto.randomUUID(),ext=mime==="application/pdf"?"pdf":mime==="image/png"?"png":"jpg",objectPath=memberSession.member_id+"/"+requestId+"."+ext;
    const {data:upload,error:signError}=await db.storage.from("marketplace-private-uploads").createSignedUploadUrl(objectPath);
    if(signError||!upload)return json({error:"upload_unavailable"},503);
