@@ -45,7 +45,20 @@ function openUpload(type){
  const close=document.createElement('button');close.type='button';close.textContent='Close';close.style.cssText='padding:10px 20px;border:0;border-radius:9px;background:#e7eaf0';close.onclick=()=>overlay.remove();panel.append(close);
  overlay.append(panel);overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.remove()});document.body.append(overlay);
 }
-function mount(){
+function mountVendorQuote(){
+ if(!/\\.vercel\\.app$/i.test(location.hostname))return;
+ const api=window.DBEST_MARKETPLACE_UPLOAD_API;
+ const dashboard=document.querySelector('.vendorDashboardHead');
+ if(!dashboard||!api?.vendorList||document.getElementById('dbestVendorUploadQuotes'))return;
+ const wrap=document.createElement('section');wrap.id='dbestVendorUploadQuotes';wrap.style.cssText='margin:14px 0;padding:14px;border:1px solid #ccd6e0;border-radius:12px;background:#fff;color:#17202a';
+ const heading=document.createElement('h3');heading.textContent='Uploaded Customer Lists / Quotations';wrap.append(heading);
+ const note=document.createElement('p');note.textContent='Secure Vendor session required. Customer documents are private and must not be shared.';wrap.append(note);
+ const refresh=document.createElement('button');refresh.type='button';refresh.textContent='Load Assigned Requests';wrap.append(refresh);
+ const result=document.createElement('div');result.setAttribute('aria-live','polite');wrap.append(result);
+ refresh.onclick=async()=>{refresh.disabled=true;result.textContent='Loading assigned requests…';try{const data=await api.vendorList();result.replaceChildren();if(!data.requests?.length){result.textContent='No assigned requests.';return;}for(const req of data.requests){const card=document.createElement('div');card.style.cssText='padding:12px;margin:10px 0;border:1px solid #ddd;border-radius:10px';const title=document.createElement('p');title.textContent=req.category+' • '+req.status+' • '+req.original_filename;card.append(title);const doc=document.createElement('button');doc.type='button';doc.textContent='Open Private Document';doc.onclick=async()=>{try{const data=await api.vendorDocumentUrl(req.id);window.open(data.url,'_blank','noopener,noreferrer')}catch(e){result.textContent=String(e.message||e)}};card.append(doc);if(['Submitted','Vendor Reviewing','Quote Ready'].includes(req.status)){const area=document.createElement('textarea');area.rows=4;area.placeholder='One item per line: Product name | quantity | price (₹)';area.style.cssText='display:block;width:100%;margin:10px 0';card.append(area);const send=document.createElement('button');send.type='button';send.textContent='Send Item-wise Quotation';send.onclick=async()=>{let items;try{items=area.value.trim().split(/\\r?\\n/).map(line=>{const parts=line.split('|').map(x=>x.trim());if(parts.length!==3||!parts[0]||!/^\\d+$/.test(parts[1])||!/^\\d+(\\.\\d{1,2})?$/.test(parts[2]))throw Error('Use: Product name | quantity | price');return{name:parts[0],qty:Number(parts[1]),price:Number(parts[2])}});if(!items.length||items.length>100)throw Error('Enter 1–100 items.');send.disabled=true;await api.vendorQuote(req.id,items);result.textContent='Quotation submitted. Refresh to view updated status.'}catch(e){result.textContent=String(e.message||e);send.disabled=false}};card.append(send)}result.append(card)}}catch(e){result.textContent=String(e.message||e)}finally{refresh.disabled=false}};
+ dashboard.insertAdjacentElement('afterend',wrap);
+}
+function mount(){mountVendorQuote();
  const root=[...document.querySelectorAll('.shopPage')].reverse().find(el=>el.querySelector('.marketTypeTab.on'));if(!root)return;
  const type=category();if(!type){root.querySelector('[data-dbest-list-upload]')?.remove();return;}
  let btn=root.querySelector('[data-dbest-list-upload]');if(btn){if(btn.dataset.dbestListUpload===type)return;btn.remove();}
