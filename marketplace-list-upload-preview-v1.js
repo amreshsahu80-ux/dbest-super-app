@@ -3,7 +3,10 @@
 const TYPES={grocery:'Upload Shopping List',medicine:'Upload Prescription / Medicine List',restaurant:'Upload Food Order List'};
 const MAX_BYTES=8*1024*1024;
 function category(){
- const active=document.querySelector('.shopPage .marketTypeTab.on');\n const tab=String(active?.getAttribute('onclick')||'').match(/type:'(grocery|restaurant|medicine)'/);\n if(tab)return tab[1];\n const text=[location.hash,location.search].join(' ').toLowerCase();
+ const active=document.querySelector('.shopPage .marketTypeTab.on');
+ const tab=String(active?.getAttribute('onclick')||'').match(/type:'(grocery|restaurant|medicine)'/);
+ if(tab)return tab[1];
+ const text=[location.hash,location.search].join(' ').toLowerCase();
  return Object.keys(TYPES).find(x=>text.includes(x))||'';
 }
 function openUpload(type){
