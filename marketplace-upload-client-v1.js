@@ -31,6 +31,7 @@ async function submit({category,vendorId,file,location}){
  if(!response.ok)throw Error('File upload failed. Please retry with a new request.');
  return request('finalize_upload',{requestId:created.requestId});
 }
+async function customerList(){return request('customer_list',{})}
 async function status(requestId){return request('customer_status',{requestId})}
 async function accept(requestId,quoteVersion){return request('customer_accept',{requestId,quoteVersion})}
 async function vendorRequest(action,body={}){
@@ -57,5 +58,5 @@ async function secureVendorLogin(login,pin){
  sessionStorage.setItem('dbest_marketplace_vendor_secure_id',data.vendor.id);
  return data.vendor;
 }
-window.DBEST_MARKETPLACE_UPLOAD_API=Object.freeze({availableVendors,submit,status,accept,vendorList,vendorDocumentUrl,vendorQuote,setVendorSecureToken,clearVendorSecureToken,secureVendorLogin});
+window.DBEST_MARKETPLACE_UPLOAD_API=Object.freeze({availableVendors,submit,status,accept,customerList,vendorList,vendorDocumentUrl,vendorQuote,setVendorSecureToken,clearVendorSecureToken,secureVendorLogin});
 })();
