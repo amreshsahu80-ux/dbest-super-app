@@ -49,7 +49,7 @@ Deno.serve(async(req:Request)=>{
   }
   if(action==="finalize_upload"){
    const memberToken=String(req.headers.get("x-dbest-member-token")||"").trim(),requestId=String(body.requestId||"").trim();
-   if(!memberToken||!requestId)return json({error:"member_session_required"},401);
+   if(!memberToken||(action!=="customer_list"&&!requestId))return json({error:"member_session_required"},401);
    const {data:memberSession}=await db.from("member_sessions_live").select("member_id").eq("token_hash",await sha(memberToken)).gt("expires_at",new Date().toISOString()).maybeSingle();
    if(!memberSession)return json({error:"member_session_invalid"},401);
    const {data:request}=await db.from("marketplace_upload_requests_live").select("id,object_path,mime_type,file_size_bytes").eq("id",requestId).eq("customer_member_id",memberSession.member_id).eq("status","Pending Upload").maybeSingle();
