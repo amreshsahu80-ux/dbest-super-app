@@ -15,9 +15,14 @@ Deno.serve(async(req:Request)=>{
   if(action==="available_vendors"){
    const category=String(body.category||"").trim().toLowerCase();
    if(!["grocery","medicine","restaurant"].includes(category))return json({error:"invalid_category"},400);
-   const {data,error}=await db.from("marketplace_vendors_live").select("id,name,type").eq("type",category).eq("owner_approval","Approved").eq("active",true).eq("operational_hold",false).order("name",{ascending:true}).limit(100);
+   const lat=Number(body.lat),lng=Number(body.lng);
+   if(body.lat==null||body.lng==null||!Number.isFinite(lat)||!Number.isFinite(lng)||Math.abs(lat)>90||Math.abs(lng)>180)return json({error:"delivery_location_required"},400);
+   const radius=category==="grocery"?10:15;
+   const {data,error}=await db.from("marketplace_vendors_live").select("id,name,type,lat,lng").eq("type",category).eq("owner_approval","Approved").eq("active",true).eq("operational_hold",false).order("name",{ascending:true}).limit(100);
    if(error)return json({error:"vendor_list_unavailable"},503);
-   return json({ok:true,vendors:data||[]});
+   const distance=(v:{lat:number,lng:number})=>{const rad=Math.PI/180,dLat=(v.lat-lat)*rad,dLng=(v.lng-lng)*rad,a=Math.sin(dLat/2)**2+Math.cos(lat*rad)*Math.cos(v.lat*rad)*Math.sin(dLng/2)**2;return 6371*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a))};
+   const vendors=(data||[]).filter(v=>v.lat!=null&&v.lng!=null&&distance({lat:Number(v.lat),lng:Number(v.lng)})<=radius).map(v=>({id:v.id,name:v.name,type:v.type}));
+   return json({ok:true,vendors});
   }
   if(action==="create_request"){
    const memberToken=String(req.headers.get("x-dbest-member-token")||"").trim();
