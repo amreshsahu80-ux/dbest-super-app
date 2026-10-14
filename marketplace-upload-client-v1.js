@@ -42,8 +42,10 @@ async function vendorRequest(action,body={}){
  if(!response.ok||!data.ok)throw Error(data.error||'Vendor request failed');
  return data;
 }
+function setVendorSecureToken(token){if(!token||typeof token!=='string')throw Error('Valid secure Vendor token required');sessionStorage.setItem('dbest_marketplace_vendor_secure_token',token)}
+function clearVendorSecureToken(){sessionStorage.removeItem('dbest_marketplace_vendor_secure_token')}
 async function vendorList(){return vendorRequest('vendor_list')}
 async function vendorDocumentUrl(requestId){return vendorRequest('vendor_document_url',{requestId})}
 async function vendorQuote(requestId,items){return vendorRequest('vendor_quote',{requestId,items})}
-window.DBEST_MARKETPLACE_UPLOAD_API=Object.freeze({availableVendors,submit,status,accept,vendorList,vendorDocumentUrl,vendorQuote});
+window.DBEST_MARKETPLACE_UPLOAD_API=Object.freeze({availableVendors,submit,status,accept,vendorList,vendorDocumentUrl,vendorQuote,setVendorSecureToken,clearVendorSecureToken});
 })();
