@@ -69,7 +69,7 @@ Deno.serve(async(req:Request)=>{
    if(error||!data)return json({error:"request_update_failed"},409);
    return json({ok:true,request:data});
   }
-  if(action==="customer_list"||action==="customer_status"||action==="customer_accept"){
+  if(action==="customer_list"||action==="customer_status"||action==="customer_accept"||action==="customer_checkout_preview"){
    const memberToken=String(req.headers.get("x-dbest-member-token")||"").trim(),requestId=String(body.requestId||"").trim();
    if(!memberToken||(action!=="customer_list"&&!requestId))return json({error:"member_session_required"},401);
    const {data:memberSession}=await db.from("member_sessions_live").select("member_id").eq("token_hash",await sha(memberToken)).gt("expires_at",new Date().toISOString()).maybeSingle();
@@ -78,6 +78,14 @@ Deno.serve(async(req:Request)=>{
     const {data,error}=await db.from("marketplace_upload_requests_live").select("id,category,vendor_id,status,quote_items,quoted_total,created_at,updated_at").eq("customer_member_id",memberSession.member_id).neq("status","Pending Upload").order("created_at",{ascending:false}).limit(50);
     if(error)return json({error:"request_list_unavailable"},503);
     return json({ok:true,requests:data||[]});
+   }
+   if(action==="customer_checkout_preview"){
+    const {data:q,error}=await db.from("marketplace_upload_requests_live").select("id,status,vendor_id,category,quote_items,quoted_total").eq("id",requestId).eq("customer_member_id",memberSession.member_id).eq("status","Customer Accepted").maybeSingle();
+    if(error||!q)return json({error:"accepted_quote_not_found"},404);
+    const {data:v}=await db.from("marketplace_vendors_live").select("id,name,owner_approval,active,operational_hold").eq("id",q.vendor_id).eq("owner_approval","Approved").eq("active",true).eq("operational_hold",false).maybeSingle();
+    if(!v)return json({error:"vendor_unavailable"},409);
+    const subtotal=Number(q.quoted_total);if(!Number.isFinite(subtotal)||subtotal<0||!Array.isArray(q.quote_items)||!q.quote_items.length)return json({error:"invalid_quote"},409);
+    return json({ok:true,checkout:{requestId:q.id,vendorName:v.name,category:q.category,items:q.quote_items,itemSubtotal:subtotal,deliveryCharge:null,totalPayable:null,paymentReady:false,reason:"delivery_address_and_verified_payment_integration_pending"}});
    }
    if(action==="customer_status"){
     const {data,error}=await db.from("marketplace_upload_requests_live").select("id,category,vendor_id,status,quote_items,quoted_total,created_at,updated_at").eq("id",requestId).eq("customer_member_id",memberSession.member_id).maybeSingle();
