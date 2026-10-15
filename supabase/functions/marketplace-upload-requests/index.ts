@@ -71,7 +71,7 @@ Deno.serve(async(req:Request)=>{
   }
   if(action==="customer_list"||action==="customer_status"||action==="customer_accept"){
    const memberToken=String(req.headers.get("x-dbest-member-token")||"").trim(),requestId=String(body.requestId||"").trim();
-   if(!memberToken||!requestId)return json({error:"member_session_required"},401);
+   if(!memberToken||(action!=="customer_list"&&!requestId))return json({error:"member_session_required"},401);
    const {data:memberSession}=await db.from("member_sessions_live").select("member_id").eq("token_hash",await sha(memberToken)).gt("expires_at",new Date().toISOString()).maybeSingle();
    if(!memberSession)return json({error:"member_session_invalid"},401);
    if(action==="customer_list"){
