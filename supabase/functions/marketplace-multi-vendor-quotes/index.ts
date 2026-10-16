@@ -10,7 +10,7 @@ Deno.serve(async(req:Request)=>{
   if(!url||!secret)return respond({error:"service_unavailable"},503);
   const db=createClient(url,secret,{auth:{persistSession:false,autoRefreshToken:false}});
   const body=await req.json(),action=String(body.action||"");
-  const isVendor=action==="vendor_invitations"||action==="submit_offer";
+  const isVendor=action==="vendor_invitations"||action==="submit_offer"||action==="vendor_document_url";
   const token=String(req.headers.get(isVendor?"x-vendor-token":"x-dbest-member-token")||"");
   if(!token)return respond({error:"authentication_required"},401);
   const {data:session}=await db.from(isVendor?"marketplace_vendor_sessions_live":"member_sessions_live")
@@ -21,14 +21,26 @@ Deno.serve(async(req:Request)=>{
    const {data:v}=await db.from("marketplace_vendors_live").select("id").eq("id",actor).eq("owner_approval","Approved").eq("active",true).eq("operational_hold",false).maybeSingle();
    if(!v)return respond({error:"vendor_unavailable"},403);
   }
-  if(action==="vendor_invitations"){
-   const {data,error}=await db.from("marketplace_quote_invitations").select("request_id,created_at").eq("vendor_id",actor).order("created_at",{ascending:false}).limit(50);
-   return error?respond({error:"invitations_unavailable"},503):respond({ok:true,invitations:data||[]});
-  }
   const requestId=String(body.requestId||"");
   if(!/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(requestId))return respond({error:"invalid_request_id"},400);
   const {data:request}=await db.from("marketplace_upload_requests_live").select("id,customer_member_id,category,status,delivery_lat,delivery_lng,quote_window_closes_at").eq("id",requestId).maybeSingle();
   if(!request)return respond({error:"request_not_found"},404);
+  if(action==="vendor_invitations"){
+   const {data:invitations,error}=await db.from("marketplace_quote_invitations").select("request_id,created_at").eq("vendor_id",actor).order("created_at",{ascending:false}).limit(50);
+   if(error)return respond({error:"invitations_unavailable"},503);
+   const ids=(invitations||[]).map(x=>x.request_id);if(!ids.length)return respond({ok:true,invitations:[]});
+   const {data:requests,error:requestError}=await db.from("marketplace_upload_requests_live").select("id,category,status,original_filename,quote_window_closes_at").in("id",ids);
+   if(requestError)return respond({error:"invitations_unavailable"},503);
+   const byId=new Map((requests||[]).map(x=>[x.id,x]));return respond({ok:true,invitations:(invitations||[]).map(x=>({...x,request:byId.get(x.request_id)||null})).filter(x=>x.request)});
+  }
+  if(action==="vendor_document_url"){
+   const {data:invitation}=await db.from("marketplace_quote_invitations").select("request_id").eq("request_id",requestId).eq("vendor_id",actor).maybeSingle();
+   if(!invitation)return respond({error:"invitation_unavailable"},403);
+   const {data:doc}=await db.from("marketplace_upload_requests_live").select("object_path,mime_type,original_filename").eq("id",requestId).single();
+   if(!doc?.object_path)return respond({error:"document_unavailable"},404);
+   const {data:link,error}=await db.storage.from("marketplace-private-uploads").createSignedUrl(doc.object_path,120);
+   return error||!link?respond({error:"document_unavailable"},503):respond({ok:true,url:link.signedUrl,expiresInSeconds:120,filename:doc.original_filename,mimeType:doc.mime_type});
+  }
   if(action==="invite_vendors"){
    if(Date.now()>=new Date(request.quote_window_closes_at).getTime())return respond({error:"quotation_window_closed"},409);
    if(request.customer_member_id!==actor)return respond({error:"forbidden"},403);
