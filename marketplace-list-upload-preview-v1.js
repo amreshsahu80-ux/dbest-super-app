@@ -21,11 +21,13 @@ function openUpload(type){
  input.addEventListener('change',()=>{const f=input.files?.[0];status.textContent=!f?'':(!['image/jpeg','image/png','application/pdf'].includes(f.type)||f.size>MAX_BYTES)?'Unsupported file or file exceeds 8 MB.':'Selected: '+f.name+' ('+Math.ceil(f.size/1024)+' KB)';});
  const vendorSelect=document.createElement('select');vendorSelect.setAttribute('aria-label','Choose Vendor');vendorSelect.style.cssText='display:block;width:100%;margin:12px 0;padding:10px;border:1px solid #bbc5d0;border-radius:8px';const initial=document.createElement('option');initial.value='';initial.textContent='Loading approved Vendors…';vendorSelect.append(initial);panel.append(vendorSelect);
  const submit=document.createElement('button');submit.type='button';submit.textContent='Submit List for Quotation';submit.disabled=true;submit.style.cssText='padding:10px 16px;border:0;border-radius:8px;background:#145ba0;color:white;opacity:.7';panel.append(submit);
- let eligibleVendorIds=[];\n const api=window.DBEST_MARKETPLACE_UPLOAD_API;
+ let eligibleVendorIds=[];
+ const api=window.DBEST_MARKETPLACE_UPLOAD_API;
  const enabled=/\.vercel\.app$/i.test(location.hostname)&&!!api;
  if(enabled){
   const loadVendors=(gps)=>api.availableVendors(type,{lat:gps.lat,lng:gps.lng}).then(vendors=>{
-   eligibleVendorIds=vendors.map(v=>String(v.id)).filter(Boolean).slice(0,20);\n   const picker=window.DBEST_MARKETPLACE_VENDOR_PICKER;
+   eligibleVendorIds=vendors.map(v=>String(v.id)).filter(Boolean).slice(0,20);
+   const picker=window.DBEST_MARKETPLACE_VENDOR_PICKER;
    if(picker)picker.render(vendorSelect,vendors,type);
    else{vendorSelect.replaceChildren();const placeholder=document.createElement('option');placeholder.value='';placeholder.textContent='Select approved Vendor';vendorSelect.append(placeholder);for(const v of vendors){const o=document.createElement('option');o.value=v.id;o.textContent=v.name;vendorSelect.append(o)}}
    submit.disabled=!vendorSelect.value;vendorSelect.onchange=()=>{submit.disabled=!vendorSelect.value};
