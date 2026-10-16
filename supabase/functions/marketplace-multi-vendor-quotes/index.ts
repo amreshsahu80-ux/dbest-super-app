@@ -27,7 +27,7 @@ Deno.serve(async(req:Request)=>{
   }
   const requestId=String(body.requestId||"");
   if(!/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(requestId))return respond({error:"invalid_request_id"},400);
-  const {data:request}=await db.from("marketplace_upload_requests_live").select("id,customer_member_id,category,status").eq("id",requestId).maybeSingle();
+  const {data:request}=await db.from("marketplace_upload_requests_live").select("id,customer_member_id,category,status,delivery_lat,delivery_lng").eq("id",requestId).maybeSingle();
   if(!request)return respond({error:"request_not_found"},404);
   if(action==="invite_vendors"){
    if(request.customer_member_id!==actor)return respond({error:"forbidden"},403);
@@ -36,9 +36,20 @@ Deno.serve(async(req:Request)=>{
    if(!Array.isArray(vendorIds)||vendorIds.length<1||vendorIds.length>20||vendorIds.some((v:unknown)=>typeof v!=="string"||!v||v.length>128)||new Set(vendorIds).size!==vendorIds.length)return respond({error:"invalid_vendor_selection"},400);
    const {data:vendors,error:vendorError}=await db.from("marketplace_vendors_live").select("id,type,owner_approval,active,operational_hold,agreement_status").in("id",vendorIds);
    if(vendorError||!vendors||vendors.length!==vendorIds.length||vendors.some(v=>String(v.type).toLowerCase()!==request.category||v.owner_approval!=="Approved"||v.active!==true||v.operational_hold===true||v.agreement_status!=="Fully Signed"))return respond({error:"vendor_not_eligible"},409);
-   // Radius is enforced during the existing create_request vendor selection.
-   // Additional vendors must be geo-verified in the invitation workflow before release.
-   return respond({error:"multi_vendor_geo_validation_pending"},501);
+   const lat=Number(request.delivery_lat),lng=Number(request.delivery_lng);
+   if(request.delivery_lat==null||request.delivery_lng==null||!Number.isFinite(lat)||!Number.isFinite(lng))return respond({error:"delivery_coordinates_missing"},409);
+   const {data:positions,error:posError}=await db.from("marketplace_vendors_live").select("id,lat,lng").in("id",vendorIds);
+   if(posError||!positions||positions.length!==vendorIds.length)return respond({error:"vendor_location_unavailable"},409);
+   const rad=Math.PI/180, radius=request.category==="grocery"?10:15;
+   for(const v of positions){
+    if(v.lat==null||v.lng==null)return respond({error:"vendor_location_unavailable"},409);
+    const a=(Number(v.lat)-lat)*rad,b=(Number(v.lng)-lng)*rad;
+    const h=Math.sin(a/2)**2+Math.cos(lat*rad)*Math.cos(Number(v.lat)*rad)*Math.sin(b/2)**2;
+    const distance=6371*2*Math.atan2(Math.sqrt(h),Math.sqrt(1-h));
+    if(!Number.isFinite(distance)||distance>radius)return respond({error:"vendor_outside_delivery_radius"},409);
+   }
+   const {error}=await db.from("marketplace_quote_invitations").upsert(vendorIds.map((vendor_id:string)=>({request_id:requestId,vendor_id})),{onConflict:"request_id,vendor_id",ignoreDuplicates:true});
+   return error?respond({error:"invitation_save_failed"},503):respond({ok:true,invited:vendorIds.length});
   }
   if(action==="customer_offers"){
    if(request.customer_member_id!==actor)return respond({error:"forbidden"},403);
