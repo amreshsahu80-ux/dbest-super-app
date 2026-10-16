@@ -19,7 +19,7 @@ async function call(action,payload={},actor='member'){
 }
 const api=Object.freeze({
  // Only use after dedicated server endpoint has been deployed and validated.
- enabled:()=>cfg.marketplaceMultiVendorEnabled===true||(/\\.vercel\\.app$/i.test(location.hostname)&&new URLSearchParams(location.search).get('multiVendorTest')==='1'),
+ enabled:()=>cfg.marketplaceMultiVendorEnabled===true||(/\.vercel\.app$/i.test(location.hostname)&&new URLSearchParams(location.search).get('multiVendorTest')==='1'),
  invite:(requestId,vendorIds)=>call('invite_vendors',{requestId,vendorIds}),
  listOffers:(requestId)=>call('customer_offers',{requestId}),
  acceptOffer:(requestId,offerId,version)=>call('accept_offer',{requestId,offerId,version}),
