@@ -140,17 +140,23 @@ Deno.serve(async(req:Request)=>{
   }
   if(action==="accept_offer"){
    if(request.customer_member_id!==actor)return respond({error:"forbidden"},403);
-   if(!["Submitted","Vendor Reviewing","Quote Ready"].includes(request.status))return respond({error:"request_not_open"},409);
+   if(!["Submitted","Vendor Reviewing","Quote Ready","Customer Accepted"].includes(request.status))return respond({error:"request_not_open"},409);
    const offerId=String(body.offerId||"");
    if(!/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(offerId))return respond({error:"invalid_offer_id"},400);
    const {data:offer}=await db.from("marketplace_quote_offers").select("id,vendor_id,subtotal,delivery_fee,delivery_calculated,status,expires_at").eq("id",offerId).eq("request_id",requestId).maybeSingle();
-   if(!offer||offer.status!=="submitted"||new Date(offer.expires_at).getTime()<=Date.now())return respond({error:"offer_unavailable"},409);
+   const previouslyAccepted=request.status==="Customer Accepted"&&offer?.status==="accepted";
+   if(!offer||(!previouslyAccepted&&(offer.status!=="submitted"||new Date(offer.expires_at).getTime()<=Date.now())))return respond({error:"offer_unavailable"},409);
    if(offer.delivery_calculated!==true)return respond({error:"delivery_fee_not_verified"},409);
-   const {data:vendor}=await db.from("marketplace_vendors_live").select("id").eq("id",offer.vendor_id).eq("owner_approval","Approved").eq("active",true).eq("operational_hold",false).maybeSingle();
-   if(!vendor)return respond({error:"vendor_unavailable"},409);
-   const {data:accepted,error:acceptError}=await db.rpc("dbest_accept_marketplace_quote",{p_request:requestId,p_offer:offerId,p_member:actor});
-   if(acceptError)return respond({error:"acceptance_unavailable"},503);
-   return accepted?.ok?respond(accepted):respond(accepted||{error:"acceptance_failed"},409);
+   if(!previouslyAccepted){
+    const {data:vendor}=await db.from("marketplace_vendors_live").select("id").eq("id",offer.vendor_id).eq("owner_approval","Approved").eq("active",true).eq("operational_hold",false).maybeSingle();
+    if(!vendor)return respond({error:"vendor_unavailable"},409);
+    const {data:accepted,error:acceptError}=await db.rpc("dbest_accept_marketplace_quote",{p_request:requestId,p_offer:offerId,p_member:actor});
+    if(acceptError)return respond({error:"acceptance_unavailable"},503);
+    if(!accepted?.ok)return respond(accepted||{error:"acceptance_failed"},409);
+   }
+   const {data:draft,error:draftError}=await db.rpc("dbest_create_quote_checkout_draft",{p_request:requestId,p_offer:offerId,p_member:actor});
+   if(draftError)return respond({error:"checkout_draft_unavailable",quoteAccepted:true},503);
+   return draft?.ok?respond({...draft,quoteAccepted:true,paymentReady:false,dispatchReady:false}):respond(draft||{error:"checkout_draft_failed"},409);
   }
   // Invitation and acceptance need a server-side atomic transaction with
   // ownership, vendor eligibility, price and order idempotency checks.
