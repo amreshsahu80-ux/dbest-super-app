@@ -1,0 +1,62 @@
+(function(){
+'use strict';
+const cfg=window.DBEST_RUNTIME_CONFIG||{};
+const base=String(cfg.supabaseUrl||'').replace(/\/$/,'');
+const key=String(cfg.supabasePublishableKey||'');
+const endpoint=base+'/functions/v1/marketplace-upload-requests';
+const bucket='marketplace-private-uploads';
+const mimeTypes=new Set(['image/jpeg','image/png','application/pdf']);
+function memberToken(){try{return String(window.DBEST_MEMBER_LIVE?.getToken?.()||localStorage.getItem('dbest_member_live_token')||'')}catch(_){return''}}
+async function request(action,body){
+ const token=memberToken();if(!token)throw Error('Please log in to upload or review your request.');
+ if(!base||!key)throw Error('Marketplace upload service is not configured.');
+ const r=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json',apikey:key,'x-dbest-member-token':token},body:JSON.stringify({action,...body})});
+ const result=await r.json().catch(()=>({error:'invalid_server_response'}));
+ if(!r.ok||!result.ok)throw Error(result.error||'Request failed');
+ return result;
+}
+async function availableVendors(category,location){
+ if(!['grocery','medicine','restaurant'].includes(category))throw Error('Invalid category');
+ if(!base||!key)throw Error('Marketplace upload service is not configured.');
+ const response=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json',apikey:key},body:JSON.stringify({action:'available_vendors',category,lat:location?.lat,lng:location?.lng})});
+ const data=await response.json().catch(()=>({error:'invalid_server_response'}));
+ if(!response.ok||!data.ok)throw Error(data.error||'Vendor lookup failed');
+ return data.vendors||[];
+}
+async function submit({category,vendorId,file,location}){
+ if(!file||!mimeTypes.has(file.type)||file.size<1||file.size>8*1024*1024)throw Error('Choose a JPG, PNG or PDF up to 8 MB.');
+ const created=await request('create_request',{category,vendorId,filename:file.name,mimeType:file.type,fileSize:file.size,lat:location?.lat,lng:location?.lng});
+ const uploadUrl=base+'/storage/v1/object/upload/sign/'+bucket+'/'+created.objectPath+'?token='+encodeURIComponent(created.uploadToken);
+ const response=await fetch(uploadUrl,{method:'PUT',headers:{'Content-Type':file.type},body:file});
+ if(!response.ok)throw Error('File upload failed. Please retry with a new request.');
+ return request('finalize_upload',{requestId:created.requestId});
+}
+async function customerList(){return request('customer_list',{})}
+async function status(requestId){return request('customer_status',{requestId})}
+async function accept(requestId,quoteVersion){return request('customer_accept',{requestId,quoteVersion})}
+async function vendorRequest(action,body={}){
+ const token=String(sessionStorage.getItem('dbest_marketplace_vendor_secure_token')||'');
+ if(!token)throw Error('Secure Vendor authentication required. The existing Vendor PIN login is not sufficient.');
+ if(!base||!key)throw Error('Marketplace upload service is not configured.');
+ const response=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json',apikey:key,'x-vendor-token':token},body:JSON.stringify({action,...body})});
+ const data=await response.json().catch(()=>({error:'invalid_server_response'}));
+ if(!response.ok||!data.ok)throw Error(data.error||'Vendor request failed');
+ return data;
+}
+function setVendorSecureToken(token){if(!token||typeof token!=='string')throw Error('Valid secure Vendor token required');sessionStorage.setItem('dbest_marketplace_vendor_secure_token',token)}
+function clearVendorSecureToken(){sessionStorage.removeItem('dbest_marketplace_vendor_secure_token')}
+async function vendorList(){return vendorRequest('vendor_list')}
+async function vendorDocumentUrl(requestId){return vendorRequest('vendor_document_url',{requestId})}
+async function vendorQuote(requestId,items){return vendorRequest('vendor_quote',{requestId,items})}
+async function secureVendorLogin(login,pin){
+ if(!base||!key)throw Error('Marketplace service unavailable');
+ const response=await fetch(base+'/functions/v1/marketplace-live',{method:'POST',headers:{'Content-Type':'application/json',apikey:key},body:JSON.stringify({action:'vendor_login',login,pin})});
+ const data=await response.json().catch(()=>({error:'invalid_server_response'}));
+ if(!response.ok||!data.ok||!data.token)throw Error(data.error||'Vendor login failed');
+ if(data.vendor?.owner_approval!=='Approved'||data.vendor?.active!==true||data.vendor?.operational_hold===true)throw Error('Vendor not approved or active');
+ setVendorSecureToken(data.token);
+ sessionStorage.setItem('dbest_marketplace_vendor_secure_id',data.vendor.id);
+ return data.vendor;
+}
+window.DBEST_MARKETPLACE_UPLOAD_API=Object.freeze({availableVendors,submit,status,accept,customerList,vendorList,vendorDocumentUrl,vendorQuote,setVendorSecureToken,clearVendorSecureToken,secureVendorLogin});
+})();
