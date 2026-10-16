@@ -26,9 +26,10 @@ function openUpload(type){
  const api=window.DBEST_MARKETPLACE_UPLOAD_API;
  const enabled=/\.vercel\.app$/i.test(location.hostname)&&!!api;
  if(enabled){
-  const loadVendors=(gps)=>{deliveryGps=gps;return api.availableVendors(type,{lat:gps.lat,lng:gps.lng}).then(vendors=>{
+  const loadVendors=(gps)=>{deliveryGps=gps;return api.availableVendors(type,{lat:gps.lat,lng:gps.lng}).then(async vendors=>{
    eligibleVendorIds=vendors.map(v=>String(v.id)).filter(Boolean).slice(0,20);
    vendorSelect.replaceChildren();for(const v of vendors){const o=document.createElement('option');o.value=v.id;o.textContent=v.name;vendorSelect.append(o)}
+   if(!window.DBEST_MARKETPLACE_MULTI_VENDOR_API){await new Promise(resolve=>{const sc=document.createElement('script');sc.src='./marketplace-multi-vendor-client-v1.js?v=20261016-fix';sc.onload=resolve;sc.onerror=resolve;document.head.append(sc)})}
    const multi=window.DBEST_MARKETPLACE_MULTI_VENDOR_API;
    const active=!!multi?.enabled?.();discovery.textContent=active?(vendors.length+' eligible nearby vendor(s) will receive this request automatically. Bidding closes in 10 minutes.'):'Multi-vendor testing is not enabled on this preview.';
    submit.disabled=!active||!vendors.length;
