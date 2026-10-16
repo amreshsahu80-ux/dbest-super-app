@@ -22,9 +22,9 @@ Deno.serve(async(req:Request)=>{
    if(!v)return respond({error:"vendor_unavailable"},403);
   }
   const requestId=String(body.requestId||"");
-  if(!/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(requestId))return respond({error:"invalid_request_id"},400);
-  const {data:request}=await db.from("marketplace_upload_requests_live").select("id,customer_member_id,category,status,delivery_lat,delivery_lng,quote_window_closes_at").eq("id",requestId).maybeSingle();
-  if(!request)return respond({error:"request_not_found"},404);
+  if(action!=="vendor_invitations"&&!/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(requestId))return respond({error:"invalid_request_id"},400);
+  const {data:request}=action==="vendor_invitations"?{data:null}:await db.from("marketplace_upload_requests_live").select("id,customer_member_id,category,status,delivery_lat,delivery_lng,quote_window_closes_at").eq("id",requestId).maybeSingle();
+  if(action!=="vendor_invitations"&&!request)return respond({error:"request_not_found"},404);
   if(action==="vendor_invitations"){
    const {data:invitations,error}=await db.from("marketplace_quote_invitations").select("request_id,created_at").eq("vendor_id",actor).order("created_at",{ascending:false}).limit(50);
    if(error)return respond({error:"invitations_unavailable"},503);
