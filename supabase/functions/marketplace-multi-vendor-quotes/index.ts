@@ -37,7 +37,7 @@ Deno.serve(async(req:Request)=>{
    if(request.customer_member_id!==actor)return respond({error:"forbidden"},403);
    if(Date.now()>=new Date(request.quote_window_closes_at).getTime())return respond({error:"quotation_window_closed"},409);
    const items=body.items;
-   if(!Array.isArray(items)||items.length<1||items.length>100)return respond({error:"invalid_items"},400);
+   if(!Array.isArray(items)||items.length<1||items.length>10)return respond({error:"invalid_items"},400);
    const cleaned=[];
    for(const item of items){const name=String(item.name||"").trim().slice(0,180),qty=Number(item.qty);if(!name||!Number.isInteger(qty)||qty<1||qty>1000)return respond({error:"invalid_item"},400);cleaned.push({name,qty})}
    const {error}=await db.from("marketplace_upload_requests_live").update({extracted_items:cleaned,extraction_status:"customer_confirmed"}).eq("id",requestId).eq("customer_member_id",actor);
