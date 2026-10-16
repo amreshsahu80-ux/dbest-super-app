@@ -82,9 +82,9 @@ Deno.serve(async(req:Request)=>{
    if(!offer||offer.status!=="submitted"||new Date(offer.expires_at).getTime()<=Date.now())return respond({error:"offer_unavailable"},409);
    const {data:vendor}=await db.from("marketplace_vendors_live").select("id").eq("id",offer.vendor_id).eq("owner_approval","Approved").eq("active",true).eq("operational_hold",false).maybeSingle();
    if(!vendor)return respond({error:"vendor_unavailable"},409);
-   // An atomic database transaction is required to select an offer and
-   // establish a payment/order reservation without concurrent acceptance.
-   return respond({error:"atomic_acceptance_not_configured"},501);
+   const {data:accepted,error:acceptError}=await db.rpc("dbest_accept_marketplace_quote",{p_request:requestId,p_offer:offerId,p_member:actor});
+   if(acceptError)return respond({error:"acceptance_unavailable"},503);
+   return accepted?.ok?respond(accepted):respond(accepted||{error:"acceptance_failed"},409);
   }
   // Invitation and acceptance need a server-side atomic transaction with
   // ownership, vendor eligibility, price and order idempotency checks.
