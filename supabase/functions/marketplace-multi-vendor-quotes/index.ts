@@ -29,9 +29,19 @@ Deno.serve(async(req:Request)=>{
    const {data:invitations,error}=await db.from("marketplace_quote_invitations").select("request_id,created_at").eq("vendor_id",actor).order("created_at",{ascending:false}).limit(50);
    if(error)return respond({error:"invitations_unavailable"},503);
    const ids=(invitations||[]).map(x=>x.request_id);if(!ids.length)return respond({ok:true,invitations:[]});
-   const {data:requests,error:requestError}=await db.from("marketplace_upload_requests_live").select("id,category,status,original_filename,quote_window_closes_at").in("id",ids);
+   const {data:requests,error:requestError}=await db.from("marketplace_upload_requests_live").select("id,category,status,original_filename,quote_window_closes_at,extracted_items,extraction_status").in("id",ids);
    if(requestError)return respond({error:"invitations_unavailable"},503);
    const byId=new Map((requests||[]).map(x=>[x.id,x]));return respond({ok:true,invitations:(invitations||[]).map(x=>({...x,request:byId.get(x.request_id)||null})).filter(x=>x.request)});
+  }
+  if(action==="save_request_items"){
+   if(request.customer_member_id!==actor)return respond({error:"forbidden"},403);
+   if(Date.now()>=new Date(request.quote_window_closes_at).getTime())return respond({error:"quotation_window_closed"},409);
+   const items=body.items;
+   if(!Array.isArray(items)||items.length<1||items.length>100)return respond({error:"invalid_items"},400);
+   const cleaned=[];
+   for(const item of items){const name=String(item.name||"").trim().slice(0,180),qty=Number(item.qty);if(!name||!Number.isInteger(qty)||qty<1||qty>1000)return respond({error:"invalid_item"},400);cleaned.push({name,qty})}
+   const {error}=await db.from("marketplace_upload_requests_live").update({extracted_items:cleaned,extraction_status:"customer_confirmed"}).eq("id",requestId).eq("customer_member_id",actor);
+   return error?respond({error:"items_save_failed"},503):respond({ok:true,items:cleaned});
   }
   if(action==="vendor_document_url"){
    const {data:invitation}=await db.from("marketplace_quote_invitations").select("request_id").eq("request_id",requestId).eq("vendor_id",actor).maybeSingle();

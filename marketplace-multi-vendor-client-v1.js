@@ -21,6 +21,7 @@ const api=Object.freeze({
  // Only use after dedicated server endpoint has been deployed and validated.
  enabled:()=>cfg.marketplaceMultiVendorEnabled===true||/\.vercel\.app$/i.test(location.hostname),
  invite:(requestId,vendorIds)=>call('invite_vendors',{requestId,vendorIds}),
+ saveItems:(requestId,items)=>call('save_request_items',{requestId,items}),
  listOffers:(requestId)=>call('customer_offers',{requestId}),
  acceptOffer:(requestId,offerId,version)=>call('accept_offer',{requestId,offerId,version}),
  vendorInvitations:()=>call('vendor_invitations',{},'vendor'),
