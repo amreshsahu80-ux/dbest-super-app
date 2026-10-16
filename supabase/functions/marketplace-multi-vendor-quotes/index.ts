@@ -91,7 +91,7 @@ Deno.serve(async(req:Request)=>{
   }
   if(action==="customer_offers"){
    if(request.customer_member_id!==actor)return respond({error:"forbidden"},403);
-   const {data,error}=await db.from("marketplace_quote_offers").select("id,vendor_id,version,items,subtotal,delivery_fee,delivery_calculated,status,expires_at,created_at").eq("request_id",requestId).eq("status","submitted").gt("expires_at",new Date().toISOString()).order("created_at",{ascending:false});
+   const {data,error}=await db.from("marketplace_quote_offers").select("id,vendor_id,version,items,subtotal,delivery_fee,delivery_calculated,delivery_road_km,delivery_billable_km,delivery_free_km,delivery_rate_per_km,delivery_distance_source,status,expires_at,created_at").eq("request_id",requestId).eq("status","submitted").gt("expires_at",new Date().toISOString()).order("created_at",{ascending:false});
    return error?respond({error:"offers_unavailable"},503):respond({ok:true,offers:data||[],quoteWindowClosesAt:request.quote_window_closes_at,selectionClosesAt:new Date(new Date(request.quote_window_closes_at).getTime()+5*60*1000).toISOString()});
   }
   if(action==="submit_offer"){
@@ -115,21 +115,37 @@ Deno.serve(async(req:Request)=>{
    const rad=Math.PI/180,a=(lat2-lat1)*rad,b=(lng2-lng1)*rad;
    const h=Math.sin(a/2)**2+Math.cos(lat1*rad)*Math.cos(lat2*rad)*Math.sin(b/2)**2;
    const km=6371*2*Math.atan2(Math.sqrt(h),Math.sqrt(Math.max(0,1-h)));
+   // Preview routing uses OSRM's public demo endpoint. Never substitute straight-line distance on failure.
+   const routeController=new AbortController();
+   const routeTimeout=setTimeout(()=>routeController.abort(),6500);
+   let roadKm:number;
+   try{
+    const routeUrl="https://router.project-osrm.org/route/v1/driving/"+lng2+","+lat2+";"+lng1+","+lat1+"?overview=false&alternatives=false&steps=false";
+    const routeResponse=await fetch(routeUrl,{signal:routeController.signal});
+    if(!routeResponse.ok)return respond({error:"road_distance_unavailable"},503);
+    const route=await routeResponse.json();
+    const meters=Number(route?.routes?.[0]?.distance);
+    if(route.code!=="Ok"||!Number.isFinite(meters)||meters<0)return respond({error:"road_distance_unavailable"},503);
+    roadKm=meters/1000;
+   }catch(_){return respond({error:"road_distance_unavailable"},503)}
+   finally{clearTimeout(routeTimeout)}
    const grocery=String(request.category).toLowerCase()==="grocery";
    const threshold=grocery?1000:250,rate=grocery?15:10;
-   const fee=Math.round(((cents/100)>=threshold?Math.max(0,km-5):Math.max(1,km))*rate*100)/100;
+   const billableKm=(cents/100)>=threshold?Math.max(0,Math.ceil(roadKm-5)):Math.max(1,Math.ceil(roadKm));
+   const fee=billableKm*rate;
    if(!Number.isFinite(fee)||fee>10000)return respond({error:"delivery_fee_out_of_range"},409);
    const {data:latest}=await db.from("marketplace_quote_offers").select("version").eq("request_id",requestId).eq("vendor_id",actor).order("version",{ascending:false}).limit(1).maybeSingle();
-   const {data,error}=await db.from("marketplace_quote_offers").insert({request_id:requestId,vendor_id:actor,version:Number(latest?.version||0)+1,items:normalized,subtotal:cents/100,delivery_fee:fee,delivery_calculated:true,expires_at:new Date(new Date(request.quote_window_closes_at).getTime()+5*60*1000).toISOString()}).select("id,version").single();
-   return error?respond({error:"quote_save_failed"},409):respond({ok:true,offer:{...data,delivery_fee:fee,delivery_distance_km:Math.round(km*100)/100}});
+   const {data,error}=await db.from("marketplace_quote_offers").insert({request_id:requestId,vendor_id:actor,version:Number(latest?.version||0)+1,items:normalized,subtotal:cents/100,delivery_fee:fee,delivery_calculated:true,delivery_road_km:Math.round(roadKm*1000)/1000,delivery_billable_km:billableKm,delivery_free_km:(cents/100)>=threshold?5:0,delivery_rate_per_km:rate,delivery_distance_source:"osrm_driving_preview",expires_at:new Date(new Date(request.quote_window_closes_at).getTime()+5*60*1000).toISOString()}).select("id,version").single();
+   return error?respond({error:"quote_save_failed"},409):respond({ok:true,offer:{...data,delivery_fee:fee,delivery_distance_km:Math.round(roadKm*100)/100}});
   }
   if(action==="accept_offer"){
    if(request.customer_member_id!==actor)return respond({error:"forbidden"},403);
    if(!["Submitted","Vendor Reviewing","Quote Ready"].includes(request.status))return respond({error:"request_not_open"},409);
    const offerId=String(body.offerId||"");
    if(!/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(offerId))return respond({error:"invalid_offer_id"},400);
-   const {data:offer}=await db.from("marketplace_quote_offers").select("id,vendor_id,subtotal,delivery_fee,status,expires_at").eq("id",offerId).eq("request_id",requestId).maybeSingle();
+   const {data:offer}=await db.from("marketplace_quote_offers").select("id,vendor_id,subtotal,delivery_fee,delivery_calculated,status,expires_at").eq("id",offerId).eq("request_id",requestId).maybeSingle();
    if(!offer||offer.status!=="submitted"||new Date(offer.expires_at).getTime()<=Date.now())return respond({error:"offer_unavailable"},409);
+   if(offer.delivery_calculated!==true)return respond({error:"delivery_fee_not_verified"},409);
    const {data:vendor}=await db.from("marketplace_vendors_live").select("id").eq("id",offer.vendor_id).eq("owner_approval","Approved").eq("active",true).eq("operational_hold",false).maybeSingle();
    if(!vendor)return respond({error:"vendor_unavailable"},409);
    const {data:accepted,error:acceptError}=await db.rpc("dbest_accept_marketplace_quote",{p_request:requestId,p_offer:offerId,p_member:actor});
