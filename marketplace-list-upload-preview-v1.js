@@ -58,13 +58,25 @@ function mountVendorQuote(){
  dashboard.insertAdjacentElement('afterend',wrap);
 }
 function mount(){mountVendorQuote();
- const root=[...document.querySelectorAll('.shopPage')].reverse().find(el=>el.offsetWidth>0&&(el.querySelector('.marketTypeTab.on')||el.querySelector('.marketTypeTab')||/restaurants & food|search restaurants/i.test(el.textContent||'')));if(!root)return;
- let type=category();if(!type){const t=(root.textContent||'').slice(0,700).toLowerCase();if(t.includes('restaurants & food'))type='restaurant';else if(t.includes('medicines'))type='medicine';else if(t.includes('grocery'))type='grocery'}if(!type){root.querySelector('[data-dbest-list-upload]')?.remove();return;}
- let btn=root.querySelector('[data-dbest-list-upload]');if(btn){if(btn.dataset.dbestListUpload===type)return;btn.remove();}
- btn=document.createElement('button');btn.type='button';btn.dataset.dbestListUpload=type;btn.textContent='📎 '+TYPES[type];btn.style.cssText='display:block;margin:12px auto;padding:12px 18px;border-radius:12px;border:1px solid #1564b5;background:#eaf4ff;color:#123e70;font-weight:700;max-width:95%';
+ const pages=[...document.querySelectorAll('.shopPage,[class*="shopPage"],[id*="shopPage"]')].filter(el=>el.getClientRects().length);
+ let root=pages.reverse().find(el=>el.querySelector('.marketTypeTab.on'))||pages[0];
+ if(!root){
+  const search=[...document.querySelectorAll('input')].find(el=>el.getClientRects().length&&/Search (Restaurants|Grocery|Medicines)/i.test(el.placeholder||''));
+  root=search?.closest('section,main,article,[class*="Page"],[class*="page"]')||search?.parentElement?.parentElement;
+ }
+ if(!root)return;
+ const text=((root.innerText||'').slice(0,1500)+' '+(root.querySelector('input[placeholder]')?.placeholder||'')).toLowerCase();
+ let type=/search restaurants|restaurants & food/.test(text)?'restaurant':/search medicines|medicine store|medicines/.test(text)?'medicine':/search grocery|grocery store|grocery/.test(text)?'grocery':category();
+ if(!type)return;
+ let btn=root.querySelector('[data-dbest-list-upload]');
+ if(btn&&btn.dataset.dbestListUpload===type)return;
+ btn?.remove();
+ btn=document.createElement('button');btn.type='button';btn.dataset.dbestListUpload=type;btn.textContent='📎 '+TYPES[type];
+ btn.style.cssText='display:block;margin:12px auto;padding:12px 18px;border-radius:12px;border:1px solid #1564b5;background:#eaf4ff;color:#123e70;font-weight:700;max-width:95%';
  btn.onclick=()=>openUpload(type);
- const anchor=root.querySelector('input[type=search]')?.parentElement||root.querySelector('h2')||root.firstElementChild;
- if(anchor?.parentNode)anchor.insertAdjacentElement('afterend',btn);else root.prepend(btn);
+ const search=root.querySelector('input[placeholder*="Search"]');
+ const anchor=search?.closest('section,div')||root.querySelector('h2')||root.firstElementChild;
+ if(anchor&&anchor!==root&&anchor.parentElement)anchor.insertAdjacentElement('afterend',btn);else root.prepend(btn);
 }
 function mountVendorQuotes(){
  if(!/\\.vercel\\.app$/i.test(location.hostname))return;
