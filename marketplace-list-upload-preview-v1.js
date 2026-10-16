@@ -83,6 +83,21 @@ function mount(){mountVendorQuote();
  const anchor=search?.closest('section,div')||root.querySelector('h2')||root.firstElementChild;
  if(anchor&&anchor!==root&&anchor.parentElement)anchor.insertAdjacentElement('afterend',btn);else root.prepend(btn);
 }
+function mountMultiVendorQuotes(){
+ if(!/\.vercel\.app$/i.test(location.hostname)||!document.querySelector('.vendorDashboardHead')||document.getElementById('dbestMultiVendorQuotes'))return;
+ const api=window.DBEST_MARKETPLACE_UPLOAD_API,multi=window.DBEST_MARKETPLACE_MULTI_VENDOR_API;if(!api||!multi?.enabled?.())return;
+ const root=document.createElement('section');root.id='dbestMultiVendorQuotes';root.style.cssText='padding:16px;margin:12px;border:1px solid #b5cbe0;border-radius:14px;background:#f0f8ff;color:#17334b';
+ const title=document.createElement('h3');title.textContent='📋 Quotation Requests — 10 Minute Bidding';root.append(title);
+ const message=document.createElement('p');message.setAttribute('aria-live','polite');root.append(message);
+ const login=document.createElement('div');const id=document.createElement('input');id.placeholder='Vendor ID';id.style.cssText='width:44%;padding:9px;margin:3px';const pin=document.createElement('input');pin.type='password';pin.placeholder='Vendor PIN';pin.style.cssText='width:44%;padding:9px;margin:3px';const auth=document.createElement('button');auth.textContent='Secure Login';auth.type='button';login.append(id,pin,auth);root.append(login);
+ const refresh=document.createElement('button');refresh.textContent='Refresh Quotation Requests';refresh.type='button';root.append(refresh);const results=document.createElement('div');root.append(results);
+ async function load(){results.replaceChildren();message.textContent='Loading invitations…';try{const data=await multi.vendorInvitations();const rows=(data.invitations||[]).filter(x=>x.request);message.textContent=rows.length+' invitation(s)';for(const invitation of rows){const r=invitation.request,close=Date.parse(r.quote_window_closes_at),card=document.createElement('div');card.style.cssText='background:white;border:1px solid #ccd;border-radius:10px;padding:12px;margin:10px 0';const label=document.createElement('strong');label.textContent=r.category+' • '+r.original_filename;card.append(label);const timer=document.createElement('p');card.append(timer);const tick=()=>{const n=Math.max(0,Math.ceil((close-Date.now())/1000));timer.textContent=n?'Bidding closes in '+Math.floor(n/60)+':'+String(n%60).padStart(2,'0'):'Bidding closed';};tick();const interval=setInterval(()=>{if(!card.isConnected){clearInterval(interval);return}tick();if(Date.now()>=close){clearInterval(interval);send.disabled=true}},1000);
+ const doc=document.createElement('button');doc.type='button';doc.textContent='View Uploaded List';doc.onclick=async()=>{try{const x=await multi.vendorDocument(r.id);window.open(x.url,'_blank','noopener,noreferrer')}catch(e){message.textContent=String(e.message||e)}};card.append(doc);
+ const area=document.createElement('textarea');area.rows=4;area.placeholder='Item name | Quantity | Price (one item per line)';area.style.cssText='display:block;width:100%;margin:10px 0';card.append(area);const fee=document.createElement('input');fee.type='number';fee.min='0';fee.step='0.01';fee.placeholder='Delivery charge ₹';fee.style.cssText='display:block;padding:8px;margin:8px 0';card.append(fee);
+ const send=document.createElement('button');send.type='button';send.textContent='Submit Item-wise Quotation';send.disabled=Date.now()>=close;send.onclick=async()=>{try{const items=area.value.split(/\r?\n/).filter(Boolean).map(line=>{const p=line.split('|').map(x=>x.trim());return{name:p[0],qty:Number(p[1]),price:Number(p[2])}});if(!items.length||items.some(x=>!x.name||!Number.isInteger(x.qty)||x.qty<1||!Number.isFinite(x.price)||x.price<0))throw Error('Enter Item | Quantity | Price on each line');send.disabled=true;await multi.submitOffer(r.id,items,Number(fee.value||0));message.textContent='Quotation submitted successfully';}catch(e){message.textContent=String(e.message||e);send.disabled=Date.now()>=close}};card.append(send);results.append(card)}}catch(e){message.textContent='Unable to load invitations: '+String(e.message||e)}}
+ auth.onclick=async()=>{auth.disabled=true;try{await api.secureVendorLogin(id.value.trim(),pin.value);pin.value='';login.remove();await load()}catch(e){message.textContent=String(e.message||e);auth.disabled=false}};
+ refresh.onclick=load;root.querySelector('.vendorDashboardHead');document.querySelector('.vendorDashboardHead').insertAdjacentElement('afterend',root);
+}
 function mountVendorQuotes(){
  if(!/\.vercel\.app$/i.test(location.hostname))return;
  const head=document.querySelector('.vendorDashboardHead');if(!head||document.getElementById('dbestVendorQuotes'))return;
@@ -97,8 +112,8 @@ function mountVendorQuotes(){
  head.insertAdjacentElement('afterend',root);
 }
 let scheduled=false;
-function scheduleMount(){if(scheduled)return;scheduled=true;setTimeout(()=>{scheduled=false;mount();mountVendorQuotes()},120)}
+function scheduleMount(){if(scheduled)return;scheduled=true;setTimeout(()=>{scheduled=false;mount();mountVendorQuotes();mountMultiVendorQuotes()},120)}
 const obs=new MutationObserver(scheduleMount);
-function start(){mount();mountVendorQuotes();obs.observe(document.body,{childList:true,subtree:true})}
+function start(){mount();mountVendorQuotes();mountMultiVendorQuotes();obs.observe(document.body,{childList:true,subtree:true})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
