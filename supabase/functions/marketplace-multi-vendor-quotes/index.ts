@@ -73,6 +73,19 @@ Deno.serve(async(req:Request)=>{
    const {data,error}=await db.from("marketplace_quote_offers").insert({request_id:requestId,vendor_id:actor,version:Number(latest?.version||0)+1,items:normalized,subtotal:cents/100,delivery_fee:fee,expires_at:new Date(Date.now()+24*3600*1000).toISOString()}).select("id,version").single();
    return error?respond({error:"quote_save_failed"},409):respond({ok:true,offer:data});
   }
+  if(action==="accept_offer"){
+   if(request.customer_member_id!==actor)return respond({error:"forbidden"},403);
+   if(!["Submitted","Vendor Reviewing","Quote Ready"].includes(request.status))return respond({error:"request_not_open"},409);
+   const offerId=String(body.offerId||"");
+   if(!/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(offerId))return respond({error:"invalid_offer_id"},400);
+   const {data:offer}=await db.from("marketplace_quote_offers").select("id,vendor_id,subtotal,delivery_fee,status,expires_at").eq("id",offerId).eq("request_id",requestId).maybeSingle();
+   if(!offer||offer.status!=="submitted"||new Date(offer.expires_at).getTime()<=Date.now())return respond({error:"offer_unavailable"},409);
+   const {data:vendor}=await db.from("marketplace_vendors_live").select("id").eq("id",offer.vendor_id).eq("owner_approval","Approved").eq("active",true).eq("operational_hold",false).maybeSingle();
+   if(!vendor)return respond({error:"vendor_unavailable"},409);
+   // An atomic database transaction is required to select an offer and
+   // establish a payment/order reservation without concurrent acceptance.
+   return respond({error:"atomic_acceptance_not_configured"},501);
+  }
   // Invitation and acceptance need a server-side atomic transaction with
   // ownership, vendor eligibility, price and order idempotency checks.
   // Do not expose incomplete mutations.
