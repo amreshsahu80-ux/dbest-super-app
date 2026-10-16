@@ -24,6 +24,7 @@ const api=Object.freeze({
  listOffers:(requestId)=>call('customer_offers',{requestId}),
  acceptOffer:(requestId,offerId,version)=>call('accept_offer',{requestId,offerId,version}),
  vendorInvitations:()=>call('vendor_invitations',{},'vendor'),
+ vendorDocument:(requestId)=>call('vendor_document_url',{requestId},'vendor'),
  submitOffer:(requestId,items,deliveryFee)=>call('submit_offer',{requestId,items,deliveryFee},'vendor')
 });
 root.DBEST_MARKETPLACE_MULTI_VENDOR_API=api;
