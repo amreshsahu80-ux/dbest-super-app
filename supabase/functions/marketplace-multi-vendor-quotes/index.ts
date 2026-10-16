@@ -91,11 +91,22 @@ Deno.serve(async(req:Request)=>{
     if(!name||!Number.isInteger(qty)||qty<1||qty>1000||!Number.isFinite(price)||price<0||price>100000||Math.abs(Math.round(price*100)-price*100)>0.000001)return respond({error:"invalid_item"},400);
     cents+=qty*Math.round(price*100);normalized.push({name,qty,price});
    }
-   const fee=Number(body.deliveryFee);
-   if(!Number.isFinite(fee)||fee<0||fee>10000||Math.abs(Math.round(fee*100)-fee*100)>0.000001||cents>100000000)return respond({error:"invalid_total"},400);
+   if(cents>100000000)return respond({error:"invalid_total"},400);
+   if(request.delivery_lat==null||request.delivery_lng==null)return respond({error:"customer_delivery_location_required"},409);
+   const {data:pickup}=await db.from("marketplace_vendors_live").select("lat,lng").eq("id",actor).maybeSingle();
+   if(!pickup||pickup.lat==null||pickup.lng==null)return respond({error:"vendor_pickup_location_required"},409);
+   const lat1=Number(request.delivery_lat),lng1=Number(request.delivery_lng),lat2=Number(pickup.lat),lng2=Number(pickup.lng);
+   if(![lat1,lng1,lat2,lng2].every(Number.isFinite)||Math.abs(lat1)>90||Math.abs(lat2)>90||Math.abs(lng1)>180||Math.abs(lng2)>180)return respond({error:"invalid_delivery_coordinates"},409);
+   const rad=Math.PI/180,a=(lat2-lat1)*rad,b=(lng2-lng1)*rad;
+   const h=Math.sin(a/2)**2+Math.cos(lat1*rad)*Math.cos(lat2*rad)*Math.sin(b/2)**2;
+   const km=6371*2*Math.atan2(Math.sqrt(h),Math.sqrt(Math.max(0,1-h)));
+   const grocery=String(request.category).toLowerCase()==="grocery";
+   const threshold=grocery?1000:250,rate=grocery?15:10;
+   const fee=Math.round(((cents/100)>=threshold?Math.max(0,km-5):Math.max(1,km))*rate*100)/100;
+   if(!Number.isFinite(fee)||fee>10000)return respond({error:"delivery_fee_out_of_range"},409);
    const {data:latest}=await db.from("marketplace_quote_offers").select("version").eq("request_id",requestId).eq("vendor_id",actor).order("version",{ascending:false}).limit(1).maybeSingle();
    const {data,error}=await db.from("marketplace_quote_offers").insert({request_id:requestId,vendor_id:actor,version:Number(latest?.version||0)+1,items:normalized,subtotal:cents/100,delivery_fee:fee,expires_at:new Date(new Date(request.quote_window_closes_at).getTime()+5*60*1000).toISOString()}).select("id,version").single();
-   return error?respond({error:"quote_save_failed"},409):respond({ok:true,offer:data});
+   return error?respond({error:"quote_save_failed"},409):respond({ok:true,offer:{...data,delivery_fee:fee,delivery_distance_km:Math.round(km*100)/100}});
   }
   if(action==="accept_offer"){
    if(request.customer_member_id!==actor)return respond({error:"forbidden"},403);
