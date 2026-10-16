@@ -41,7 +41,22 @@ Deno.serve(async(req:Request)=>{
    const cleaned=[];
    for(const item of items){const name=String(item.name||"").trim().slice(0,180),qty=Number(item.qty);if(!name||!Number.isInteger(qty)||qty<1||qty>1000)return respond({error:"invalid_item"},400);cleaned.push({name,qty})}
    const {error}=await db.from("marketplace_upload_requests_live").update({extracted_items:cleaned,extraction_status:"customer_confirmed"}).eq("id",requestId).eq("customer_member_id",actor);
-   return error?respond({error:"items_save_failed"},503):respond({ok:true,items:cleaned});
+   if(error)return respond({error:"items_save_failed"},503);
+   // Route on the server immediately after item confirmation; do not depend on a second browser call.
+   const {data:eligible,error:lookupError}=await db.from("marketplace_vendors_live").select("id,type,lat,lng,owner_approval,active,operational_hold,agreement_status").eq("type",request.category).eq("owner_approval","Approved").eq("active",true).eq("operational_hold",false).eq("agreement_status","Fully Signed");
+   if(lookupError)return respond({error:"vendor_routing_lookup_failed",requestId},503);
+   const lat=Number(request.delivery_lat),lng=Number(request.delivery_lng),rad=Math.PI/180,radius=request.category==="grocery"?10:15;
+   if(request.delivery_lat==null||request.delivery_lng==null||!Number.isFinite(lat)||!Number.isFinite(lng))return respond({error:"delivery_coordinates_missing",requestId},409);
+   const nearby=(eligible||[]).filter(v=>{
+    if(v.lat==null||v.lng==null)return false;
+    const a=(Number(v.lat)-lat)*rad,b=(Number(v.lng)-lng)*rad;
+    const h=Math.sin(a/2)**2+Math.cos(lat*rad)*Math.cos(Number(v.lat)*rad)*Math.sin(b/2)**2;
+    return 6371*2*Math.atan2(Math.sqrt(h),Math.sqrt(Math.max(0,1-h)))<=radius;
+   }).slice(0,20);
+   if(!nearby.length)return respond({error:"no_eligible_nearby_vendors",requestId},409);
+   const {error:routeError}=await db.from("marketplace_quote_invitations").upsert(nearby.map(v=>({request_id:requestId,vendor_id:v.id})),{onConflict:"request_id,vendor_id",ignoreDuplicates:true});
+   if(routeError)return respond({error:"vendor_routing_failed",requestId},503);
+   return respond({ok:true,items:cleaned,invited:nearby.length});
   }
   if(action==="vendor_document_url"){
    const {data:invitation}=await db.from("marketplace_quote_invitations").select("request_id").eq("request_id",requestId).eq("vendor_id",actor).maybeSingle();
