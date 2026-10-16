@@ -76,7 +76,7 @@ Deno.serve(async(req:Request)=>{
   }
   if(action==="customer_offers"){
    if(request.customer_member_id!==actor)return respond({error:"forbidden"},403);
-   const {data,error}=await db.from("marketplace_quote_offers").select("id,vendor_id,version,items,subtotal,delivery_fee,status,expires_at,created_at").eq("request_id",requestId).eq("status","submitted").gt("expires_at",new Date().toISOString()).order("created_at",{ascending:false});
+   const {data,error}=await db.from("marketplace_quote_offers").select("id,vendor_id,version,items,subtotal,delivery_fee,delivery_calculated,status,expires_at,created_at").eq("request_id",requestId).eq("status","submitted").gt("expires_at",new Date().toISOString()).order("created_at",{ascending:false});
    return error?respond({error:"offers_unavailable"},503):respond({ok:true,offers:data||[],quoteWindowClosesAt:request.quote_window_closes_at,selectionClosesAt:new Date(new Date(request.quote_window_closes_at).getTime()+5*60*1000).toISOString()});
   }
   if(action==="submit_offer"){
@@ -105,7 +105,7 @@ Deno.serve(async(req:Request)=>{
    const fee=Math.round(((cents/100)>=threshold?Math.max(0,km-5):Math.max(1,km))*rate*100)/100;
    if(!Number.isFinite(fee)||fee>10000)return respond({error:"delivery_fee_out_of_range"},409);
    const {data:latest}=await db.from("marketplace_quote_offers").select("version").eq("request_id",requestId).eq("vendor_id",actor).order("version",{ascending:false}).limit(1).maybeSingle();
-   const {data,error}=await db.from("marketplace_quote_offers").insert({request_id:requestId,vendor_id:actor,version:Number(latest?.version||0)+1,items:normalized,subtotal:cents/100,delivery_fee:fee,expires_at:new Date(new Date(request.quote_window_closes_at).getTime()+5*60*1000).toISOString()}).select("id,version").single();
+   const {data,error}=await db.from("marketplace_quote_offers").insert({request_id:requestId,vendor_id:actor,version:Number(latest?.version||0)+1,items:normalized,subtotal:cents/100,delivery_fee:fee,delivery_calculated:true,expires_at:new Date(new Date(request.quote_window_closes_at).getTime()+5*60*1000).toISOString()}).select("id,version").single();
    return error?respond({error:"quote_save_failed"},409):respond({ok:true,offer:{...data,delivery_fee:fee,delivery_distance_km:Math.round(km*100)/100}});
   }
   if(action==="accept_offer"){
