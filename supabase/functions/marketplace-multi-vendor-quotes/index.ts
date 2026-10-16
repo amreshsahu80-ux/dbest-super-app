@@ -29,6 +29,17 @@ Deno.serve(async(req:Request)=>{
   if(!/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(requestId))return respond({error:"invalid_request_id"},400);
   const {data:request}=await db.from("marketplace_upload_requests_live").select("id,customer_member_id,category,status").eq("id",requestId).maybeSingle();
   if(!request)return respond({error:"request_not_found"},404);
+  if(action==="invite_vendors"){
+   if(request.customer_member_id!==actor)return respond({error:"forbidden"},403);
+   if(!["Submitted","Vendor Reviewing","Quote Ready"].includes(request.status))return respond({error:"request_not_open"},409);
+   const vendorIds=body.vendorIds;
+   if(!Array.isArray(vendorIds)||vendorIds.length<1||vendorIds.length>20||vendorIds.some((v:unknown)=>typeof v!=="string"||!v||v.length>128)||new Set(vendorIds).size!==vendorIds.length)return respond({error:"invalid_vendor_selection"},400);
+   const {data:vendors,error:vendorError}=await db.from("marketplace_vendors_live").select("id,type,owner_approval,active,operational_hold,agreement_status").in("id",vendorIds);
+   if(vendorError||!vendors||vendors.length!==vendorIds.length||vendors.some(v=>String(v.type).toLowerCase()!==request.category||v.owner_approval!=="Approved"||v.active!==true||v.operational_hold===true||v.agreement_status!=="Fully Signed"))return respond({error:"vendor_not_eligible"},409);
+   // Radius is enforced during the existing create_request vendor selection.
+   // Additional vendors must be geo-verified in the invitation workflow before release.
+   return respond({error:"multi_vendor_geo_validation_pending"},501);
+  }
   if(action==="customer_offers"){
    if(request.customer_member_id!==actor)return respond({error:"forbidden"},403);
    const {data,error}=await db.from("marketplace_quote_offers").select("id,vendor_id,version,items,subtotal,delivery_fee,status,expires_at,created_at").eq("request_id",requestId).eq("status","submitted").gt("expires_at",new Date().toISOString()).order("created_at",{ascending:false});
