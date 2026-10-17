@@ -9,13 +9,11 @@ async function nearbyHandler(req,res){
   if(!googleKey)throw Error('Google Places key missing');
   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),6500);
   try{
-   const url='https://maps.googleapis.com/maps/api/place/nearbysearch/json?location='+encodeURIComponent(lat+','+lng)+'&radius=12000&type=point_of_interest&key='+encodeURIComponent(googleKey);
-   const response=await fetch(url,{signal:controller.signal});
-   if(!response.ok)throw Error('Google HTTP '+response.status);
+   const response=await fetch('https://places.googleapis.com/v1/places:searchNearby',{method:'POST',headers:{'Content-Type':'application/json','X-Goog-Api-Key':googleKey,'X-Goog-FieldMask':'places.displayName,places.location,places.types'},body:JSON.stringify({includedTypes:['hospital','train_station','bus_station','airport','university','school','park','tourist_attraction'],maxResultCount:20,locationRestriction:{circle:{center:{latitude:lat,longitude:lng},radius:12000}}}),signal:controller.signal});
+   if(!response.ok){const detail=await response.text().catch(()=>'');throw Error('Google Places New HTTP '+response.status+' '+detail.slice(0,180))}
    const data=await response.json();
-   if(data.status!=='OK')throw Error('Google Places '+String(data.status)+' '+String(data.error_message||''));
    const seen=new Set();
-   const places=(data.results||[]).map(x=>({name:String(x.name||'').trim(),lat:Number(x.geometry?.location?.lat),lng:Number(x.geometry?.location?.lng),types:Array.isArray(x.types)?x.types:[]})).filter(x=>{const key=x.name.toLowerCase();if(!key||seen.has(key)||!Number.isFinite(x.lat)||!Number.isFinite(x.lng))return false;seen.add(key);return true}).slice(0,12);
+   const places=(data.places||[]).map(x=>({name:String(x.displayName?.text||'').trim(),lat:Number(x.location?.latitude),lng:Number(x.location?.longitude),types:Array.isArray(x.types)?x.types:[]})).filter(x=>{const key=x.name.toLowerCase();if(!key||seen.has(key)||!Number.isFinite(x.lat)||!Number.isFinite(x.lng))return false;seen.add(key);return true}).slice(0,12);
    if(!places.length)throw Error('Google Places empty');
    return places;
   }finally{clearTimeout(timer)}
