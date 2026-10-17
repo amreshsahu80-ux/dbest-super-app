@@ -15,7 +15,7 @@ async function nearbyHandler(req,res){
    const data=await response.json();
    if(data.status!=='OK')throw Error('Google Places '+String(data.status)+' '+String(data.error_message||''));
    const seen=new Set();
-   const places=(data.results||[]).map(x=>({name:String(x.name||'').trim(),lat:Number(x.geometry?.location?.lat),lng:Number(x.geometry?.location?.lng)})).filter(x=>{const key=x.name.toLowerCase();if(!key||seen.has(key)||!Number.isFinite(x.lat)||!Number.isFinite(x.lng))return false;seen.add(key);return true}).slice(0,12);
+   const places=(data.results||[]).map(x=>({name:String(x.name||'').trim(),lat:Number(x.geometry?.location?.lat),lng:Number(x.geometry?.location?.lng),types:Array.isArray(x.types)?x.types:[]})).filter(x=>{const key=x.name.toLowerCase();if(!key||seen.has(key)||!Number.isFinite(x.lat)||!Number.isFinite(x.lng))return false;seen.add(key);return true}).slice(0,12);
    if(!places.length)throw Error('Google Places empty');
    return places;
   }finally{clearTimeout(timer)}
@@ -26,7 +26,7 @@ async function nearbyHandler(req,res){
    const response=await fetch(host,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({data:q}),signal:controller.signal});
    if(!response.ok)throw Error('HTTP '+response.status);
    const data=await response.json();const seen=new Set();
-   const places=(data.elements||[]).map(x=>({name:String(x.tags?.name||'').trim(),lat:Number(x.lat??x.center?.lat),lng:Number(x.lon??x.center?.lon)})).filter(x=>{const key=x.name.toLowerCase();if(!key||seen.has(key)||!Number.isFinite(x.lat)||!Number.isFinite(x.lng))return false;seen.add(key);return true}).slice(0,12);
+   const places=(data.elements||[]).map(x=>({name:String(x.tags?.name||'').trim(),lat:Number(x.lat??x.center?.lat),lng:Number(x.lon??x.center?.lon),types:[x.tags?.amenity,x.tags?.railway,x.tags?.tourism,x.tags?.aeroway,x.tags?.leisure].filter(Boolean).map(v=>({station:'train_station',bus_station:'bus_station',hospital:'hospital',college:'college',university:'university',park:'park',attraction:'tourist_attraction'}[v]||v))})).filter(x=>{const key=x.name.toLowerCase();if(!key||seen.has(key)||!Number.isFinite(x.lat)||!Number.isFinite(x.lng))return false;seen.add(key);return true}).slice(0,12);
    if(!places.length)throw Error('Empty response');
    return places;
   }finally{clearTimeout(timer)}
