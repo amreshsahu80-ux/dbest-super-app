@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const TYPES={grocery:'Upload Shopping List',medicine:'Upload Prescription / Medicine List',restaurant:'Upload Food Order List'};
+const TYPES={grocery:'Upload Shopping List',medicine:'Upload Prescription / Medicine List',restaurant:'Upload Bulk Order'};
 const MAX_BYTES=8*1024*1024;
 function category(){
  const active=document.querySelector('.shopPage .marketTypeTab.on');
