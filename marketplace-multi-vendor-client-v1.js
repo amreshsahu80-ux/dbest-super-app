@@ -25,6 +25,7 @@ const api=Object.freeze({
  listOffers:(requestId)=>call('customer_offers',{requestId}),
  acceptOffer:(requestId,offerId,version)=>call('accept_offer',{requestId,offerId,version}),
  saveCheckoutAddress:(requestId,deliveryAddress)=>call('save_checkout_details',{requestId,deliveryAddress}),
+ placeQuoteOrder:(requestId,paymentMethod)=>call('place_quote_order',{requestId,paymentMethod}),
  vendorInvitations:()=>call('vendor_invitations',{},'vendor'),
  vendorDocument:(requestId)=>call('vendor_document_url',{requestId},'vendor'),
  submitOffer:(requestId,items,deliveryFee)=>call('submit_offer',{requestId,items,deliveryFee},'vendor')
