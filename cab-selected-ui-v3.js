@@ -190,7 +190,7 @@ async function loadNearbyPlaces(lat,lng){
   let lastError;
   for(const radius of [12000,25000,45000]){
    try{
-    const result=await Place.searchNearby({fields:['displayName','location','primaryType','types','photos'],includedTypes:['train_station','bus_station','airport','hospital','university','school','shopping_mall','park','tourist_attraction'],locationRestriction:{center:{lat,lng},radius},maxResultCount:20,rankPreference:SearchNearbyRankPreference.DISTANCE});
+    const result=await Place.searchNearby({fields:['displayName','location','primaryType','types','photos'],includedTypes:['train_station','bus_station','airport','hospital','university','school','shopping_mall','park','tourist_attraction'],locationRestriction:{center:{lat,lng},radius:Math.min(radius,12000)},maxResultCount:20,rankPreference:SearchNearbyRankPreference.DISTANCE});
     add(result.places);
     if(all.length>=18)break;
    }catch(e){lastError=e;console.warn('DBest Places radius '+radius+'m failed',e);break}
@@ -198,7 +198,7 @@ async function loadNearbyPlaces(lat,lng){
   if(all.length<5&&typeof Place.searchByText==='function'){
    for(const query of ['railway station bus station airport hospital','college university shopping mall park garden']){
     try{
-     const result=await Place.searchByText({textQuery:query,fields:['displayName','location','primaryType','types','photos'],locationRestriction:{center:{lat,lng},radius:25000},maxResultCount:12});
+     const result=await Place.searchByText({textQuery:query,fields:['displayName','location','primaryType','types','photos'],locationBias:{center:{lat,lng},radius:12000},maxResultCount:12});
      add(result.places);
      if(all.length>=8)break;
     }catch(e){lastError=e;console.warn('DBest Places text fallback failed',e)}
@@ -223,7 +223,7 @@ async function loadNearbyPlaces(lat,lng){
    finally{clearTimeout(abort)}
   })();
   const outcomes=await Promise.all([googlePromise,serverPromise]);
-  if(!outcomes.some(Boolean)){render([]);if(rail.isConnected&&rail.dataset.requestId===requestId){const diagnostic=document.createElement('div');diagnostic.style.cssText='font-size:11px;color:#64748b;padding:0 12px 12px';diagnostic.textContent='Diagnostic: '+(nearbyFailure||'No nearby results')+' · server unavailable';rail.appendChild(diagnostic)}}
+  if(!outcomes.some(Boolean)){render([]);console.warn('DBest nearby search unavailable',nearbyFailure||'No nearby results')}
  }finally{clearTimeout(timer)}
 }
 async function useGps(noisy){
