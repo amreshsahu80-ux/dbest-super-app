@@ -222,7 +222,20 @@ async function loadNearbyPlaces(lat,lng){
    }catch(e){console.warn('DBest nearby server failed',e);return false}
    finally{clearTimeout(abort)}
   })();
-  const outcomes=await Promise.all([googlePromise,serverPromise]);
+  // V18 resilience: independent destination-search fallback when nearby providers fail.
+  const fallbackPromise=(async()=>{
+   const terms=['hospital','railway station','bus stand','airport','college','park'];
+   const results=await Promise.all(terms.map(async term=>{
+    try{
+     const rows=await Promise.race([searchLocations(term),new Promise(resolve=>setTimeout(()=>resolve([]),5500))]);
+     return (rows||[]).filter(p=>Number.isFinite(Number(p.lat))&&Number.isFinite(Number(p.lng))).map(p=>({name:String(p.label||p.name||'').split(',')[0].trim(),lat:Number(p.lat),lng:Number(p.lng),types:[term==='railway station'?'train_station':term==='bus stand'?'bus_station':term]}));
+    }catch(e){return[]}
+   }));
+   const seen=new Set();
+   const near=results.flat().filter(p=>cabPublicPlace(p.name,p.types)&&Math.hypot((p.lat-lat)*111.2,(p.lng-lng)*111.2*Math.cos(lat*Math.PI/180))<=25).filter(p=>{const k=p.name.toLowerCase();if(seen.has(k))return false;seen.add(k);return true});
+   if(near.length){render(near);return true}return false;
+  })();
+  const outcomes=await Promise.all([googlePromise,serverPromise,fallbackPromise]);
   if(!outcomes.some(Boolean)){render([]);console.warn('DBest nearby search unavailable',nearbyFailure||'No nearby results')}
  }finally{clearTimeout(timer)}
 }
