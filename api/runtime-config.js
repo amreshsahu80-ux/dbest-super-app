@@ -31,9 +31,31 @@ async function nearbyHandler(req,res){
    return places;
   }finally{clearTimeout(timer)}
  };
+ const nominatimFallback=async()=>{
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),6500);
+  try{
+   const delta=.18,viewbox=[lng-delta,lat+delta,lng+delta,lat-delta].join(',');
+   const searches=['hospital','railway station','bus station','college','park'];
+   const results=await Promise.allSettled(searches.map(async term=>{
+    const url='https://nominatim.openstreetmap.org/search?format=json&limit=5&bounded=1&viewbox='+encodeURIComponent(viewbox)+'&q='+encodeURIComponent(term);
+    const response=await fetch(url,{headers:{'Accept':'application/json','User-Agent':'DBestCabNearby/1.0 (dbest4u.com)'},signal:controller.signal});
+    if(!response.ok)throw Error('Nominatim HTTP '+response.status);
+    return response.json();
+   }));
+   const seen=new Set(),places=[];
+   for(const result of results){if(result.status!=='fulfilled')continue;
+    for(const p of result.value||[]){const name=String(p.name||p.display_name?.split(',')[0]||'').trim(),plat=Number(p.lat),plng=Number(p.lon),key=name.toLowerCase();
+     if(!name||seen.has(key)||!Number.isFinite(plat)||!Number.isFinite(plng))continue;
+     const km=Math.hypot((plat-lat)*111.2,(plng-lng)*111.2*Math.cos(lat*Math.PI/180));
+     if(km>25)continue;seen.add(key);places.push({name,lat:plat,lng:plng});
+    }
+   }
+   if(!places.length)throw Error('Nominatim empty');return places.slice(0,12);
+  }finally{clearTimeout(timer)}
+ };
  try{
-  const places=await Promise.any([googleLookup(),...HOSTS.map(queryHost)]);
-  return res.status(200).json({places,source:'openstreetmap'});
+  const places=await Promise.any([googleLookup(),...HOSTS.map(queryHost),nominatimFallback()]);
+  return res.status(200).json({places,source:'nearby-provider'});
  }catch(e){
   console.error('DBest nearby: all providers failed',JSON.stringify((e.errors||[]).map(x=>String(x.message||x))));
   return res.status(503).json({places:[],error:'Nearby location providers unavailable'});
