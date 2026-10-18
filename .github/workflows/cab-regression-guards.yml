@@ -1,0 +1,19 @@
+name: Cab static regression guards
+on:
+  push:
+    branches: [audit/cab-regression-hardening-20261018]
+  pull_request:
+    paths:
+      - 'cab-selected-ui-v3.js'
+      - 'tests/cab-regression-guards.cjs'
+      - '.github/workflows/cab-regression-guards.yml'
+jobs:
+  cab-static-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run static Cab regression guards
+        run: node tests/cab-regression-guards.cjs
