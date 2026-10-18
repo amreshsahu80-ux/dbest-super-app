@@ -188,7 +188,7 @@ async function loadNearbyPlaces(lat,lng){
    const photo=p.photos?.[0];let photoUrl='';try{if(photo?.getURI)photoUrl=photo.getURI({maxWidth:480,maxHeight:320})}catch(e){}const attribution=(photo?.authorAttributions||[]).map(a=>a.displayName).filter(Boolean).join(', ');seen.add(key);all.push({name,lat:plat,lng:plng,types:[p.primaryType,...(p.types||[])],photo:photoUrl,attribution});
   }};
   let lastError;
-  for(const radius of [12000,25000,45000]){
+  for(const radius of [12000]){
    try{
     const result=await Place.searchNearby({fields:['displayName','location','primaryType','types','photos'],includedTypes:['train_station','bus_station','airport','hospital','university','school','shopping_mall','park','tourist_attraction'],locationRestriction:{center:{lat,lng},radius},maxResultCount:20,rankPreference:SearchNearbyRankPreference.DISTANCE});
     add(result.places);
@@ -252,7 +252,7 @@ async function renderEntryMap(){
  const el=$('cab6EntryMap');if(!el)return;
  let pos=null;
  if(S.p&&Number.isFinite(S.p.lat)&&Number.isFinite(S.p.lng))pos={lat:S.p.lat,lng:S.p.lng};
- if(!pos){const txt=String($('cab6P')?.value||'').trim();if(txt.length>=3){try{const p=await Promise.race([geocodeText(txt),new Promise(r=>setTimeout(()=>r(null),2500))]);if(p&&Number.isFinite(p.lat)&&Number.isFinite(p.lng)){S.p=p;pos={lat:p.lat,lng:p.lng}}}catch(e){}}}
+ if(!pos){const txt=String($('cab6P')?.value||'').trim();if(txt.length>=3){try{const p=await Promise.race([geocodeText(txt),new Promise(r=>setTimeout(()=>r(null),2500))]);if(p&&Number.isFinite(p.lat)&&Number.isFinite(p.lng)){S.p=p;pos={lat:p.lat,lng:p.lng};loadNearbyPlaces(p.lat,p.lng).catch(e=>console.warn('Nearby lookup failed',e))}}catch(e){}}}
  if(!pos){try{pos=await new Promise(resolve=>navigator.geolocation?navigator.geolocation.getCurrentPosition(p=>resolve({lat:p.coords.latitude,lng:p.coords.longitude}),()=>resolve(null),{enableHighAccuracy:false,timeout:2500,maximumAge:60000}):resolve(null))}catch(e){}}
  if(!pos)return;
  try{if(S.entryMap&&S.entryMap.remove)S.entryMap.remove()}catch(e){}S.entryMap=null;
@@ -274,7 +274,7 @@ async function searchLocations(term){
 }
 async function resolvePlace(x){if(x?.lat!=null)return x;if(S.provider==='google'&&x?.placeId){return await new Promise(resolve=>{const svc=new google.maps.places.PlacesService(document.createElement('div'));svc.getDetails({placeId:x.placeId,fields:['geometry','formatted_address','name']},(p,status)=>{if(status===google.maps.places.PlacesServiceStatus.OK&&p.geometry?.location)resolve({label:p.formatted_address||p.name||x.label,lat:p.geometry.location.lat(),lng:p.geometry.location.lng()});else resolve(null)})})}return null}
 async function geocodeText(v){v=String(v||'').trim();if(v.length<3)return null;await initSearchProvider();if(S.provider==='google'&&window.google?.maps?.Geocoder){try{return await new Promise(resolve=>new google.maps.Geocoder().geocode({address:v,componentRestrictions:{country:'IN'}},(rows,status)=>{const r=rows?.[0],l=r?.geometry?.location;resolve(status==='OK'&&l?{label:r.formatted_address||v,lat:l.lat(),lng:l.lng()}:null)}))}catch(e){}}const a=await searchLocations(v);return a[0]?resolvePlace(a[0]):null}
-function bindSearch(i,b,k){const inp=$(i),box=$(b);let timer=0,seq=0;inp.oninput=()=>{clearTimeout(timer);S[k]=null;const term=inp.value.trim(),n=++seq;if(term.length<2){box.classList.remove('show');box.innerHTML='';return}timer=setTimeout(async()=>{const rows=await searchLocations(term);if(n!==seq)return;box.innerHTML=rows.map((x,j)=>`<button type="button" data-i="${j}"><b>${esc(String(x.label||'Location').split(',')[0])}</b><small>${esc(String(x.label||'').split(',').slice(1,3).join(','))}</small></button>`).join('');box.classList.toggle('show',rows.length>0);qa('button',box).forEach(btn=>btn.onclick=async()=>{const p=await resolvePlace(rows[+btn.dataset.i]);if(!p)return say('Could not resolve this location.');S[k]=p;inp.value=p.label;box.classList.remove('show');if(k==='p')renderEntryMap()})},240)};inp.onblur=()=>setTimeout(()=>box.classList.remove('show'),180)}
+function bindSearch(i,b,k){const inp=$(i),box=$(b);let timer=0,seq=0;inp.oninput=()=>{clearTimeout(timer);S[k]=null;const term=inp.value.trim(),n=++seq;if(term.length<2){box.classList.remove('show');box.innerHTML='';return}timer=setTimeout(async()=>{const rows=await searchLocations(term);if(n!==seq)return;box.innerHTML=rows.map((x,j)=>`<button type="button" data-i="${j}"><b>${esc(String(x.label||'Location').split(',')[0])}</b><small>${esc(String(x.label||'').split(',').slice(1,3).join(','))}</small></button>`).join('');box.classList.toggle('show',rows.length>0);qa('button',box).forEach(btn=>btn.onclick=async()=>{const p=await resolvePlace(rows[+btn.dataset.i]);if(!p)return say('Could not resolve this location.');S[k]=p;inp.value=p.label;box.classList.remove('show');if(k==='p'){loadNearbyPlaces(p.lat,p.lng).catch(e=>console.warn('Nearby lookup failed',e));renderEntryMap()}})},240)};inp.onblur=()=>setTimeout(()=>box.classList.remove('show'),180)}
 function realisticRoadMinutes(km,providerMin){
  const k=Math.max(0,Number(km)||0),raw=Math.max(1,Number(providerMin)||1);
  // DBest ETA sanity floor: provider ETA is respected when higher, but never allow
