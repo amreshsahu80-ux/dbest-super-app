@@ -9,6 +9,8 @@ on:
       - api/runtime-config.js
       - tests/cab-regression-guards.cjs
       - tests/cab-runtime-provider.cjs
+      - tests/cab-owner-tariff-parity.cjs
+      - tests/cab-booking-handoff-mock.cjs
       - .github/workflows/cab-production-parity.yml
 jobs:
   cab-static-regression:
@@ -22,3 +24,5 @@ jobs:
         run: |
           node tests/cab-regression-guards.cjs
           node tests/cab-runtime-provider.cjs
+          node tests/cab-owner-tariff-parity.cjs
+          node tests/cab-booking-handoff-mock.cjs
