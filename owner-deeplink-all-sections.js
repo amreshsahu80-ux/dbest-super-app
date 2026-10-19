@@ -128,17 +128,26 @@ function injectNow(id,i){
     return true;
   }catch(e){return false}
 }
+let activeDeeplinkView=0;
 function inject(id,i){
-  [35,180,600,1400].forEach(ms=>setTimeout(()=>injectNow(id,i),ms));
-  // Fresh devices may have no local d2_links yet. Pull the shared Owner config,
-  // then render again so deeplinks never depend on browser-local history.
-  [60,450,1200,2400].forEach(ms=>setTimeout(()=>{
-    try{
-      const p=window.DBEST_OWNER_CONTROL_LIVE?.refreshPublic?.();
-      if(p&&typeof p.then==='function')p.finally(()=>injectNow(id,i));
-      else injectNow(id,i);
-    }catch(e){injectNow(id,i)}
-  },ms));
+  // Each navigation invalidates delayed cards and old fetch completions.
+  // Otherwise a late Insurance response can overwrite Flights/Hotel cards.
+  const view=++activeDeeplinkView;
+  const isActive=()=>view===activeDeeplinkView;
+  const render=()=>{if(isActive())injectNow(id,i)};
+  [35,180,600,1400].forEach(ms=>setTimeout(render,ms));
+  // Owner settings are fetched by owner-control-live on startup. Make only
+  // one extra request on a fresh device instead of four racing refreshes.
+  if(!window.DBEST_PUBLIC_LINKS){
+    setTimeout(()=>{
+      if(!isActive())return;
+      try{
+        const p=window.DBEST_OWNER_CONTROL_LIVE?.refreshPublic?.();
+        if(p&&typeof p.finally==='function')p.finally(render);
+        else render();
+      }catch(e){render()}
+    },60);
+  }
 }
 const baseOpenService=window.openService;
 if(typeof baseOpenService==='function')window.openService=function(id){const out=baseOpenService.apply(this,arguments);inject(id,null);return out};
