@@ -5,6 +5,9 @@ on:
       - fix/vaahak-completion-map-invoice-20261019
       - main
       - fix/customer-ride-completion-history-20261020
+      - governance/cab-frozen-release-gates-20261020
+      - 'release/**'
+  workflow_dispatch:
   pull_request:
     paths:
       - 'vaahak-standalone-v2.html'
@@ -15,6 +18,8 @@ on:
       - 'member-ride-history-bridge.js'
       - 'index.html'
       - 'tests/ride-customer-history-regression.cjs'
+      - 'cab-golden-lock.json'
+      - 'tests/cab-golden-integrity.cjs'
       - 'tests/vaahak-active-ride-regression.cjs'
       - '.github/workflows/cab-vaahak-release-gate.yml'
 jobs:
@@ -25,6 +30,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Reject unexpected changes to the Owner-approved Cab golden source
+        run: node tests/cab-golden-integrity.cjs
       - name: Verify Vaahak completion, map and invoice safeguards
         run: |
           node tests/vaahak-active-ride-regression.cjs
