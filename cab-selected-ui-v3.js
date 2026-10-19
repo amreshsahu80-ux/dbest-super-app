@@ -313,60 +313,74 @@ function cabFilterIndianResults(rows){
  }).map(x=>({...x,distanceKm:pickup?cabPlaceDistanceKm(pickup,x):Infinity}))
  .sort((a,b)=>a.distanceKm-b.distanceKm)
 }
+async function googleCabLocations(term,pickup){
+ await Promise.race([initSearchProvider(),new Promise(resolve=>setTimeout(resolve,1700))]);
+ if(S.provider!=='google'||!window.google?.maps?.places)return[];
+ try{
+  return await Promise.race([new Promise(resolve=>{
+   const origin=pickup&&window.google.maps.LatLng?new google.maps.LatLng(+pickup.lat,+pickup.lng):null;
+   const req={input:term,componentRestrictions:{country:'in'}};
+   if(origin){req.location=origin;req.radius=50000;req.origin=origin}
+   new google.maps.places.AutocompleteService().getPlacePredictions(req,(rows,status)=>{
+    if(status!==google.maps.places.PlacesServiceStatus.OK)return resolve([]);
+    resolve((rows||[]).map(x=>({label:x.description,placeId:x.place_id,distanceMeters:Number(x.distance_meters||0)})).sort((x,y)=>{
+     return (x.distanceMeters>0?x.distanceMeters:Infinity)-(y.distanceMeters>0?y.distanceMeters:Infinity)
+    }).slice(0,8))
+   })
+  }),new Promise(resolve=>setTimeout(()=>resolve([]),2400))])
+ }catch(e){console.warn('Google autocomplete unavailable, using local fallback',e);return[]}
+}
+async function backendCabLocations(term,pickup){
+ const base=String(cfg().supabaseUrl||'').replace(/\/$/,''),key=String(cfg().supabasePublishableKey||cfg().supabaseAnonKey||'');
+ if(!base)return[];
+ const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),4200);
+ try{
+  const r=await fetch(base+'/functions/v1/location-search-live',{
+   method:'POST',headers:{'content-type':'application/json',apikey:key},
+   body:JSON.stringify({q:term,...(pickup?{lat:+pickup.lat,lon:+pickup.lng}:{})}),signal:controller.signal
+  });
+  if(!r.ok)return[];
+  const j=await r.json();
+  const items=(j.results||[]).map(x=>({
+   label:String(x.label||x.detail||''),lat:Number(x.lat),lng:Number(x.lon??x.lng),
+   country:x.country||'',detail:String(x.detail||''),source:x.source||'backend'
+  }));
+  return cabFilterIndianResults(items).slice(0,8)
+ }catch(e){console.warn('Cab location backend fallback',e);return[]}
+ finally{clearTimeout(timer)}
+}
+async function osmIndianCabLocations(term){
+ const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),2700);
+ try{
+  const r=await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=in&limit=12&q='+encodeURIComponent(term),{
+   headers:{Accept:'application/json'},signal:controller.signal
+  });
+  if(!r.ok)return[];
+  const rows=await r.json();
+  return cabFilterIndianResults((rows||[]).map(x=>({
+   label:x.display_name,lat:Number(x.lat),lng:Number(x.lon),country:x.address?.country||'India',source:'nominatim'
+  }))).slice(0,8)
+ }catch(e){return[]}
+ finally{clearTimeout(timer)}
+}
 async function searchLocations(term){
  if(term.length<2)return[];
  const pickup=S.p&&Number.isFinite(+S.p.lat)&&Number.isFinite(+S.p.lng)?S.p:null;
- // Restore the proven 5 October order: India-restricted Google Places FIRST,
- // geographically biased toward pickup. This must not be preceded by the
- // unfiltered global Photon backend, which returned Germany for Etwari Bazar.
- await Promise.race([initSearchProvider(),new Promise(resolve=>setTimeout(resolve,2400))]);
- if(S.provider==='google'&&window.google?.maps?.places){
-  try{
-   const origin=pickup&&window.google.maps.LatLng?new google.maps.LatLng(+pickup.lat,+pickup.lng):null;
-   const predictions=await Promise.race([new Promise(resolve=>{
-    const req={input:term,componentRestrictions:{country:'in'}};
-    if(origin){req.location=origin;req.radius=50000;req.origin=origin}
-    new google.maps.places.AutocompleteService().getPlacePredictions(req,(rows,status)=>{
-     const good=status===google.maps.places.PlacesServiceStatus.OK?(rows||[]):[];
-     resolve(good.map(x=>({label:x.description,placeId:x.place_id,distanceMeters:Number(x.distance_meters||0)})).sort((a,b)=>{
-      const aDist=a.distanceMeters>0?a.distanceMeters:Infinity,bDist=b.distanceMeters>0?b.distanceMeters:Infinity;
-      return aDist-bDist
-     }).slice(0,8))
-    })
-   }),new Promise(resolve=>setTimeout(()=>resolve([]),2800))]);
-   if(predictions.length)return predictions
-  }catch(e){console.warn('Cab Google autocomplete fallback',e)}
- }
- const base=String(cfg().supabaseUrl||'').replace(/\/$/,''),key=String(cfg().supabasePublishableKey||cfg().supabaseAnonKey||'');
- if(base){
-  const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),4200);
-  try{
-   const r=await fetch(base+'/functions/v1/location-search-live',{
-    method:'POST',headers:{'content-type':'application/json',apikey:key},
-    body:JSON.stringify({q:term,...(pickup?{lat:+pickup.lat,lon:+pickup.lng}:{})}),signal:controller.signal
-   });
-   if(r.ok){
-    const j=await r.json();
-    const rows=(j.results||[]).map(x=>({
-     label:String(x.label||x.detail||''),lat:Number(x.lat),lng:Number(x.lon??x.lng),
-     country:x.country||'',detail:String(x.detail||''),source:x.source||'backend'
-    }));
-    const indian=cabFilterIndianResults(rows);
-    if(indian.length)return indian.slice(0,8)
-   }
-  }catch(e){console.warn('Cab location backend fallback',e)}
-  finally{clearTimeout(timeout)}
- }
- try{
-  const ctl=new AbortController(),timeout=setTimeout(()=>ctl.abort(),3000);
-  const r=await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=in&limit=12&q='+encodeURIComponent(term),{headers:{Accept:'application/json'},signal:ctl.signal});
-  clearTimeout(timeout);
-  const j=await r.json();
-  return cabFilterIndianResults((j||[]).map(x=>({label:x.display_name,lat:Number(x.lat),lng:Number(x.lon),country:x.address?.country||'India',source:'nominatim'}))).slice(0,8)
- }catch(e){return[]}
+ // The 5 October proven primary provider is Google Places, India-restricted
+ // and biased to pickup. Run a geographically-filtered backend in parallel so
+ // a stalled Google callback cannot leave the user waiting.
+ const googleTask=googleCabLocations(term,pickup).catch(()=>[]);
+ const backendTask=backendCabLocations(term,pickup).catch(()=>[]);
+ const earlyGoogle=await Promise.race([googleTask,new Promise(resolve=>setTimeout(()=>resolve([]),1350))]);
+ if(earlyGoogle.length)return earlyGoogle;
+ const nearby=await backendTask;
+ if(nearby.length)return nearby;
+ const laterGoogle=await googleTask;
+ if(laterGoogle.length)return laterGoogle;
+ return await osmIndianCabLocations(term)
 }
 async function resolvePlace(x){if(x?.lat!=null)return x;if(S.provider==='google'&&x?.placeId){return await new Promise(resolve=>{const svc=new google.maps.places.PlacesService(document.createElement('div'));svc.getDetails({placeId:x.placeId,fields:['geometry','formatted_address','name']},(p,status)=>{if(status===google.maps.places.PlacesServiceStatus.OK&&p.geometry?.location)resolve({label:p.formatted_address||p.name||x.label,lat:p.geometry.location.lat(),lng:p.geometry.location.lng()});else resolve(null)})})}return null}
-async function geocodeText(v){v=String(v||'').trim();if(v.length<3)return null;await initSearchProvider();if(S.provider==='google'&&window.google?.maps?.Geocoder){try{return await new Promise(resolve=>new google.maps.Geocoder().geocode({address:v,componentRestrictions:{country:'IN'}},(rows,status)=>{const r=rows?.[0],l=r?.geometry?.location;resolve(status==='OK'&&l?{label:r.formatted_address||v,lat:l.lat(),lng:l.lng()}:null)}))}catch(e){}}const a=await searchLocations(v);return a[0]?resolvePlace(a[0]):null}
+async function geocodeText(v){v=String(v||'').trim();if(v.length<3)return null;await initSearchProvider();if(S.provider==='google'&&window.google?.maps?.Geocoder){try{const place=await Promise.race([new Promise(resolve=>new google.maps.Geocoder().geocode({address:v,componentRestrictions:{country:'IN'}},(rows,status)=>{const r=rows?.[0],l=r?.geometry?.location;resolve(status==='OK'&&l?{label:r.formatted_address||v,lat:l.lat(),lng:l.lng()}:null)})),new Promise(resolve=>setTimeout(()=>resolve(null),3200))]);if(place)return place}catch(e){}}const a=await searchLocations(v);return a[0]?resolvePlace(a[0]):null}
 async function openCabMapPinPicker(kind,typed){
  const pickup=S.p&&Number.isFinite(+S.p.lat)&&Number.isFinite(+S.p.lng)?S.p:null;
  if(!pickup)return say('Set your pickup first, then select the destination on the map.');
@@ -392,7 +406,7 @@ async function openCabMapPinPicker(kind,typed){
   setTimeout(()=>pinMap?.invalidateSize(),90);
   overlay.querySelector('#cab6PinConfirm').onclick=async()=>{
    const button=overlay.querySelector('#cab6PinConfirm');button.disabled=true;button.textContent='Saving selected destination…';
-   const label=await Promise.race([reverseGoogle(point.lat,point.lng).catch(()=>''),new Promise(resolve=>setTimeout(()=>resolve(''),3000))])||'Map pin ('+point.lat.toFixed(5)+', '+point.lng.toFixed(5)+'), Jharkhand';
+   const label=await Promise.race([reverseGoogle(point.lat,point.lng).catch(()=>''),new Promise(resolve=>setTimeout(()=>resolve(''),3000))])||'Map pin ('+point.lat.toFixed(5)+', '+point.lng.toFixed(5)+')';
    S[kind]={lat:point.lat,lng:point.lng,label};
    const inp=$(kind==='d'?'cab6D':'cab6P');if(inp)inp.value=label;
    $(kind==='d'?'cab6DS':'cab6PS')?.classList.remove('show');
