@@ -98,7 +98,7 @@ body:has(.cab6Page) #dbestServicePartnerQuick,body:has(.cab6Page) .floatingServi
 `;document.head.appendChild(x)}
 function header(back){return `<div class="cab6Top cab6IconNav cab6HeroNav"><button type="button" aria-label="Back" title="Back" onclick="${back}">Back</button><div class="cab6HeroCopy"><span class="cab6HeroEyebrow">DBest Cab</span><b>Where to next?</b><small>Smart rides • Local discovery</small></div><button type="button" aria-label="Home" title="Home" onclick="backHome()">Home</button></div>`}
 function screen(body,back='backHome()'){css();destroyMap();sectionScreen(`<div class="cab6Page">${header(back)}<div class="cab6Wrap">${body}</div></div>`)}
-function destroyMap(){try{if(S.map&&S.map.remove)S.map.remove()}catch(e){}try{if(S.entryMap&&S.entryMap.remove)S.entryMap.remove()}catch(e){}S.map=null;S.layer=null;S.entryMap=null}
+function destroyMap(){entryMapRun++;try{if(S.map&&S.map.remove)S.map.remove()}catch(e){}try{if(S.entryMap&&S.entryMap.remove)S.entryMap.remove()}catch(e){}S.map=null;S.layer=null;S.entryMap=null}
 function minLocal(){const d=new Date(Date.now()+15*60000);d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,16)}
 function recents(){try{return (JSON.parse(localStorage.getItem(RECENT_KEY)||'[]')||[]).slice(0,4)}catch(e){return[]}}
 function saveRecent(v){v=String(v||'').trim();if(!v)return;try{localStorage.setItem(RECENT_KEY,JSON.stringify([v,...recents().filter(x=>x.toLowerCase()!==v.toLowerCase())].slice(0,4)))}catch(e){}}
@@ -114,7 +114,7 @@ function bindSearchPage(){
  qa('[data-q]').forEach(b=>b.onclick=()=>{const k=b.dataset.q;if(k==='schedule'){S.schedule=S.schedule==='later'?'now':'later';b.classList.toggle('on',S.schedule==='later');$('cab6Schedule').classList.toggle('show',S.schedule==='later')}else if(k==='other'){S.rider=S.rider==='other'?'self':'other';b.classList.toggle('on',S.rider==='other');$('cab6Other').classList.toggle('show',S.rider==='other')}else{S.mode=S.mode==='rental'?'ride':'rental';b.classList.toggle('on',S.mode==='rental');$('cab6Rental').classList.toggle('show',S.mode==='rental');$('cab6DropWrap').style.display=S.mode==='rental'?'none':'';if($('cab6Stops'))$('cab6Stops').style.display=S.mode==='rental'?'none':'';if($('cab6AddStop'))$('cab6AddStop').parentElement.style.display=S.mode==='rental'?'none':''}});
  $('cab6At').onchange=e=>S.scheduledAt=e.target.value;$('cab6Name').oninput=e=>S.riderName=e.target.value.trim();$('cab6Mobile').oninput=e=>{e.target.value=e.target.value.replace(/\D/g,'').slice(0,10);S.riderMobile=e.target.value};$('cab6RentalPkg').onchange=e=>{const[h,k]=e.target.value.split('|').map(Number);S.rentalHours=h;S.rentalKm=k};$('cab6PoolSeats').onchange=e=>S.carpoolSeats=Number(e.target.value||1);$('cab6PoolVehicle').onchange=e=>S.carpoolVehicle=e.target.value||'Any';$('cab6PoolName').oninput=e=>S.carpoolName=e.target.value.trim();$('cab6PoolMobile').oninput=e=>{e.target.value=e.target.value.replace(/\D/g,'').slice(0,10);S.carpoolMobile=e.target.value};$('cab6Go').onclick=continueRide;bindSearch('cab6P','cab6PS','p');bindSearch('cab6D','cab6DS','d')
 }
-let searchProviderPromise=null,leafletPromise=null;
+let searchProviderPromise=null,leafletPromise=null,entryMapRun=0;
 function loadScript(src,id){return new Promise((ok,no)=>{const old=$(id);if(old){if(old.dataset.ready==='1')return ok();old.addEventListener('load',ok,{once:true});old.addEventListener('error',no,{once:true});return}const s=document.createElement('script');s.id=id;s.src=src;s.async=true;s.onload=()=>{s.dataset.ready='1';ok()};s.onerror=no;document.head.appendChild(s)})}
 function loadCss(href,id){if($(id))return;const l=document.createElement('link');l.id=id;l.rel='stylesheet';l.href=href;document.head.appendChild(l)}
 async function waitGoogleKey(ms=2200){const end=Date.now()+ms;while(Date.now()<end){const k=String(cfg().googleMapsApiKey||'').trim();if(k)return k;await new Promise(r=>setTimeout(r,120))}return String(cfg().googleMapsApiKey||'').trim()}
@@ -261,14 +261,17 @@ async function useGps(noisy){
 }
 async function renderEntryMap(){
  const el=$('cab6EntryMap');if(!el)return;
+ const thisRun=++entryMapRun;
  let pos=null;
  if(S.p&&Number.isFinite(S.p.lat)&&Number.isFinite(S.p.lng))pos={lat:S.p.lat,lng:S.p.lng};
  if(!pos){const txt=String($('cab6P')?.value||'').trim();if(txt.length>=3){try{const p=await Promise.race([geocodeText(txt),new Promise(r=>setTimeout(()=>r(null),2500))]);if(p&&Number.isFinite(p.lat)&&Number.isFinite(p.lng)){S.p=p;pos={lat:p.lat,lng:p.lng};loadNearbyPlaces(p.lat,p.lng).catch(e=>console.warn('Nearby lookup failed',e))}}catch(e){}}}
  if(!pos){try{pos=await new Promise(resolve=>navigator.geolocation?navigator.geolocation.getCurrentPosition(p=>resolve({lat:p.coords.latitude,lng:p.coords.longitude}),()=>resolve(null),{enableHighAccuracy:false,timeout:2500,maximumAge:60000}):resolve(null))}catch(e){}}
  if(!pos)return;
- try{if(S.entryMap&&S.entryMap.remove)S.entryMap.remove()}catch(e){}S.entryMap=null;
  try{
-   const L=await initLeaflet();if(!$('cab6EntryMap'))return;
+   const L=await initLeaflet();if(thisRun!==entryMapRun||$('cab6EntryMap')!==el)return;
+   if(S.entryMap&&S.entryMap.getContainer?.()===el){S.entryMap.setView([pos.lat,pos.lng],14);return}
+   try{S.entryMap?.remove?.()}catch(e){}
+   S.entryMap=null;
    el.innerHTML='';S.entryMap=L.map(el,{zoomControl:false,attributionControl:true,preferCanvas:true}).setView([pos.lat,pos.lng],14);
    const thisMap=S.entryMap;let loadedTiles=0,usedBackup=false;
    const visual=document.createElement('div');visual.className='cab6EntryMapFallback';
