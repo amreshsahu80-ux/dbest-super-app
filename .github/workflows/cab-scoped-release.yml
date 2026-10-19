@@ -1,0 +1,36 @@
+name: DBest Cab scoped regression release
+on:
+  push:
+    branches:
+      - release/cab-ui-only-20261019
+  pull_request:
+    paths:
+      - cab-selected-ui-v3.js
+      - cab-colored-map-layout-fix-v1.js
+      - cab-planned-ui-v2.js
+      - api/runtime-config.js
+      - tests/cab-regression-guards.cjs
+      - tests/cab-runtime-provider.cjs
+      - tests/cab-owner-tariff-parity.cjs
+      - tests/cab-booking-handoff-mock.cjs
+      - tests/core-module-parse-guards.cjs
+      - .github/workflows/cab-scoped-release.yml
+jobs:
+  cab-ui-parity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify unchanged backend and Cab regression
+        run: |
+          node tests/cab-regression-guards.cjs
+          node tests/cab-runtime-provider.cjs
+          node tests/cab-owner-tariff-parity.cjs
+          node tests/cab-booking-handoff-mock.cjs
+          node tests/core-module-parse-guards.cjs
+          node --check cab-selected-ui-v3.js
+          node --check cab-planned-ui-v2.js
+          node --check cab-colored-map-layout-fix-v1.js
+          node --check api/runtime-config.js
