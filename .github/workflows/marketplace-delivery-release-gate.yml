@@ -1,0 +1,33 @@
+name: Marketplace delivery completion protected release
+on:
+  push:
+    branches:
+      - fix/marketplace-completion-hardening-20261020
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'supabase/functions/marketplace-vaahak-sync/**'
+      - 'supabase/functions/marketplace-handover-live/**'
+      - 'supabase/functions/vaahak-commerce-live/**'
+      - 'tests/marketplace-edge-completion-contract.cjs'
+      - '.github/workflows/marketplace-delivery-release-gate.yml'
+jobs:
+  marketplace-delivery-cab-protected:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install isolated TypeScript test dependency
+        run: npm install --no-save --no-package-lock typescript@5.9.3
+      - name: Verify real Edge function code under mocked authenticated sessions
+        run: node --test tests/marketplace-edge-completion-contract.cjs
+      - name: Preserve Marketplace quotation and auth contracts
+        run: node --test tests/marketplace-quote-comparison.test.js tests/marketplace-multi-vendor-contract.test.js
+      - name: Preserve frozen Cab, payment and Customer invoice flows
+        run: |
+          node tests/cab-regression-guards.cjs
+          node tests/cab-booking-handoff-mock.cjs
+          node tests/vaahak-active-ride-regression.cjs
+          node tests/ride-customer-history-regression.cjs
