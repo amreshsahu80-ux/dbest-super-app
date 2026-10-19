@@ -1,0 +1,43 @@
+name: Protected DBest partner deeplink handoffs
+on:
+  push:
+    branches:
+      - fix/partner-deeplink-handoff-golden-20261020
+      - 'release/partner-handoff-*'
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'owner-deeplink-all-sections.js'
+      - 'owner-control-live.js'
+      - 'external-service-subtype-preserver-v1.js'
+      - 'finance-insurance-showcase.js'
+      - 'external-success-claims.js'
+      - 'partner-handoff-freeze.json'
+      - 'tests/partner-*'
+      - '.github/workflows/partner-handoff-release-gate.yml'
+jobs:
+  partner-handoff-golden-and-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify the exact Owner-approved partner URLs and code fingerprints
+        run: node tests/partner-handoff-golden-integrity.cjs
+      - name: Test exact InsuranceDekho, DBest Fly and NJ Wealth handoff contracts
+        run: node --test tests/partner-deeplink-handoff-regression.cjs
+      - name: Preserve frozen Cab and Marketplace releases
+        run: |
+          node tests/cab-golden-integrity.cjs
+          node tests/marketplace-golden-integrity.cjs
+          node tests/cab-regression-guards.cjs
+          node tests/cab-booking-handoff-mock.cjs
+          node tests/vaahak-active-ride-regression.cjs
+          node tests/ride-customer-history-regression.cjs
+      - name: Validate JavaScript startup
+        run: |
+          node --check owner-deeplink-all-sections.js
+          node --check owner-control-live.js
+          node --check external-service-subtype-preserver-v1.js
+          node tests/core-module-parse-guards.cjs
