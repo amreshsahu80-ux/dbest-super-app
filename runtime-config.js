@@ -134,7 +134,9 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
     if(googleConfigured()&&/\/vendor(?:\.html)?\/?$/i.test(location.pathname)){
       try{await loadScriptAsync('/vendor-google-location-v1.js?v='+V,'data-dbest-vendor-google-location-v1')}catch(e){console.warn('DBest vendor Google location warning',e)}
     }
-    if(googleConfigured()&&/\/vaahak(?:\.html)?\/?$/i.test(location.pathname)){
+    // Modern Vaahak owns its Leaflet map; never let the legacy Google map layer overwrite renderMap.
+    // Legacy /vaahak.html (without the authority meta) keeps the existing Google integration.
+    if(googleConfigured()&&/\/vaahak(?:\.html)?\/?$/i.test(location.pathname)&&!document.querySelector('meta[name="dbest-vaahak-map-authority"][content="leaflet-primary"]')){
       try{await loadScriptAsync('/vaahak-google-live-map-v1.js?v='+V,'data-dbest-vaahak-google-map-v1')}catch(e){console.warn('DBest Vaahak Google map warning',e)}
     }
   };
