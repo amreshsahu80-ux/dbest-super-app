@@ -98,7 +98,7 @@ body:has(.cab6Page) #dbestServicePartnerQuick,body:has(.cab6Page) .floatingServi
 `;document.head.appendChild(x)}
 function header(back){return `<div class="cab6Top cab6IconNav cab6HeroNav"><button type="button" aria-label="Back" title="Back" onclick="${back}">Back</button><div class="cab6HeroCopy"><span class="cab6HeroEyebrow">DBest Cab</span><b>Where to next?</b><small>Smart rides • Local discovery</small></div><button type="button" aria-label="Home" title="Home" onclick="backHome()">Home</button></div>`}
 function screen(body,back='backHome()'){css();destroyMap();sectionScreen(`<div class="cab6Page">${header(back)}<div class="cab6Wrap">${body}</div></div>`)}
-function destroyMap(){try{if(S.map&&S.map.remove)S.map.remove()}catch(e){}try{if(S.entryMap&&S.entryMap.remove)S.entryMap.remove()}catch(e){}S.map=null;S.layer=null;S.entryMap=null}
+function destroyMap(){entryMapRun++;try{if(S.map&&S.map.remove)S.map.remove()}catch(e){}try{if(S.entryMap&&S.entryMap.remove)S.entryMap.remove()}catch(e){}S.map=null;S.layer=null;S.entryMap=null}
 function minLocal(){const d=new Date(Date.now()+15*60000);d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,16)}
 function recents(){try{return (JSON.parse(localStorage.getItem(RECENT_KEY)||'[]')||[]).slice(0,4)}catch(e){return[]}}
 function saveRecent(v){v=String(v||'').trim();if(!v)return;try{localStorage.setItem(RECENT_KEY,JSON.stringify([v,...recents().filter(x=>x.toLowerCase()!==v.toLowerCase())].slice(0,4)))}catch(e){}}
@@ -114,7 +114,7 @@ function bindSearchPage(){
  qa('[data-q]').forEach(b=>b.onclick=()=>{const k=b.dataset.q;if(k==='schedule'){S.schedule=S.schedule==='later'?'now':'later';b.classList.toggle('on',S.schedule==='later');$('cab6Schedule').classList.toggle('show',S.schedule==='later')}else if(k==='other'){S.rider=S.rider==='other'?'self':'other';b.classList.toggle('on',S.rider==='other');$('cab6Other').classList.toggle('show',S.rider==='other')}else{S.mode=S.mode==='rental'?'ride':'rental';b.classList.toggle('on',S.mode==='rental');$('cab6Rental').classList.toggle('show',S.mode==='rental');$('cab6DropWrap').style.display=S.mode==='rental'?'none':'';if($('cab6Stops'))$('cab6Stops').style.display=S.mode==='rental'?'none':'';if($('cab6AddStop'))$('cab6AddStop').parentElement.style.display=S.mode==='rental'?'none':''}});
  $('cab6At').onchange=e=>S.scheduledAt=e.target.value;$('cab6Name').oninput=e=>S.riderName=e.target.value.trim();$('cab6Mobile').oninput=e=>{e.target.value=e.target.value.replace(/\D/g,'').slice(0,10);S.riderMobile=e.target.value};$('cab6RentalPkg').onchange=e=>{const[h,k]=e.target.value.split('|').map(Number);S.rentalHours=h;S.rentalKm=k};$('cab6PoolSeats').onchange=e=>S.carpoolSeats=Number(e.target.value||1);$('cab6PoolVehicle').onchange=e=>S.carpoolVehicle=e.target.value||'Any';$('cab6PoolName').oninput=e=>S.carpoolName=e.target.value.trim();$('cab6PoolMobile').oninput=e=>{e.target.value=e.target.value.replace(/\D/g,'').slice(0,10);S.carpoolMobile=e.target.value};$('cab6Go').onclick=continueRide;bindSearch('cab6P','cab6PS','p');bindSearch('cab6D','cab6DS','d')
 }
-let searchProviderPromise=null,leafletPromise=null;
+let searchProviderPromise=null,leafletPromise=null,entryMapRun=0;
 function loadScript(src,id){return new Promise((ok,no)=>{const old=$(id);if(old){if(old.dataset.ready==='1')return ok();old.addEventListener('load',ok,{once:true});old.addEventListener('error',no,{once:true});return}const s=document.createElement('script');s.id=id;s.src=src;s.async=true;s.onload=()=>{s.dataset.ready='1';ok()};s.onerror=no;document.head.appendChild(s)})}
 function loadCss(href,id){if($(id))return;const l=document.createElement('link');l.id=id;l.rel='stylesheet';l.href=href;document.head.appendChild(l)}
 async function waitGoogleKey(ms=2200){const end=Date.now()+ms;while(Date.now()<end){const k=String(cfg().googleMapsApiKey||'').trim();if(k)return k;await new Promise(r=>setTimeout(r,120))}return String(cfg().googleMapsApiKey||'').trim()}
@@ -124,7 +124,18 @@ async function initSearchProvider(){
 }
 async function initLeaflet(){
  if(window.L)return window.L;if(leafletPromise)return leafletPromise;
- loadCss('https://unpkg.com/leaflet@1.9.4/dist/leaflet.css','cab6-leaflet-css');leafletPromise=loadScript('https://unpkg.com/leaflet@1.9.4/dist/leaflet.js','cab6-leaflet').then(()=>window.L);return leafletPromise
+ leafletPromise=(async()=>{
+   loadCss('https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css','cab6-leaflet-css');
+   for(const [id,url] of [
+     ['cab6-leaflet-cdn1','https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js'],
+     ['cab6-leaflet-cdn2','https://unpkg.com/leaflet@1.9.4/dist/leaflet.js']
+   ]){
+     try{await Promise.race([loadScript(url,id),new Promise((_,reject)=>setTimeout(()=>reject(Error('Leaflet timeout')),4500))]);if(window.L)return window.L}
+     catch(e){console.warn('DBest map CDN fallback',e)}
+   }
+   throw Error('Map renderer unavailable');
+ })().catch(e=>{leafletPromise=null;throw e});
+ return leafletPromise
 }
 async function reverseGoogle(lat,lng){
  try{
@@ -151,7 +162,7 @@ function placePhotoUrl(lat,lng,name){return 'https://maps.googleapis.com/maps/ap
 const CAB_PUBLIC_TYPES=['train_station','transit_station','bus_station','bus_stop','airport','hospital','university','college','school','shopping_mall','supermarket','market','park','tourist_attraction','museum','stadium','government_office','city_hall'];
 const CAB_PUBLIC_NAME=/\b(station|railway|airport|airstrip|hospital|medical|clinic|college|university|school|campus|mall|market|bazaar|park|garden|museum|stadium|bus stand|bus stop|terminal|tourist|temple|mandir|fort|zoo|shopping|government|court|district|police|bank|post office)\b/i;
 function cabPublicPlace(name,types){
- const n=String(name||'').trim();if(!n||/^(home|house|residence|private|my home|address|plot|flat|room)\b/i.test(n))return false;
+ const n=String(name||'').trim();if(!n||/^(home|house|residence|private|my home|address|plot|flat|room)\b/i.test(n)||/\b(pharmacy|chemist|medical (store|shop)|medicine shop|drugstore)\b/i.test(n)||/^(hospital|railway station|bus station|bus stand|college|park|airport|clinic|medical|unknown)$/i.test(n))return false;
  return (types||[]).some(t=>CAB_PUBLIC_TYPES.includes(t))||CAB_PUBLIC_NAME.test(n);
 }
 function cabPlacePriority(p){
@@ -168,10 +179,10 @@ async function loadNearbyPlaces(lat,lng){
  const rail=$('cab6NearbyRail');if(!rail)return;
  if(!Number.isFinite(lat)||!Number.isFinite(lng)){rail.textContent='Select a pickup location to see nearby places.';return}
  const requestId=String(Date.now())+'-'+Math.random();rail.dataset.requestId=requestId;
- const render=rows=>{if(!rail.isConnected||rail.dataset.requestId!==requestId)return;
-  const distance=p=>Math.hypot((p.lat-lat)*111.2,(p.lng-lng)*111.2*Math.cos(lat*Math.PI/180));rows=[...rows].sort((a,b)=>cabPlacePriority(a)-cabPlacePriority(b)||distance(a)-distance(b));
+ let hasRenderedPlaces=false;const render=rows=>{if(!rail.isConnected||rail.dataset.requestId!==requestId)return;if(rows.length&&hasRenderedPlaces)return;if(rows.length)hasRenderedPlaces=true;
+  const distance=p=>Math.hypot((p.lat-lat)*111.2,(p.lng-lng)*111.2*Math.cos(lat*Math.PI/180));rows=[...rows].filter(p=>Number.isFinite(p.lat)&&Number.isFinite(p.lng)&&distance(p)<=15&&cabPublicPlace(p.name,p.types||[])).sort((a,b)=>cabPlacePriority(a)-cabPlacePriority(b)||distance(a)-distance(b));
   if(!rows.length){rail.innerHTML='<div style="padding:12px;color:#687386;font-size:12px">Nearby places are unavailable right now. You can enter a destination above.</div>';return}
-  rail.innerHTML=rows.slice(0,8).map(p=>'<button type="button" class="cab6Place" data-place="'+esc(p.name)+'" data-lat="'+p.lat+'" data-lng="'+p.lng+'">'+(p.photo?'<img class="cab6PlacePhoto" alt="" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;border-radius:inherit;z-index:0" onerror="this.style.display=\'none\'" src="'+esc(p.photo)+'">':'')+'<span style="position:absolute;bottom:12px;left:12px;right:8px;z-index:2;color:white;font-weight:700;text-shadow:0 1px 4px #000">'+esc(p.name)+'</span>'+(p.attribution?'<small class="cab6PhotoCredit" style="position:absolute;top:6px;right:6px;left:6px;z-index:2;font-size:9px;color:white;text-align:right;text-shadow:0 1px 4px #000;pointer-events:none">Photo: '+esc(p.attribution)+'</small>':'')+'</button>').join('');
+  rail.innerHTML=rows.slice(0,8).map(p=>'<button type="button" class="cab6Place" data-place="'+esc(p.name)+'" data-lat="'+p.lat+'" data-lng="'+p.lng+'">'+(p.photo?'<img class="cab6PlacePhoto" alt="" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;border-radius:inherit;z-index:0" onerror="this.style.display=\'none\';this.parentElement.querySelector(\'.cab6PhotoCredit\')?.remove()" src="'+esc(p.photo)+'">':'<span aria-hidden="true" style="position:absolute;top:13px;left:13px;z-index:2;font-size:24px">'+(cabPlacePriority(p)===0?'🏥':cabPlacePriority(p)===1?'🚉':cabPlacePriority(p)===2?'🚌':cabPlacePriority(p)===3?'✈️':cabPlacePriority(p)===4?'🎓':cabPlacePriority(p)===5?'🌳':'📍')+'</span>')+'<span style="position:absolute;bottom:12px;left:12px;right:8px;z-index:2;color:white;font-weight:700;text-shadow:0 1px 4px #000">'+esc(p.name)+'</span>'+(p.attribution?'<small class="cab6PhotoCredit" style="position:absolute;top:6px;right:6px;left:6px;z-index:2;font-size:9px;color:white;text-align:right;text-shadow:0 1px 4px #000;pointer-events:none">Photo: '+esc(p.attribution)+'</small>':'')+'</button>').join('');
   qa('.cab6Place',rail).forEach(btn=>btn.onclick=()=>{const d=$('cab6D');if(!d)return;d.value=btn.dataset.place;S.d={label:d.value,lat:Number(btn.dataset.lat),lng:Number(btn.dataset.lng)};$('cab6DS')?.classList.remove('show')});
  };
  const browserGoogleNearby=async()=>{
@@ -188,9 +199,9 @@ async function loadNearbyPlaces(lat,lng){
    const photo=p.photos?.[0];let photoUrl='';try{if(photo?.getURI)photoUrl=photo.getURI({maxWidth:480,maxHeight:320})}catch(e){}const attribution=(photo?.authorAttributions||[]).map(a=>a.displayName).filter(Boolean).join(', ');seen.add(key);all.push({name,lat:plat,lng:plng,types:[p.primaryType,...(p.types||[])],photo:photoUrl,attribution});
   }};
   let lastError;
-  for(const radius of [12000,25000,45000]){
+  for(const radius of [12000]){
    try{
-    const result=await Place.searchNearby({fields:['displayName','location','primaryType','types','photos'],includedTypes:['train_station','bus_station','airport','hospital','university','school','shopping_mall','park','tourist_attraction'],locationRestriction:{center:{lat,lng},radius:Math.min(radius,12000)},maxResultCount:20,rankPreference:SearchNearbyRankPreference.DISTANCE});
+    const result=await Place.searchNearby({fields:['displayName','location','primaryType','types','photos'],includedTypes:['train_station','bus_station','airport','hospital','university','school','shopping_mall','park','tourist_attraction'],locationRestriction:{center:{lat,lng},radius},maxResultCount:20,rankPreference:SearchNearbyRankPreference.DISTANCE});
     add(result.places);
     if(all.length>=18)break;
    }catch(e){lastError=e;console.warn('DBest Places radius '+radius+'m failed',e);break}
@@ -198,7 +209,7 @@ async function loadNearbyPlaces(lat,lng){
   if(all.length<5&&typeof Place.searchByText==='function'){
    for(const query of ['railway station bus station airport hospital','college university shopping mall park garden']){
     try{
-     const result=await Place.searchByText({textQuery:query,fields:['displayName','location','primaryType','types','photos'],locationBias:{center:{lat,lng},radius:12000},maxResultCount:12});
+     const result=await Place.searchByText({textQuery:query,fields:['displayName','location','primaryType','types','photos'],locationRestriction:{center:{lat,lng},radius:25000},maxResultCount:12});
      add(result.places);
      if(all.length>=8)break;
     }catch(e){lastError=e;console.warn('DBest Places text fallback failed',e)}
@@ -213,7 +224,7 @@ async function loadNearbyPlaces(lat,lng){
   let nearbyFailure='';
  const googlePromise=browserGoogleNearby().then(rows=>{if(rows.length){render(rows);return true}nearbyFailure='Google returned no places';return false}).catch(e=>{nearbyFailure=String(e?.message||e||'Google Places error').slice(0,140);console.warn('DBest browser Places failed',e);return false});
   const serverPromise=(async()=>{
-   const controller=new AbortController(),abort=setTimeout(()=>controller.abort(),8500);
+   const controller=new AbortController(),abort=setTimeout(()=>controller.abort(),12000);
    try{
     const response=await fetch('/api/runtime-config?mode=nearby&lat='+encodeURIComponent(lat)+'&lng='+encodeURIComponent(lng),{signal:controller.signal});
     if(!response.ok)throw Error('Nearby server HTTP '+response.status);
@@ -222,21 +233,8 @@ async function loadNearbyPlaces(lat,lng){
    }catch(e){console.warn('DBest nearby server failed',e);return false}
    finally{clearTimeout(abort)}
   })();
-  // V18 resilience: independent destination-search fallback when nearby providers fail.
-  const fallbackPromise=(async()=>{
-   const terms=['hospital','railway station','bus stand','airport','college','park'];
-   const results=await Promise.all(terms.map(async term=>{
-    try{
-     const rows=await Promise.race([searchLocations(term),new Promise(resolve=>setTimeout(()=>resolve([]),5500))]);
-     return (rows||[]).filter(p=>Number.isFinite(Number(p.lat))&&Number.isFinite(Number(p.lng))).map(p=>({name:String(p.label||p.name||'').split(',')[0].trim(),lat:Number(p.lat),lng:Number(p.lng),types:[term==='railway station'?'train_station':term==='bus stand'?'bus_station':term]}));
-    }catch(e){return[]}
-   }));
-   const seen=new Set();
-   const near=results.flat().filter(p=>cabPublicPlace(p.name,p.types)&&Math.hypot((p.lat-lat)*111.2,(p.lng-lng)*111.2*Math.cos(lat*Math.PI/180))<=25).filter(p=>{const k=p.name.toLowerCase();if(seen.has(k))return false;seen.add(k);return true});
-   if(near.length){render(near);return true}return false;
-  })();
-  const outcomes=await Promise.all([googlePromise,serverPromise,fallbackPromise]);
-  if(!outcomes.some(Boolean)){render([]);console.warn('DBest nearby search unavailable',nearbyFailure||'No nearby results')}
+  const outcomes=await Promise.all([googlePromise,serverPromise]);
+  if(!outcomes.some(Boolean)){render([]);if(rail.isConnected&&rail.dataset.requestId===requestId){const retry=document.createElement('button');retry.type='button';retry.className='cab6RetryNearby';retry.textContent='↻ Retry nearby places';retry.style.cssText='background:#edf3ff;border:1px solid #c6d8fa;border-radius:12px;padding:12px;color:#3157a8;font-size:12px;font-weight:750';retry.onclick=()=>loadNearbyPlaces(lat,lng);rail.appendChild(retry)}}
  }finally{clearTimeout(timer)}
 }
 async function useGps(noisy){
@@ -263,31 +261,47 @@ async function useGps(noisy){
 }
 async function renderEntryMap(){
  const el=$('cab6EntryMap');if(!el)return;
+ const thisRun=++entryMapRun;
  let pos=null;
  if(S.p&&Number.isFinite(S.p.lat)&&Number.isFinite(S.p.lng))pos={lat:S.p.lat,lng:S.p.lng};
- if(!pos){const txt=String($('cab6P')?.value||'').trim();if(txt.length>=3){try{const p=await Promise.race([geocodeText(txt),new Promise(r=>setTimeout(()=>r(null),2500))]);if(p&&Number.isFinite(p.lat)&&Number.isFinite(p.lng)){S.p=p;pos={lat:p.lat,lng:p.lng}}}catch(e){}}}
+ if(!pos){const txt=String($('cab6P')?.value||'').trim();if(txt.length>=3){try{const p=await Promise.race([geocodeText(txt),new Promise(r=>setTimeout(()=>r(null),2500))]);if(p&&Number.isFinite(p.lat)&&Number.isFinite(p.lng)){S.p=p;pos={lat:p.lat,lng:p.lng};loadNearbyPlaces(p.lat,p.lng).catch(e=>console.warn('Nearby lookup failed',e))}}catch(e){}}}
  if(!pos){try{pos=await new Promise(resolve=>navigator.geolocation?navigator.geolocation.getCurrentPosition(p=>resolve({lat:p.coords.latitude,lng:p.coords.longitude}),()=>resolve(null),{enableHighAccuracy:false,timeout:2500,maximumAge:60000}):resolve(null))}catch(e){}}
  if(!pos)return;
- try{if(S.entryMap&&S.entryMap.remove)S.entryMap.remove()}catch(e){}S.entryMap=null;
  try{
-   const L=await initLeaflet();if(!$('cab6EntryMap'))return;
-   el.innerHTML='';S.entryMap=L.map(el,{zoomControl:false,attributionControl:false,preferCanvas:true}).setView([pos.lat,pos.lng],14);
-   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(S.entryMap);
+   const L=await initLeaflet();if(thisRun!==entryMapRun||$('cab6EntryMap')!==el)return;
+   if(S.entryMap&&S.entryMap.getContainer?.()===el){S.entryMap.setView([pos.lat,pos.lng],14);return}
+   try{S.entryMap?.remove?.()}catch(e){}
+   S.entryMap=null;
+   el.innerHTML='';S.entryMap=L.map(el,{zoomControl:false,attributionControl:true,preferCanvas:true}).setView([pos.lat,pos.lng],14);
+   const thisMap=S.entryMap;let loadedTiles=0,usedBackup=false;
+   const visual=document.createElement('div');visual.className='cab6EntryMapFallback';
+   visual.style.cssText='z-index:440;pointer-events:none;display:grid;place-items:center;color:#284575;background:linear-gradient(130deg,#e1effe,#f3f6ff)';
+   visual.innerHTML='<div class="cab6EntryMapPin"></div><strong style="position:absolute;bottom:40%;font-size:12px">Loading your pickup map…</strong>';
+   el.appendChild(visual);
+   const status=document.createElement('div');status.className='cab6TileStatus';status.setAttribute('role','status');
+   status.style.cssText='display:none;position:absolute;z-index:450;inset:auto 12px 12px;background:#fff;color:#24304e;border-radius:14px;padding:10px 12px;font-size:12px;box-shadow:0 6px 22px #0002';
+   status.textContent='Map tiles are temporarily unavailable. Pickup location is still saved.';
+   el.appendChild(status);
+   const attachTiles=(url,attribution)=>L.tileLayer(url,{maxZoom:19,attribution}).on('tileload',()=>{loadedTiles++;status.style.display='none';visual.remove()}).addTo(thisMap);
+   let tiles=attachTiles('https://tile.openstreetmap.org/{z}/{x}/{y}.png','© OpenStreetMap contributors');
+   setTimeout(()=>{if(S.entryMap!==thisMap||!el.isConnected||loadedTiles)return;usedBackup=true;thisMap.removeLayer(tiles);tiles=attachTiles('https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png','© OpenStreetMap contributors · © CARTO')},3200);
+   setTimeout(()=>{if(S.entryMap===thisMap&&el.isConnected&&!loadedTiles&&usedBackup)status.style.display='block'},6800);
    L.circleMarker([pos.lat,pos.lng],{radius:8,weight:4,color:'#fff',fillColor:'#2362ee',fillOpacity:1}).addTo(S.entryMap);
    setTimeout(()=>S.entryMap?.invalidateSize?.(),100);
- }catch(e){console.warn('Entry map failed',e)}
+ }catch(e){console.warn('Entry map failed',e);const w=$('cab6EntryMap');if(w&&!w.querySelector('.cab6EntryMapFallback'))w.innerHTML='<div class="cab6EntryMapFallback"><div class="cab6EntryMapPin"></div><strong style="position:absolute;bottom:26%;font-size:12px;color:#334b76">Map temporarily unavailable. Your pickup location is saved.</strong></div>'}
 }
 async function searchLocations(term){
- if(term.length<2)return[];await initSearchProvider();
- const origin=(S.provider==='google'&&window.google?.maps?.LatLng&&S.p&&Number.isFinite(S.p.lat)&&Number.isFinite(S.p.lng))?new google.maps.LatLng(S.p.lat,S.p.lng):null;
- if(S.provider==='google'&&window.google?.maps?.places){return await new Promise(resolve=>{const req={input:term,componentRestrictions:{country:'in'}};if(origin){req.location=origin;req.radius=50000;req.origin=origin}new google.maps.places.AutocompleteService().getPlacePredictions(req,(rows,status)=>{let a=status===google.maps.places.PlacesServiceStatus.OK?(rows||[]):[];a=a.map(x=>({label:x.description,placeId:x.place_id,distanceMeters:Number(x.distance_meters||0)}));if(origin)a.sort((x,y)=>(x.distanceMeters||999999999)-(y.distanceMeters||999999999));resolve(a.slice(0,8))})})}
+ if(term.length<2)return[];
  const base=String(cfg().supabaseUrl||'').replace(/\/$/,''),key=String(cfg().supabasePublishableKey||cfg().supabaseAnonKey||'');
- if(base){try{const r=await fetch(base+'/functions/v1/location-search-live',{method:'POST',headers:{'content-type':'application/json',apikey:key},body:JSON.stringify({q:term})});const j=await r.json();const a=(j.results||[]).slice(0,8).map(x=>({label:x.label||x.detail,lat:+x.lat,lng:+(x.lon??x.lng)}));if(a.length)return a}catch(e){}}
+ if(base){const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),7000);try{const r=await fetch(base+'/functions/v1/location-search-live',{method:'POST',headers:{'content-type':'application/json',apikey:key},body:JSON.stringify({q:term,...(S.p&&Number.isFinite(S.p.lat)&&Number.isFinite(S.p.lng)?{lat:S.p.lat,lon:S.p.lng}:{})}),signal:controller.signal});if(r.ok){const j=await r.json();const a=(j.results||[]).slice(0,8).map(x=>({label:x.label||x.detail,lat:+x.lat,lng:+(x.lon??x.lng)})).filter(x=>x.label&&Number.isFinite(x.lat)&&Number.isFinite(x.lng));if(a.length)return a}}catch(e){console.warn('Cab location backend fallback',e)}finally{clearTimeout(timeout)}}
+ await initSearchProvider();
+ const origin=(S.provider==='google'&&window.google?.maps?.LatLng&&S.p&&Number.isFinite(S.p.lat)&&Number.isFinite(S.p.lng))?new google.maps.LatLng(S.p.lat,S.p.lng):null;
+ if(S.provider==='google'&&window.google?.maps?.places){try{const predictions=await Promise.race([new Promise(resolve=>{const req={input:term,componentRestrictions:{country:'in'}};if(origin){req.location=origin;req.radius=50000;req.origin=origin}new google.maps.places.AutocompleteService().getPlacePredictions(req,(rows,status)=>{let a=status===google.maps.places.PlacesServiceStatus.OK?(rows||[]):[];a=a.map(x=>({label:x.description,placeId:x.place_id,distanceMeters:Number(x.distance_meters||0)}));if(origin)a.sort((x,y)=>(x.distanceMeters||999999999)-(y.distanceMeters||999999999));resolve(a.slice(0,8))})}),new Promise(resolve=>setTimeout(()=>resolve([]),3500))]);if(predictions.length)return predictions}catch(e){console.warn('Cab Google autocomplete fallback',e)}}
  try{const r=await fetch('https://nominatim.openstreetmap.org/search?format=json&countrycodes=in&limit=8&q='+encodeURIComponent(term),{headers:{Accept:'application/json'}});const j=await r.json();return (j||[]).map(x=>({label:x.display_name,lat:+x.lat,lng:+x.lon}))}catch(e){return[]}
 }
 async function resolvePlace(x){if(x?.lat!=null)return x;if(S.provider==='google'&&x?.placeId){return await new Promise(resolve=>{const svc=new google.maps.places.PlacesService(document.createElement('div'));svc.getDetails({placeId:x.placeId,fields:['geometry','formatted_address','name']},(p,status)=>{if(status===google.maps.places.PlacesServiceStatus.OK&&p.geometry?.location)resolve({label:p.formatted_address||p.name||x.label,lat:p.geometry.location.lat(),lng:p.geometry.location.lng()});else resolve(null)})})}return null}
 async function geocodeText(v){v=String(v||'').trim();if(v.length<3)return null;await initSearchProvider();if(S.provider==='google'&&window.google?.maps?.Geocoder){try{return await new Promise(resolve=>new google.maps.Geocoder().geocode({address:v,componentRestrictions:{country:'IN'}},(rows,status)=>{const r=rows?.[0],l=r?.geometry?.location;resolve(status==='OK'&&l?{label:r.formatted_address||v,lat:l.lat(),lng:l.lng()}:null)}))}catch(e){}}const a=await searchLocations(v);return a[0]?resolvePlace(a[0]):null}
-function bindSearch(i,b,k){const inp=$(i),box=$(b);let timer=0,seq=0;inp.oninput=()=>{clearTimeout(timer);S[k]=null;const term=inp.value.trim(),n=++seq;if(term.length<2){box.classList.remove('show');box.innerHTML='';return}timer=setTimeout(async()=>{const rows=await searchLocations(term);if(n!==seq)return;box.innerHTML=rows.map((x,j)=>`<button type="button" data-i="${j}"><b>${esc(String(x.label||'Location').split(',')[0])}</b><small>${esc(String(x.label||'').split(',').slice(1,3).join(','))}</small></button>`).join('');box.classList.toggle('show',rows.length>0);qa('button',box).forEach(btn=>btn.onclick=async()=>{const p=await resolvePlace(rows[+btn.dataset.i]);if(!p)return say('Could not resolve this location.');S[k]=p;inp.value=p.label;box.classList.remove('show');if(k==='p')renderEntryMap()})},240)};inp.onblur=()=>setTimeout(()=>box.classList.remove('show'),180)}
+function bindSearch(i,b,k){const inp=$(i),box=$(b);let timer=0,seq=0;inp.oninput=()=>{clearTimeout(timer);S[k]=null;const term=inp.value.trim(),n=++seq;if(term.length<2){box.classList.remove('show');box.innerHTML='';return}timer=setTimeout(async()=>{const rows=await searchLocations(term);if(n!==seq)return;box.innerHTML=rows.length?rows.map((x,j)=>`<button type="button" data-i="${j}"><b>${esc(String(x.label||'Location').split(',')[0])}</b><small>${esc(String(x.label||'').split(',').slice(1,3).join(','))}</small></button>`).join(''):'<div role="status" style="padding:13px;color:#64748b;font-size:12px">No location found. Try the nearby town or full address.</div>';box.classList.add('show');qa('button',box).forEach(btn=>btn.onclick=async()=>{const p=await resolvePlace(rows[+btn.dataset.i]);if(!p)return say('Could not resolve this location.');S[k]=p;inp.value=p.label;box.classList.remove('show');if(k==='p'){loadNearbyPlaces(p.lat,p.lng).catch(e=>console.warn('Nearby lookup failed',e));renderEntryMap()}})},240)};inp.onblur=()=>setTimeout(()=>box.classList.remove('show'),180)}
 function realisticRoadMinutes(km,providerMin){
  const k=Math.max(0,Number(km)||0),raw=Math.max(1,Number(providerMin)||1);
  // DBest ETA sanity floor: provider ETA is respected when higher, but never allow
@@ -367,7 +381,42 @@ async function refreshCarpool(id,mobile){
 async function cancelCarpool(id,mobile){
  try{await carpoolApi('decline',{id,mobile});try{localStorage.removeItem('dbest_carpool_last')}catch(_){}say('Car Pool request cancelled.');open()}catch(e){say(String(e?.message||'')==='paid_request_refund_required'?'Paid Car Pool cancellation requires a refund workflow. Please contact DBest support.':'Unable to cancel Car Pool request.')}
 }
-function roundRules(){try{const x=JSON.parse(localStorage.getItem('d2_ride_config')||'null'),r=x?.roundTripRules||{};return{sedan:{perKm:Number(r.sedan?.perKm||15),nightHalt:Number(r.sedan?.nightHalt||1000)},suv:{perKm:Number(r.suv?.perKm||18),nightHalt:Number(r.suv?.nightHalt||1500)}}}catch(e){return{sedan:{perKm:15,nightHalt:1000},suv:{perKm:18,nightHalt:1500}}}}function visibleVehicles(){return S.mode==='rental'||S.tripType!=='roundtrip'?VEH:VEH.filter(v=>v.id==='sedan'||v.id==='suv')}function totalKm(){const k=S.route?.km||S.rentalKm;return S.mode!=='rental'&&S.tripType==='roundtrip'?k*2:k}function totalMin(){if(S.mode==='rental')return S.rentalHours*60;const oneWay=realisticRoadMinutes(Number(S.route?.km||0),Number(S.route?.min||1));return S.tripType==='roundtrip'?oneWay*2:oneWay}function fare(v){const k=S.route?.km||S.rentalKm;if(S.mode!=='rental'&&S.tripType==='roundtrip'){const rr=roundRules()[v.id];if(!rr)return 0;return Math.round((k*2)*rr.perKm+(S.nightHalt?rr.nightHalt:0))}return Math.round(Math.max(v.min,v.base+v.km*k)+PLATFORM_FEE)}
+function ownerRideConfig(){
+ let stored=null;
+ try{stored=JSON.parse(localStorage.getItem('d2_ride_config')||'null')}catch(e){}
+ // Prefer the application's active Owner configuration when it is available.
+ try{if(typeof rideConfig!=='undefined'&&rideConfig&&Array.isArray(rideConfig.vehicles))return rideConfig}catch(e){}
+ return stored&&Array.isArray(stored.vehicles)?stored:null;
+}
+function roundRules(){
+ const r=ownerRideConfig()?.roundTripRules||{};
+ const positive=(n,f)=>Number.isFinite(Number(n))&&Number(n)>=0?Number(n):f;
+ return{sedan:{perKm:positive(r.sedan?.perKm,15),nightHalt:positive(r.sedan?.nightHalt,1000)},
+  suv:{perKm:positive(r.suv?.perKm,18),nightHalt:positive(r.suv?.nightHalt,1500)}};
+}
+function visibleVehicles(){
+ const c=ownerRideConfig();
+ const active=Array.isArray(c?.vehicles)&&c.vehicles.length
+  ?VEH.filter(v=>c.vehicles.some(x=>x.id===v.id)):VEH;
+ return S.mode==='rental'||S.tripType!=='roundtrip'?active:active.filter(v=>v.id==='sedan'||v.id==='suv');
+}
+function totalKm(){const k=S.route?.km||S.rentalKm;return S.mode!=='rental'&&S.tripType==='roundtrip'?k*2:k}
+function totalMin(){if(S.mode==='rental')return S.rentalHours*60;const oneWay=realisticRoadMinutes(Number(S.route?.km||0),Number(S.route?.min||1));return S.tripType==='roundtrip'?oneWay*2:oneWay}
+function fare(v){
+ const k=Math.max(0,Number(S.route?.km||S.rentalKm)||0);
+ if(S.mode!=='rental'&&S.tripType==='roundtrip'){
+  const rr=roundRules()[v.id];if(!rr)return 0;
+  return Math.round((k*2)*rr.perKm+(S.nightHalt?rr.nightHalt:0));
+ }
+ const c=ownerRideConfig(),item=c?.vehicles?.find(x=>x.id===v.id);
+ if(item){
+  const val=(x,f)=>Number.isFinite(Number(x))&&Number(x)>=0?Number(x):f;
+  const base=val(item.base,v.base),perKm=val(item.perKm,v.km),minimum=val(item.minFare,v.min);
+  const surge=val(c.surge,1),fee=val(c.platformFee,PLATFORM_FEE),tax=val(c.taxPercent,0);
+  return Math.round((Math.max(minimum,base+perKm*k)*surge+fee)*(1+tax/100));
+ }
+ return Math.round(Math.max(v.min,v.base+v.km*k)+PLATFORM_FEE);
+}
 function pickupEta(v){const m={bike:4,auto:5,sedan:6,suv:7};return m[v.id]||6}
 function vehCard(v){const rr=S.tripType==='roundtrip'?roundRules()[v.id]:null;return `<button type="button" class="cab6Veh ${S.selected===v.id?'on':''}" data-v="${v.id}"><span class="photo"><img src="${IMG[v.id]}" alt="${esc(v.name)}" loading="eager"></span><b>${esc(v.name)}${S.tripType==='roundtrip'?'<span style="display:block;font-size:7px;color:#315efb;margin-top:2px">ROUND TRIP</span>':''}</b><small>${v.seats} seat${v.seats>1?'s':''}${rr?' • ₹'+rr.perKm+'/km':''}</small><small style="color:#315efb;font-weight:900;margin-top:2px">~${pickupEta(v)} min away</small><strong>₹${fare(v)}</strong></button>`}
 function mapBlock(title,id='cab6Map'){return `<div class="cab6MapFrame"><div id="${id}" class="cab6Map"></div><div class="cab6MapShade"></div><div class="cab6RoutePill">${esc(title)}</div></div>`}
@@ -385,8 +434,16 @@ function vehicles(){
  qa('[data-v]').forEach(b=>b.onclick=()=>{S.selected=b.dataset.v;qa('[data-v]').forEach(x=>x.classList.toggle('on',x===b));$('cab6Book').textContent='Continue with '+(list.find(v=>v.id===S.selected)?.name||'Ride')});$('cab6Book').onclick=()=>confirmRide(S.selected);setTimeout(()=>renderRealMap('cab6Map'),40)
 }
 function confirmRide(id){
- const v=VEH.find(x=>x.id===id);if(!v)return;const amt=fare(v),title=S.mode==='rental'?`${S.rentalHours} Hours / ${S.rentalKm} km`:`${S.p?.label||'Pickup'} → ${S.d?.label||'Destination'}${S.tripType==='roundtrip'?' → '+(S.p?.label||'Pickup'):''}`;
- screen(`<div class="cab6ConfirmMap">${mapBlock(title)}</div><div class="cab6Confirm"><div class="cab6VehicleHero"><div class="pic"><img src="${IMG[v.id]}" alt="${esc(v.name)}"></div><div><b style="font-size:16px">${esc(v.name)}</b><div style="font-size:9px;color:#7d8597">${v.seats} seats • ~${totalMin()} min</div></div></div><div class="cab6RouteRow"><small>Pickup</small><b>${esc(S.p?.label||'')}</b></div>${S.mode!=='rental'&&(S.stops||[]).length?`<div class="cab6RouteRow"><small>Stops</small><b>${S.stops.map((s,i)=>`${i+1}. ${esc(s?.label||'')}`).join(' • ')}</b></div>`:''}<div class="cab6RouteRow"><small>${S.mode==='rental'?'Package':'Destination'}</small><b>${esc(S.mode==='rental'?`${S.rentalHours} Hours / ${S.rentalKm} km`:S.d?.label||'')}</b></div><div class="cab6Fare"><div><small style="color:#858da0;font-size:9px">Estimated fare</small><strong>₹${amt}</strong></div><div style="text-align:right;color:#7c8498;font-size:8px">${totalKm().toFixed(1)} km<br>~${totalMin()} min</div></div><div class="cab6Pay"><label><input type="radio" name="cab6pay" value="cash" checked> Cash</label><label><input type="radio" name="cab6pay" value="upi"> UPI</label></div><button type="button" id="cab6ConfirmBook" class="cab6Book">Book ${esc(v.name)}</button></div>`,'DBEST_CAB_SELECTED_UI.vehicles()');
+ const v=VEH.find(x=>x.id===id);if(!v)return;
+ const c=ownerRideConfig(),paymentOptions=[];
+ if(c?.cash!==false)paymentOptions.push(['cash','Cash']);
+ if(c?.upiDriver!==false)paymentOptions.push(['upi-driver','UPI to Vaahak']);
+ let payuReady=false;
+ try{payuReady=typeof payuSettings!=='undefined'&&payuSettings?.enabled===true}catch(e){}
+ if(c?.payu!==false&&payuReady)paymentOptions.push(['payu','Pay securely online']);
+ const paymentHtml=paymentOptions.length?paymentOptions.map((o,i)=>'<label><input type="radio" name="cab6pay" value="'+o[0]+'" '+(i===0?'checked':'')+'> '+o[1]+'</label>').join(''):'<span style="font-size:12px;color:#9c3340">No payment option is enabled. Please contact support.</span>';
+ const amt=fare(v),title=S.mode==='rental'?`${S.rentalHours} Hours / ${S.rentalKm} km`:`${S.p?.label||'Pickup'} → ${S.d?.label||'Destination'}${S.tripType==='roundtrip'?' → '+(S.p?.label||'Pickup'):''}`;
+ screen(`<div class="cab6ConfirmMap">${mapBlock(title)}</div><div class="cab6Confirm"><div class="cab6VehicleHero"><div class="pic"><img src="${IMG[v.id]}" alt="${esc(v.name)}"></div><div><b style="font-size:16px">${esc(v.name)}</b><div style="font-size:9px;color:#7d8597">${v.seats} seats • ~${totalMin()} min</div></div></div><div class="cab6RouteRow"><small>Pickup</small><b>${esc(S.p?.label||'')}</b></div>${S.mode!=='rental'&&(S.stops||[]).length?`<div class="cab6RouteRow"><small>Stops</small><b>${S.stops.map((s,i)=>`${i+1}. ${esc(s?.label||'')}`).join(' • ')}</b></div>`:''}<div class="cab6RouteRow"><small>${S.mode==='rental'?'Package':'Destination'}</small><b>${esc(S.mode==='rental'?`${S.rentalHours} Hours / ${S.rentalKm} km`:S.d?.label||'')}</b></div><div class="cab6Fare"><div><small style="color:#858da0;font-size:9px">Estimated fare</small><strong>₹${amt}</strong></div><div style="text-align:right;color:#7c8498;font-size:8px">${totalKm().toFixed(1)} km<br>~${totalMin()} min</div></div><div class="cab6Pay">${paymentHtml}</div><button type="button" id="cab6ConfirmBook" class="cab6Book" ${paymentOptions.length?"":"disabled"}>Book ${esc(v.name)}</button></div>`,'DBEST_CAB_SELECTED_UI.vehicles()');
  $('cab6ConfirmBook').onclick=()=>book(id);setTimeout(()=>renderRealMap('cab6Map'),40)
 }
 function book(id){const pay=q('input[name="cab6pay"]:checked')?.value||'cash';try{if(typeof window.bookRide==='function'){window.rideDraft=window.rideDraft||{};const round=S.mode!=='rental'&&S.tripType==='roundtrip';Object.assign(window.rideDraft,{quotedFare:fare(VEH.find(x=>x.id===id)||{base:0,km:0,min:0}),pickup:S.p?.label||'',pickupCoords:(S.p&&Number.isFinite(S.p.lat)&&Number.isFinite(S.p.lng))?{lat:S.p.lat,lng:S.p.lng,label:S.p.label||''}:null,stops:(S.stops||[]).map(x=>x?.label||'').filter(Boolean),stopCoords:(S.stops||[]).filter(x=>Number.isFinite(x?.lat)&&Number.isFinite(x?.lng)).map(x=>({lat:x.lat,lng:x.lng,label:x.label||''})),drop:S.mode==='rental'?`${S.rentalHours} Hours / ${S.rentalKm} km`:S.d?.label||'',dropCoords:(S.mode!=='rental'&&S.d&&Number.isFinite(S.d.lat)&&Number.isFinite(S.d.lng))?{lat:S.d.lat,lng:S.d.lng,label:S.d.label||''}:null,distance:round?totalKm():S.route.km,roundTripDistance:round?totalKm():null,estimatedMinutes:round?totalMin():S.route.min,selected:id,schedule:S.schedule,scheduledAt:S.scheduledAt,rider:S.rider,riderName:S.riderName,riderMobile:S.riderMobile,mode:S.mode,bookingType:S.mode==='rental'?'Rental':(round?'Round Trip':'Ride'),tripType:round?'roundtrip':'oneway',roundTrip:round,sameVehicle:round,returnPickup:round?(S.d?.label||''):null,returnDrop:round?(S.p?.label||''):null,nightHalt:round&&S.nightHalt,tollsExtra:round,rentalHours:S.rentalHours,rentalKm:S.rentalKm});const f=document.createElement('form');f.innerHTML=`<input name="payment" value="${esc(pay)}">`;return window.bookRide({preventDefault(){},target:f},id)}}catch(e){console.warn('Booking handoff failed',e)}say('Ride details are ready. Please retry booking.')}
