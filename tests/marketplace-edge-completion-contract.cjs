@@ -156,6 +156,28 @@ test('Customer confirm before Vaahak completion records matching Customer/Vendor
  finished(db);
 });
 
+test('Vaahak completion after Customer-first success returns already-completed without duplicating settlement writes',async()=>{
+ const db=await fixture();
+ const first=await handler(fns.handover,db)('member_confirm_delivery','MEM_QA_SESSION');
+ assert.equal(first.status,200);
+ const priorWrites=db.audit.length;
+ const result=await handler(fns.commerce,db)('complete_delivery');
+ assert.equal(result.status,200,JSON.stringify(result.body));
+ assert.equal(result.body.already,true);
+ assert.equal(db.audit.length,priorWrites,'Already-completed Vaahak retry must not update anything');
+ finished(db);
+});
+
+test('Repeated Customer confirmation does not re-trigger Vendor settlement on an already-synchronized completed order',async()=>{
+ const db=await fixture({alreadyCompleted:true});
+ Object.assign(row(db,'marketplace_orders_live'),{status:'Delivered / Completed',vendor_status:'Delivered / Completed'});
+ const result=await handler(fns.handover,db)('member_confirm_delivery','MEM_QA_SESSION');
+ assert.equal(result.status,200,JSON.stringify(result.body));
+ finished(db);
+ assert.equal(db.audit.filter(x=>x.table==='marketplace_orders_live').length,0,'No repeated completed order writes');
+ assert.equal(db.audit.filter(x=>x.table==='vaahak_jobs_live').length,0);
+});
+
 test('Unpaid customer confirmation is rejected without changing order or job status',async()=>{
  const db=await fixture({paid:false});
  const result=await handler(fns.handover,db)('member_confirm_delivery','MEM_QA_SESSION');
