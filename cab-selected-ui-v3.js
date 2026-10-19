@@ -151,7 +151,7 @@ function placePhotoUrl(lat,lng,name){return 'https://maps.googleapis.com/maps/ap
 const CAB_PUBLIC_TYPES=['train_station','transit_station','bus_station','bus_stop','airport','hospital','university','college','school','shopping_mall','supermarket','market','park','tourist_attraction','museum','stadium','government_office','city_hall'];
 const CAB_PUBLIC_NAME=/\b(station|railway|airport|airstrip|hospital|medical|clinic|college|university|school|campus|mall|market|bazaar|park|garden|museum|stadium|bus stand|bus stop|terminal|tourist|temple|mandir|fort|zoo|shopping|government|court|district|police|bank|post office)\b/i;
 function cabPublicPlace(name,types){
- const n=String(name||'').trim();if(!n||/^(home|house|residence|private|my home|address|plot|flat|room)\b/i.test(n))return false;
+ const n=String(name||'').trim();if(!n||/^(home|house|residence|private|my home|address|plot|flat|room)\b/i.test(n)||/\b(pharmacy|chemist|medical (store|shop)|medicine shop|drugstore)\b/i.test(n))return false;
  return (types||[]).some(t=>CAB_PUBLIC_TYPES.includes(t))||CAB_PUBLIC_NAME.test(n);
 }
 function cabPlacePriority(p){
@@ -169,9 +169,9 @@ async function loadNearbyPlaces(lat,lng){
  if(!Number.isFinite(lat)||!Number.isFinite(lng)){rail.textContent='Select a pickup location to see nearby places.';return}
  const requestId=String(Date.now())+'-'+Math.random();rail.dataset.requestId=requestId;
  let hasRenderedPlaces=false;const render=rows=>{if(!rail.isConnected||rail.dataset.requestId!==requestId)return;if(rows.length&&hasRenderedPlaces)return;if(rows.length)hasRenderedPlaces=true;
-  const distance=p=>Math.hypot((p.lat-lat)*111.2,(p.lng-lng)*111.2*Math.cos(lat*Math.PI/180));rows=[...rows].sort((a,b)=>cabPlacePriority(a)-cabPlacePriority(b)||distance(a)-distance(b));
+  const distance=p=>Math.hypot((p.lat-lat)*111.2,(p.lng-lng)*111.2*Math.cos(lat*Math.PI/180));rows=[...rows].filter(p=>Number.isFinite(p.lat)&&Number.isFinite(p.lng)&&distance(p)<=15&&cabPublicPlace(p.name,p.types||[])).sort((a,b)=>cabPlacePriority(a)-cabPlacePriority(b)||distance(a)-distance(b));
   if(!rows.length){rail.innerHTML='<div style="padding:12px;color:#687386;font-size:12px">Nearby places are unavailable right now. You can enter a destination above.</div>';return}
-  rail.innerHTML=rows.slice(0,8).map(p=>'<button type="button" class="cab6Place" data-place="'+esc(p.name)+'" data-lat="'+p.lat+'" data-lng="'+p.lng+'">'+(p.photo?'<img class="cab6PlacePhoto" alt="" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;border-radius:inherit;z-index:0" onerror="this.style.display=\'none\'" src="'+esc(p.photo)+'">':'')+'<span style="position:absolute;bottom:12px;left:12px;right:8px;z-index:2;color:white;font-weight:700;text-shadow:0 1px 4px #000">'+esc(p.name)+'</span>'+(p.attribution?'<small class="cab6PhotoCredit" style="position:absolute;top:6px;right:6px;left:6px;z-index:2;font-size:9px;color:white;text-align:right;text-shadow:0 1px 4px #000;pointer-events:none">Photo: '+esc(p.attribution)+'</small>':'')+'</button>').join('');
+  rail.innerHTML=rows.slice(0,8).map(p=>'<button type="button" class="cab6Place" data-place="'+esc(p.name)+'" data-lat="'+p.lat+'" data-lng="'+p.lng+'">'+(p.photo?'<img class="cab6PlacePhoto" alt="" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;border-radius:inherit;z-index:0" onerror="this.style.display=\'none\';this.parentElement.querySelector(\'.cab6PhotoCredit\')?.remove()" src="'+esc(p.photo)+'">':'')+'<span style="position:absolute;bottom:12px;left:12px;right:8px;z-index:2;color:white;font-weight:700;text-shadow:0 1px 4px #000">'+esc(p.name)+'</span>'+(p.attribution?'<small class="cab6PhotoCredit" style="position:absolute;top:6px;right:6px;left:6px;z-index:2;font-size:9px;color:white;text-align:right;text-shadow:0 1px 4px #000;pointer-events:none">Photo: '+esc(p.attribution)+'</small>':'')+'</button>').join('');
   qa('.cab6Place',rail).forEach(btn=>btn.onclick=()=>{const d=$('cab6D');if(!d)return;d.value=btn.dataset.place;S.d={label:d.value,lat:Number(btn.dataset.lat),lng:Number(btn.dataset.lng)};$('cab6DS')?.classList.remove('show')});
  };
  const browserGoogleNearby=async()=>{
@@ -258,8 +258,16 @@ async function renderEntryMap(){
  try{if(S.entryMap&&S.entryMap.remove)S.entryMap.remove()}catch(e){}S.entryMap=null;
  try{
    const L=await initLeaflet();if(!$('cab6EntryMap'))return;
-   el.innerHTML='';S.entryMap=L.map(el,{zoomControl:false,attributionControl:false,preferCanvas:true}).setView([pos.lat,pos.lng],14);
-   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(S.entryMap);
+   el.innerHTML='';S.entryMap=L.map(el,{zoomControl:false,attributionControl:true,preferCanvas:true}).setView([pos.lat,pos.lng],14);
+   const thisMap=S.entryMap;let loadedTiles=0,usedBackup=false;
+   const status=document.createElement('div');status.className='cab6TileStatus';status.setAttribute('role','status');
+   status.style.cssText='display:none;position:absolute;z-index:450;inset:auto 12px 12px;background:#fff;color:#24304e;border-radius:14px;padding:10px 12px;font-size:12px;box-shadow:0 6px 22px #0002';
+   status.textContent='Map tiles are temporarily unavailable. Pickup location is still saved.';
+   el.appendChild(status);
+   const attachTiles=(url,attribution)=>L.tileLayer(url,{maxZoom:19,attribution}).on('tileload',()=>{loadedTiles++;status.style.display='none'}).addTo(thisMap);
+   let tiles=attachTiles('https://tile.openstreetmap.org/{z}/{x}/{y}.png','© OpenStreetMap contributors');
+   setTimeout(()=>{if(S.entryMap!==thisMap||!el.isConnected||loadedTiles)return;usedBackup=true;thisMap.removeLayer(tiles);tiles=attachTiles('https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png','© OpenStreetMap contributors · © CARTO')},3200);
+   setTimeout(()=>{if(S.entryMap===thisMap&&el.isConnected&&!loadedTiles&&usedBackup)status.style.display='block'},6800);
    L.circleMarker([pos.lat,pos.lng],{radius:8,weight:4,color:'#fff',fillColor:'#2362ee',fillOpacity:1}).addTo(S.entryMap);
    setTimeout(()=>S.entryMap?.invalidateSize?.(),100);
  }catch(e){console.warn('Entry map failed',e)}
