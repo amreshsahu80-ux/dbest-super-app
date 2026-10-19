@@ -79,7 +79,11 @@ window.dbestUniversalExternalGo=async function(id,i){
     const sub=idx!==null?(s[5]?.[idx]||'External Partner Transaction'):'External Partner Transaction';
     const userId=String(activeSession?.id||'guest');
     let txId='';
-    let url=String(l.url);
+    let url=String(l.url).trim();
+    // Reject unsafe or malformed Owner-configured URLs BEFORE logging a pending
+    // partner transaction. Pending ledger rows represent an actual handoff.
+    const parsed=new URL(url,location.href);
+    if(!['https:','http:'].includes(parsed.protocol))throw new Error('Unsafe partner destination protocol');
     // Tracking must never prevent a valid partner handoff.
     try{
       if(typeof addTx==='function'&&activeSession?.id){
