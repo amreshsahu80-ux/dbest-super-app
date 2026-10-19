@@ -21,6 +21,8 @@ jobs:
           node-version: '22'
       - name: Install isolated TypeScript test dependency
         run: npm install --no-save --no-package-lock typescript@5.9.3
+      - name: Verify frozen Cab source remains byte-for-byte unchanged
+        run: node tests/cab-golden-integrity.cjs
       - name: Verify real Edge function code under mocked authenticated sessions
         run: node --test tests/marketplace-edge-completion-contract.cjs
       - name: Preserve Marketplace quotation and auth contracts
