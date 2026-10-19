@@ -28,4 +28,12 @@ for(const path of ['transaction-invoice-receipt-v1.js','transaction-invoice-ui-v
  new vm.Script(s,{filename:path});
  assert(s.includes("document.querySelector('.ridePage')?.getClientRects()?.length"),path+' must suppress invoice on active ride page');
 }
+const runtime=fs.readFileSync('runtime-config.js','utf8');
+const mapLegacy=fs.readFileSync('vaahak-google-live-map-v1.js','utf8');
+assert(html.includes('name="dbest-vaahak-map-authority" content="leaflet-primary"'),'Modern dashboard must declare its map authority');
+assert(html.includes('runtime-config.js?v=20261019-vaahak-map-authority-v1'),'Prevent stale runtime script from restoring legacy map override');
+assert(runtime.includes("!document.querySelector('meta[name=\"dbest-vaahak-map-authority\"][content=\"leaflet-primary\"]')"),'Do not load competing legacy Google map script on standalone Vaahak page');
+assert(mapLegacy.includes('window.renderMap=function(j){return renderGoogle(j)}'),'Regression must guard the old conflicting renderer');
+assert(core.includes("L.tileLayer('https://{s}.tile.openstreetmap.org"),'Standalone Vaahak must have usable non-Google map with navigation fallback');
+
 console.log('PASS: Vaahak map, route, payout gating, two-step cash completion, and active-ride invoice exclusion. No production calls.');
