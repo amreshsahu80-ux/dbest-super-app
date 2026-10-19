@@ -224,7 +224,7 @@ async function loadNearbyPlaces(lat,lng){
   let nearbyFailure='';
  const googlePromise=browserGoogleNearby().then(rows=>{if(rows.length){render(rows);return true}nearbyFailure='Google returned no places';return false}).catch(e=>{nearbyFailure=String(e?.message||e||'Google Places error').slice(0,140);console.warn('DBest browser Places failed',e);return false});
   const serverPromise=(async()=>{
-   const controller=new AbortController(),abort=setTimeout(()=>controller.abort(),8500);
+   const controller=new AbortController(),abort=setTimeout(()=>controller.abort(),12000);
    try{
     const response=await fetch('/api/runtime-config?mode=nearby&lat='+encodeURIComponent(lat)+'&lng='+encodeURIComponent(lng),{signal:controller.signal});
     if(!response.ok)throw Error('Nearby server HTTP '+response.status);
@@ -234,7 +234,7 @@ async function loadNearbyPlaces(lat,lng){
    finally{clearTimeout(abort)}
   })();
   const outcomes=await Promise.all([googlePromise,serverPromise]);
-  if(!outcomes.some(Boolean)){render([]);if(rail.isConnected&&rail.dataset.requestId===requestId){const diagnostic=document.createElement('div');diagnostic.style.cssText='font-size:11px;color:#64748b;padding:0 12px 12px';diagnostic.textContent='Diagnostic: '+(nearbyFailure||'No nearby results')+' · server unavailable';rail.appendChild(diagnostic)}}
+  if(!outcomes.some(Boolean)){render([]);if(rail.isConnected&&rail.dataset.requestId===requestId){const retry=document.createElement('button');retry.type='button';retry.className='cab6RetryNearby';retry.textContent='↻ Retry nearby places';retry.style.cssText='background:#edf3ff;border:1px solid #c6d8fa;border-radius:12px;padding:12px;color:#3157a8;font-size:12px;font-weight:750';retry.onclick=()=>loadNearbyPlaces(lat,lng);rail.appendChild(retry)}}
  }finally{clearTimeout(timer)}
 }
 async function useGps(noisy){
