@@ -4,18 +4,16 @@ async function nearbyHandler(req,res){
  const lat=Number(req.query.lat),lng=Number(req.query.lng);
  if(!Number.isFinite(lat)||!Number.isFinite(lng)||Math.abs(lat)>90||Math.abs(lng)>180)return res.status(400).json({error:'Invalid pickup coordinates'});
  const q='[out:json][timeout:9];(nwr(around:15000,'+lat+','+lng+')[name][amenity~"hospital|bus_station|marketplace|college|university|place_of_worship"];nwr(around:15000,'+lat+','+lng+')[name][railway=station];nwr(around:15000,'+lat+','+lng+')[name][tourism~"attraction|hotel|museum"];);out center 50;';
- const googleKey=String(process.env.GOOGLE_MAPS_SERVER_KEY||process.env.GOOGLE_MAPS_API_KEY||process.env.GOOGLE_MAPS_BROWSER_KEY||'').trim();
+ const googleKey=String(process.env.GOOGLE_MAPS_SERVER_KEY||'').trim();
  const googleLookup=async()=>{
   if(!googleKey)throw Error('Google Places key missing');
   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),6500);
   try{
-   const url='https://maps.googleapis.com/maps/api/place/nearbysearch/json?location='+encodeURIComponent(lat+','+lng)+'&radius=12000&type=point_of_interest&key='+encodeURIComponent(googleKey);
-   const response=await fetch(url,{signal:controller.signal});
-   if(!response.ok)throw Error('Google HTTP '+response.status);
+   const response=await fetch('https://places.googleapis.com/v1/places:searchNearby',{method:'POST',headers:{'Content-Type':'application/json','X-Goog-Api-Key':googleKey,'X-Goog-FieldMask':'places.displayName,places.location,places.types'},body:JSON.stringify({includedTypes:['hospital','train_station','bus_station','airport','university','school','park','tourist_attraction'],maxResultCount:20,locationRestriction:{circle:{center:{latitude:lat,longitude:lng},radius:12000}}}),signal:controller.signal});
+   if(!response.ok){const detail=await response.text().catch(()=>'');throw Error('Google Places New HTTP '+response.status+' '+detail.slice(0,180))}
    const data=await response.json();
-   if(data.status!=='OK')throw Error('Google Places '+String(data.status)+' '+String(data.error_message||''));
    const seen=new Set();
-   const places=(data.results||[]).map(x=>({name:String(x.name||'').trim(),lat:Number(x.geometry?.location?.lat),lng:Number(x.geometry?.location?.lng)})).filter(x=>{const key=x.name.toLowerCase();if(!key||seen.has(key)||!Number.isFinite(x.lat)||!Number.isFinite(x.lng))return false;seen.add(key);return true}).slice(0,12);
+   const places=(data.places||[]).map(x=>({name:String(x.displayName?.text||'').trim(),lat:Number(x.location?.latitude),lng:Number(x.location?.longitude),types:Array.isArray(x.types)?x.types:[]})).filter(x=>{const key=x.name.toLowerCase();if(!key||seen.has(key)||!Number.isFinite(x.lat)||!Number.isFinite(x.lng))return false;seen.add(key);return true}).slice(0,12);
    if(!places.length)throw Error('Google Places empty');
    return places;
   }finally{clearTimeout(timer)}
@@ -47,7 +45,17 @@ async function nearbyHandler(req,res){
     for(const p of result.value||[]){const name=String(p.name||p.display_name?.split(',')[0]||'').trim(),plat=Number(p.lat),plng=Number(p.lon),key=name.toLowerCase();
      if(!name||seen.has(key)||!Number.isFinite(plat)||!Number.isFinite(plng))continue;
      const km=Math.hypot((plat-lat)*111.2,(plng-lng)*111.2*Math.cos(lat*Math.PI/180));
-     if(km>25)continue;seen.add(key);places.push({name,lat:plat,lng:plng});
+     if(km>15)continue;
+     const klass=String(p.class||p.category||'').toLowerCase(),kind=String(p.type||'').toLowerCase();
+     const type=klass==='railway'&&/station|halt/.test(kind)?'train_station':
+      klass==='amenity'&&/hospital|bus_station|college|university/.test(kind)?kind:
+      klass==='aeroway'&&/aerodrome/.test(kind)?'airport':
+      klass==='leisure'&&kind==='park'?'park':
+      /\\bhospital\\b/i.test(name)?'hospital':/\\b(bus stand|bus station)\\b/i.test(name)?'bus_station':
+      /\\b(railway station|junction)\\b/i.test(name)?'train_station':/\\b(college|university)\\b/i.test(name)?'college':
+      /\\bpark\\b/i.test(name)?'park':'';
+     if(!type)continue;
+     seen.add(key);places.push({name:type==='train_station'&&!/station|junction|halt/i.test(name)?name+' Railway Station':name,lat:plat,lng:plng,types:[type]});
     }
    }
    if(!places.length)throw Error('Nominatim empty');return places.slice(0,12);
