@@ -17,6 +17,23 @@ async function nearbyHandler(req,res){
  const haversineKm=(a,b,c,d)=>{const rd=Math.PI/180,dy=(c-a)*rd,dx=(d-b)*rd;
   const k=Math.sin(dy/2)**2+Math.cos(a*rd)*Math.cos(c*rd)*Math.sin(dx/2)**2;
   return 12742*Math.atan2(Math.sqrt(k),Math.sqrt(Math.max(0,1-k)))};
+ const verifiedOsmPhoto=tags=>{
+  // Show a *real* place photo only when OSM associates the image with this POI.
+  // Never substitute generic stock imagery, and never proxy arbitrary photo URLs.
+  const input=String(tags?.image||tags?.wikimedia_commons||'').trim();
+  if(!input)return null;
+  if(/^File:/i.test(input)){
+   const file=input.slice(5).trim();
+   if(!file||file.length>170||!/\.(jpe?g|png|webp)$/i.test(file))return null;
+   return {photo:'https://commons.wikimedia.org/wiki/Special:FilePath/'+encodeURIComponent(file)+'?width=640',attribution:'Wikimedia Commons • OpenStreetMap'};
+  }
+  try{
+   const url=new URL(input);
+   if(url.protocol!=='https:'||!['upload.wikimedia.org','commons.wikimedia.org'].includes(url.hostname))return null;
+   if(!/\.(jpe?g|png|webp)$/i.test(url.pathname))return null;
+   return {photo:url.href,attribution:'Wikimedia Commons • OpenStreetMap'};
+  }catch{return null}
+ };
  const ckpSeed=haversineKm(lat,lng,22.675,85.635)<=9?
   verifiedCkp.filter(p=>haversineKm(lat,lng,p.lat,p.lng)<=15):[];
  const resultType=p=>(p.types||[]).some(t=>t==='hospital')?0:(p.types||[]).some(t=>t==='train_station')?1:
@@ -69,7 +86,7 @@ async function nearbyHandler(req,res){
    const response=await fetch(host,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({data:q}),signal:controller.signal});
    if(!response.ok)throw Error('HTTP '+response.status);
    const data=await response.json();const seen=new Set();
-   const places=(data.elements||[]).map(x=>({name:String(x.tags?.name||'').trim(),lat:Number(x.lat??x.center?.lat),lng:Number(x.lon??x.center?.lon)})).filter(x=>{const key=x.name.toLowerCase();if(!key||seen.has(key)||!Number.isFinite(x.lat)||!Number.isFinite(x.lng))return false;seen.add(key);return true}).slice(0,12);
+   const places=(data.elements||[]).map(x=>({name:String(x.tags?.name||'').trim(),lat:Number(x.lat??x.center?.lat),lng:Number(x.lon??x.center?.lon),types:[x.tags?.amenity,x.tags?.railway,x.tags?.aeroway,x.tags?.leisure].filter(Boolean).map(v=>({station:'train_station',bus_station:'bus_station',hospital:'hospital',college:'college',university:'university',park:'park',aerodrome:'airport'}[v]||v)),...verifiedOsmPhoto(x.tags)})).filter(x=>{const key=x.name.toLowerCase();if(!key||seen.has(key)||!Number.isFinite(x.lat)||!Number.isFinite(x.lng))return false;seen.add(key);return true}).slice(0,12);
    if(!places.length)throw Error('Empty response');
    return places;
   }finally{clearTimeout(timer)}
@@ -80,7 +97,7 @@ async function nearbyHandler(req,res){
    const delta=.18,viewbox=[lng-delta,lat+delta,lng+delta,lat-delta].join(',');
    const searches=['hospital','railway station','bus station','college','park'];
    const results=await Promise.allSettled(searches.map(async term=>{
-    const url='https://nominatim.openstreetmap.org/search?format=json&limit=5&bounded=1&viewbox='+encodeURIComponent(viewbox)+'&q='+encodeURIComponent(term);
+    const url='https://nominatim.openstreetmap.org/search?format=json&extratags=1&limit=5&bounded=1&viewbox='+encodeURIComponent(viewbox)+'&q='+encodeURIComponent(term);
     const response=await fetch(url,{headers:{'Accept':'application/json','User-Agent':'DBestCabNearby/1.0 (dbest4u.com)'},signal:controller.signal});
     if(!response.ok)throw Error('Nominatim HTTP '+response.status);
     return response.json();
@@ -100,7 +117,7 @@ async function nearbyHandler(req,res){
       /\b(railway station|junction)\b/i.test(name)?'train_station':/\b(college|university)\b/i.test(name)?'college':
       /\bpark\b/i.test(name)?'park':'';
      if(!type)continue;
-     seen.add(key);places.push({name:type==='train_station'&&!/station|junction|halt/i.test(name)?name+' Railway Station':name,lat:plat,lng:plng,types:[type]});
+     seen.add(key);places.push({name:type==='train_station'&&!/station|junction|halt/i.test(name)?name+' Railway Station':name,lat:plat,lng:plng,types:[type],...verifiedOsmPhoto(p.extratags||p)});
     }
    }
    if(!places.length)throw Error('Nominatim empty');return places.slice(0,12);
