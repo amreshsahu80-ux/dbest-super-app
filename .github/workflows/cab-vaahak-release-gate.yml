@@ -4,12 +4,17 @@ on:
     branches:
       - fix/vaahak-completion-map-invoice-20261019
       - main
+      - fix/customer-ride-completion-history-20261020
   pull_request:
     paths:
       - 'vaahak-standalone-v2.html'
       - 'transaction-invoice-receipt-v1.js'
       - 'transaction-invoice-ui-v2.js'
       - 'cab-selected-ui-v3.js'
+      - 'ride-live-ui-finalizer.js'
+      - 'member-ride-history-bridge.js'
+      - 'index.html'
+      - 'tests/ride-customer-history-regression.cjs'
       - 'tests/vaahak-active-ride-regression.cjs'
       - '.github/workflows/cab-vaahak-release-gate.yml'
 jobs:
@@ -23,6 +28,7 @@ jobs:
       - name: Verify Vaahak completion, map and invoice safeguards
         run: |
           node tests/vaahak-active-ride-regression.cjs
+          node tests/ride-customer-history-regression.cjs
           node --check transaction-invoice-receipt-v1.js
           node --check transaction-invoice-ui-v2.js
       - name: Verify protected Cab booking and owner tariff
