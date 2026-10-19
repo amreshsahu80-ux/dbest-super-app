@@ -9,16 +9,13 @@ function linkFor(id,i){
     // DBest Fly destination unless the Owner explicitly configures travel.
     const key=String(id||''),central=(window.DBEST_PUBLIC_LINKS&&typeof window.DBEST_PUBLIC_LINKS==='object')?window.DBEST_PUBLIC_LINKS:null;
     const local=typeof links!=='undefined'&&links&&typeof links==='object'?links:null;
-    for(const source of [central,local]){
-      if(!source)continue;
-      if(Number.isInteger(i)&&source[keyFor(key,i)])return source[keyFor(key,i)];
-      if(source[key])return source[key];
-    }
-    if(key==='travel'){
-      for(const source of [central,local]){
-        if(source?.flights)return source.flights;
-      }
-    }
+    // Public Owner settings are authoritative. Only use local saved links
+    // before the public configuration is available, never in preference to it.
+    const source=central||local;
+    if(!source)return null;
+    if(Number.isInteger(i)&&source[keyFor(key,i)])return source[keyFor(key,i)];
+    if(source[key])return source[key];
+    if(key==='travel'&&source.flights)return source.flights;
     return null;
   }catch(e){return null}
 }
