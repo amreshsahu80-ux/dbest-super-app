@@ -14,5 +14,12 @@ for(const group of ['baseExtras','ownerExtras']){
   total++;
  }
 }
+const legacyCab=fs.readFileSync('cab-planned-ui-v2.js','utf8');
+const events=[];
+const mockWindow={};
+const mockDocument={addEventListener:(...args)=>events.push(args)};
+vm.runInNewContext(legacyCab,{window:mockWindow,document:mockDocument,console},{filename:'cab-planned-ui-v2.js'});
+assert.equal(events.length,0,'Legacy Cab must not intercept click events by default');
+assert.equal(mockWindow.DBEST_CAB_V13,undefined,'Legacy Cab must not seize UI authority without opt-in');
 assert.ok(total>=70,'Unusually short startup module list');
 console.log('DBest core/Owner startup module parse guard passed for '+total+' modules.');
