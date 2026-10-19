@@ -11,6 +11,8 @@ on:
       - tests/cab-runtime-provider.cjs
       - tests/cab-owner-tariff-parity.cjs
       - tests/cab-booking-handoff-mock.cjs
+      - tests/cab-completion-gate-contract.cjs
+      - release/cab-completion-guard-review.sql
       - .github/workflows/cab-production-parity.yml
 jobs:
   cab-static-regression:
@@ -26,3 +28,4 @@ jobs:
           node tests/cab-runtime-provider.cjs
           node tests/cab-owner-tariff-parity.cjs
           node tests/cab-booking-handoff-mock.cjs
+          node tests/cab-completion-gate-contract.cjs
