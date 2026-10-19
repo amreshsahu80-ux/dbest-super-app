@@ -1,0 +1,43 @@
+name: Protected DBest partner deeplink handoffs
+on:
+  push:
+    branches:
+      - fix/partner-deeplinks-handoff-20261020
+      - governance/partner-deeplink-freeze-20261020
+      - 'release/partner-deeplinks-*'
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'owner-deeplink-all-sections.js'
+      - 'owner-control-live.js'
+      - 'external-service-subtype-preserver-v1.js'
+      - 'external-success-*.js'
+      - 'index.html'
+      - 'index-26.html'
+      - 'runtime-config.js'
+      - 'tests/partner-handoff-owner-routing.test.cjs'
+      - 'partner-deeplink-golden-lock.json'
+      - 'tests/partner-deeplink-golden-integrity.cjs'
+      - '.github/workflows/partner-deeplink-release-gate.yml'
+jobs:
+  partner-handoffs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: All Insurance, Flights, Hotels and Mutual Funds partner-routing contracts
+        run: node --test tests/partner-handoff-owner-routing.test.cjs
+      - name: Protect frozen Cab and Marketplace source
+        run: |
+          node tests/cab-golden-integrity.cjs
+          node tests/marketplace-golden-integrity.cjs
+      - name: Cab and Marketplace integration regression
+        run: |
+          node tests/cab-booking-handoff-mock.cjs
+          node tests/vaahak-active-ride-regression.cjs
+          node tests/ride-customer-history-regression.cjs
+      - name: Protect Owner-approved deeplink golden code if locked
+        run: |
+          if [ -f partner-deeplink-golden-lock.json ]; then node tests/partner-deeplink-golden-integrity.cjs; fi
