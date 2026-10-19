@@ -8,6 +8,7 @@ on:
       - cab-selected-ui-v3.js
       - api/runtime-config.js
       - tests/cab-regression-guards.cjs
+      - tests/cab-runtime-provider.cjs
       - .github/workflows/cab-production-parity.yml
 jobs:
   cab-static-regression:
@@ -18,4 +19,6 @@ jobs:
         with:
           node-version: '22'
       - name: Validate Cab JavaScript and regression guards
-        run: node tests/cab-regression-guards.cjs
+        run: |
+          node tests/cab-regression-guards.cjs
+          node tests/cab-runtime-provider.cjs
