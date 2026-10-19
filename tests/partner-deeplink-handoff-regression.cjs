@@ -145,6 +145,25 @@ test('Late Owner-public config is awaited before navigating, preserving configur
  assert.equal(b.results.transactions.length,1);
 });
 
+test('Late Insurance rendering cannot overwrite the newer Hotel partner card',async()=>{
+ const b=browser(),scheduled=[],rendered=[];
+ const hero={insertAdjacentHTML:(position,html)=>rendered.push(String(html))};
+ const root={
+   getBoundingClientRect:()=>({width:393,height:700}),
+   querySelector:(selector)=>selector==='.sectionHero'?hero:null,
+   insertAdjacentHTML:(position,html)=>rendered.push(String(html))
+ };
+ b.context.setTimeout=(fn,ms)=>{scheduled.push({fn,ms});return scheduled.length};
+ b.context.document.querySelectorAll=selector=>selector==='.sectionContent'?[root]:[];
+ b.context.getComputedStyle=()=>({display:'block',visibility:'visible'});
+ b.window.openService('insurance');
+ b.window.openService('travel');
+ for(const pending of scheduled.sort((a,b)=>a.ms-b.ms))pending.fn();
+ await Promise.resolve();
+ assert(rendered.length>0,'Newest section card must render');
+ assert(rendered.every(html=>html.includes('DBest Fly')&&!html.includes('InsuranceDekho')),'Old Insurance requests must not overwrite Hotel partner card');
+});
+
 test('User handoff source does not amend affiliate URL or use popup blockers',()=>{
  assert(!original.includes("u.searchParams.set('dbest_user_id'"));
  assert(!original.includes("u.searchParams.set('dbest_tx_id'"));
