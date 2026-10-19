@@ -381,7 +381,42 @@ async function refreshCarpool(id,mobile){
 async function cancelCarpool(id,mobile){
  try{await carpoolApi('decline',{id,mobile});try{localStorage.removeItem('dbest_carpool_last')}catch(_){}say('Car Pool request cancelled.');open()}catch(e){say(String(e?.message||'')==='paid_request_refund_required'?'Paid Car Pool cancellation requires a refund workflow. Please contact DBest support.':'Unable to cancel Car Pool request.')}
 }
-function roundRules(){try{const x=JSON.parse(localStorage.getItem('d2_ride_config')||'null'),r=x?.roundTripRules||{};return{sedan:{perKm:Number(r.sedan?.perKm||15),nightHalt:Number(r.sedan?.nightHalt||1000)},suv:{perKm:Number(r.suv?.perKm||18),nightHalt:Number(r.suv?.nightHalt||1500)}}}catch(e){return{sedan:{perKm:15,nightHalt:1000},suv:{perKm:18,nightHalt:1500}}}}function visibleVehicles(){return S.mode==='rental'||S.tripType!=='roundtrip'?VEH:VEH.filter(v=>v.id==='sedan'||v.id==='suv')}function totalKm(){const k=S.route?.km||S.rentalKm;return S.mode!=='rental'&&S.tripType==='roundtrip'?k*2:k}function totalMin(){if(S.mode==='rental')return S.rentalHours*60;const oneWay=realisticRoadMinutes(Number(S.route?.km||0),Number(S.route?.min||1));return S.tripType==='roundtrip'?oneWay*2:oneWay}function fare(v){const k=S.route?.km||S.rentalKm;if(S.mode!=='rental'&&S.tripType==='roundtrip'){const rr=roundRules()[v.id];if(!rr)return 0;return Math.round((k*2)*rr.perKm+(S.nightHalt?rr.nightHalt:0))}return Math.round(Math.max(v.min,v.base+v.km*k)+PLATFORM_FEE)}
+function ownerRideConfig(){
+ let stored=null;
+ try{stored=JSON.parse(localStorage.getItem('d2_ride_config')||'null')}catch(e){}
+ // Prefer the application's active Owner configuration when it is available.
+ try{if(typeof rideConfig!=='undefined'&&rideConfig&&Array.isArray(rideConfig.vehicles))return rideConfig}catch(e){}
+ return stored&&Array.isArray(stored.vehicles)?stored:null;
+}
+function roundRules(){
+ const r=ownerRideConfig()?.roundTripRules||{};
+ const positive=(n,f)=>Number.isFinite(Number(n))&&Number(n)>=0?Number(n):f;
+ return{sedan:{perKm:positive(r.sedan?.perKm,15),nightHalt:positive(r.sedan?.nightHalt,1000)},
+  suv:{perKm:positive(r.suv?.perKm,18),nightHalt:positive(r.suv?.nightHalt,1500)}};
+}
+function visibleVehicles(){
+ const c=ownerRideConfig();
+ const active=Array.isArray(c?.vehicles)&&c.vehicles.length
+  ?VEH.filter(v=>c.vehicles.some(x=>x.id===v.id)):VEH;
+ return S.mode==='rental'||S.tripType!=='roundtrip'?active:active.filter(v=>v.id==='sedan'||v.id==='suv');
+}
+function totalKm(){const k=S.route?.km||S.rentalKm;return S.mode!=='rental'&&S.tripType==='roundtrip'?k*2:k}
+function totalMin(){if(S.mode==='rental')return S.rentalHours*60;const oneWay=realisticRoadMinutes(Number(S.route?.km||0),Number(S.route?.min||1));return S.tripType==='roundtrip'?oneWay*2:oneWay}
+function fare(v){
+ const k=Math.max(0,Number(S.route?.km||S.rentalKm)||0);
+ if(S.mode!=='rental'&&S.tripType==='roundtrip'){
+  const rr=roundRules()[v.id];if(!rr)return 0;
+  return Math.round((k*2)*rr.perKm+(S.nightHalt?rr.nightHalt:0));
+ }
+ const c=ownerRideConfig(),item=c?.vehicles?.find(x=>x.id===v.id);
+ if(item){
+  const val=(x,f)=>Number.isFinite(Number(x))&&Number(x)>=0?Number(x):f;
+  const base=val(item.base,v.base),perKm=val(item.perKm,v.km),minimum=val(item.minFare,v.min);
+  const surge=val(c.surge,1),fee=val(c.platformFee,PLATFORM_FEE),tax=val(c.taxPercent,0);
+  return Math.round((Math.max(minimum,base+perKm*k)*surge+fee)*(1+tax/100));
+ }
+ return Math.round(Math.max(v.min,v.base+v.km*k)+PLATFORM_FEE);
+}
 function pickupEta(v){const m={bike:4,auto:5,sedan:6,suv:7};return m[v.id]||6}
 function vehCard(v){const rr=S.tripType==='roundtrip'?roundRules()[v.id]:null;return `<button type="button" class="cab6Veh ${S.selected===v.id?'on':''}" data-v="${v.id}"><span class="photo"><img src="${IMG[v.id]}" alt="${esc(v.name)}" loading="eager"></span><b>${esc(v.name)}${S.tripType==='roundtrip'?'<span style="display:block;font-size:7px;color:#315efb;margin-top:2px">ROUND TRIP</span>':''}</b><small>${v.seats} seat${v.seats>1?'s':''}${rr?' • ₹'+rr.perKm+'/km':''}</small><small style="color:#315efb;font-weight:900;margin-top:2px">~${pickupEta(v)} min away</small><strong>₹${fare(v)}</strong></button>`}
 function mapBlock(title,id='cab6Map'){return `<div class="cab6MapFrame"><div id="${id}" class="cab6Map"></div><div class="cab6MapShade"></div><div class="cab6RoutePill">${esc(title)}</div></div>`}
