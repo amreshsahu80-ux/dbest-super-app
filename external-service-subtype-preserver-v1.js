@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='1.0.0';
+const VERSION='1.1.0-explicit-subsection-only';
 function visible(el){if(!el)return false;try{const s=getComputedStyle(el),r=el.getBoundingClientRect();return s.display!=='none'&&s.visibility!=='hidden'&&!!(r.width||r.height)}catch(e){return false}}
 function currentText(){try{const roots=[...document.querySelectorAll('.sectionContent')].filter(visible);return String(roots.pop()?.innerText||'').toLowerCase().replace(/\s+/g,' ')}catch(e){return''}}
 function infer(id,s){
@@ -15,7 +15,8 @@ function install(){
   const fn=window.dbestUniversalExternalGo;if(typeof fn!=='function'||fn.__dbestSubtypePreserver)return false;
   const wrapped=function(id,i){
     let s=null;try{s=(Array.isArray(services)?services:[]).find(v=>String(v?.[0])===String(id))||null}catch(e){}
-    const inferred=Number.isInteger(i)?i:infer(id,s),before=latestOwn()?.id;
+    // Do not guess a subtype from section text: a page can list Health, Life and Motor together.
+    const inferred=Number.isInteger(i)&&i>=0&&i<(s?.[5]?.length||0)?i:null,before=latestOwn()?.id;
     const out=fn.apply(this,arguments);
     try{
       if(Number.isInteger(inferred)){
