@@ -23,8 +23,10 @@ async function main(){
     };
     const good=response();await handler({query:{mode:'nearby',lat:'22.675',lng:'85.635'}},good);
     assert.equal(good.code,200,'Fallback should return landmarks even without Google server key');
-    assert.deepEqual(good.body.places.map(p=>p.name),['Railway Hospital, Chakradharpur']);
-    assert.deepEqual(good.body.places[0].types,['hospital']);
+    assert.ok(good.body.places.some(p=>p.name==='Railway Hospital, Chakradharpur'),'Relevant local hospital should be present');
+    assert.ok(good.body.places.some(p=>p.types.includes('train_station')),'Relevant local railway stations should be present');
+    assert.ok(!good.body.places.some(p=>p.name==='Sri Medical Store'||p.name==='Hospital in another district'),'Irrelevant or distant entries must be excluded');
+    assert.deepEqual(good.body.places.find(p=>p.name==='Railway Hospital, Chakradharpur').types,['hospital']);
     const bad=response();await handler({query:{mode:'nearby',lat:'200',lng:'85.635'}},bad);
     assert.equal(bad.code,400);
     console.log('Cab nearby provider functional fallback guards passed');
