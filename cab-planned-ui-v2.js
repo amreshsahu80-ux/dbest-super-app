@@ -1,5 +1,9 @@
 (function(){
 'use strict';
+// This legacy Cab V13 intercepts #cab6Go and must never override the current
+// selected Cab flow. Its previous syntax error had kept it inactive.
+// Only an explicit, separately tested compatibility session may opt in.
+if(window.DBEST_ENABLE_LEGACY_CAB_V13!==true)return;
 const BASE='20260905-selected-realmap-v6';
 const VERSION='20260929-live-fare-v4';
 const PACKS=[['2|20','2 Hours / 20 km'],['4|40','4 Hours / 40 km'],['8|80','8 Hours / 80 km'],['12|120','12 Hours / 120 km']];
