@@ -1,0 +1,66 @@
+{
+  "freeze_id": "DBEST-PARTNER-HANDOFF-PREDEPLOY-20261020",
+  "approval_date": "2026-10-20",
+  "approval": "Owner explicitly confirms InsuranceDekho, DBest Fly and NJ Wealth existing partner destinations; authorizes test, hardening, and freeze of handoff functionality.",
+  "production_site": "https://dbest4u.com",
+  "production_vercel_deployment_id": "dpl_BH4La8R6fTTXKUPWVPJJKjyUtWkk",
+  "production_frontend_commit": "f7305e05d2bedc50760062316dc98ebb7dbe7c31",
+  "live_baseline_branch": "release/partner-handoff-live-frozen-20261020",
+  "hardened_candidate_branch": "release/partner-handoff-hardened-candidate-20261020",
+  "hardened_candidate_commit": "c5ebf3913e65f275836772e2e950f8f1660c6ec3",
+  "deployment_status": "PREVIEW_AND_PRODUCTION_PENDING_VERCEL_DAILY_API_DEPLOYMENT_QUOTA",
+  "partner_urls": {
+    "insurance": "https://www.insurancedekho.com/?source=PARTNER&sub-source=BESTSERVICES_B2C",
+    "flights": "https://dbestfly.com",
+    "travel": "https://dbestfly.com",
+    "mf": "https://p.njw.bz/13879"
+  },
+  "owner_handoff_sections": {
+    "insurance": {
+      "partner": "InsuranceDekho",
+      "subsections": [
+        "Health Insurance",
+        "Motor Insurance",
+        "Life / Term Insurance",
+        "Travel Insurance"
+      ]
+    },
+    "flights": {
+      "partner": "DBest Fly",
+      "subsections": [
+        "Flight Booking",
+        "Flight + Hotel",
+        "Visa Assistance"
+      ]
+    },
+    "travel": {
+      "partner": "DBest Fly",
+      "subsections": [
+        "Hotel Booking",
+        "Tour Package",
+        "Custom Itinerary"
+      ]
+    },
+    "mf": {
+      "partner": "NJ Wealth",
+      "subsections": [
+        "Mutual Fund Investment",
+        "Portfolio Assistance"
+      ]
+    }
+  },
+  "protected_deeplink_git_blob_sha1": {
+    "owner-deeplink-all-sections.js": "739f4f0ad63c428bbb9900a1e224fcf0ba75bf5d",
+    "owner-control-live.js": "eb35a22aee0d4f18c2127a8319976ab919b5be80",
+    "external-service-subtype-preserver-v1.js": "83749fe78f8e98018ef53b3c27241e1a7e852cb7",
+    "finance-insurance-showcase.js": "a13c4cfac6ef3e4f6f2a579894169a76521dd563",
+    "external-success-claims.js": "e691584cd5f5aa870242c3b832369c8399f476c7",
+    "tests/partner-deeplink-handoff-regression.cjs": "8512ae1d58b014487d16cc07997f296dd734cd29"
+  },
+  "customer_handoff_policy": "Preserve Owner affiliate URLs exactly; no arbitrary DBest query parameters, no popup-blocked redirect, pending transaction logged without payout, member auth required, public Owner settings authoritative, Hotels n Packages uses DBest Fly and invalidates stale async cards.",
+  "exceptions": [
+    "NJ Wealth approved shortlink redirects to NJ onboarding endpoint which returned HTTP 404 from an automated HTTP check; requires real customer-device check or NJ partner confirmation.",
+    "Vercel API deployment returned HTTP 402 daily limit; reviewed handoff JavaScript not yet published; only Owner hotels/travel URL setting was updated live.",
+    "Cab and Marketplace remain frozen and must pass source-integrity checks. Server-side GitHub/Vercel branch/deploy restrictions require administration."
+  ]
+}
