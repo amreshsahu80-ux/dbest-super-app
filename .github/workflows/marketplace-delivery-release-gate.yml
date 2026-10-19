@@ -3,9 +3,21 @@ on:
   push:
     branches:
       - fix/marketplace-completion-hardening-20261020
+      - governance/marketplace-frozen-release-gates-20261020
+      - 'release/marketplace-*'
   workflow_dispatch:
   pull_request:
     paths:
+      - 'marketplace-*.js'
+      - 'customer-marketplace-*.js'
+      - 'vendor-*.js'
+      - 'razorpay-*.js'
+      - 'dbest-meds-preview-catalog.js'
+      - 'index.html'
+      - 'runtime-config.js'
+      - 'app-bootstrap-performance-v1.js'
+      - 'marketplace-golden-lock.json'
+      - 'tests/marketplace-golden-integrity.cjs'
       - 'supabase/functions/marketplace-vaahak-sync/**'
       - 'supabase/functions/marketplace-handover-live/**'
       - 'supabase/functions/vaahak-commerce-live/**'
@@ -21,6 +33,8 @@ jobs:
           node-version: '22'
       - name: Install isolated TypeScript test dependency
         run: npm install --no-save --no-package-lock typescript@5.9.3
+      - name: Block unauthorized changes to approved Marketplace source
+        run: node tests/marketplace-golden-integrity.cjs
       - name: Verify frozen Cab source remains byte-for-byte unchanged
         run: node tests/cab-golden-integrity.cjs
       - name: Verify real Edge function code under mocked authenticated sessions
