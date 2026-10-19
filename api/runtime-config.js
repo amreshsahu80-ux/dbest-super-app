@@ -51,9 +51,9 @@ async function nearbyHandler(req,res){
       klass==='amenity'&&/hospital|bus_station|college|university/.test(kind)?kind:
       klass==='aeroway'&&/aerodrome/.test(kind)?'airport':
       klass==='leisure'&&kind==='park'?'park':
-      /\\bhospital\\b/i.test(name)?'hospital':/\\b(bus stand|bus station)\\b/i.test(name)?'bus_station':
-      /\\b(railway station|junction)\\b/i.test(name)?'train_station':/\\b(college|university)\\b/i.test(name)?'college':
-      /\\bpark\\b/i.test(name)?'park':'';
+      /\bhospital\b/i.test(name)?'hospital':/\b(bus stand|bus station)\b/i.test(name)?'bus_station':
+      /\b(railway station|junction)\b/i.test(name)?'train_station':/\b(college|university)\b/i.test(name)?'college':
+      /\bpark\b/i.test(name)?'park':'';
      if(!type)continue;
      seen.add(key);places.push({name:type==='train_station'&&!/station|junction|halt/i.test(name)?name+' Railway Station':name,lat:plat,lng:plng,types:[type]});
     }
