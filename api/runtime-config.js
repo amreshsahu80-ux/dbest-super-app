@@ -23,7 +23,7 @@ async function nearbyHandler(req,res){
   (p.types||[]).some(t=>t==='bus_station')?2:(p.types||[]).some(t=>t==='airport')?3:
   (p.types||[]).some(t=>t==='college'||t==='university')?4:(p.types||[]).some(t=>t==='park')?5:6;
  const finalize=rows=>{const seen=new Set();return (rows||[]).filter(p=>{
-  if(!p||!p.name||!Number.isFinite(p.lat)||!Number.isFinite(p.lng)||haversineKm(lat,lng,p.lat,p.lng)>15)return false;
+  if(!p||!p.name||/^(hospital|railway station|bus station|bus stand|college|park|airport|clinic|medical|unknown)$/i.test(String(p.name).trim())||!Number.isFinite(p.lat)||!Number.isFinite(p.lng)||haversineKm(lat,lng,p.lat,p.lng)>15)return false;
   const key=String(p.name).trim().toLowerCase();if(seen.has(key))return false;seen.add(key);return true;
  }).sort((a,b)=>resultType(a)-resultType(b)||haversineKm(lat,lng,a.lat,a.lng)-haversineKm(lat,lng,b.lat,b.lng)).slice(0,12)};
  const photonLookup=async()=>{
