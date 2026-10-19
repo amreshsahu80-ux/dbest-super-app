@@ -124,7 +124,18 @@ async function initSearchProvider(){
 }
 async function initLeaflet(){
  if(window.L)return window.L;if(leafletPromise)return leafletPromise;
- loadCss('https://unpkg.com/leaflet@1.9.4/dist/leaflet.css','cab6-leaflet-css');leafletPromise=loadScript('https://unpkg.com/leaflet@1.9.4/dist/leaflet.js','cab6-leaflet').then(()=>window.L);return leafletPromise
+ leafletPromise=(async()=>{
+   loadCss('https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css','cab6-leaflet-css');
+   for(const [id,url] of [
+     ['cab6-leaflet-cdn1','https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js'],
+     ['cab6-leaflet-cdn2','https://unpkg.com/leaflet@1.9.4/dist/leaflet.js']
+   ]){
+     try{await Promise.race([loadScript(url,id),new Promise((_,reject)=>setTimeout(()=>reject(Error('Leaflet timeout')),4500))]);if(window.L)return window.L}
+     catch(e){console.warn('DBest map CDN fallback',e)}
+   }
+   throw Error('Map renderer unavailable');
+ })().catch(e=>{leafletPromise=null;throw e});
+ return leafletPromise
 }
 async function reverseGoogle(lat,lng){
  try{
@@ -171,7 +182,7 @@ async function loadNearbyPlaces(lat,lng){
  let hasRenderedPlaces=false;const render=rows=>{if(!rail.isConnected||rail.dataset.requestId!==requestId)return;if(rows.length&&hasRenderedPlaces)return;if(rows.length)hasRenderedPlaces=true;
   const distance=p=>Math.hypot((p.lat-lat)*111.2,(p.lng-lng)*111.2*Math.cos(lat*Math.PI/180));rows=[...rows].filter(p=>Number.isFinite(p.lat)&&Number.isFinite(p.lng)&&distance(p)<=15&&cabPublicPlace(p.name,p.types||[])).sort((a,b)=>cabPlacePriority(a)-cabPlacePriority(b)||distance(a)-distance(b));
   if(!rows.length){rail.innerHTML='<div style="padding:12px;color:#687386;font-size:12px">Nearby places are unavailable right now. You can enter a destination above.</div>';return}
-  rail.innerHTML=rows.slice(0,8).map(p=>'<button type="button" class="cab6Place" data-place="'+esc(p.name)+'" data-lat="'+p.lat+'" data-lng="'+p.lng+'">'+(p.photo?'<img class="cab6PlacePhoto" alt="" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;border-radius:inherit;z-index:0" onerror="this.style.display=\'none\';this.parentElement.querySelector(\'.cab6PhotoCredit\')?.remove()" src="'+esc(p.photo)+'">':'')+'<span style="position:absolute;bottom:12px;left:12px;right:8px;z-index:2;color:white;font-weight:700;text-shadow:0 1px 4px #000">'+esc(p.name)+'</span>'+(p.attribution?'<small class="cab6PhotoCredit" style="position:absolute;top:6px;right:6px;left:6px;z-index:2;font-size:9px;color:white;text-align:right;text-shadow:0 1px 4px #000;pointer-events:none">Photo: '+esc(p.attribution)+'</small>':'')+'</button>').join('');
+  rail.innerHTML=rows.slice(0,8).map(p=>'<button type="button" class="cab6Place" data-place="'+esc(p.name)+'" data-lat="'+p.lat+'" data-lng="'+p.lng+'">'+(p.photo?'<img class="cab6PlacePhoto" alt="" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;border-radius:inherit;z-index:0" onerror="this.style.display=\'none\';this.parentElement.querySelector(\'.cab6PhotoCredit\')?.remove()" src="'+esc(p.photo)+'">':'<span aria-hidden="true" style="position:absolute;top:13px;left:13px;z-index:2;font-size:24px">'+(cabPlacePriority(p)===0?'🏥':cabPlacePriority(p)===1?'🚉':cabPlacePriority(p)===2?'🚌':cabPlacePriority(p)===3?'✈️':cabPlacePriority(p)===4?'🎓':cabPlacePriority(p)===5?'🌳':'📍')+'</span>')+'<span style="position:absolute;bottom:12px;left:12px;right:8px;z-index:2;color:white;font-weight:700;text-shadow:0 1px 4px #000">'+esc(p.name)+'</span>'+(p.attribution?'<small class="cab6PhotoCredit" style="position:absolute;top:6px;right:6px;left:6px;z-index:2;font-size:9px;color:white;text-align:right;text-shadow:0 1px 4px #000;pointer-events:none">Photo: '+esc(p.attribution)+'</small>':'')+'</button>').join('');
   qa('.cab6Place',rail).forEach(btn=>btn.onclick=()=>{const d=$('cab6D');if(!d)return;d.value=btn.dataset.place;S.d={label:d.value,lat:Number(btn.dataset.lat),lng:Number(btn.dataset.lng)};$('cab6DS')?.classList.remove('show')});
  };
  const browserGoogleNearby=async()=>{
@@ -260,17 +271,21 @@ async function renderEntryMap(){
    const L=await initLeaflet();if(!$('cab6EntryMap'))return;
    el.innerHTML='';S.entryMap=L.map(el,{zoomControl:false,attributionControl:true,preferCanvas:true}).setView([pos.lat,pos.lng],14);
    const thisMap=S.entryMap;let loadedTiles=0,usedBackup=false;
+   const visual=document.createElement('div');visual.className='cab6EntryMapFallback';
+   visual.style.cssText='z-index:440;pointer-events:none;display:grid;place-items:center;color:#284575;background:linear-gradient(130deg,#e1effe,#f3f6ff)';
+   visual.innerHTML='<div class="cab6EntryMapPin"></div><strong style="position:absolute;bottom:40%;font-size:12px">Loading your pickup map…</strong>';
+   el.appendChild(visual);
    const status=document.createElement('div');status.className='cab6TileStatus';status.setAttribute('role','status');
    status.style.cssText='display:none;position:absolute;z-index:450;inset:auto 12px 12px;background:#fff;color:#24304e;border-radius:14px;padding:10px 12px;font-size:12px;box-shadow:0 6px 22px #0002';
    status.textContent='Map tiles are temporarily unavailable. Pickup location is still saved.';
    el.appendChild(status);
-   const attachTiles=(url,attribution)=>L.tileLayer(url,{maxZoom:19,attribution}).on('tileload',()=>{loadedTiles++;status.style.display='none'}).addTo(thisMap);
+   const attachTiles=(url,attribution)=>L.tileLayer(url,{maxZoom:19,attribution}).on('tileload',()=>{loadedTiles++;status.style.display='none';visual.remove()}).addTo(thisMap);
    let tiles=attachTiles('https://tile.openstreetmap.org/{z}/{x}/{y}.png','© OpenStreetMap contributors');
    setTimeout(()=>{if(S.entryMap!==thisMap||!el.isConnected||loadedTiles)return;usedBackup=true;thisMap.removeLayer(tiles);tiles=attachTiles('https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png','© OpenStreetMap contributors · © CARTO')},3200);
    setTimeout(()=>{if(S.entryMap===thisMap&&el.isConnected&&!loadedTiles&&usedBackup)status.style.display='block'},6800);
    L.circleMarker([pos.lat,pos.lng],{radius:8,weight:4,color:'#fff',fillColor:'#2362ee',fillOpacity:1}).addTo(S.entryMap);
    setTimeout(()=>S.entryMap?.invalidateSize?.(),100);
- }catch(e){console.warn('Entry map failed',e)}
+ }catch(e){console.warn('Entry map failed',e);const w=$('cab6EntryMap');if(w&&!w.querySelector('.cab6EntryMapFallback'))w.innerHTML='<div class="cab6EntryMapFallback"><div class="cab6EntryMapPin"></div><strong style="position:absolute;bottom:26%;font-size:12px;color:#334b76">Map temporarily unavailable. Your pickup location is saved.</strong></div>'}
 }
 async function searchLocations(term){
  if(term.length<2)return[];
