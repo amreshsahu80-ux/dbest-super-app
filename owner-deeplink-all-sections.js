@@ -1,14 +1,19 @@
 (function(){
 'use strict';
-const VERSION='2.4.0-new-user-external-access';
+const VERSION='2.5.0-protected-partner-handoffs';
+const PROTECTED_HANDOFFS=new Set(['insurance','flights','travel','mf']);
+const pendingPartnerRefresh=new Set();
 const esc2=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const keyFor=(id,i)=>Number.isInteger(i)?`${id}::${i}`:String(id||'');
 function linkFor(id,i){
   try{
     const central=(window.DBEST_PUBLIC_LINKS&&typeof window.DBEST_PUBLIC_LINKS==='object')?window.DBEST_PUBLIC_LINKS:null;
     if(central){
-      if(Number.isInteger(i)&&central[keyFor(id,i)]?.url)return central[keyFor(id,i)];
-      if(central[String(id)]?.url)return central[String(id)];
+      // The shared Owner configuration is authoritative, including a disabled link.
+      if(Number.isInteger(i)&&Object.prototype.hasOwnProperty.call(central,keyFor(id,i)))return central[keyFor(id,i)];
+      if(Object.prototype.hasOwnProperty.call(central,String(id)))return central[String(id)];
+      // Never resurrect a stale local partner URL when the Owner removed it.
+      if(PROTECTED_HANDOFFS.has(String(id)))return null;
     }
     if(Number.isInteger(i)&&typeof links!=='undefined'&&links?.[keyFor(id,i)]?.url)return links[keyFor(id,i)];
     return typeof links!=='undefined'?(links?.[String(id)]||null):null;
@@ -56,6 +61,29 @@ window.ownerDeeplinkStudio=function(){
 
 window.dbestUniversalExternalGo=function(id,i){
   try{
+    const sectionId=String(id||'');
+    // New devices may contain old localStorage links but have not loaded the
+    // authoritative Owner public configuration. Never hand a member to an
+    // obsolete or unrelated provider based only on that browser cache.
+    if(PROTECTED_HANDOFFS.has(sectionId)&&!window.DBEST_PUBLIC_LINKS){
+      const refresh=window.DBEST_OWNER_CONTROL_LIVE?.refreshPublic;
+      if(typeof refresh!=='function'){
+        if(typeof toast==='function')toast('Partner links are loading. Please try again shortly.');
+        return;
+      }
+      if(pendingPartnerRefresh.has(sectionId))return;
+      pendingPartnerRefresh.add(sectionId);
+      Promise.resolve().then(()=>refresh()).then(result=>{
+        pendingPartnerRefresh.delete(sectionId);
+        if(result&&window.DBEST_PUBLIC_LINKS)window.dbestUniversalExternalGo(sectionId,i);
+        else if(typeof toast==='function')toast('Could not verify partner destination. Please try again.');
+      }).catch(e=>{
+        pendingPartnerRefresh.delete(sectionId);
+        console.warn('DBest partner URL refresh',e);
+        if(typeof toast==='function')toast('Partner destination temporarily unavailable.');
+      });
+      return;
+    }
     const liveSession=(()=>{try{return JSON.parse(localStorage.getItem('d2_session')||'{}')}catch(e){return{}}})();
     const activeSession=(window.session&&window.session.id)?window.session:liveSession;
     if(!activeSession?.id||activeSession.role==='visitor'){
@@ -70,6 +98,11 @@ window.dbestUniversalExternalGo=function(id,i){
     const userId=String(activeSession?.id||'guest');
     let txId='';
     let url=String(l.url);
+    // Partner handoffs must be HTTPS and must never execute custom URL schemes.
+    if(PROTECTED_HANDOFFS.has(sectionId)){
+      try{const verified=new URL(url);if(verified.protocol!=='https:')throw new Error('unsafe_partner_url')}
+      catch(e){if(typeof toast==='function')toast('Invalid secure partner destination. Contact DBest support.');return}
+    }
     // Tracking must never prevent a valid partner handoff.
     try{
       if(typeof addTx==='function'&&activeSession?.id){
@@ -129,7 +162,23 @@ function inject(id,i){
 const baseOpenService=window.openService;
 if(typeof baseOpenService==='function')window.openService=function(id){const out=baseOpenService.apply(this,arguments);inject(id,null);return out};
 const baseOpenContent=window.openContentForm;
-if(typeof baseOpenContent==='function')window.openContentForm=function(id,i){const out=baseOpenContent.apply(this,arguments);inject(id,Number(i));return out};
+if(typeof baseOpenContent==='function')window.openContentForm=function(id,i){
+  // These are existing external partner services, not DBest paid application
+  // forms. In particular, the Hotels/Packages section ("travel") was absent
+  // from the legacy externalIds list, allowing a wrong local fee form.
+  if(PROTECTED_HANDOFFS.has(String(id))){
+    window.dbestUniversalExternalGo(id,Number(i));
+    return;
+  }
+  const out=baseOpenContent.apply(this,arguments);
+  inject(id,Number(i));
+  return out
+};
+const baseExternalGo=window.externalGo;
+window.externalGo=function(id){
+  if(PROTECTED_HANDOFFS.has(String(id)))return window.dbestUniversalExternalGo(id);
+  return typeof baseExternalGo==='function'?baseExternalGo.apply(this,arguments):undefined
+};
 
 const baseOps=window.ownerOperations;
 if(typeof baseOps==='function')window.ownerOperations=function(){const out=baseOps.apply(this,arguments);setTimeout(()=>{document.querySelectorAll('button[onclick="ownerDeeplinkStudio()"]').forEach(b=>{const small=b.querySelector('small');if(small)small.textContent='Configure external/internal destinations for every section and subsection.'})},20);return out};
