@@ -6,6 +6,9 @@ on:
   pull_request:
     paths:
       - cab-selected-ui-v3.js
+      - cab-planned-ui-v2.js
+      - index.html
+      - tests/core-module-parse-guards.cjs
       - api/runtime-config.js
       - tests/cab-regression-guards.cjs
       - tests/cab-runtime-provider.cjs
@@ -29,3 +32,4 @@ jobs:
           node tests/cab-owner-tariff-parity.cjs
           node tests/cab-booking-handoff-mock.cjs
           node tests/cab-completion-gate-contract.cjs
+          node tests/core-module-parse-guards.cjs
