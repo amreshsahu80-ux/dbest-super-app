@@ -7,6 +7,9 @@ on:
     paths:
       - cab-selected-ui-v3.js
       - cab-planned-ui-v2.js
+      - vaahak-completion-recovery-v1.js
+      - tests/cab-vaahak-completion-mock.cjs
+      - tests/cab-ephemeral-postgres-completion.cjs
       - index.html
       - tests/core-module-parse-guards.cjs
       - api/runtime-config.js
@@ -33,3 +36,16 @@ jobs:
           node tests/cab-booking-handoff-mock.cjs
           node tests/cab-completion-gate-contract.cjs
           node tests/core-module-parse-guards.cjs
+          node tests/cab-vaahak-completion-mock.cjs
+
+  isolated-postgres-completion:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install disposable embedded PostgreSQL
+        run: npm install --no-save --no-package-lock --ignore-scripts @electric-sql/pglite@0.3.14
+      - name: Verify real SQL completion transitions in memory only
+        run: node tests/cab-ephemeral-postgres-completion.cjs
