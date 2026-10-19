@@ -38,7 +38,7 @@ function setup(provider,features){
 (async()=>{
  const g=setup('google',[{description:'Etwari Bazar, Chakradharpur, Jharkhand, India',place_id:'local-place',distance_meters:2600}]);
  const local=await g.context.window.testSearch('Etwari Bazar');
- assert.equal(local.length,1);assert.equal(local[0].placeId,'local-place');assert.equal(g.googleHits,1);assert.equal(g.backendHits,0);
+ assert.equal(local.length,1);assert.equal(local[0].placeId,'local-place');assert.equal(g.googleHits,1);assert.equal(g.backendHits,1);
  assert.equal(g.request.componentRestrictions.country,'in');assert(g.request.origin);
  const fallback=setup('supabase');
  const matches=await fallback.context.window.testSearch('Station');
@@ -49,5 +49,5 @@ function setup(provider,features){
  const onlyWorld=setup('supabase');
  const strict=onlyWorld.context.window.testFilter([world[0],world[1]]);
  assert.equal(strict.length,0);
- console.log('PASS: restored Google-first local autocomplete, Indian-only geographic fallback, near-first ordering and map-pin option.');
+ console.log('PASS: pickup-biased Google-first local autocomplete with parallel Indian-only geographic fallback, near-first ordering and map-pin option.');
 })().catch(e=>{console.error(e);process.exitCode=1});
