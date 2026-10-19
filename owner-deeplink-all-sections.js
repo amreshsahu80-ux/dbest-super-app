@@ -1,17 +1,25 @@
 (function(){
 'use strict';
-const VERSION='2.4.0-new-user-external-access';
+const VERSION='2.5.0-preserve-partner-affiliate-url';
 const esc2=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const keyFor=(id,i)=>Number.isInteger(i)?`${id}::${i}`:String(id||'');
 function linkFor(id,i){
   try{
-    const central=(window.DBEST_PUBLIC_LINKS&&typeof window.DBEST_PUBLIC_LINKS==='object')?window.DBEST_PUBLIC_LINKS:null;
-    if(central){
-      if(Number.isInteger(i)&&central[keyFor(id,i)]?.url)return central[keyFor(id,i)];
-      if(central[String(id)]?.url)return central[String(id)];
+    // The distinct "Hotels n Packages" tile inherits the Owner-confirmed
+    // DBest Fly destination unless the Owner explicitly configures travel.
+    const key=String(id||''),central=(window.DBEST_PUBLIC_LINKS&&typeof window.DBEST_PUBLIC_LINKS==='object')?window.DBEST_PUBLIC_LINKS:null;
+    const local=typeof links!=='undefined'&&links&&typeof links==='object'?links:null;
+    for(const source of [central,local]){
+      if(!source)continue;
+      if(Number.isInteger(i)&&source[keyFor(key,i)])return source[keyFor(key,i)];
+      if(source[key])return source[key];
     }
-    if(Number.isInteger(i)&&typeof links!=='undefined'&&links?.[keyFor(id,i)]?.url)return links[keyFor(id,i)];
-    return typeof links!=='undefined'?(links?.[String(id)]||null):null;
+    if(key==='travel'){
+      for(const source of [central,local]){
+        if(source?.flights)return source.flights;
+      }
+    }
+    return null;
   }catch(e){return null}
 }
 function sectionById(id){try{return services.find(s=>String(s?.[0])===String(id))||null}catch(e){return null}}
@@ -54,7 +62,7 @@ window.ownerDeeplinkStudio=function(){
   }catch(err){console.error(err);if(typeof toast==='function')toast('Deeplink Studio could not open')}
 };
 
-window.dbestUniversalExternalGo=function(id,i){
+window.dbestUniversalExternalGo=async function(id,i){
   try{
     const liveSession=(()=>{try{return JSON.parse(localStorage.getItem('d2_session')||'{}')}catch(e){return{}}})();
     const activeSession=(window.session&&window.session.id)?window.session:liveSession;
@@ -64,6 +72,11 @@ window.dbestUniversalExternalGo=function(id,i){
       return;
     }
     const s=sectionById(id);if(!s)return typeof toast==='function'&&toast('Section not found');
+    // Resolve the shared Owner-configured destination before committing a redirect.
+    // Cached device-specific links may be stale from an older release.
+    if(!window.DBEST_PUBLIC_LINKS && window.DBEST_OWNER_CONTROL_LIVE?.refreshPublic){
+      try{await window.DBEST_OWNER_CONTROL_LIVE.refreshPublic()}catch(e){console.warn('Partner link refresh deferred',e)}
+    }
     const idx=Number.isInteger(i)?i:null,l=linkFor(id,idx);
     if(!l?.url||l.enabled===false)return typeof toast==='function'&&toast('Deeplink is not configured or is disabled');
     const sub=idx!==null?(s[5]?.[idx]||'External Partner Transaction'):'External Partner Transaction';
@@ -79,16 +92,16 @@ window.dbestUniversalExternalGo=function(id,i){
         if(typeof save==='function')save();
       }
     }catch(trackErr){console.warn('DBest deeplink tracking skipped',trackErr)}
-    url=url.replaceAll('{DBEST_TX_ID}',txId).replaceAll('{USER_ID}',userId).replaceAll('{SECTION_ID}',String(id)).replaceAll('{SUBSECTION}',String(sub));
-    try{
-      const u=new URL(url,location.href);
-      if(txId)u.searchParams.set('dbest_tx_id',txId);
-      if(userId&&userId!=='guest')u.searchParams.set('dbest_user_id',userId);
-      u.searchParams.set('dbest_section',String(id));
-      u.searchParams.set('dbest_subsection',String(sub));
-      url=u.toString();
-    }catch(e){}
-    // Same-tab navigation is reliable in Android WebView/Chrome and avoids popup blocking.
+    url=url.replaceAll('{DBEST_TX_ID}',encodeURIComponent(txId)).replaceAll('{USER_ID}',encodeURIComponent(userId)).replaceAll('{SECTION_ID}',encodeURIComponent(String(id))).replaceAll('{SUBSECTION}',encodeURIComponent(String(sub)));
+    // Do not append arbitrary DBest parameters to a third-party affiliate
+    // URL. InsuranceDekho's source/sub-source and NJ Wealth's short-link
+    // path are partner-owned and must be transmitted exactly as configured.
+    // An Owner-authored placeholder is the ONLY opt-in for external tracking.
+    const u=new URL(url,location.href);
+    if(!['https:','http:'].includes(u.protocol))throw new Error('Unsafe partner destination protocol');
+    url=u.href;
+    // Same-tab navigation avoids Android popup blockers and stays on the
+    // user-clicked, Owner-approved partner URL.
     try{window.location.assign(url)}catch(navErr){window.location.href=url}
   }catch(err){console.error(err);if(typeof toast==='function')toast('Could not open partner destination')}
 };
@@ -129,7 +142,31 @@ function inject(id,i){
 const baseOpenService=window.openService;
 if(typeof baseOpenService==='function')window.openService=function(id){const out=baseOpenService.apply(this,arguments);inject(id,null);return out};
 const baseOpenContent=window.openContentForm;
-if(typeof baseOpenContent==='function')window.openContentForm=function(id,i){const out=baseOpenContent.apply(this,arguments);inject(id,Number(i));return out};
+if(typeof baseOpenContent==='function')window.openContentForm=function(id,i){
+  // The core legacy form does not recognize "travel" as an external partner
+  // service. Route its Hotel/Package subsections to the inherited DBest Fly
+  // destination, while preserving native flows for every other service.
+  if(String(id)==='travel'){
+    const selected=linkFor(id,Number(i));
+    if(selected?.url){
+      if(selected.enabled===false){if(typeof toast==='function')toast('Partner handoff is disabled by Owner');return}
+      return window.dbestUniversalExternalGo?.(id,Number(i));
+    }
+    // An Owner link may not have loaded on first navigation.
+    const refresh=window.DBEST_OWNER_CONTROL_LIVE?.refreshPublic;
+    if(typeof refresh==='function'){
+      Promise.resolve(refresh()).then(()=>{
+        const ready=linkFor(id,Number(i));
+        if(ready?.url&&ready.enabled!==false)window.dbestUniversalExternalGo?.(id,Number(i));
+        else if(typeof toast==='function')toast('Hotel partner destination is not configured or is disabled');
+      }).catch(()=>{if(typeof toast==='function')toast('Could not load Hotel partner destination')});
+      return;
+    }
+  }
+  const out=baseOpenContent.apply(this,arguments);
+  inject(id,Number(i));
+  return out
+};
 
 const baseOps=window.ownerOperations;
 if(typeof baseOps==='function')window.ownerOperations=function(){const out=baseOps.apply(this,arguments);setTimeout(()=>{document.querySelectorAll('button[onclick="ownerDeeplinkStudio()"]').forEach(b=>{const small=b.querySelector('small');if(small)small.textContent='Configure external/internal destinations for every section and subsection.'})},20);return out};
