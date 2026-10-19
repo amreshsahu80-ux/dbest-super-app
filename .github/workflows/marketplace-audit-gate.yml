@@ -1,0 +1,35 @@
+name: Marketplace isolated audit and Cab freeze gate
+on:
+  push:
+    branches:
+      - audit/marketplace-go-no-go-20261020
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'marketplace-*.js'
+      - 'customer-marketplace-*.js'
+      - 'tests/marketplace-*.js'
+      - 'tests/marketplace-*.cjs'
+      - 'cab-golden-lock.json'
+      - 'tests/cab-golden-integrity.cjs'
+      - '.github/workflows/marketplace-audit-gate.yml'
+jobs:
+  read-only-marketplace-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Preserve golden Cab source
+        run: node tests/cab-golden-integrity.cjs
+      - name: Marketplace source, member auth and checkout guards
+        run: node tests/marketplace-audit-guards.cjs
+      - name: Existing quotation contract and security tests
+        run: node --test tests/marketplace-quote-comparison.test.js tests/marketplace-multi-vendor-contract.test.js
+      - name: Preserve verified Cab-to-Vaahak regression
+        run: |
+          node tests/cab-regression-guards.cjs
+          node tests/cab-booking-handoff-mock.cjs
+          node tests/vaahak-active-ride-regression.cjs
+          node tests/ride-customer-history-regression.cjs
