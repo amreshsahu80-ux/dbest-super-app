@@ -1,0 +1,21 @@
+name: Cab regression checks (isolated)
+on:
+  push:
+    branches:
+      - fix/cab-production-parity-20261019
+  pull_request:
+    paths:
+      - cab-selected-ui-v3.js
+      - api/runtime-config.js
+      - tests/cab-regression-guards.cjs
+      - .github/workflows/cab-production-parity.yml
+jobs:
+  cab-static-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate Cab JavaScript and regression guards
+        run: node tests/cab-regression-guards.cjs
