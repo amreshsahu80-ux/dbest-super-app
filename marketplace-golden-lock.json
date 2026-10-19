@@ -1,0 +1,183 @@
+{
+  "freeze_id": "DBEST-MARKETPLACE-GOLDEN-20261020",
+  "owner_approved_date": "2026-10-20",
+  "approved_scope": "Previously tested end-to-end Marketplace flow with the repaired, idempotent Customer–Vendor–Vaahak delivery completion, paid-status guards, checkout, upload, catalogue, Vendor earnings and protected Cab interoperability.",
+  "public_site": "https://dbest4u.com",
+  "production_frontend_commit": "f7305e05d2bedc50760062316dc98ebb7dbe7c31",
+  "production_vercel_deployment_id": "dpl_BH4La8R6fTTXKUPWVPJJKjyUtWkk",
+  "marketplace_golden_branch": "release/marketplace-golden-frozen-20261020",
+  "marketplace_backend_source_commit": "0ea380bc88bba7cc6d22facfa199c846c192af99",
+  "cab_golden_branch": "release/cab-golden-frozen-20261020",
+  "cab_golden_commit": "f7305e05d2bedc50760062316dc98ebb7dbe7c31",
+  "backend_supabase_project_id": "ydedmotbacnllkijzmvp",
+  "protected_source_git_blob_sha1": {
+    "index.html": "6d09370ad9ddf9f16a00d229874295dd10e77022",
+    "runtime-config.js": "8ba57242666895f75c83cdda92d7efa05cfe63b9",
+    "app-bootstrap-performance-v1.js": "ad02a929d07d1639a41a80ada7921598a669b759",
+    "marketplace-secure-session-v1.js": "f0bc0a83e96a92cd6501f1d7dbbabe99a0252c7a",
+    "marketplace-vaahak-live-v2.js": "60192c9d80a664f3dd33a07dd33c286cb2a6ff1",
+    "marketplace-live-catalog-authority.js": "726d6b5bceb2ef481ee2ee26b7810735de1b09e4",
+    "marketplace-minimum-order-ux.js": "2b4911c9897d57c3a5c0ce730df2b02122b9d5a0",
+    "marketplace-live-order-submit-final.js": "647f5884d25f51c88483b73a5a803f2088a5232b",
+    "marketplace-cart-quantity-v1.js": "16303a348ad102d88c9400aa88b4d7d612bc80b4",
+    "marketplace-customer-stage-wording-fix.js": "7ec2a53b3efc9523b4e4d73e749c01cbb285b96e",
+    "customer-marketplace-my-orders.js": "218420ebd0ba8fbf9b2846e58d959f7d04998344",
+    "marketplace-completion-green.js": "e195815e55ba913b756812a6f1bfe72a564eec07",
+    "marketplace-delivery-rules.js": "135f557eaee8ce6e8c58849f268cf663eafe8422",
+    "marketplace-delivery-order-display.js": "a94c5b01ef8b7a338953fc5f87e7f6ce264d2201",
+    "marketplace-master-cart.js": "cf78bb7ed388322b644499a45abc175d416eb530",
+    "marketplace-pay-at-delivery-v2.js": "623d57738da8517d0917e74d92d56675ab19c5d7",
+    "marketplace-pay-at-delivery-hardening-v1.js": "2bf0b749f5a90893764b03a0067c2bed442af132",
+    "marketplace-checkout-button-bridge-v1.js": "96bb69caf047b64fd186e1c786bee44f2e89bded",
+    "razorpay-master-market-v1.js": "77b37cd0ed0b4b081ed2d7342846a1fe1ffe5df0",
+    "razorpay-master-checkout-final-v1.js": "d0ca5d87662ce0f5b1adb3ff9a6dc020f0a8fcdb",
+    "vendor-existing-live-upgrade.js": "49e5c844c9d49b53c4b7e8794cb78c3f1d643ff7",
+    "vendor-direct-catalog-finalizer.js": "4f1dfb57b90f5588c6d30a5f4cbac56173bc4d28",
+    "vendor-delivery-location.js": "74f67ea72e85e17311615cd26b94928378f881fc",
+    "vendor-mobile-image-upload-fix.js": "047636c7833903114dbd109d238030b8bc8cf27e",
+    "marketplace-upload-vendor-picker-v1.js": "0ec3b5d64677082e259c27e862b92065531e36fa",
+    "marketplace-upload-client-v1.js": "b93d74613eaa0b51cb35358478a8518b492fd10c",
+    "marketplace-multi-vendor-client-v1.js": "1189b3009e5552c0859dc0df5e3838d10cd0ab2c",
+    "marketplace-list-upload-preview-v1.js": "3943fce5adeab0b1824e6b886d4d714b6d465494",
+    "marketplace-quote-comparison-v1.js": "a718584f7646a25927d264e4acfb867550b24a03",
+    "dbest-meds-preview-catalog.js": "e5de1c7cb4e1aba72b288f0fb72af199e5572e6e",
+    "dbest-points-cab-marketplace-v1.js": "d20b8cfa28b381a92183c8243634d3268b2f9732",
+    "razorpay-integration-v1.js": "c15d499638be0eaf973da71e8ec9104d6a33a42e",
+    "razorpay-ecom-trace-v1.js": "32a4c5255fb32f2e1bdad9af21371794e85b6836",
+    "razorpay-checkout-policy-v1.js": "d5361c32dc7df1c649746163f56302f99eea7231",
+    "razorpay-paymentpage-fallback-v1.js": "98ae9ff130c72bdd5530e218fe08fc6fd9c01288",
+    "owner-vendor-profile-review-v1.js": "3a0ef64ae13e2fd176765c363b0dca7198b7995c",
+    "owner-marketplace-category-control-v1.js": "73d33dda9cf18011cd38af0dc15375092fc2f7bb",
+    "customer-marketplace-delivery-pin-ui-v1.js": "ceda3e6fa4878f7cc02b06dd1f572be1f073bd25",
+    "supabase/functions/marketplace-handover-live/index.ts": "92e9b5afab1caef15728c750c07dea6264a1fda2",
+    "supabase/functions/marketplace-vaahak-sync/index.ts": "b4da1a066d9f8cd843a6f7be12d872e6a248cde6",
+    "supabase/functions/vaahak-commerce-live/index.ts": "7e672f25a928a40c8450c1ddf36f146e10873d30"
+  },
+  "protected_edge_functions": {
+    "vaahak-commerce-live": {
+      "version": 15,
+      "ezbr_sha256": "ad710f5fe3013569296b2d59794906270d07645e1fc266dd84fb108af9521d8f",
+      "verify_jwt": false,
+      "status": "ACTIVE"
+    },
+    "marketplace-live": {
+      "version": 21,
+      "ezbr_sha256": "da103f7430a8e298d88869feed6d3c3fa13e31c023be33c48d9e3e3f13c3defb",
+      "verify_jwt": false,
+      "status": "ACTIVE"
+    },
+    "marketplace-vaahak-sync": {
+      "version": 7,
+      "ezbr_sha256": "95c293871ad4de772def2546bee7806f07fa6c9dbe78bb199893fcf46241e693",
+      "verify_jwt": false,
+      "status": "ACTIVE"
+    },
+    "marketplace-vendor-legacy-bridge": {
+      "version": 6,
+      "ezbr_sha256": "6560278c97e0f16195ca17f373711deec52389dcb9259d2801b9ecff996ad8a7",
+      "verify_jwt": false,
+      "status": "ACTIVE"
+    },
+    "marketplace-member-orders": {
+      "version": 7,
+      "ezbr_sha256": "684619db7434ada131295ebb4e47f6ffe1c9ea257d9cb4596317d0f6f2f06965",
+      "verify_jwt": false,
+      "status": "ACTIVE"
+    },
+    "marketplace-delivery-rules": {
+      "version": 8,
+      "ezbr_sha256": "5db6355cb9702409e3ae12d8efb4b539a6bc327f12866ab70a4a161c52212446",
+      "verify_jwt": false,
+      "status": "ACTIVE"
+    },
+    "marketplace-order-live-v2": {
+      "version": 10,
+      "ezbr_sha256": "c1132ee1730b8e96d5005ddcf8228163ee18ff36841cfb7386fb0b7bff413bab",
+      "verify_jwt": false,
+      "status": "ACTIVE"
+    },
+    "marketplace-master-order-live": {
+      "version": 8,
+      "ezbr_sha256": "676c3138aa279a30939ecce06a62e39ef0060291130ec7957347c191c8f7d209",
+      "verify_jwt": false,
+      "status": "ACTIVE"
+    },
+    "vendor-catalog-bulk-live": {
+      "version": 6,
+      "ezbr_sha256": "14559870ca041af808b3f9222179e816aa3de007186faaa2ab8fb1d4063c01c1",
+      "verify_jwt": false,
+      "status": "ACTIVE"
+    },
+    "marketplace-local-catalog-live": {
+      "version": 9,
+      "ezbr_sha256": "962feefd8b359c613f1f89e6517f859d370e5f429b1473ca4b179c592265c6b7",
+      "verify_jwt": false,
+      "status": "ACTIVE"
+    },
+    "vendor-settlement-live": {
+      "version": 3,
+      "ezbr_sha256": "4dc0f65c39494c8013ce73dfbd4f328af50e2ade611324e033aac35064a8b8c1",
+      "verify_jwt": false,
+      "status": "ACTIVE"
+    },
+    "marketplace-delivery-pin-live": {
+      "version": 3,
+      "ezbr_sha256": "99897f8560f208856734c9e31a21ccdaedcc874d03e91dceab89fead883ec080",
+      "verify_jwt": false,
+      "status": "ACTIVE"
+    },
+    "marketplace-handover-live": {
+      "version": 7,
+      "ezbr_sha256": "d50c739d50b9099a214c437cef7373c378d51e763000cbf0f92f10de3d67be4c",
+      "verify_jwt": false,
+      "status": "ACTIVE"
+    },
+    "marketplace-vendor-fallback-live": {
+      "version": 2,
+      "ezbr_sha256": "e9db1822bcfc3879f723f312ab34463c7e31db307f750c41d5592c956032c247",
+      "verify_jwt": false,
+      "status": "ACTIVE"
+    },
+    "marketplace-upload-requests": {
+      "version": 6,
+      "ezbr_sha256": "8b6b289bd4b0b6831a1c66ed6a30055546b45235906e07918e2ef177659652a0",
+      "verify_jwt": false,
+      "status": "ACTIVE"
+    },
+    "marketplace-quote-test-checkout": {
+      "version": 1,
+      "ezbr_sha256": "aeda96ac1095c27493d3d7e19decbf0291bf0f8cc8b7216f83f2fc5b6cb51b26",
+      "verify_jwt": false,
+      "status": "ACTIVE"
+    },
+    "marketplace-multi-vendor-quotes": {
+      "version": 21,
+      "ezbr_sha256": "133949370ca14b40192e5fe6e5111a513431d36ea163142ba11ad8aac274409a",
+      "verify_jwt": false,
+      "status": "ACTIVE"
+    },
+    "marketplace-delivery-simulation": {
+      "version": 1,
+      "ezbr_sha256": "dce1d49fcfaf3885c5869fcfc229dd6490a0fcd046a566805f0bd1834832c982",
+      "verify_jwt": false,
+      "status": "ACTIVE"
+    }
+  },
+  "regression_suite": [
+    "node tests/marketplace-golden-integrity.cjs",
+    "node tests/cab-golden-integrity.cjs",
+    "node --test tests/marketplace-edge-completion-contract.cjs",
+    "node --test tests/marketplace-quote-comparison.test.js tests/marketplace-multi-vendor-contract.test.js",
+    "node tests/cab-booking-handoff-mock.cjs",
+    "node tests/vaahak-active-ride-regression.cjs",
+    "node tests/ride-customer-history-regression.cjs"
+  ],
+  "operational_exceptions_not_overridden": [
+    "Unverified historical Razorpay reconciliation entries (including the recorded ₹82 Production entry).",
+    "Pending Grocery and Medicines vendor KYC, compliance, owner approval and pickup GPS; restaurant location gaps.",
+    "Historical vendor payout settlement verification and pre-existing completed-order display inconsistencies.",
+    "Medicine catalogue placeholder photos and product imagery coverage.",
+    "Full public launch remains subject to a separate integrated GO/NO-GO decision."
+  ],
+  "policy": "No production changes to the protected code or listed Edge Functions without explicit Owner approval, scoped preview validation, full regression suite and a tested rollback path. Do not auto-update old fingerprints to bypass failures. Client-source guards are CI checks only; Edge release versions are production snapshots checked via Supabase and require an administrative deployment policy to be unbypassable."
+}
