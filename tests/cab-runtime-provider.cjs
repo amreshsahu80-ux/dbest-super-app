@@ -29,6 +29,20 @@ async function main(){
     assert.deepEqual(good.body.places.find(p=>p.name==='Railway Hospital, Chakradharpur').types,['hospital']);
     const bad=response();await handler({query:{mode:'nearby',lat:'200',lng:'85.635'}},bad);
     assert.equal(bad.code,400);
+    // Accept a real image only when the mapped OSM landmark itself names it.
+    global.fetch=async url=>{
+      if(String(url).includes('overpass.kumi.systems'))return {ok:true,json:async()=>({elements:[
+        {tags:{name:'Railway Hospital, Chakradharpur',amenity:'hospital',image:'File:Railway_Hospital_CKP.jpg'},lat:22.675384,lon:85.62599},
+        {tags:{name:'Chakradharpur Railway Station',railway:'station',image:'https://untrusted.example/photo.jpg'},lat:22.6783014,lon:85.6270604}
+      ]})};
+      throw Error('simulated media fallback');
+    };
+    const media=response();
+    await handler({query:{mode:'nearby',lat:'22.57',lng:'85.635'}},media);
+    assert.equal(media.code,200);
+    assert.match(media.body.places.find(p=>p.name==='Railway Hospital, Chakradharpur').photo,/^https:\/\/commons\.wikimedia\.org\/wiki\/Special:FilePath\//);
+    assert.equal(media.body.places.find(p=>p.name==='Chakradharpur Railway Station').photo,undefined,'Untrusted image hosts must never render');
+
     console.log('Cab nearby provider functional fallback guards passed');
   }finally{
     global.fetch=oldFetch;
