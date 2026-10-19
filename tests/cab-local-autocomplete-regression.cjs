@@ -6,7 +6,7 @@ const code=fs.readFileSync('cab-selected-ui-v3.js','utf8');
 const from=code.indexOf('const LOCAL_PLACE_RADIUS_KM=250;');
 const to=code.indexOf('async function resolvePlace(x){',from);
 assert(from>=0&&to>from,'Cab geo search functions must be present');
-assert(code.indexOf('await initSearchProvider();',from)<code.indexOf("const base=String(cfg().supabaseUrl",from),'Google must be attempted before Photon/Supabase');
+assert(code.indexOf('await Promise.race([initSearchProvider()',from)<code.indexOf("const base=String(cfg().supabaseUrl",from),'Google must be attempted before Photon/Supabase');
 assert(code.includes('data-map-pin="1"'),'Map-pin fallback must be offered for destinations');
 assert(code.includes('pinMap.on(\'click\''),'Map-pin fallback must allow a map click');
 const world=[
@@ -18,11 +18,18 @@ const world=[
 ];
 function setup(provider,features){
  let backendHits=0,googleHits=0,request=null;
+ const googleMaps={
+  LatLng:class LatLng{constructor(lat,lng){this.lat=lat;this.lng=lng}},
+  places:{PlacesServiceStatus:{OK:'OK'},AutocompleteService:class{
+   getPlacePredictions(req,callback){googleHits++;request=req;callback(features||[],features?.length?'OK':'ZERO_RESULTS')}
+  }}
+ };
  const context={
-   window:{google:{maps:{LatLng:class LatLng{constructor(lat,lng){this.lat=lat;this.lng=lng}},places:{PlacesServiceStatus:{OK:'OK'},AutocompleteService:class{getPlacePredictions(req,callback){googleHits++;request=req;callback(features||[],features?.length?'OK':'ZERO_RESULTS')}}}}},
-   google:null,S:{provider,p:{lat:22.675,lng:85.635}},cfg:()=>({supabaseUrl:'https://mock.dbest',supabasePublishableKey:'public'}),
-   initSearchProvider:async()=>{},AbortController,console:{warn(){}},setTimeout,clearTimeout,encodeURIComponent,
-   fetch:async url=>{backendHits++;if(String(url).includes('location-search-live'))return {ok:true,json:async()=>({results:world})};return {ok:true,json:async()=>([])}}
+  window:{google:{maps:googleMaps}},google:{maps:googleMaps},
+  S:{provider,p:{lat:22.675,lng:85.635}},
+  cfg:()=>({supabaseUrl:'https://mock.dbest',supabasePublishableKey:'public'}),
+  initSearchProvider:async()=>{},AbortController,console:{warn(){}},setTimeout,clearTimeout,encodeURIComponent,
+  fetch:async url=>{backendHits++;if(String(url).includes('location-search-live'))return {ok:true,json:async()=>({results:world})};return {ok:true,json:async()=>([])}}
  };
  context.google=context.window.google;
  vm.runInNewContext(code.slice(from,to)+'\nwindow.testSearch=searchLocations;window.testFilter=cabFilterIndianResults;',context,{timeout:1000});
