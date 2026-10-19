@@ -45,7 +45,7 @@ function buildDb(seed={}){
         return {data:this.value,error:null}
       }
       const rows=this.matches();
-      return {data:this.selected ? (rows.length===1?rows[0]:rows):rows,error:null}
+      return {data:rows,error:null}
     }
     maybeSingle(){const r=this.exec();return Promise.resolve({data:Array.isArray(r.data)?r.data[0]||null:r.data,error:r.error})}
     single(){return this.maybeSingle()}
