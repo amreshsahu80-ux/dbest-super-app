@@ -125,14 +125,14 @@ function renderJob(j){
  if(host.dataset.jobSignature===signature&&host.querySelector('.job'))return;
  host.dataset.jobSignature=signature;hostJobSig=signature;
  const assigned=!!(current&&String(j.assigned_partner_id)===String(current.id));const delivery=j.kind==='delivery';
- host.className='';host.innerHTML='<div class="job"><div class="jobTitle">'+(delivery?'📦 Marketplace Delivery':'🚕 Ride Request')+'</div><div class="route">'+esc(j.pickup||'Pickup')+' → '+esc(j.dropoff||'Drop')+'</div><div class="chips"><span class="chip">'+esc(j.status||'Active')+'</span></div>'+(delivery?'<div class="chips" style="display:flex;flex-wrap:wrap;gap:8px;margin:12px 0"><span class="chip">Route: '+(Number(j.order_meta?.deliveryRouteKm||j.distance_km)>0?Number(j.order_meta?.deliveryRouteKm||j.distance_km).toFixed(2)+' km':'Unavailable')+'</span><span class="chip">Your earnings: ₹'+Number(j.partner_earning||j.order_meta?.vaahakDeliveryEarning||0).toFixed(2)+'</span><span class="chip">Collect from customer: ₹'+Number(j.order_meta?.collectAmount??j.fare??0).toFixed(2)+'</span></div>':'')+'<div id="rideMap" class="rideMap" role="region" aria-label="Pickup and destination map"></div><div id="rideMapFallback" class="muted" style="display:none;margin-top:8px;font-size:12px">Map preview unavailable. Use navigation to open your location in Google Maps.</div><div class="row" id="safeJobActions" style="margin-top:12px"></div>'+(assigned&&!delivery?paymentHtml(j):'')+'</div>';
+ host.className='';host.innerHTML='<div class="job"><div class="jobTitle">'+(delivery?'📦 Marketplace Delivery':'🚕 Ride Request')+'</div><div class="route">'+esc(j.pickup||'Pickup')+' → '+esc(j.dropoff||'Drop')+'</div><div class="chips"><span class="chip">'+esc(j.status||'Active')+'</span></div>'+(delivery?'<div class="chips" style="display:flex;flex-wrap:wrap;gap:8px;margin:12px 0"><span class="chip">Route: '+(Number(j.order_meta?.deliveryRouteKm||j.distance_km)>0?Number(j.order_meta?.deliveryRouteKm||j.distance_km).toFixed(2)+' km':'Unavailable')+'</span><span class="chip">Your earnings: ₹'+Number(j.partner_earning||j.order_meta?.vaahakDeliveryEarning||0).toFixed(2)+'</span><span class="chip">Collect from customer: ₹'+Number(j.order_meta?.collectAmount??j.fare??0).toFixed(2)+'</span></div>':'')+'<div id="rideMap" class="rideMap" role="region" aria-label="Pickup and destination map"></div><div class="muted" style="font-size:10px;margin-top:5px">Map shows pickup, destination and last GPS point; dashed line is indicative, not road navigation.</div><div id="rideMapFallback" class="muted" style="display:none;margin-top:8px;font-size:12px">Map preview unavailable. Use navigation to open your location in Google Maps.</div><div class="row" id="safeJobActions" style="margin-top:12px"></div>'+(assigned&&!delivery?paymentHtml(j):'')+'</div>';
  const a=el('safeJobActions');if(!a)return;
  if(j.status==='Open'&&String(j.offered_partner_id||'')===String(current?.id||'')){const yes=document.createElement('button');yes.className='btn wide';yes.type='button';yes.textContent=delivery?'Accept Delivery':'Accept Ride';yes.onclick=()=>jobAction(j.id,'accept');a.appendChild(yes);const no=document.createElement('button');no.className='btn secondary wide';no.type='button';no.textContent='Skip';no.onclick=()=>jobAction(j.id,'reject');a.appendChild(no)}
  else if(assigned&&j.status==='Accepted'&&delivery){const b=document.createElement('button');b.className='btn wide';b.type='button';b.textContent='Check Vendor Handover';b.onclick=()=>checkVendorHandover(j.id);a.appendChild(b)}
  else if(assigned&&j.status==='Accepted'){const b=document.createElement('button');b.className='btn wide';b.type='button';b.textContent='Enter Ride PIN';b.onclick=()=>openRidePin(j.id);a.appendChild(b)}
  if(assigned&&['Accepted','Trip Started'].includes(j.status)){
   const destination=j.status==='Trip Started',lat=destination?j.drop_lat:j.pickup_lat,lng=destination?j.drop_lng:j.pickup_lng;
-  if(Number.isFinite(Number(lat))&&Number.isFinite(Number(lng))){
+  if(lat!=null&&lng!=null&&Number.isFinite(Number(lat))&&Number.isFinite(Number(lng))){
    const link=document.createElement('a');link.className='btn soft wide';link.style.cssText='text-decoration:none;text-align:center;display:inline-block';link.target='_blank';link.rel='noopener noreferrer';link.href=mapLink(Number(lat),Number(lng));link.textContent=destination?'🧭 Navigate to Destination':'🧭 Navigate to Pickup';a.appendChild(link)
   }
  }
@@ -157,8 +157,8 @@ async function ensureVaahakLeaflet(){
 async function renderMap(j){
  const host=el('rideMap');if(!host)return;
  const pts=[];
- if(Number.isFinite(Number(j.pickup_lat))&&Number.isFinite(Number(j.pickup_lng)))pts.push({label:'Pickup',lat:Number(j.pickup_lat),lng:Number(j.pickup_lng)});
- if(Number.isFinite(Number(j.drop_lat))&&Number.isFinite(Number(j.drop_lng)))pts.push({label:'Destination',lat:Number(j.drop_lat),lng:Number(j.drop_lng)});
+ if(j.pickup_lat!=null&&j.pickup_lng!=null&&Number.isFinite(Number(j.pickup_lat))&&Number.isFinite(Number(j.pickup_lng)))pts.push({label:'Pickup',lat:Number(j.pickup_lat),lng:Number(j.pickup_lng)});
+ if(j.drop_lat!=null&&j.drop_lng!=null&&Number.isFinite(Number(j.drop_lat))&&Number.isFinite(Number(j.drop_lng)))pts.push({label:'Destination',lat:Number(j.drop_lat),lng:Number(j.drop_lng)});
  if(!pts.length){host.style.display='none';el('rideMapFallback').style.display='block';return}
  const L=await ensureVaahakLeaflet();
  if(!host.isConnected||!currentJob||String(j.id)!==String(currentJob.id))return;
