@@ -29,6 +29,7 @@ assert(history.includes("if(!r||String(r.status)!=='Completed')return"),
   'Never issue an invoice for unpaid or unfinished ride');
 assert(history.includes("x-dbest-member-token"),'History must use an authenticated member session');
 assert(history.includes("Download / Save Invoice PDF"),'Receipt must have printable/save-PDF control');
+assert(history.includes("if(!token()||token()!==historyAuthToken)return"),'Invoice access must be bound to the current signed-in member, not stale cached account data');
 assert(history.includes("observer.observe(mount,{childList:true})"),
   'Lightweight app-screen observer required; avoid repeated global DOM scanning');
 const reg=fs.readFileSync('tests/vaahak-active-ride-regression.cjs','utf8');
