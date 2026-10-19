@@ -1,0 +1,33 @@
+{
+  "freeze_id": "DBEST-CAB-GOLDEN-20261020",
+  "approved_at": "2026-10-20",
+  "approved_production_commit": "f7305e05d2bedc50760062316dc98ebb7dbe7c31",
+  "approved_deployment_id": "dpl_BH4La8R6fTTXKUPWVPJJKjyUtWkk",
+  "site": "https://dbest4u.com",
+  "snapshot_branch": "release/cab-golden-frozen-20261020",
+  "backend_edge_function_versions": {
+    "vaahak-live": 29,
+    "vaahak-dispatch-live": 36,
+    "vaahak-complete-live": 2,
+    "member-ride-history": 7,
+    "vaahak-customer-session-live": 1
+  },
+  "protected_source_git_blob_sha1": {
+    "index.html": "6d09370ad9ddf9f16a00d229874295dd10e77022",
+    "runtime-config.js": "8ba57242666895f75c83cdda92d7efa05cfe63b9",
+    "cab-selected-ui-v3.js": "178d70c76988c1205e8df218b8d885c7a92bc91c",
+    "cab-colored-map-layout-fix-v1.js": "a521cc15db3e5045796194afd361b9836f4551b2",
+    "cab-live-job-handoff-fix-v1.js": "d0bad8401b2a4d29adb3ed8473a49c585397681c",
+    "cab-entry-capture-final-v1.js": "1f69e495da2b4a15bf33a76d8d9b6771a07c0c13",
+    "ride-live-ui-finalizer.js": "6ef0f5b1245ac608811b3785c3debe47c652ee84",
+    "member-ride-history-bridge.js": "45103d90c92b264a8bd049385dc103637d8f4558",
+    "vaahak-standalone-v2.html": "031d2e7cb8da65a5bc59c2d10a5265a861f682be",
+    "vaahak-google-live-map-v1.js": "89734c7c03c24ec5ff73361a689c2f80e760c7c4",
+    "vaahak-dashboard-tabs-v1.js": "5190bbf3672aff4159c3142cba57a2c5633ab3cc",
+    "transaction-invoice-receipt-v1.js": "a06f9d00549cebe0288b076eb1254964e83b5e2c",
+    "transaction-invoice-ui-v2.js": "cbc020e738f141d788789011950274321497d806",
+    "app-bootstrap-performance-v1.js": "ad02a929d07d1639a41a80ada7921598a669b759",
+    "payment-policy-router-v1.js": "42a6e8d143019789c01c39d3adce4bafa1ec9f62"
+  },
+  "approval_policy": "NO CHANGES to protected Cab files or live Supabase Cab functions without explicit Owner authorization, isolated preview, full end-to-end regression checks, verified rollback and user acceptance. A manifest update alone is not authorization."
+}
