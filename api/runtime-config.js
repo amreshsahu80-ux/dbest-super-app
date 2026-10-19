@@ -4,7 +4,7 @@ async function nearbyHandler(req,res){
  const lat=Number(req.query.lat),lng=Number(req.query.lng);
  if(!Number.isFinite(lat)||!Number.isFinite(lng)||Math.abs(lat)>90||Math.abs(lng)>180)return res.status(400).json({error:'Invalid pickup coordinates'});
  const q='[out:json][timeout:9];(nwr(around:15000,'+lat+','+lng+')[name][amenity~"hospital|bus_station|marketplace|college|university|place_of_worship"];nwr(around:15000,'+lat+','+lng+')[name][railway=station];nwr(around:15000,'+lat+','+lng+')[name][tourism~"attraction|hotel|museum"];);out center 50;';
- const googleKey=String(process.env.GOOGLE_MAPS_SERVER_KEY||process.env.GOOGLE_MAPS_API_KEY||process.env.GOOGLE_MAPS_BROWSER_KEY||'').trim();
+ const googleKey=String(process.env.GOOGLE_MAPS_SERVER_KEY||'').trim();
  const googleLookup=async()=>{
   if(!googleKey)throw Error('Google Places key missing');
   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),6500);
@@ -24,14 +24,46 @@ async function nearbyHandler(req,res){
    const response=await fetch(host,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({data:q}),signal:controller.signal});
    if(!response.ok)throw Error('HTTP '+response.status);
    const data=await response.json();const seen=new Set();
-   const places=(data.elements||[]).map(x=>({name:String(x.tags?.name||'').trim(),lat:Number(x.lat??x.center?.lat),lng:Number(x.lon??x.center?.lon),types:[x.tags?.amenity,x.tags?.railway,x.tags?.tourism,x.tags?.aeroway,x.tags?.leisure].filter(Boolean).map(v=>({station:'train_station',bus_station:'bus_station',hospital:'hospital',college:'college',university:'university',park:'park',attraction:'tourist_attraction'}[v]||v))})).filter(x=>{const key=x.name.toLowerCase();if(!key||seen.has(key)||!Number.isFinite(x.lat)||!Number.isFinite(x.lng))return false;seen.add(key);return true}).slice(0,12);
+   const places=(data.elements||[]).map(x=>({name:String(x.tags?.name||'').trim(),lat:Number(x.lat??x.center?.lat),lng:Number(x.lon??x.center?.lon)})).filter(x=>{const key=x.name.toLowerCase();if(!key||seen.has(key)||!Number.isFinite(x.lat)||!Number.isFinite(x.lng))return false;seen.add(key);return true}).slice(0,12);
    if(!places.length)throw Error('Empty response');
    return places;
   }finally{clearTimeout(timer)}
  };
+ const nominatimFallback=async()=>{
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),6500);
+  try{
+   const delta=.18,viewbox=[lng-delta,lat+delta,lng+delta,lat-delta].join(',');
+   const searches=['hospital','railway station','bus station','college','park'];
+   const results=await Promise.allSettled(searches.map(async term=>{
+    const url='https://nominatim.openstreetmap.org/search?format=json&limit=5&bounded=1&viewbox='+encodeURIComponent(viewbox)+'&q='+encodeURIComponent(term);
+    const response=await fetch(url,{headers:{'Accept':'application/json','User-Agent':'DBestCabNearby/1.0 (dbest4u.com)'},signal:controller.signal});
+    if(!response.ok)throw Error('Nominatim HTTP '+response.status);
+    return response.json();
+   }));
+   const seen=new Set(),places=[];
+   for(const result of results){if(result.status!=='fulfilled')continue;
+    for(const p of result.value||[]){const name=String(p.name||p.display_name?.split(',')[0]||'').trim(),plat=Number(p.lat),plng=Number(p.lon),key=name.toLowerCase();
+     if(!name||seen.has(key)||!Number.isFinite(plat)||!Number.isFinite(plng))continue;
+     const km=Math.hypot((plat-lat)*111.2,(plng-lng)*111.2*Math.cos(lat*Math.PI/180));
+     if(km>15)continue;
+     const klass=String(p.class||p.category||'').toLowerCase(),kind=String(p.type||'').toLowerCase();
+     const type=klass==='railway'&&/station|halt/.test(kind)?'train_station':
+      klass==='amenity'&&/hospital|bus_station|college|university/.test(kind)?kind:
+      klass==='aeroway'&&/aerodrome/.test(kind)?'airport':
+      klass==='leisure'&&kind==='park'?'park':
+      /\bhospital\b/i.test(name)?'hospital':/\b(bus stand|bus station)\b/i.test(name)?'bus_station':
+      /\b(railway station|junction)\b/i.test(name)?'train_station':/\b(college|university)\b/i.test(name)?'college':
+      /\bpark\b/i.test(name)?'park':'';
+     if(!type)continue;
+     seen.add(key);places.push({name:type==='train_station'&&!/station|junction|halt/i.test(name)?name+' Railway Station':name,lat:plat,lng:plng,types:[type]});
+    }
+   }
+   if(!places.length)throw Error('Nominatim empty');return places.slice(0,12);
+  }finally{clearTimeout(timer)}
+ };
  try{
-  const places=await Promise.any([googleLookup(),...HOSTS.map(queryHost)]);
-  return res.status(200).json({places,source:'openstreetmap'});
+  const places=await Promise.any([googleLookup(),...HOSTS.map(queryHost),nominatimFallback()]);
+  return res.status(200).json({places,source:'nearby-provider'});
  }catch(e){
   console.error('DBest nearby: all providers failed',JSON.stringify((e.errors||[]).map(x=>String(x.message||x))));
   return res.status(503).json({places:[],error:'Nearby location providers unavailable'});
