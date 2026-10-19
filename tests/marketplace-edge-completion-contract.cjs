@@ -128,6 +128,15 @@ test('Late payment event cannot regress a completed Vendor stage',async()=>{
  assert.equal(row(db,'marketplace_orders_live').vendor_status,'Delivered / Completed');
 });
 
+test('Sync cannot mark an unpaid completed job as Received',async()=>{
+ const db=await fixture({alreadyCompleted:true,paid:false});
+ const result=await handler(fns.sync,db)('sync','VAH_QA_SESSION',{step:'complete'});
+ assert.equal(result.status,409);
+ assert.equal(row(db,'marketplace_orders_live').payment_status,'Pending');
+ assert.equal(row(db,'marketplace_orders_live').vendor_status,'Ready for Pickup');
+ assert.equal(db.audit.length,0);
+});
+
 test('Customer confirm after Vaahak Completed repairs order without changing original job completion timestamp',async()=>{
  const db=await fixture({alreadyCompleted:true});
  const previous=row(db,'vaahak_jobs_live').completed_at;
