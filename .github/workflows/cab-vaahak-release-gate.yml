@@ -1,0 +1,34 @@
+name: DBest Cab and Vaahak protected release
+on:
+  push:
+    branches:
+      - fix/vaahak-completion-map-invoice-20261019
+      - main
+  pull_request:
+    paths:
+      - 'vaahak-standalone-v2.html'
+      - 'transaction-invoice-receipt-v1.js'
+      - 'transaction-invoice-ui-v2.js'
+      - 'cab-selected-ui-v3.js'
+      - 'tests/vaahak-active-ride-regression.cjs'
+      - '.github/workflows/cab-vaahak-release-gate.yml'
+jobs:
+  cab-vaahak-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify Vaahak completion, map and invoice safeguards
+        run: |
+          node tests/vaahak-active-ride-regression.cjs
+          node --check transaction-invoice-receipt-v1.js
+          node --check transaction-invoice-ui-v2.js
+      - name: Verify protected Cab booking and owner tariff
+        run: |
+          node tests/cab-regression-guards.cjs
+          node tests/cab-runtime-provider.cjs
+          node tests/cab-owner-tariff-parity.cjs
+          node tests/cab-booking-handoff-mock.cjs
+          node tests/core-module-parse-guards.cjs
