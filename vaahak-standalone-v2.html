@@ -55,6 +55,8 @@ body:not(.publicEntry) .shell{padding-bottom:88px}
 @media(max-width:650px){.vhDashHero{min-height:155px}.vhDashHeroCopy{max-width:72%;padding:15px}.vhDashHeroCopy h3{font-size:20px}.vhQuick button{padding:9px 3px;font-size:10px}}
 </style>
 
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+<script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 </head>
 <body>
 <header class="top"><div class="topIn"><button id="menuBtn" class="menuBtn hidden" type="button" aria-label="Open menu">☰</button><div class="brand">DBest Vaahak</div><div id="globalStatus" class="statusPill hidden" aria-hidden="true"></div></div></header>
@@ -115,18 +117,68 @@ function isCarpool(j){return !!(j&&j.kind==='ride'&&j.order_meta&&j.order_meta.c
 function carpoolMetaHtml(j){if(!isCarpool(j))return'';const m=j.order_meta||{},pick=Array.isArray(m.pickupStops)?m.pickupStops:[],drop=Array.isArray(m.dropStops)?m.dropStops:[],when=m.scheduledAt?new Date(m.scheduledAt):null;const whenTxt=when&&Number.isFinite(when.getTime())?when.toLocaleString():'';return `<div class="orderMeta" style="background:#f4f7ff;border:1px solid #dce6ff"><b>🚘 Shared Car Pool</b>${whenTxt?`<div style="margin-top:4px">Scheduled: ${esc(whenTxt)}</div>`:''}<div style="margin-top:5px"><b>${Number(m.confirmedSeats||0)} confirmed seat(s) • ${esc(m.vehicleType||j.vehicle_type||'Vehicle')}</b></div>${pick.length?`<div style="margin-top:9px"><b>Pickup sequence</b>${pick.map((x,i)=>`<div style="margin-top:4px">${i+1}. ${esc(x.name||'Passenger')} — ${esc(x.label||'Pickup')} (${Number(x.seats||1)} seat${Number(x.seats||1)>1?'s':''})</div>`).join('')}</div>`:''}${drop.length?`<div style="margin-top:9px"><b>Drop sequence</b>${drop.map((x,i)=>`<div style="margin-top:4px">${i+1}. ${esc(x.name||'Passenger')} — ${esc(x.label||'Drop')}</div>`).join('')}</div>`:''}<div style="margin-top:8px;color:#315efb;font-weight:900">One pooled job • Multiple passenger stops</div></div>`}
 function orderMetaHtml(j){if(j.kind!=='delivery'||!j.order_meta)return'';const m=j.order_meta||{},items=Array.isArray(m.items)?m.items:[];return `<div class="orderMeta"><b>${esc(m.vendorName||'Marketplace Delivery')}</b>${items.length?`<div>${items.map(i=>`${esc(i.name||'Item')} × ${Number(i.qty||1)}`).join(' • ')}</div>`:''}${m.collectAmount?`<div style="margin-top:6px"><b>Order value: ₹${Math.round(Number(m.collectAmount||0))}</b></div>`:''}</div>`}
 function isSameVehicleReturn(j){const m=j?.order_meta||{};return j?.kind==='ride'&&m.roundTrip===true&&m.sameVehicle===true}
-function paymentHtml(j){if(isMarketplaceDelivery(j)){const paid=isPaid(j),started=j.status==='Trip Started';return `<div class="paymentBox"><div class="paymentHead"><b>💳 Marketplace Payment</b><span class="paymentPill ${paid?'paid':''}">${paid?(j.payment_status==='Prepaid'?'PREPAID':'RAZORPAY VERIFIED'):(started?'PENDING':'RAZORPAY')}</span></div>${paid?`<div class="muted">${j.payment_status==='Prepaid'?'Payment completed online before dispatch.':'Customer payment verified by DBest through Razorpay.'}</div><div class="gps">Customer receipt confirmation is also required.</div>`:(started?`<div class="muted">Waiting for customer Razorpay payment.</div><div class="gps">This status refreshes automatically after successful payment.</div>`:`<div class="muted">Customer payment will be collected through Razorpay after delivery starts.</div>`)}${started?`<button class="btn wide" style="margin-top:10px" onclick="confirmMarketplaceDelivery('${esc(j.id)}')">✅ Confirm Delivery</button>`:''}</div>`}if(j.status!=='Trip Started')return'';if(isSameVehicleReturn(j)&&String(j.order_meta?.returnLegStatus||'')!=='started')return `<div class="paymentBox"><div class="paymentHead"><b>↩️ 2-Way / Return Journey</b><span class="paymentPill">OUTWARD LEG</span></div><div class="muted">Keep the same vehicle assigned. Start the return only when the passenger is ready to travel back.</div><button class="btn wide" onclick="startReturnJourney('${esc(j.id)}')">Start Return Journey</button></div>`;const paid=isPaid(j);return `<div class="paymentBox"><div class="paymentHead"><b>${isSameVehicleReturn(j)?'↩️ Return Journey Payment':'💳 Cab/Ride Payment'}</b><span class="paymentPill ${paid?'paid':''}">${paid?'RECEIVED':'PENDING'}</span></div>${paid?`<div class="muted">Payment confirmed.</div><button class="btn wide" onclick="completeJob('${esc(j.id)}')">${isSameVehicleReturn(j)?'Complete Return Journey':'Complete Ride'}</button>`:`<div class="muted">Confirm after payment is received.</div><div class="payMethods"><button onclick="confirmPayment('${esc(j.id)}','Cash')">💵 Cash</button><button onclick="confirmPayment('${esc(j.id)}','UPI')">📲 UPI</button><button onclick="confirmPayment('${esc(j.id)}','Online / Other')">✅ Other</button></div>`}</div>`}
+function paymentHtml(j){if(isMarketplaceDelivery(j)){const paid=isPaid(j),started=j.status==='Trip Started';return `<div class="paymentBox"><div class="paymentHead"><b>💳 Marketplace Payment</b><span class="paymentPill ${paid?'paid':''}">${paid?(j.payment_status==='Prepaid'?'PREPAID':'RAZORPAY VERIFIED'):(started?'PENDING':'RAZORPAY')}</span></div>${paid?`<div class="muted">${j.payment_status==='Prepaid'?'Payment completed online before dispatch.':'Customer payment verified by DBest through Razorpay.'}</div><div class="gps">Customer receipt confirmation is also required.</div>`:(started?`<div class="muted">Waiting for customer Razorpay payment.</div><div class="gps">This status refreshes automatically after successful payment.</div>`:`<div class="muted">Customer payment will be collected through Razorpay after delivery starts.</div>`)}${started?`<button class="btn wide" style="margin-top:10px" onclick="confirmMarketplaceDelivery('${esc(j.id)}')">✅ Confirm Delivery</button>`:''}</div>`}if(j.status!=='Trip Started')return'';if(isSameVehicleReturn(j)&&String(j.order_meta?.returnLegStatus||'')!=='started')return `<div class="paymentBox"><div class="paymentHead"><b>↩️ 2-Way / Return Journey</b><span class="paymentPill">OUTWARD LEG</span></div><div class="muted">Keep the same vehicle assigned. Start the return only when the passenger is ready to travel back.</div><button class="btn wide" onclick="startReturnJourney('${esc(j.id)}')">Start Return Journey</button></div>`;const paid=isPaid(j);return `<div class="paymentBox"><div class="paymentHead"><b>${isSameVehicleReturn(j)?'↩️ Return Journey Payment':'💳 Cab/Ride Payment'}</b><span class="paymentPill ${paid?'paid':''}">${paid?'RECEIVED':'PENDING'}</span></div>${paid?`<div class="muted">Payment confirmed.</div><button class="btn wide" onclick="completeJob('${esc(j.id)}')">${isSameVehicleReturn(j)?'Complete Return Journey':'Complete Ride'}</button>`:`<div class="muted">Confirm after payment is actually received. Complete Ride will unlock afterward.</div><div class="payMethods"><button onclick="confirmPayment('${esc(j.id)}','Cash')">💵 Cash</button><button onclick="confirmPayment('${esc(j.id)}','UPI')">📲 UPI</button><button onclick="confirmPayment('${esc(j.id)}','Online / Other')">✅ Other</button></div>`}</div>`}
 function renderJob(j){
- currentJob=j||null;hostJobSig='';const host=el('jobs');if(!host)return;
- if(!j){host.className='empty';host.textContent=current?.available?'You are online. Nearby requests will appear here.':'You are offline. Go online to receive nearby requests.';return}
+ currentJob=j||null;const host=el('jobs');if(!host)return;
+ if(!j){host.dataset.jobSignature='';hostJobSig='';if(map){try{map.remove()}catch(e){}map=null}host.className='empty';host.textContent=current?.available?'You are online. Nearby requests will appear here.':'You are offline. Go online to receive nearby requests.';return}
+ const signature=[j.id,j.kind,j.status,j.payment_status,j.assigned_partner_id,j.order_meta?.returnLegStatus||''].join('|');
+ if(host.dataset.jobSignature===signature&&host.querySelector('.job'))return;
+ host.dataset.jobSignature=signature;hostJobSig=signature;
  const assigned=!!(current&&String(j.assigned_partner_id)===String(current.id));const delivery=j.kind==='delivery';
- host.className='';host.innerHTML='<div class="job"><div class="jobTitle">'+(delivery?'📦 Marketplace Delivery':'🚕 Ride Request')+'</div><div class="route">'+esc(j.pickup||'Pickup')+' → '+esc(j.dropoff||'Drop')+'</div><div class="chips"><span class="chip">'+esc(j.status||'Active')+'</span></div>'+(delivery?'<div class="chips" style="display:flex;flex-wrap:wrap;gap:8px;margin:12px 0"><span class="chip">Route: '+(Number(j.order_meta?.deliveryRouteKm||j.distance_km)>0?Number(j.order_meta?.deliveryRouteKm||j.distance_km).toFixed(2)+' km':'Unavailable')+'</span><span class="chip">Your earnings: ₹'+Number(j.partner_earning||j.order_meta?.vaahakDeliveryEarning||0).toFixed(2)+'</span><span class="chip">Collect from customer: ₹'+Number(j.order_meta?.collectAmount??j.fare??0).toFixed(2)+'</span></div>':'')+'<div class="row" id="safeJobActions"></div></div>';
+ host.className='';host.innerHTML='<div class="job"><div class="jobTitle">'+(delivery?'📦 Marketplace Delivery':'🚕 Ride Request')+'</div><div class="route">'+esc(j.pickup||'Pickup')+' → '+esc(j.dropoff||'Drop')+'</div><div class="chips"><span class="chip">'+esc(j.status||'Active')+'</span></div>'+(delivery?'<div class="chips" style="display:flex;flex-wrap:wrap;gap:8px;margin:12px 0"><span class="chip">Route: '+(Number(j.order_meta?.deliveryRouteKm||j.distance_km)>0?Number(j.order_meta?.deliveryRouteKm||j.distance_km).toFixed(2)+' km':'Unavailable')+'</span><span class="chip">Your earnings: ₹'+Number(j.partner_earning||j.order_meta?.vaahakDeliveryEarning||0).toFixed(2)+'</span><span class="chip">Collect from customer: ₹'+Number(j.order_meta?.collectAmount??j.fare??0).toFixed(2)+'</span></div>':'')+'<div id="rideMap" class="rideMap" role="region" aria-label="Pickup and destination map"></div><div id="rideMapFallback" class="muted" style="display:none;margin-top:8px;font-size:12px">Map preview unavailable. Use navigation to open your location in Google Maps.</div><div class="row" id="safeJobActions" style="margin-top:12px"></div>'+(assigned&&!delivery?paymentHtml(j):'')+'</div>';
  const a=el('safeJobActions');if(!a)return;
  if(j.status==='Open'&&String(j.offered_partner_id||'')===String(current?.id||'')){const yes=document.createElement('button');yes.className='btn wide';yes.type='button';yes.textContent=delivery?'Accept Delivery':'Accept Ride';yes.onclick=()=>jobAction(j.id,'accept');a.appendChild(yes);const no=document.createElement('button');no.className='btn secondary wide';no.type='button';no.textContent='Skip';no.onclick=()=>jobAction(j.id,'reject');a.appendChild(no)}
  else if(assigned&&j.status==='Accepted'&&delivery){const b=document.createElement('button');b.className='btn wide';b.type='button';b.textContent='Check Vendor Handover';b.onclick=()=>checkVendorHandover(j.id);a.appendChild(b)}
  else if(assigned&&j.status==='Accepted'){const b=document.createElement('button');b.className='btn wide';b.type='button';b.textContent='Enter Ride PIN';b.onclick=()=>openRidePin(j.id);a.appendChild(b)}
+ if(assigned&&['Accepted','Trip Started'].includes(j.status)){
+  const destination=j.status==='Trip Started',lat=destination?j.drop_lat:j.pickup_lat,lng=destination?j.drop_lng:j.pickup_lng;
+  if(Number.isFinite(Number(lat))&&Number.isFinite(Number(lng))){
+   const link=document.createElement('a');link.className='btn soft wide';link.style.cssText='text-decoration:none;text-align:center;display:inline-block';link.target='_blank';link.rel='noopener noreferrer';link.href=mapLink(Number(lat),Number(lng));link.textContent=destination?'🧭 Navigate to Destination':'🧭 Navigate to Pickup';a.appendChild(link)
+  }
+ }
+ if(assigned&&!delivery&&j.status==='Trip Started'&&!isPaid(j)){
+  const hint=el('rideMapFallback');if(hint)hint.setAttribute('data-payment-required','true');
+ }
+ setTimeout(()=>renderMap(j),100)
 }
-function renderMap(j){const x=el('rideMap');if(x)x.style.display='none'}
+async function ensureVaahakLeaflet(){
+ if(window.L?.map)return window.L;
+ if(window._dbestVaahakLeafletLoad)return window._dbestVaahakLeafletLoad;
+ window._dbestVaahakLeafletLoad=new Promise(resolve=>{
+  const lib=document.createElement('script');
+  lib.src='https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js';
+  lib.onload=()=>resolve(window.L?.map?window.L:null);
+  lib.onerror=()=>resolve(null);
+  setTimeout(()=>resolve(window.L?.map?window.L:null),4500);
+  document.head.appendChild(lib)
+ });
+ return window._dbestVaahakLeafletLoad
+}
+async function renderMap(j){
+ const host=el('rideMap');if(!host)return;
+ const pts=[];
+ if(Number.isFinite(Number(j.pickup_lat))&&Number.isFinite(Number(j.pickup_lng)))pts.push({label:'Pickup',lat:Number(j.pickup_lat),lng:Number(j.pickup_lng)});
+ if(Number.isFinite(Number(j.drop_lat))&&Number.isFinite(Number(j.drop_lng)))pts.push({label:'Destination',lat:Number(j.drop_lat),lng:Number(j.drop_lng)});
+ if(!pts.length){host.style.display='none';el('rideMapFallback').style.display='block';return}
+ const L=await ensureVaahakLeaflet();
+ if(!host.isConnected||!currentJob||String(j.id)!==String(currentJob.id))return;
+ if(!L){host.style.display='none';el('rideMapFallback').style.display='block';return}
+ try{
+  if(map){try{map.remove()}catch(e){}map=null}
+  host.style.display='block';el('rideMapFallback').style.display='none';
+  map=L.map(host,{zoomControl:true,scrollWheelZoom:false,attributionControl:true});
+  const tile=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'});
+  tile.on('tileerror',()=>{if(map&&!map._dbestAltTiles){map._dbestAltTiles=true;L.tileLayer('https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© CARTO, © OpenStreetMap'}).addTo(map)}});
+  tile.addTo(map);
+  const bounds=[];
+  for(const p of pts){const pos=[p.lat,p.lng];L.marker(pos).addTo(map).bindPopup(p.label);bounds.push(pos)}
+  if(bounds.length===2)L.polyline(bounds,{color:'#2563eb',weight:4,opacity:0.8,dashArray:'8 5'}).addTo(map);
+  const meLat=Number(current?.current_lat),meLng=Number(current?.current_lng);
+  if(Number.isFinite(meLat)&&Number.isFinite(meLng)&&meLat>0&&meLng>0){const pos=[meLat,meLng];L.circleMarker(pos,{radius:7,weight:2,color:'#047857',fillColor:'#10b981',fillOpacity:0.85}).addTo(map).bindPopup('Your last GPS location');bounds.push(pos)}
+  if(bounds.length>1)map.fitBounds(bounds,{padding:[20,20],maxZoom:16});else map.setView(bounds[0],15);
+  setTimeout(()=>{try{if(map&&host.isConnected)map.invalidateSize()}catch(e){}},230)
+ }catch(e){console.warn('Vaahak map failed',e);host.style.display='none';el('rideMapFallback').style.display='block'}
+}
 function gpsIndicator(message,healthy=false,detail=''){const e=el('gpsChip');if(!e)return;e.textContent=message;e.classList.toggle('live',healthy);e.title=detail||'Tap to retry location sync';e.setAttribute('aria-label',e.title)}
 async function refreshDispatchLocation(force=false){
  if(!token()||!current?.available||current?.owner_approval!=='Approved')return false;
@@ -173,7 +225,18 @@ async function checkVendorHandover(id){const a=el('safeJobActions');if(!a)return
 async function startDelivery(id){if(busy)return;busy=true;try{await comCall('start_delivery',{jobId:id},true);note('Delivery started.');loadStatus(true)}catch(x){note('Delivery could not start: '+x.message,false)}finally{busy=false}}
 async function confirmMarketplaceDelivery(id){if(busy)return;const j=currentJob;if(!j||String(j.id)!==String(id)||!isMarketplaceDelivery(j))return;busy=true;try{const st=await handCall('vaahak_status',{jobId:id},true);const paid=['Received','Prepaid','Paid','Razorpay Verified'].includes(String(st?.paymentStatus||j.payment_status||''));if(!paid){note('Customer Razorpay payment is still pending.',false);return}if(!st?.customerConfirmed){note('Payment verified. Ask the customer to tap Confirm Delivery / Receipt on their screen.',false);return}await comCall('complete_delivery',{jobId:id},true);note('Delivery completed successfully.');stopGps();await loadStatus(true)}catch(x){const m=String(x.message||'');note(m==='customer_delivery_confirmation_required'?'Ask the customer to confirm receipt first.':m==='razorpay_payment_verification_required'?'Customer Razorpay payment is still pending.':'Could not complete delivery: '+m,false)}finally{busy=false}}
 async function startReturnJourney(id){if(busy)return;const j=currentJob;if(!j||String(j.id)!==String(id)||!isSameVehicleReturn(j))return;busy=true;try{await call('start_return',{jobId:id},true);note('Return journey started with the same vehicle.');await loadStatus(true)}catch(x){note('Could not start return journey: '+x.message,false)}finally{busy=false}}
-async function confirmPayment(id,method){if(isMarketplaceDelivery(currentJob))return note('Marketplace payment is completed by the Customer through Razorpay. Please wait for verified payment status.',false);if(busy)return;busy=true;try{await call('confirm_payment',{jobId:id,method},true);note(method+' received. Completing ride…');const done=await call('complete',{jobId:id},true);note('Ride completed successfully.');stopGps();currentJob=done?.job||null;await loadStatus(true)}catch(x){note('Payment / completion failed: '+x.message,false);setTimeout(()=>loadStatus(true),500)}finally{busy=false}}
+async function confirmPayment(id,method){
+ if(isMarketplaceDelivery(currentJob))return note('Marketplace payment is completed by the Customer through Razorpay. Please wait for verified payment status.',false);
+ const j=currentJob;if(!j||String(j.id)!==String(id)||j.status!=='Trip Started')return note('Ride is not ready for payment.',false);
+ if(isPaid(j))return note('Payment already confirmed.');
+ if(busy)return;
+ const amount=Number(j.order_meta?.customerPayable??j.fare??0);
+ if(!confirm('Confirm that ₹'+amount.toFixed(2)+' was actually received by '+method+' for this ride? This will record payment in DBest.'))return;
+ busy=true;
+ try{await call('confirm_payment',{jobId:id,method},true);note(method+' payment recorded. Tap Complete Ride when ready.');await loadStatus(true)}
+ catch(x){note('Payment confirmation failed: '+x.message,false);setTimeout(()=>loadStatus(true),500)}
+ finally{busy=false}
+}
 async function completeJob(id){if(busy)return;const j=currentJob;if(!j||String(j.id)!==String(id))return;if(!isPaid(j))return note(isMarketplaceDelivery(j)?'Waiting for Customer Razorpay payment verification.':'Confirm payment first.',false);busy=true;try{if(j.kind==='delivery')await comCall('complete_delivery',{jobId:id},true);else await call('complete',{jobId:id},true);note((j.kind==='delivery'?'Delivery':'Ride')+' completed.');stopGps();loadStatus(true)}catch(x){note('Could not complete job: '+x.message,false)}finally{busy=false}}
 async function jobAction(id,action){if(busy)return;busy=true;let refreshAfter=false;try{if(action==='accept'){const accepted=await dispatchCall('accept_offer',{jobId:id},true);if(accepted?.job)renderJob(accepted.job);refreshAfter=true}else{await dispatchCall('reject_offer',{jobId:id},true);refreshAfter=true}note(action==='accept'?(isCarpool(currentJob)?'Car Pool accepted.':currentJob?.kind==='delivery'?'Delivery accepted.':'Ride accepted.'):'Request skipped.')}catch(x){const m=String(x.message||'');note(m==='offer_expired'?'Offer expired. Checking next request…':m==='job_not_offered_to_this_vaahak'?'This request is no longer assigned to you.':m==='job_already_taken'?'Another Vaahak already accepted this request.':m==='ride_request_expired'?'This request has expired.':'Job update failed: '+m,false);refreshAfter=true}finally{busy=false;if(refreshAfter)setTimeout(()=>loadStatus(true),100)}}
 async function cancelJob(id){if(!confirm('Cancel this job?'))return;try{const r=await fetch(CANCEL,{method:'POST',headers:headers(true),body:JSON.stringify({action:'vaahak_cancel',jobId:id,reason:''})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'Unable to cancel');note('Job cancelled.');loadStatus(true)}catch(x){note('Unable to cancel: '+x.message,false)}}
