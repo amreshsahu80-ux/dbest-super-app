@@ -319,7 +319,7 @@ async function searchLocations(term){
  // Restore the proven 5 October order: India-restricted Google Places FIRST,
  // geographically biased toward pickup. This must not be preceded by the
  // unfiltered global Photon backend, which returned Germany for Etwari Bazar.
- await initSearchProvider();
+ await Promise.race([initSearchProvider(),new Promise(resolve=>setTimeout(resolve,2400))]);
  if(S.provider==='google'&&window.google?.maps?.places){
   try{
    const origin=pickup&&window.google.maps.LatLng?new google.maps.LatLng(+pickup.lat,+pickup.lng):null;
@@ -333,13 +333,13 @@ async function searchLocations(term){
       return aDist-bDist
      }).slice(0,8))
     })
-   }),new Promise(resolve=>setTimeout(()=>resolve([]),3500))]);
+   }),new Promise(resolve=>setTimeout(()=>resolve([]),2800))]);
    if(predictions.length)return predictions
   }catch(e){console.warn('Cab Google autocomplete fallback',e)}
  }
  const base=String(cfg().supabaseUrl||'').replace(/\/$/,''),key=String(cfg().supabasePublishableKey||cfg().supabaseAnonKey||'');
  if(base){
-  const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),6500);
+  const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),4200);
   try{
    const r=await fetch(base+'/functions/v1/location-search-live',{
     method:'POST',headers:{'content-type':'application/json',apikey:key},
@@ -358,7 +358,7 @@ async function searchLocations(term){
   finally{clearTimeout(timeout)}
  }
  try{
-  const ctl=new AbortController(),timeout=setTimeout(()=>ctl.abort(),4500);
+  const ctl=new AbortController(),timeout=setTimeout(()=>ctl.abort(),3000);
   const r=await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=in&limit=12&q='+encodeURIComponent(term),{headers:{Accept:'application/json'},signal:ctl.signal});
   clearTimeout(timeout);
   const j=await r.json();
@@ -410,6 +410,11 @@ function bindSearch(i,b,k){
   clearTimeout(timer);S[k]=null;
   const term=inp.value.trim(),n=++seq;
   if(term.length<2){box.classList.remove('show');box.innerHTML='';return}
+  if(k==='d'){
+   box.innerHTML='<div role="status" style="padding:10px 12px;color:#536175;font-size:12px">Finding destinations near your pickup…</div><button type="button" data-map-pin="1" style="font-weight:850;color:#1749bf;background:#f0f5ff">📍 Destination not listed? Pin it on the map</button>';
+   box.classList.add('show');
+   box.querySelector('[data-map-pin]').onclick=()=>openCabMapPinPicker(k,term)
+  }
   timer=setTimeout(async()=>{
    const rows=await searchLocations(term);if(n!==seq)return;
    const buttons=rows.map((x,j)=>'<button type="button" data-i="'+j+'"><b>'+esc(String(x.label||'Location').split(',')[0])+'</b><small>'+esc(String(x.label||'').split(',').slice(1,3).join(','))+'</small></button>').join('');
