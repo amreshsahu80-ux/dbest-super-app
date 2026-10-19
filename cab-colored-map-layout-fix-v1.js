@@ -21,18 +21,8 @@ function css(){
   document.head.appendChild(s);
 }
 function patchLeaflet(){
-  const L=window.L;
-  if(!L||L.__dbestColorTilesPatched||typeof L.tileLayer!=='function')return;
-  const original=L.tileLayer;
-  L.tileLayer=function(url,opts){
-    let nextUrl=url,nextOpts=Object.assign({},opts||{});
-    if(typeof url==='string'&&(/tile\.openstreetmap\.org/i.test(url)||/basemaps\.cartocdn\.com/i.test(url))){
-      nextUrl='https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
-      nextOpts=Object.assign({},nextOpts,{subdomains:'abcd',maxZoom:20,attribution:'© OpenStreetMap © CARTO'});
-    }
-    return original.call(this,nextUrl,nextOpts);
-  };
-  L.__dbestColorTilesPatched=true;
+  // Use actual tile URLs chosen by the Cab renderer. Rewriting both primary
+  // and fallback hosts to one provider previously defeated tile failover.
 }
 function watchLeafletScript(){
   document.addEventListener('load',e=>{
