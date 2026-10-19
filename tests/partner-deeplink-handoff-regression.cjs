@@ -149,6 +149,6 @@ test('User handoff source does not amend affiliate URL or use popup blockers',()
  assert(!original.includes("u.searchParams.set('dbest_user_id'"));
  assert(!original.includes("u.searchParams.set('dbest_tx_id'"));
  assert(original.includes('window.location.assign(url)'));
- assert(original.includes('source:\\'Partner Deeplink\\''));
+ assert(original.includes("source:'Partner Deeplink'"));
  console.log('PASS: All Insurance, Flights, Hotels/Packages and NJ Wealth secure handoff contracts.');
 });
