@@ -1,0 +1,40 @@
+name: DBest Partner Onboarding Golden Flow Gate
+on:
+  push:
+    branches:
+      - fix/partner-onboarding-leader-expiry-20261020
+  pull_request:
+    branches:
+      - release/cab-golden-frozen-20261020
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  safe-leader-onboarding:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Checkout exact golden source plus partner-only candidate
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Enforce no Cab Marketplace partner-deeplink membership or backend changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          base=f7305e05d2bedc50760062316dc98ebb7dbe7c31
+          git merge-base --is-ancestor "$base" HEAD
+          while IFS= read -r path; do
+            [ -n "$path" ] || continue
+            case "$path" in
+              leader-partner-onboarding-v1.js|tests/leader-onboarding-expiry-contract.cjs|.github/workflows/dbest-partner-onboarding-golden-gate.yml)
+              echo "Partner-onboarding-only change: $path" ;;
+              *) echo "::error::Frozen flow modification blocked: $path"; exit 1 ;;
+            esac
+          done < <(git diff --name-only "$base" HEAD)
+      - name: Verify Leader invitation UI syntax and expiration accounting
+        run: |
+          node --check leader-partner-onboarding-v1.js
+          node --check tests/leader-onboarding-expiry-contract.cjs
+          node --test tests/leader-onboarding-expiry-contract.cjs
