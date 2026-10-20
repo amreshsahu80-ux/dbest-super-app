@@ -2,7 +2,7 @@
 'use strict';
 const VERSION='2.5.0-verified-partner-handoffs';
 const PARTNER_IDS=new Set(['insurance','flights','travel','mf']);
-let lastLaunch='',lastLaunchAt=0;
+let lastLaunch='',lastLaunchAt=0,ownerLinkCheckPending=false;
 const esc2=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const keyFor=(id,i)=>Number.isInteger(i)?`${id}::${i}`:String(id||'');
 function linkFor(id,i){
@@ -69,6 +69,21 @@ window.dbestUniversalExternalGo=function(id,i){
    return;
   }
   const s=sectionById(id);if(!s)return typeof toast==='function'&&toast('Section not found');
+  // Never use a stale locally cached partner URL until central Owner config
+  // has been attempted for this fresh session, even on the main section card.
+  if(PARTNER_IDS.has(String(id))&&!window.DBEST_PUBLIC_LINKS&&typeof window.DBEST_OWNER_CONTROL_LIVE?.refreshPublic==='function'){
+   if(ownerLinkCheckPending)return;
+   ownerLinkCheckPending=true;
+   try{
+    const check=window.DBEST_OWNER_CONTROL_LIVE.refreshPublic();
+    Promise.race([Promise.resolve(check).catch(()=>null),new Promise(resolve=>setTimeout(resolve,1600))]).then(()=>{
+     ownerLinkCheckPending=false;
+     if(!window.DBEST_PUBLIC_LINKS){if(typeof toast==='function')toast('Unable to verify approved partner destination. Please try again shortly.');return}
+     window.dbestUniversalExternalGo?.(id,i);
+    });
+   }catch(e){ownerLinkCheckPending=false;if(typeof toast==='function')toast('Unable to verify approved partner destination. Please try again shortly.')}
+   return;
+  }
   const idx=Number.isInteger(i)?i:null,l=linkFor(id,idx);
   if(!l?.url||l.enabled===false)return typeof toast==='function'&&toast('Partner deeplink is not configured or is disabled');
   let dest;
