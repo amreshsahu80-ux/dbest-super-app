@@ -5,7 +5,7 @@ const compiled=transformSync(source,{loader:'ts',format:'cjs',target:'es2022'}).
 function context(overrides={}){
  const memberId='QA-MEMBER',transactionId='TX-HOME-QA-01',label='Electrician';
  const data={
-  member_sessions_live:[{member_id:memberId,token_hash:'not-used',expires_at:'2099-01-01'}],
+  member_sessions_live:[{member_id:memberId,token_hash:require('node:crypto').createHash('sha256').update('synthetic-token').digest('hex'),expires_at:'2099-01-01'}],
   onboarding_records:[{kind:'member',external_id:memberId,name:'QA Customer',email:'qa@example.test',mobile:'0000000000',status:'Active',deleted_at:null}],
   hyperlocal_jobs_live:overrides.job?[{transaction_id:transactionId,member_id:memberId,service_type:'electrician',status:'Completed',assigned_partner_member_id:'QA-PARTNER',...overrides.job}]:[],
   service_requests_live:overrides.noProof?[]:[{transaction_id:transactionId,member_id:memberId,section:'Home Jobs & Local Services',subsection:label}],
