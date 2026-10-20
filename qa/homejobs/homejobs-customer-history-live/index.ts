@@ -5,7 +5,17 @@ const reply=(v:unknown,status=200)=>new Response(JSON.stringify(v),{status,heade
 const clean=(v:unknown,max=150)=>String(v??"").trim().slice(0,max);
 async function sha(value:string){const d=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(value));return [...new Uint8Array(d)].map(c=>c.toString(16).padStart(2,"0")).join("")}
 const labels=new Set(["Maid / House Help","Electrician","Plumber","Refrigerator Mechanic","AC Mechanic"]);
-const paymentEvidence=(amount:number,status:string)=>amount>0&&Number.isFinite(amount)&&/^(Verified|Payment Verified|Paid|Settled|Captured|Razorpay Verified|PayU Verified)$/i.test(status.trim());
+const paymentEvidence=(amount:number,status:string,mode:string,metadata:unknown)=>{
+ // Payment status alone is NOT trustworthy. Exclude QA/demo/sandbox transactions,
+ // and require a gateway-specific, server-verified reference to show a receipt.
+ const m=(metadata&&typeof metadata==="object"&&!Array.isArray(metadata))?metadata as Record<string,unknown>:{};
+ if(!Number.isFinite(amount)||amount<=0||!/^(Verified|Payment Verified|Paid|Settled|Captured|Razorpay Verified|PayU Verified)$/i.test(status.trim()))return false;
+ if(m.qa===true||m.sandbox_only===true||m.is_test===true||m.demo===true||/test|sandbox|demo|qa/i.test(mode+" "+status))return false;
+ const ref=(v:unknown)=>String(v??"").trim();
+ if(/razorpay/i.test(mode))return (m.razorpay_signature_verified===true||m.razorpay_verified===true)&&!!ref(m.razorpay_payment_id);
+ if(/payu/i.test(mode))return m.payu_verified===true&&!!ref(m.payu_mihpayid);
+ return false;
+};
 Deno.serve(async(req:Request)=>{
  if(req.method==="OPTIONS")return new Response("ok",{headers});
  if(req.method!=="POST")return reply({error:"method_not_allowed"},405);
@@ -31,7 +41,7 @@ Deno.serve(async(req:Request)=>{
      .eq("member_id",memberId).order("created_at",{ascending:false}).limit(150),
    sb.from("service_requests_live").select("transaction_id,subsection,status,created_at,updated_at")
      .eq("member_id",memberId).eq("section","Home Jobs & Local Services").order("created_at",{ascending:false}).limit(150),
-   sb.from("transactions").select("transaction_id,subsection,amount,payment_mode,payment_status,reference,transaction_date,updated_at")
+   sb.from("transactions").select("transaction_id,subsection,amount,payment_mode,payment_status,reference,metadata,transaction_date,updated_at")
      .eq("actor_ref",memberId).eq("section","Home Jobs & Local Services").order("transaction_date",{ascending:false}).limit(150)
   ]);
   if(jr.error||rr.error||tr.error)throw jr.error||rr.error||tr.error;
@@ -46,7 +56,7 @@ Deno.serve(async(req:Request)=>{
    if(!j&&!matched)return null; // never show a Service Partner registration or unrelated transaction here
    const title=matched||({"maid":"Maid / House Help","electrician":"Electrician","plumber":"Plumber","refrigerator":"Refrigerator Mechanic","ac":"AC Mechanic"} as Record<string,string>)[clean(j?.service_type,50)]||"Home Service";
    const status=clean(j?.status||r?.status||"Request Submitted",55),amount=Number(t?.amount||0);
-   const verified=!!t&&paymentEvidence(amount,clean(t.payment_status,80));
+   const verified=!!t&&paymentEvidence(amount,clean(t.payment_status,80),clean(t.payment_mode,80),t.metadata);
    const receivedAt=j?.created_at||r?.created_at||t?.transaction_date||null;
    return {transactionId:id,service:title,status,createdAt:receivedAt,updatedAt:j?.updated_at||r?.updated_at||t?.updated_at||receivedAt,
     preferredDate:j?.preferred_date||null,preferredSlot:clean(j?.preferred_slot,100),assigned:!!j?.assigned_partner_member_id,
