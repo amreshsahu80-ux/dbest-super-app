@@ -1,0 +1,81 @@
+{
+  "freeze_id": "DBEST-PARTNER-HANDOFF-LIVE-GOLDEN-20261020",
+  "frozen_at_date": "2026-10-20",
+  "purpose": "Preserve live working partner referral handoffs without altering frozen Cab and Marketplace. Baseline evidence is configuration, live source and transaction ledger; do not claim fully authenticated partner-site E2E testing.",
+  "production_site": "https://dbest4u.com",
+  "production_vercel_deployment_id": "dpl_BH4La8R6fTTXKUPWVPJJKjyUtWkk",
+  "production_frontend_git_commit": "f7305e05d2bedc50760062316dc98ebb7dbe7c31",
+  "release_baseline_branch": "release/partner-handoff-live-frozen-20261020",
+  "live_handoff_script_version": "2.4.0-new-user-external-access",
+  "protected_source_git_blob_sha1": {
+    "owner-deeplink-all-sections.js": "5b8b57ac7e8003d38ba72fca7928970ac7d6cc3e",
+    "external-service-subtype-preserver-v1.js": "83749fe78f8e98018ef53b3c27241e1a7e852cb7"
+  },
+  "owner_settings_source": {
+    "supabase_project": "ydedmotbacnllkijzmvp",
+    "table": "public.app_settings",
+    "key": "owner_console_settings",
+    "links_path": "links",
+    "verified_updated_at": "2026-10-19T21:12:37.712231Z"
+  },
+  "approved_live_owner_link_snapshot": {
+    "insurance": {
+      "partner": "InsuranceDekho",
+      "url": "https://www.insurancedekho.com/?source=PARTNER&sub-source=BESTSERVICES_B2C",
+      "enabled": true
+    },
+    "flights": {
+      "partner": "DBest Fly",
+      "url": "https://dbestfly.com",
+      "enabled": true
+    },
+    "travel": {
+      "partner": "DBest Fly",
+      "url": "https://dbestfly.com",
+      "enabled": true
+    },
+    "mf": {
+      "partner": "NJ Wealth",
+      "url": "https://p.njw.bz/13879",
+      "enabled": true
+    }
+  },
+  "frozen_behaviors": [
+    "Owner controls destination and enabled status; snapshot is evidence and must not override Owner-editable settings.",
+    "Verified external destination values and referral identifiers are preserved when handed off.",
+    "Authenticated member ID is required to attempt external partner handoff.",
+    "Handoff tracks DBest transaction ID with status Redirected / Pending, not payment/completion.",
+    "Partner external handoff must never modify Cab, Marketplace, payouts, partner hierarchy or other frozen services."
+  ],
+  "observable_evidence": {
+    "live_script_http_200": true,
+    "owner_links_all_enabled": true,
+    "ledger_status": "Redirected / Pending",
+    "example_live_transaction_sections": [
+      "All Insurance",
+      "Flights Hotels Packages",
+      "Mutual Funds"
+    ],
+    "transaction_evidence_from": "read-only aggregate query of public.transactions, October 1-20, 2026",
+    "full_authenticated_e2e_status": "NOT_VERIFIED_BY_AUTOMATION",
+    "partner_completion_reconciliation_status": "NOT_VERIFIED"
+  },
+  "candidate_upgrade_separate": {
+    "branch": "fix/partner-deeplink-handoffs-20261020",
+    "script_version": "2.5.0-verified-partner-handoffs",
+    "status": "PREVIEW_ONLY_NOT_IN_THIS_LIVE_FREEZE",
+    "review": "https://github.com/amreshsahu80-ux/dbest-super-app/pull/53"
+  },
+  "release_policy": {
+    "protected_frozen_scopes": [
+      "Cab",
+      "Marketplace",
+      "Insurance partner handoff",
+      "Flights/Hotels partner handoff",
+      "Mutual Fund partner handoff"
+    ],
+    "baseline_source_may_change_only_after": "Separate reviewed candidate with contract tests, owner destination validation, production-matching staging, rollback baseline, and explicit promotion",
+    "never_infer_payout_or_commission_completion_from_partner_redirect": true,
+    "production_must_remain_untouched_by_freeze": true
+  }
+}
