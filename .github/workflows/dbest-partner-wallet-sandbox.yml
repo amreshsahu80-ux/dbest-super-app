@@ -1,0 +1,67 @@
+name: Partner Onboarding Wallet Sandbox (No Live Writes)
+on:
+  push:
+    branches:
+      - qa/partner-onboarding-wallet-sandbox-20261020
+  pull_request:
+    branches:
+      - release/member-referral-reliable-mount-live-20261020
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  partner-activation-wallet:
+    name: Isolated PostgreSQL verified activation and no bank payout
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: dbest_sandbox_only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d dbest_sandbox_only"
+          --health-interval 5s --health-timeout 5s --health-retries 15
+    env:
+      PGPASSWORD: postgres
+      PGHOST: 127.0.0.1
+      PGPORT: '5432'
+      PGUSER: postgres
+      PGDATABASE: dbest_sandbox_only
+    steps:
+      - name: Checkout exact approved golden production baseline
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Reject any changes to frozen app, partner registration or payout sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE=c99ddceb8f8dedf72575636d451a34bd6945939d
+          git merge-base --is-ancestor "$BASE" HEAD
+          while IFS= read -r p; do
+            [ -n "$p" ] || continue
+            case "$p" in
+              tests/partner-onboarding-sandbox/live-functions.sql|tests/partner-onboarding-sandbox/three-partner-wallet-integration.sql|.github/workflows/dbest-partner-wallet-sandbox.yml)
+                echo "Allowed sandbox-only file: $p";;
+              *) echo "::error::FROZEN live production file changed: $p";exit 1;;
+            esac
+          done < <(git diff --name-only "$BASE" HEAD)
+      - name: Verify Postgres is isolated from live Supabase
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${PGHOST}" = "127.0.0.1"
+          test "${PGDATABASE}" = "dbest_sandbox_only"
+          psql -tAc 'select current_database()' | grep -Fx dbest_sandbox_only
+      - name: Exercise real SQL triggers and wallet credit without real account or payout
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 -f tests/partner-onboarding-sandbox/three-partner-wallet-integration.sql
+          echo "SANDBOX PASS: all money events simulated in ephemeral Docker Postgres only"
