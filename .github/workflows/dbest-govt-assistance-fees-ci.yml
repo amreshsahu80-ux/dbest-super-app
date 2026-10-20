@@ -25,12 +25,12 @@ jobs:
           while IFS= read -r f; do
             [ -n "$f" ] || continue
             case "$f" in
-              index.html|service-variable-pricing-v1.js|govt-assistance-fees-v1.js|tests/govt-assistance-fees-contract.cjs|tests/govt-fees-live-shell-mobile.cjs|.github/workflows/dbest-govt-assistance-fees-ci.yml)
+              index.html|service-variable-pricing-v1.js|govt-assistance-fees-v1.js|govt-payu-test-only-v1.js|payment-policy-router-v1.js|api/payu/create-payment.js|api/payu/return.js|tests/govt-assistance-fees-contract.cjs|tests/govt-fees-live-shell-mobile.cjs|tests/govt-payu-test-only-contract.cjs|.github/workflows/dbest-govt-assistance-fees-ci.yml)
               echo "Government fees only: $f";;
               *) echo "::error::Frozen source touched: $f";exit 1;;
             esac
           done < <(git diff --name-only "$GOLDEN" HEAD)
-          if git diff "$GOLDEN" HEAD -- index.html | grep '^+' | grep -v '^+++' | grep -v "govt-assistance-fees-v1.js"; then
+          if git diff "$GOLDEN" HEAD -- index.html | grep '^+' | grep -v '^+++' | grep -Ev "govt-(assistance-fees|payu-test-only)-v1.js"; then
             echo "::error::Unexpected shell changes"; exit 1
           fi
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020f4
@@ -40,7 +40,11 @@ jobs:
         run: |
           node --check govt-assistance-fees-v1.js
           node --check service-variable-pricing-v1.js
-          node --test tests/govt-assistance-fees-contract.cjs
+          node --check govt-payu-test-only-v1.js
+          node --check payment-policy-router-v1.js
+          node --check api/payu/create-payment.js
+          node --check api/payu/return.js
+          node --test tests/govt-assistance-fees-contract.cjs tests/govt-payu-test-only-contract.cjs
       - name: Install isolated Chromium automation driver (no deploy)
         run: npm install --no-save --ignore-scripts --package-lock=false playwright-core@1.56.1
       - name: Mobile live-shell fixture with backend writes blocked
