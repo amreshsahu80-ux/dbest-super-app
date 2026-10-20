@@ -39,7 +39,22 @@ const failures=[];
     assert.equal(root.status(),200,'live homepage should render');
     await page.waitForFunction(()=>typeof window.memberDash==='function',{timeout:40000});
     await page.evaluate(id=>{window.memberDash(id)},MEMBER);
-    await page.waitForSelector('#dbestCreateReferralLink',{timeout:20000});
+    await page.waitForTimeout(2500);
+    const diag=await page.evaluate(()=>({
+      title:document.title,route:location.pathname,
+      memberDash:typeof window.memberDash,
+      shareLoaded:!!window.DBEST_MEMBER_REFERRAL_SHARE,
+      version:window.DBEST_MEMBER_REFERRAL_SHARE?.version,
+      session:window.DBEST_SESSION_COMPAT?.read?.()||window.session||null,
+      sectionCount:document.querySelectorAll('.sectionContent.classicDash').length,
+      hasMemberMiniHead:!!document.querySelector('.sectionContent.classicDash .memberMiniHead'),
+      dashboardText:(document.querySelector('.sectionContent.classicDash')?.innerText||'').slice(0,650),
+      refButton:!!document.getElementById('dbestCreateReferralLink'),
+      sessionTokenPresent:!!(localStorage.getItem('dbest_member_live_token')),
+      injectedUserCount:JSON.parse(localStorage.getItem('d2_users')||'[]').length
+    }));
+    console.log('QA DIAGNOSTICS:',JSON.stringify(diag));
+    await page.waitForSelector('#dbestCreateReferralLink',{timeout:12000});
     assert.equal(await page.locator('#dbestCreateReferralLink').count(),1);
     await page.locator('#dbestCreateReferralLink').click();
     const link=await page.locator('#dbestReferralSharePanel input[readonly]').inputValue();
