@@ -120,8 +120,8 @@ function injectNow(id,i){
     const root=roots.filter(el=>{try{const s=getComputedStyle(el),r=el.getBoundingClientRect();return s.display!=='none'&&s.visibility!=='hidden'&&(r.width||r.height)}catch(e){return false}}).pop()||roots.pop();
     if(!root)return false;
     const expected=String(sectionById(id)?.[1]||'').trim().toLowerCase();
-    const hero=String(root.querySelector('.sectionHero b')?.textContent||'').trim().toLowerCase();
-    if(!expected||!hero||hero!==expected)return false;
+    const heroText=String(root.querySelector('.sectionHero b')?.textContent||'').trim().toLowerCase();
+    if(!expected||!heroText||heroText!==expected)return false;
     const existing=root.querySelector('[data-dbest-universal-deeplink]');
     if(existing){
       // Core UI can render an empty placeholder before central links finish loading.
