@@ -1,0 +1,74 @@
+{
+  "audit_date": "2026-10-20",
+  "name": "DBest membership/referral/KYC/payout readiness",
+  "source": "Read-only queries on linked Supabase project and deployed Edge Function v8/v10/v13; no payout or member data modified",
+  "live_release_sha": "f7305e05d2bedc50760062316dc98ebb7dbe7c31",
+  "proven_workflows": {
+    "paid_registration_and_activation": "Owner-confirmed working; preserve, no repeated test needed",
+    "cab_marketplace_insurance_travel_mutual_funds": "Previously frozen; no files/functions changed"
+  },
+  "member_population": {
+    "active": 29,
+    "active_paid_tiers": 27,
+    "active_starter": 2
+  },
+  "referral_hierarchy": {
+    "active_with_referral_code": 24,
+    "active_with_upline": 7,
+    "orphan_uplines": 0,
+    "self_referrals": 0,
+    "duplicate_nonblank_referral_codes": 0,
+    "observed_depths": {
+      "1": 7,
+      "2": 2,
+      "3": 1
+    },
+    "live_edge_function_version": 10
+  },
+  "wallet": {
+    "accounts": 9,
+    "available": 2901.47,
+    "held": 0,
+    "lifetime_earned": 2996.87,
+    "lifetime_reversed": 95.4,
+    "lifetime_paid": 0,
+    "credited_allocations": 2901.47,
+    "reversed_allocations": 95.4,
+    "ledger_duplicate_idempotency_keys": 0,
+    "negative_balances": 0,
+    "live_edge_function_version": 8
+  },
+  "payout_eligibility": {
+    "active_paid_members": 27,
+    "payout_enabled_flag_count": 2,
+    "verified_bank_account_count": 1,
+    "eligible_active_paid_with_verified_bank": 1,
+    "eligible_with_positive_wallet_balance": 1,
+    "other_members_requires_individual_kyc_bank_review": true,
+    "automatic_payout_release_authorized": false
+  },
+  "permissions": {
+    "functions": [
+      "dbest_member_request_payout",
+      "dbest_member_wallet_summary",
+      "dbest_owner_update_member_payout"
+    ],
+    "anon_execute": false,
+    "authenticated_execute": false,
+    "service_role_execute": true
+  },
+  "actual_money_payouts": {
+    "paid_requests": 0,
+    "historical_intentional_failed_test_excluded": true,
+    "bank_settlement_proven": false
+  },
+  "release_status": "PREVIEW ONLY — production unchanged; don't classify real bank payout E2E as proved",
+  "reconciliation_rule": "lifetime_earned - lifetime_reversed = available + held + lifetime_paid = credited allocations",
+  "safety_gates": [
+    "Keep verified onboarding and auto-activation unchanged",
+    "Keep Starter payouts disabled",
+    "Don't credit unverified partner redirects as completed",
+    "Require Owner action and verified payout account for payout",
+    "No production edits to frozen Cab, Marketplace or partner handoffs"
+  ]
+}
