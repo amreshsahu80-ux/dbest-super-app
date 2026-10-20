@@ -1,0 +1,42 @@
+name: DBest Live Referral Browser Smoke — Synthetic Member Only
+on:
+  push:
+    branches:
+      - qa/member-referral-live-browser-smoke-20261020
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  live-referral-public-ui:
+    name: Verify live Referral Button and paid/Starter journey
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: No production or frozen module source changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE=24054adf688d1401ccd45fdeb97b00030c051c71
+          git merge-base --is-ancestor "$BASE" HEAD
+          while IFS= read -r p; do
+            [ -n "$p" ] || continue
+            case "$p" in
+              tests/member-referral-live-browser-smoke.cjs|.github/workflows/dbest-live-referral-browser-smoke.yml) echo "QA-only: $p";;
+              *) echo "::error::Unexpected source change $p";exit 1;;
+            esac
+          done < <(git diff --name-only "$BASE" HEAD)
+      - name: Use preinstalled Chrome and local Playwright driver
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHROME_BIN=$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)
+          test -n "$CHROME_BIN" || { echo "No Chrome executable installed"; exit 1; }
+          echo "CHROME_BIN=$CHROME_BIN" >> "$GITHUB_ENV"
+          npm install --ignore-scripts --no-save --package-lock=false playwright-core@1.57.0
+          node --check tests/member-referral-live-browser-smoke.cjs
+      - name: Live website browser proof (mock token and API; no real registration)
+        run: node tests/member-referral-live-browser-smoke.cjs
