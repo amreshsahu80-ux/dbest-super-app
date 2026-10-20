@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='20261020-authenticated-member-referral-share-v1';
+const VERSION='20261020-authenticated-member-referral-share-v2-mount-retry';
 if(window.DBEST_MEMBER_REFERRAL_SHARE?.version===VERSION)return;
 const config=window.DBEST_RUNTIME_CONFIG||{};
 const BASE=String(config.supabaseUrl||'').replace(/\/$/,'');
@@ -9,7 +9,7 @@ const TOKEN_KEY='dbest_member_live_token';
 const ELIGIBLE=new Set(['promoter','prime','leader']);
 const ID='dbestMemberReferralLink';
 const acceptedPayments=new Set(['approved','razorpay verified','payu verified','verified']);
-let checking=false,queued=false,lastAttempt=0,shownKey='';
+let checking=false,queued=false,lastAttempt=0,shownKey='',retryTimer=null;
 function token(){
  try{return String(window.DBEST_MEMBER_LIVE?.getToken?.()||localStorage.getItem(TOKEN_KEY)||'')}catch(_){return''}
 }
@@ -99,14 +99,22 @@ async function mount(){
  const key=s.id+'|'+t;
  if(el&&shownKey===key)return;
  if(el){el.remove();shownKey=''}
- if(checking||Date.now()-lastAttempt<1200)return;
+ if(checking){scheduleRetry(400);return}
+ const elapsed=Date.now()-lastAttempt;
+ if(elapsed<1200){scheduleRetry(1250-elapsed);return}
  checking=true;lastAttempt=Date.now();
  try{
    const member=await verify();
-   if(!member||!root.isConnected||dashboard()!==root||document.getElementById(ID))return;
+   if(!member)return;
+   if(!root.isConnected||dashboard()!==root){scheduleRetry(400);return}
+   if(document.getElementById(ID))return;
    shownKey=key;addButton(root,member,key);
  }catch(e){console.warn('DBest member referral link unavailable',e)}
  finally{checking=false}
+}
+function scheduleRetry(ms){
+ if(retryTimer!==null)return;
+ retryTimer=setTimeout(()=>{retryTimer=null;queue()},Math.max(120,ms||500));
 }
 function queue(){
  if(queued)return;queued=true;
