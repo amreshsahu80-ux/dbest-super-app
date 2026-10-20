@@ -24,7 +24,7 @@ jobs:
           git merge-base --is-ancestor "$GOLDEN" HEAD
           while IFS= read -r path; do
             case "$path" in
-              qa/homejobs/hyperlocal-job-execution-v9-baseline.ts|qa/homejobs/hyperlocal-job-execution-payment-status-v10.ts|qa/homejobs/payment-status-isolation.test.cjs|.github/workflows/homejobs-payment-status-isolation.yml)
+              qa/homejobs/hyperlocal-job-execution-v9-baseline.ts|qa/homejobs/hyperlocal-job-execution-payment-status-v10.ts|qa/homejobs/payment-status-isolation.test.cjs|.github/workflows/homejobs-payment-status-isolation.yml|.github/workflows/homejobs-payment-status-isolation-qa.yml)
               echo "Allowed isolated Home Jobs test file: $path";;
               *) echo "::error::Frozen live source modified $path"; exit 1;;
             esac
