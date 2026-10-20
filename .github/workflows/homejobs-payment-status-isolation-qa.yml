@@ -24,7 +24,7 @@ jobs:
           git merge-base --is-ancestor "$LIVE" HEAD
           while IFS= read -r file; do
             case "$file" in
-              qa/homejobs/hyperlocal-job-execution-v9-baseline.ts|qa/homejobs/hyperlocal-job-execution-payment-status-v10.ts|qa/homejobs/payment-status-isolation.test.cjs|.github/workflows/homejobs-payment-status-isolation-qa.yml)
+              qa/homejobs/hyperlocal-job-execution-v9-baseline.ts|qa/homejobs/hyperlocal-job-execution-payment-status-v10.ts|qa/homejobs/payment-status-isolation.test.cjs|.github/workflows/homejobs-payment-status-isolation.yml|.github/workflows/homejobs-payment-status-isolation-qa.yml)
                 echo "HomeJobs QA-only change: $file";;
               *) echo "::error::Frozen source modified: $file";exit 1;;
             esac
