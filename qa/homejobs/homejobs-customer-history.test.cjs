@@ -21,8 +21,8 @@ const rows={
  {transaction_id:'TX-OTHER-REQUEST',member_id:'OTHER-CUSTOMER',section:'Home Jobs & Local Services',subsection:'Electrician',status:'New'}
  ],
  transactions:[
- {transaction_id:'TX-COMPLETE-FREE',actor_ref:member,section:'Home Jobs & Local Services',subsection:'Electrician',amount:0,payment_status:'Verified',payment_mode:'None'},
- {transaction_id:'TX-VERIFIED-PAID',actor_ref:member,section:'Home Jobs & Local Services',subsection:'Plumber',amount:249,payment_status:'Verified',payment_mode:'PayU'},
+ {transaction_id:'TX-COMPLETE-FREE',actor_ref:member,section:'Home Jobs & Local Services',subsection:'Electrician',amount:0,payment_status:'Verified',payment_mode:'None',metadata:{qa:true}},
+ {transaction_id:'TX-VERIFIED-PAID',actor_ref:member,section:'Home Jobs & Local Services',subsection:'Plumber',amount:249,payment_status:'Verified',payment_mode:'PayU',metadata:{payu_verified:true,payu_mihpayid:'qa_unit_test_gateway_reference'}},
  {transaction_id:'TX-NO-ASSIGNMENT',actor_ref:member,section:'Home Jobs & Local Services',subsection:'AC Mechanic',amount:0,payment_status:'Payment Pending'},
  {transaction_id:'TX-UNPAID',actor_ref:member,section:'Home Jobs & Local Services',subsection:'Refrigerator Mechanic',amount:150,payment_status:'Pending'},
  {transaction_id:'TX-PARTNER-REG',actor_ref:member,section:'Home Jobs & Local Services',subsection:'Service Partner Registration',amount:0,payment_status:'Approved'},
@@ -30,7 +30,7 @@ const rows={
  ]
 };
 function build(options={}){
- const data={...rows,onboarding_records:options.inactive?[{kind:'member',external_id:member,status:'Suspended',deleted_at:null}]:rows.onboarding_records};let handler,readCalls=[];
+ const data={...rows,onboarding_records:options.inactive?[{kind:'member',external_id:member,status:'Suspended',deleted_at:null}]:rows.onboarding_records,transactions:rows.transactions.map(x=>x.transaction_id==='TX-VERIFIED-PAID'?{...x,metadata:options.qaTransaction?{qa:'legacy-test',purpose:'QA payment-gated wallet test'}:options.noProof?{}:x.metadata}:x)};let handler,readCalls=[];
  const db={from:(table)=>{
   const constraints=[],gt=[],nulls=[];
   const query={
@@ -67,6 +67,15 @@ test('completed free job is service summary, never falsely issued paid receipt',
 test('verified payment produces receipt and amount from server ledger',async()=>{
  const c=build(),r=await c.run(),x=r.body.history.find(x=>x.transactionId==='TX-VERIFIED-PAID');
  assert.equal(x.documentType,'payment_receipt');assert.equal(x.payment.amount,249);assert.equal(x.payment.verified,true);
+});
+test('legacy QA Verified-status transaction cannot generate a paid invoice',async()=>{
+ const c=build({qaTransaction:true}),r=await c.run(),x=r.body.history.find(x=>x.transactionId==='TX-VERIFIED-PAID');
+ assert.equal(x.payment.verified,false);
+ assert.equal(x.documentType,'service_summary');
+});
+test('unverified payment status alone never generates a receipt',async()=>{
+ const c=build({noProof:true}),r=await c.run(),x=r.body.history.find(x=>x.transactionId==='TX-VERIFIED-PAID');
+ assert.equal(x.payment.verified,false);
 });
 test('pending quote may be visible but cannot create receipt',async()=>{
  const c=build(),r=await c.run(),x=r.body.history.find(x=>x.transactionId==='TX-UNPAID');
