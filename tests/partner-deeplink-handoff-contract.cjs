@@ -168,6 +168,23 @@ test('Subtype-preserver does not invent Health/Flight subtype or duplicate netwo
  assert.equal(x.txs.length,1);assert.equal(x.txs[0].sub,'External Partner Transaction');
  assert.equal(x.writes.length,1);
 });
+test('Generic section handoff waits for Owner mapping instead of using a stale cached partner URL',async()=>{
+ const x=env({central:false,cachedLinks:{mf:{url:'https://outdated.example/',enabled:true}},refresh:async w=>{
+  await sleep(45);w.DBEST_PUBLIC_LINKS={mf:{url:expected.mf,enabled:true,partner:'NJ Wealth'}};return {ok:true}
+ }});
+ x.window.dbestUniversalExternalGo('mf');
+ assert.equal(x.launches.length,0);
+ await sleep(90);
+ assert.equal(x.launches.length,1);
+ assertPartner(x.launches[0],'mf','External Partner Transaction',x.txs[0].id);
+});
+test('Generic handoff refuses old links if authoritative Owner config cannot be refreshed',async()=>{
+ const x=env({central:false,cachedLinks:{insurance:{url:'https://old.example/',enabled:true}},refresh:async()=>null});
+ x.window.dbestUniversalExternalGo('insurance');await sleep(75);
+ assert.equal(x.txs.length,0);assert.equal(x.launches.length,0);
+ assert(x.messages.some(x=>/unable to verify/i.test(x)));
+});
+
 test('Unrelated services retain their original internal application form',()=>{
  const x=env();x.window.openContentForm('other',0);assert.equal(x.forms,1);
 });
