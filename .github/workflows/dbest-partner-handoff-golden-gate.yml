@@ -60,3 +60,72 @@ jobs:
         env:
           DBEST_PREVIEW_URL: https://dbest-super-app-git-fix-partner-deeplink-handoffs-465e74-db-est.vercel.app
         run: node tests/preview-maps-browser-smoke.cjs
+
+
+  stage-production-no-domain:
+    name: Stage production build without changing live domains
+    needs: partner-handoff-contract
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/fix/partner-deeplink-handoffs-20261020' && startsWith(github.event.head_commit.message, 'release(stage):') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout reviewed candidate
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Ensure source remains partner-only and baseline unchanged
+        shell: bash
+        run: |
+          set -euo pipefail
+          frozen=f7305e05d2bedc50760062316dc98ebb7dbe7c31
+          git merge-base --is-ancestor "$frozen" HEAD
+          while IFS= read -r path; do
+            case "$path" in
+              owner-deeplink-all-sections.js|external-service-subtype-preserver-v1.js|tests/partner-deeplink-handoff-contract.cjs|tests/preview-maps-browser-smoke.cjs|.github/workflows/dbest-partner-handoff-golden-gate.yml) ;;
+              *) echo "::error::Frozen Cab or Marketplace change blocked: $path"; exit 1 ;;
+            esac
+          done < <(git diff --name-only "$frozen" HEAD)
+      - name: Check availability of protected staging credential
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        shell: bash
+        run: |
+          if [ -z "${VERCEL_TOKEN:-}" ]; then
+            echo "::error::Cannot stage safely: GitHub Actions secret VERCEL_TOKEN is not configured. The live domain remains untouched."
+            exit 1
+          fi
+          echo "Staging credential found (value not displayed)."
+      - name: Install pinned Vercel CLI
+        run: npm install --no-save --ignore-scripts --package-lock=false vercel@64.1.0
+      - name: Deploy with production config and skip all domain assignment
+        id: staged
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: team_9T2x7zMDZNZoDWROdWmSK5O5
+          VERCEL_PROJECT_ID: prj_Pq0un1qVi9Yt18CMqrAAKf2I1iqA
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .vercel
+          printf '{"orgId":"%s","projectId":"%s"}\n' "$VERCEL_ORG_ID" "$VERCEL_PROJECT_ID" > .vercel/project.json
+          stage_url="$(./node_modules/.bin/vercel deploy --prod --skip-domain --yes --scope db-est)"
+          [[ "$stage_url" =~ ^https://[a-z0-9-]+\.vercel\.app$ ]] || { echo "::error::Unsafe unexpected stage URL"; exit 1; }
+          printf 'staged_url=%s\n' "$stage_url" >> "$GITHUB_OUTPUT"
+          echo "Staged production-configured build (NO CUSTOM DOMAIN): $stage_url"
+      - name: Smoke check staged assets and production runtime without leaking configuration
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          STAGED_URL: ${{ steps.staged.outputs.staged_url }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./node_modules/.bin/vercel curl / --deployment "$STAGED_URL" > /tmp/dbest-home.html
+          grep -q 'DBest Super Platform' /tmp/dbest-home.html
+          ./node_modules/.bin/vercel curl /owner-deeplink-all-sections.js --deployment "$STAGED_URL" > /tmp/dbest-handoff.js
+          grep -q '2.5.0-verified-partner-handoffs' /tmp/dbest-handoff.js
+          ./node_modules/.bin/vercel curl /api/runtime-config --deployment "$STAGED_URL" > /tmp/dbest-runtime.txt
+          grep -q 'googleMapsApiKey":"AIza' /tmp/dbest-runtime.txt
+          echo "PASS: staged production build and browser Maps config present; production domains not promoted."
