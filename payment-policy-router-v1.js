@@ -8,6 +8,7 @@ const POLICY={
   home_jobs:['cash_to_service_provider','upi_to_service_provider'],
   repairing:['cash_to_partner','upi_to_partner'],
   forms:['razorpay','payu'],
+  govt:['payu'],
   dormant:{home_jobs:'payu',repairing:'payu'}
 };
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -31,6 +32,7 @@ function classify(tx){
   if(tx.order||tx.meta?.order||/(marketplace|e-?commerce|grocery|restaurant|food order|digital item|medicine|pharmacy|store)/.test(s))return 'ecommerce';
   if(/(home jobs?|home jobs & local services|hyperlocal home service|maid|house help|electrician|plumber|refrigerator mechanic)/.test(s))return 'home_jobs';
   if(/(repair|repairing|mobile repair|ac service|appliance repair|technician)/.test(s))return 'repairing';
+  if(String(tx.meta?.sectionId||'')==='govt'||String(tx.section||'').toLowerCase()==='pan, dl, itr')return 'govt';
   if(/(forms?|government|govt|pan application|driving licence|driving license|itr filing|certificate|application service)/.test(s))return 'forms';
   return 'other';
 }
@@ -50,6 +52,7 @@ function gatewayHtml(tx,route){
   if(route==='cab')return `<div class="ownerPanelCard dbestPolicyCard" data-dbest-policy="cab"><h3>Pay Driver Directly</h3>${head}<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><button class="btn" onclick="dbestCabPayDriver('${id}','cash')">💵 Cash to Driver</button><button class="btn soft" onclick="dbestCabPayDriver('${id}','upi')">📱 UPI to Driver</button></div><small style="display:block;margin-top:8px">No Razorpay or PayU gateway is used for Cab rides.</small></div>`;
   if(route==='home_jobs'||route==='repairing')return directCard(tx,route);
   if(route==='ecommerce')return `<div class="ownerPanelCard dbestPolicyCard" data-dbest-policy="ecommerce"><h3>Secure Online Payment</h3>${head}<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">${razorButton(tx.id,true)}${payuButton(tx.id,true)}</div><small style="display:block;margin-top:8px">Razorpay is live primary. PayU activates automatically after Owner adds valid Key + Salt.</small></div>`;
+  if(route==='govt')return `<div class="ownerPanelCard dbestPolicyCard" data-dbest-policy="govt"><h3>PayU Test Gateway Only</h3>${head}<div style="display:grid;grid-template-columns:1fr;gap:10px"><button class="btn" type="button" data-dbest-govt-payu="1" onclick="dbestGovtStartPayU('${id}')">Pay with PayU Test →</button></div><small>Sandbox only. Any statutory Government charge is separate. No Razorpay, UPI or other gateway is accepted for this service.</small></div>`;
   if(route==='forms')return `<div class="ownerPanelCard dbestPolicyCard" data-dbest-policy="forms"><h3>Secure Online Payment</h3>${head}<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">${razorButton(tx.id,true)}${payuButton(tx.id,true)}</div><small style="display:block;margin-top:8px">Razorpay is live primary. PayU activates automatically after Owner adds valid Key + Salt.</small></div>`;
   return '';
 }
