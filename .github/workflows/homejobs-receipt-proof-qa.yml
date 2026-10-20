@@ -1,0 +1,38 @@
+name: Home Jobs Payment Receipt Proof - Narrow QA
+on:
+  push:
+    branches: [fix/homejobs-receipt-proof-harden-20261020]
+  pull_request:
+    branches: [feat/homejobs-customer-dashboard-20261020]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  receipt-proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Block unrelated working flow changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          LIVE=e5a1bbe0a36ed41d9d7099e55d5f17e5063d8eda
+          git merge-base --is-ancestor "$LIVE" HEAD
+          while IFS= read -r f; do
+            case "$f" in
+              qa/homejobs/homejobs-customer-history-live/index.ts|qa/homejobs/homejobs-customer-history.test.cjs|.github/workflows/homejobs-receipt-proof-qa.yml)
+              echo "Scoped invoice eligibility fix: $f";;
+              *) echo "::error::Frozen source modified: $f"; exit 1;;
+            esac
+          done < <(git diff --name-only "$LIVE" HEAD)
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020f4
+        with:
+          node-version: '24'
+      - name: Install test transpiler only
+        run: npm install --no-save --ignore-scripts --package-lock=false esbuild@0.25.12
+      - name: Verify payment evidence, synthetic exclusions, member privacy
+        run: node --test qa/homejobs/homejobs-customer-history.test.cjs
