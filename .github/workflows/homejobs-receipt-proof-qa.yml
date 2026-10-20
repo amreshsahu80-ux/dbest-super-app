@@ -24,7 +24,7 @@ jobs:
           git merge-base --is-ancestor "$LIVE" HEAD
           while IFS= read -r f; do
             case "$f" in
-              qa/homejobs/homejobs-customer-history-live/index.ts|qa/homejobs/homejobs-customer-history.test.cjs|.github/workflows/homejobs-receipt-proof-qa.yml)
+              qa/homejobs/homejobs-customer-history-live/index.ts|qa/homejobs/homejobs-customer-history.test.cjs|.github/workflows/homejobs-receipt-proof-qa.yml|.github/workflows/homejobs-customer-history-qa.yml)
               echo "Scoped invoice eligibility fix: $f";;
               *) echo "::error::Frozen source modified: $f"; exit 1;;
             esac
