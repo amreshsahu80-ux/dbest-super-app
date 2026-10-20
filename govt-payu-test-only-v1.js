@@ -23,8 +23,9 @@ async function getConfig(force=false){
 function ready(){return cfg.configured&&cfg.mode==='test'}
 function updateButtons(){
  document.querySelectorAll('[data-dbest-govt-payu-only="1"]').forEach(el=>{
-   const btn=el.querySelector('button[data-dbest-govt-payu-submit]');
-   const note=el.querySelector('[data-dbest-govt-payu-status]');
+   const scope=el.shadowRoot||el;
+   const btn=scope.querySelector('button[data-dbest-govt-payu-submit]');
+   const note=scope.querySelector('[data-dbest-govt-payu-status]');
    if(btn){btn.disabled=!ready();const v=ready()?'Continue to PayU Sandbox →':'PayU Test Setup Required';if(btn.textContent!==v)btn.textContent=v}
    if(note){const v=ready()?'PayU test credentials found. No live payment will be taken.':'PayU test key and salt are not configured. No other payment gateway is available for this service.';if(note.textContent!==v)note.textContent=v}
  });
@@ -53,16 +54,23 @@ function decorate(){
  let card=root.querySelector('[data-dbest-govt-payu-only="1"]');
  if(card&&card.dataset.txid!==id){card.remove();card=null}
  if(!card){
-   card=document.createElement('section');
-   card.className='ownerPanelCard';card.dataset.dbestGovtPayuOnly='1';card.dataset.txid=id;
-   card.style.cssText='margin:12px 0;border:1px solid #d8e5fc;padding:16px;border-radius:14px;';
+   // The existing membership-only Razorpay compatibility layer rewrites every
+   // visible PayU text node in #m to Razorpay. Shadow DOM isolates ONLY this
+   // Government checkout's label without changing that frozen global layer.
+   card=document.createElement('div');
+   card.dataset.dbestGovtPayuOnly='1';card.dataset.txid=id;
+   card.style.cssText='display:block;margin:12px 0';
+   const shadow=card.attachShadow({mode:'open'});
+   const style=document.createElement('style');
+   style.textContent=':host{display:block;font-family:Arial,Helvetica,sans-serif;color:#162b4a}.panel{padding:16px;border:1px solid #d8e5fc;border-radius:14px;background:#fff}h3{margin:0 0 12px;font-size:17px}p{font-weight:700;margin:0 0 9px}.notice{border-radius:8px;background:#f4f8ff;padding:10px 12px;font-size:12px;margin:12px 0}small{display:block;line-height:1.5;color:#48607d}button{display:block;width:100%;margin:12px 0;background:#175cff;color:white;border:0;border-radius:10px;padding:13px;font-size:15px;font-weight:700;cursor:pointer}button:disabled{background:#bdc9d9;cursor:not-allowed}';
+   const panel=document.createElement('section');panel.className='panel';
    const title=document.createElement('h3');title.textContent='PayU Test Payment Only';
    const amount=document.createElement('p');amount.textContent='DBest Assistance Fee: ₹'+Number(tx.amount||0).toLocaleString('en-IN');
    const note=document.createElement('div');note.className='notice';note.textContent='Government statutory/portal fees, if applicable, are separate.';
    const status=document.createElement('small');status.dataset.dbestGovtPayuStatus='1';status.textContent='Checking PayU test configuration…';
-   const btn=document.createElement('button');btn.className='btn';btn.type='button';btn.dataset.dbestGovtPayuSubmit='1';btn.disabled=true;btn.textContent='Checking PayU Test…';btn.style.cssText='display:block;width:100%;margin:12px 0';
+   const btn=document.createElement('button');btn.type='button';btn.dataset.dbestGovtPayuSubmit='1';btn.disabled=true;btn.textContent='Checking PayU Test…';
    btn.addEventListener('click',()=>window.dbestGovtStartPayU(id));
-   card.append(title,amount,note,status,btn);
+   panel.append(title,amount,note,status,btn);shadow.append(style,panel);
    const anchor=root.querySelector('.paymentSummary');
    if(anchor)anchor.insertAdjacentElement('beforebegin',card);else root.prepend(card);
  }
@@ -83,7 +91,7 @@ window.dbestGovtStartPayU=async function(txid){
  const app=tx.application||tx.meta?.application||{};
  const email=String(app.email||((typeof me==='function'?me():null)?.email)||'').trim();
  if(!email||!email.includes('@')){toastMsg('A valid applicant email is required for PayU Test.');return false}
- const button=document.querySelector('[data-dbest-govt-payu-only="1"] button');
+ const button=document.querySelector('[data-dbest-govt-payu-only="1"]')?.shadowRoot?.querySelector('button');
  if(button)button.disabled=true;
  try{
    // Ensure verified central transaction exists BEFORE creating PayU's sandbox payment.
