@@ -61,6 +61,7 @@ const fees=[['PAN Application',140],['Driving Licence',150],['ITR Filing',150],[
   console.log('PASS Government review: ONLY disabled PayU Test payment, other gateways hidden');
   // Ensure another working section has exactly its existing payment options when relevant.
   await page.evaluate(()=>window.paymentReview('TX-SYNTH-GOVT-TEST'));
+  await page.waitForSelector('[data-dbest-govt-payu-only="1"]',{timeout:7500});
   assert.equal(await page.locator('[data-dbest-govt-payu-only="1"]').count(),1);
   console.log('PASS Reopening payment review does not duplicate checkout');
   console.log('PASS No government submissions, payment gateway calls, or live writes');
