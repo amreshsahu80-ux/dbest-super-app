@@ -1,0 +1,37 @@
+name: Leader Invitation Expiry Summary — No Vercel Build
+on:
+  push:
+    branches: [fix/leader-invite-expired-summary-20261020]
+  pull_request:
+    branches: [release/member-referral-reliable-mount-live-20261020]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  summary-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Protect production app files and payment modules
+        shell: bash
+        run: |
+          set -euo pipefail
+          GOLDEN=c99ddceb8f8dedf72575636d451a34bd6945939d
+          git merge-base --is-ancestor "$GOLDEN" HEAD
+          while IFS= read -r path; do
+            [ -n "$path" ] || continue
+            case "$path" in
+              audit/20261020-leader-onboarding-live-v5-source.ts|supabase/functions/leader-partner-onboarding-live/index.ts|tests/leader-invitation-summary-contract.cjs|.github/workflows/dbest-leader-invitation-summary-ci.yml)
+                echo "Allowed leader summary: $path";;
+              *) echo "::error::Frozen production file touched: $path"; exit 1;;
+            esac
+          done < <(git diff --name-only "$GOLDEN" HEAD)
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020f4
+        with:
+          node-version: '24'
+      - run: npm install --no-save --ignore-scripts --package-lock=false typescript@5.9.3
+      - run: node --test tests/leader-invitation-summary-contract.cjs
