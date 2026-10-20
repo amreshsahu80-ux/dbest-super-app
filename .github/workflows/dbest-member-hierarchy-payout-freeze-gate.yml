@@ -1,0 +1,45 @@
+name: DBest Member Hierarchy Payout Freeze Gate
+on:
+  push:
+    branches:
+      - fix/member-hierarchy-payout-audit-20261020
+  pull_request:
+    branches:
+      - release/cab-golden-frozen-20261020
+      - main
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify-member-safe:
+    name: Member UI safety and all proven frozen flows
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - name: Checkout test candidate with original live baseline
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Reject any Cab Marketplace Insurance Travel Mutual Funds or payout backend changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          frozen=f7305e05d2bedc50760062316dc98ebb7dbe7c31
+          git cat-file -e "$frozen^{commit}"
+          git merge-base --is-ancestor "$frozen" HEAD
+          while IFS= read -r path; do
+            [ -n "$path" ] || continue
+            case "$path" in
+              member-dashboard-controller-v1.js|member-live-login-bridge.js|tests/member-safety-ui-contract.cjs|.github/workflows/dbest-member-hierarchy-payout-freeze-gate.yml)
+                echo "Allowed member UI-only file: $path" ;;
+              *) echo "::error::FROZEN FLOW GUARD: unexpected file $path"; exit 1 ;;
+            esac
+          done < <(git diff --name-only "$frozen" HEAD)
+      - name: Verify syntax of member/UI test files
+        run: |
+          node --check member-dashboard-controller-v1.js
+          node --check member-live-login-bridge.js
+          node --check tests/member-safety-ui-contract.cjs
+      - name: Run member authentication and markup safety contract
+        run: node --test tests/member-safety-ui-contract.cjs
