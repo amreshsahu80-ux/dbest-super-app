@@ -1,0 +1,41 @@
+name: DBest Member Referral Wallet Live Golden Gate
+on:
+  push:
+    branches:
+      - governance/member-referral-wallet-freeze-gates-20261020
+  pull_request:
+    branches:
+      - release/member-referral-wallet-golden-frozen-20261020
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  frozen-source-and-contract:
+    name: Preserve proven membership onboarding referral wallet
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - name: Checkout with immutable production ancestry
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Fail on ANY live source changes, including other frozen sections
+        shell: bash
+        run: |
+          set -euo pipefail
+          live=f7305e05d2bedc50760062316dc98ebb7dbe7c31
+          git cat-file -e "$live^{commit}"
+          git merge-base --is-ancestor "$live" HEAD
+          while IFS= read -r path; do
+            [ -n "$path" ] || continue
+            case "$path" in
+              member-referral-wallet-golden-lock.json|tests/member-referral-wallet-live-golden.test.cjs|.github/workflows/dbest-member-referral-wallet-live-golden-gate.yml) echo "Governance only: $path" ;;
+              *) echo "::error::Frozen LIVE SOURCE CHANGE BLOCKED: $path"; exit 1 ;;
+            esac
+          done < <(git diff --name-only "$live" HEAD)
+      - name: Validate all source fingerprints, financial math and freeze boundary
+        run: |
+          set -euo pipefail
+          node --check tests/member-referral-wallet-live-golden.test.cjs
+          node --test tests/member-referral-wallet-live-golden.test.cjs
