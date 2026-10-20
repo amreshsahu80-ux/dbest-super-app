@@ -54,6 +54,18 @@ const failures=[];
       injectedUserCount:JSON.parse(localStorage.getItem('d2_users')||'[]').length
     }));
     console.log('QA DIAGNOSTICS:',JSON.stringify(diag));
+    const verifier=await page.evaluate(async()=>{
+      try{
+        const v=await window.DBEST_MEMBER_REFERRAL_SHARE?.verify?.();
+        await window.DBEST_MEMBER_REFERRAL_SHARE?.mount?.();
+        return {verification:v||null,postMountButton:!!document.getElementById('dbestCreateReferralLink'),
+          dashboardRoot:!!document.querySelector('.sectionContent.classicDash .memberMiniHead'),
+          configPresent:!!window.DBEST_RUNTIME_CONFIG?.supabaseUrl&&!!window.DBEST_RUNTIME_CONFIG?.supabasePublishableKey,
+          tokenPresent:!!window.DBEST_MEMBER_LIVE?.getToken?.()
+        }
+      }catch(e){return {error:e.message}}
+    });
+    console.log('QA VERIFIER:',JSON.stringify(verifier));
     await page.waitForSelector('#dbestCreateReferralLink',{timeout:12000});
     assert.equal(await page.locator('#dbestCreateReferralLink').count(),1);
     await page.locator('#dbestCreateReferralLink').click();
