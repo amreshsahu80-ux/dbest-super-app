@@ -1,6 +1,7 @@
 'use strict';
 const assert=require('node:assert/strict');
 const {chromium}=require('playwright-core');
+const fs=require('node:fs');
 const LIVE='https://dbest4u.com';
 const ORIGIN=String(process.env.DBEST_BROWSER_BASE_URL||LIVE).replace(/\/$/,'');
 const MEMBER='DBEST-BROWSER-QA-MEMBER';
@@ -22,6 +23,10 @@ const failures=[];
         }]));
       }catch(_){}
     },{id:MEMBER,ref:REF});
+    // Exercise candidate script on the real live UI without changing production.
+    await ctx.route('**/member-referral-share-v1.js*',async route=>{
+      await route.fulfill({status:200,contentType:'application/javascript',body:fs.readFileSync('member-referral-share-v1.js','utf8')});
+    });
     const page=await ctx.newPage();
     page.on('pageerror',err=>{if(/member-referral-share-v1|buildUrl|referralFrom/.test(err.message))failures.push(err.message)});
     await page.route('**/functions/v1/**',async route=>{
