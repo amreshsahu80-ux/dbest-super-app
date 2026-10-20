@@ -24,7 +24,7 @@ jobs:
           git merge-base --is-ancestor "$GOLDEN" HEAD
           while IFS= read -r f; do
             case "$f" in
-              index.html|homejobs-customer-dashboard-v1.js|qa/homejobs/homejobs-customer-history-live/index.ts|qa/homejobs/homejobs-customer-history.test.cjs|.github/workflows/homejobs-customer-dashboard-qa.yml)
+              index.html|homejobs-customer-dashboard-v1.js|qa/homejobs/homejobs-customer-history-live/index.ts|qa/homejobs/homejobs-customer-history.test.cjs|qa/homejobs/homejobs-mobile-dashboard-smoke.cjs|.github/workflows/homejobs-customer-dashboard-qa.yml)
               echo "HomeJobs allowed: $f";;
               *) echo "::error::Frozen flow file unexpectedly changed: $f"; exit 1;;
             esac
@@ -41,3 +41,7 @@ jobs:
         run: |
           node --check homejobs-customer-dashboard-v1.js
           node --test qa/homejobs/homejobs-customer-history.test.cjs
+      - name: Install isolated browser driver
+        run: npm install --no-save --ignore-scripts --package-lock=false esbuild@0.25.12 playwright-core@1.56.1
+      - name: Mobile shell and service history smoke (all writes blocked)
+        run: node qa/homejobs/homejobs-mobile-dashboard-smoke.cjs
