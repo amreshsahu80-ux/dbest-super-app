@@ -1,0 +1,53 @@
+name: DBest Partner Handoff Frozen-Flow Gate
+
+on:
+  push:
+    branches:
+      - fix/partner-deeplink-handoffs-20261020
+      - release/partner-deeplinks-tested-20261020
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  partner-handoff-contract:
+    name: Partner handoff and golden-source safety
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout exact candidate commit
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Confirm all frozen sources remain untouched
+        shell: bash
+        env:
+          FROZEN_SHA: f7305e05d2bedc50760062316dc98ebb7dbe7c31
+        run: |
+          set -euo pipefail
+          git cat-file -e "$FROZEN_SHA^{commit}"
+          git merge-base --is-ancestor "$FROZEN_SHA" HEAD
+          changed="$(git diff --name-only "$FROZEN_SHA" HEAD)"
+          if [ -z "$changed" ]; then echo "Nothing changed."; fi
+          while IFS= read -r path; do
+            [ -n "$path" ] || continue
+            case "$path" in
+              owner-deeplink-all-sections.js|external-service-subtype-preserver-v1.js|tests/partner-deeplink-handoff-contract.cjs|.github/workflows/dbest-partner-handoff-golden-gate.yml)
+                echo "Allowed handoff-only file: $path" ;;
+              *)
+                echo "::error::FROZEN FLOW PROTECTION: unauthorized file change: $path"
+                exit 1 ;;
+            esac
+          done <<< "$changed"
+      - name: Verify syntax of handoff scripts and tests
+        run: |
+          node --check owner-deeplink-all-sections.js
+          node --check external-service-subtype-preserver-v1.js
+          node --check tests/partner-deeplink-handoff-contract.cjs
+      - name: Test partner routing, Owner authority, pending ledger and no double writes
+        run: node --test tests/partner-deeplink-handoff-contract.cjs
