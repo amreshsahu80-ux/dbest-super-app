@@ -31,7 +31,7 @@ jobs:
           while IFS= read -r path; do
             [ -n "$path" ] || continue
             case "$path" in
-              member-dashboard-controller-v1.js|member-live-login-bridge.js|tests/member-safety-ui-contract.cjs|.github/workflows/dbest-member-hierarchy-payout-freeze-gate.yml)
+              member-dashboard-controller-v1.js|member-live-login-bridge.js|tests/member-safety-ui-contract.cjs|tests/member-financial-readonly-audit.test.cjs|tests/member-financial-readonly-audit-snapshot.json|.github/workflows/dbest-member-hierarchy-payout-freeze-gate.yml)
                 echo "Allowed member UI-only file: $path" ;;
               *) echo "::error::FROZEN FLOW GUARD: unexpected file $path"; exit 1 ;;
             esac
@@ -41,5 +41,6 @@ jobs:
           node --check member-dashboard-controller-v1.js
           node --check member-live-login-bridge.js
           node --check tests/member-safety-ui-contract.cjs
-      - name: Run member authentication and markup safety contract
-        run: node --test tests/member-safety-ui-contract.cjs
+          node --check tests/member-financial-readonly-audit.test.cjs
+      - name: Run member authentication, downline, payout and accounting contracts
+        run: node --test tests/member-safety-ui-contract.cjs tests/member-financial-readonly-audit.test.cjs
