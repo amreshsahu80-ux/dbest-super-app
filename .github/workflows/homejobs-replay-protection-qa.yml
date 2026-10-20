@@ -24,7 +24,7 @@ jobs:
           git merge-base --is-ancestor "$GOLDEN" HEAD
           while IFS= read -r f; do
             case "$f" in
-              qa/homejobs/hyperlocal-service-live-candidate.ts|qa/homejobs/homejobs-request-idempotency.test.cjs|.github/workflows/homejobs-replay-protection-qa.yml)
+              qa/homejobs/hyperlocal-service-live-candidate.ts|qa/homejobs/hyperlocal-service-live-v15-baseline.ts|qa/homejobs/homejobs-request-idempotency.test.cjs|.github/workflows/homejobs-replay-protection-qa.yml)
               echo "HomeJobs isolated QA file $f";;
               *) echo "::error::Unrelated/frozen production file changed: $f";exit 1;;
             esac
