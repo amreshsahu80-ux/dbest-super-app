@@ -1,0 +1,43 @@
+name: Home Jobs Customer Dashboard - Isolated QA
+on:
+  push:
+    branches: [feature/homejobs-customer-history-invoices-20261020]
+  pull_request:
+    branches: [fix/govt-fixed-pricing-and-intake-20261020]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  customer-history:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify all frozen app modules unchanged
+        shell: bash
+        run: |
+          set -euo pipefail
+          GOLDEN=f08bf2fc0ab7d07083818c68b12a55ce885ef3a8
+          git merge-base --is-ancestor "$GOLDEN" HEAD
+          while IFS= read -r f; do
+            case "$f" in
+              index.html|homejobs-customer-dashboard-v1.js|qa/homejobs/homejobs-customer-history-live/index.ts|qa/homejobs/homejobs-customer-history.test.cjs|.github/workflows/homejobs-customer-dashboard-qa.yml)
+              echo "HomeJobs allowed: $f";;
+              *) echo "::error::Frozen flow file unexpectedly changed: $f"; exit 1;;
+            esac
+          done < <(git diff --name-only "$GOLDEN" HEAD)
+          if git diff "$GOLDEN" HEAD -- index.html | grep '^+' | grep -v '^+++' | grep -v 'homejobs-customer-dashboard-v1.js'; then
+            echo "::error::Unexpected homepage shell change";exit 1
+          fi
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020f4
+        with:
+          node-version: '24'
+      - name: Install isolated TypeScript test transpiler
+        run: npm install --no-save --ignore-scripts --package-lock=false esbuild@0.25.12
+      - name: Test service history, privacy and invoice eligibility
+        run: |
+          node --check homejobs-customer-dashboard-v1.js
+          node --test qa/homejobs/homejobs-customer-history.test.cjs
