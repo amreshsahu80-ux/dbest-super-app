@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='1.0.0';
+const VERSION='1.1.0-explicit-subtype-handoff';
 function visible(el){if(!el)return false;try{const s=getComputedStyle(el),r=el.getBoundingClientRect();return s.display!=='none'&&s.visibility!=='hidden'&&!!(r.width||r.height)}catch(e){return false}}
 function currentText(){try{const roots=[...document.querySelectorAll('.sectionContent')].filter(visible);return String(roots.pop()?.innerText||'').toLowerCase().replace(/\s+/g,' ')}catch(e){return''}}
 function infer(id,s){
@@ -15,13 +15,15 @@ function install(){
   const fn=window.dbestUniversalExternalGo;if(typeof fn!=='function'||fn.__dbestSubtypePreserver)return false;
   const wrapped=function(id,i){
     let s=null;try{s=(Array.isArray(services)?services:[]).find(v=>String(v?.[0])===String(id))||null}catch(e){}
-    const inferred=Number.isInteger(i)?i:infer(id,s),before=latestOwn()?.id;
+    // A section page lists all subsections. Guessing the first one falsely
+    // classifies generic Insurance / Flight / MF partner handoffs.
+    const inferred=Number.isInteger(i)?i:null,before=latestOwn()?.id;
     const out=fn.apply(this,arguments);
     try{
       if(Number.isInteger(inferred)){
         const x=latestOwn();if(x&&x.id!==before){
           const sub=String(s?.[5]?.[inferred]||'').trim();
-          if(sub){x.sub=sub;x.meta={...(x.meta||{}),subIndex:inferred,serviceSubtype:sub};if(typeof save==='function')save();setTimeout(()=>window.DBEST_TRANSACTION_LEDGER?.record?.(x),20)}
+          if(sub){x.sub=sub;x.meta={...(x.meta||{}),subIndex:inferred,serviceSubtype:sub};if(typeof save==='function')save();if(!String(window.DBEST_UNIVERSAL_DEEPLINKS?.version||'').includes('verified-partner-handoffs'))setTimeout(()=>window.DBEST_TRANSACTION_LEDGER?.record?.(x),20)}
         }
       }
     }catch(e){console.warn('DBest subtype preserve',e)}

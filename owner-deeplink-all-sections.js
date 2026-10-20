@@ -1,18 +1,23 @@
 (function(){
 'use strict';
-const VERSION='2.4.0-new-user-external-access';
+const VERSION='2.5.0-verified-partner-handoffs';
+const PARTNER_IDS=new Set(['insurance','flights','travel','mf']);
+let lastLaunch='',lastLaunchAt=0,ownerLinkCheckPending=false;
 const esc2=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const keyFor=(id,i)=>Number.isInteger(i)?`${id}::${i}`:String(id||'');
 function linkFor(id,i){
-  try{
-    const central=(window.DBEST_PUBLIC_LINKS&&typeof window.DBEST_PUBLIC_LINKS==='object')?window.DBEST_PUBLIC_LINKS:null;
-    if(central){
-      if(Number.isInteger(i)&&central[keyFor(id,i)]?.url)return central[keyFor(id,i)];
-      if(central[String(id)]?.url)return central[String(id)];
-    }
-    if(Number.isInteger(i)&&typeof links!=='undefined'&&links?.[keyFor(id,i)]?.url)return links[keyFor(id,i)];
-    return typeof links!=='undefined'?(links?.[String(id)]||null):null;
-  }catch(e){return null}
+ try{
+  const k=String(id||''),c=(window.DBEST_PUBLIC_LINKS&&typeof window.DBEST_PUBLIC_LINKS==='object'&&!Array.isArray(window.DBEST_PUBLIC_LINKS))?window.DBEST_PUBLIC_LINKS:null;
+  if(c){
+   const sub=Number.isInteger(i)?keyFor(k,i):null;
+   if(sub&&Object.prototype.hasOwnProperty.call(c,sub))return c[sub]||null;
+   if(Object.prototype.hasOwnProperty.call(c,k))return c[k]||null;
+   // Live Owner settings override stale links in a different browser profile.
+   if(PARTNER_IDS.has(k))return null;
+  }
+  if(Number.isInteger(i)&&typeof links!=='undefined'&&links?.[keyFor(k,i)]?.url)return links[keyFor(k,i)];
+  return typeof links!=='undefined'?(links?.[k]||null):null;
+ }catch(e){return null}
 }
 function sectionById(id){try{return services.find(s=>String(s?.[0])===String(id))||null}catch(e){return null}}
 function saveUniversalLink(e,key){
@@ -55,42 +60,68 @@ window.ownerDeeplinkStudio=function(){
 };
 
 window.dbestUniversalExternalGo=function(id,i){
+ try{
+  const cached=(()=>{try{return JSON.parse(localStorage.getItem('d2_session')||'{}')}catch(e){return{}}})();
+  const user=(window.session&&window.session.id)?window.session:cached;
+  if(!user?.id||user.role==='visitor'){
+   if(typeof toast==='function')toast('Please login to continue to the partner service');
+   try{if(typeof loginChoice==='function')loginChoice();else if(typeof account==='function')account();else location.href='/preview-member-login-v2.html?return='+encodeURIComponent(location.pathname+location.search)}catch(e){try{location.href='/preview-member-login-v2.html'}catch(_){}}
+   return;
+  }
+  const s=sectionById(id);if(!s)return typeof toast==='function'&&toast('Section not found');
+  // Never use a stale locally cached partner URL until central Owner config
+  // has been attempted for this fresh session, even on the main section card.
+  if(PARTNER_IDS.has(String(id))&&!window.DBEST_PUBLIC_LINKS&&typeof window.DBEST_OWNER_CONTROL_LIVE?.refreshPublic==='function'){
+   if(ownerLinkCheckPending)return;
+   ownerLinkCheckPending=true;
+   try{
+    const check=window.DBEST_OWNER_CONTROL_LIVE.refreshPublic();
+    Promise.race([Promise.resolve(check).catch(()=>null),new Promise(resolve=>setTimeout(resolve,1600))]).then(()=>{
+     ownerLinkCheckPending=false;
+     if(!window.DBEST_PUBLIC_LINKS){if(typeof toast==='function')toast('Unable to verify approved partner destination. Please try again shortly.');return}
+     window.dbestUniversalExternalGo?.(id,i);
+    });
+   }catch(e){ownerLinkCheckPending=false;if(typeof toast==='function')toast('Unable to verify approved partner destination. Please try again shortly.')}
+   return;
+  }
+  const idx=Number.isInteger(i)?i:null,l=linkFor(id,idx);
+  if(!l?.url||l.enabled===false)return typeof toast==='function'&&toast('Partner deeplink is not configured or is disabled');
+  let dest;
+  try{dest=new URL(String(l.url),location.href);if(dest.protocol!=='https:')throw Error('https_required')}
+  catch(e){if(typeof toast==='function')toast('Partner destination is invalid. Please contact DBest support.');return}
+  const key=keyFor(id,idx);
+  if(lastLaunch===key&&Date.now()-lastLaunchAt<1700)return;
+  lastLaunch=key;lastLaunchAt=Date.now();
+  const sub=idx!==null?(s[5]?.[idx]||'External Partner Transaction'):'External Partner Transaction',uid=String(user.id);
+  let txId='',tracked=null;
+  // A pending handoff is not a successful policy, booking or investment.
   try{
-    const liveSession=(()=>{try{return JSON.parse(localStorage.getItem('d2_session')||'{}')}catch(e){return{}}})();
-    const activeSession=(window.session&&window.session.id)?window.session:liveSession;
-    if(!activeSession?.id||activeSession.role==='visitor'){
-      if(typeof toast==='function')toast('Please login to continue to the partner service');
-      try{if(typeof loginChoice==='function')loginChoice();else if(typeof account==='function')account();else location.href='/preview-member-login-v2.html?return='+encodeURIComponent(location.pathname+location.search)}catch(e){try{location.href='/preview-member-login-v2.html'}catch(_){}}
-      return;
-    }
-    const s=sectionById(id);if(!s)return typeof toast==='function'&&toast('Section not found');
-    const idx=Number.isInteger(i)?i:null,l=linkFor(id,idx);
-    if(!l?.url||l.enabled===false)return typeof toast==='function'&&toast('Deeplink is not configured or is disabled');
-    const sub=idx!==null?(s[5]?.[idx]||'External Partner Transaction'):'External Partner Transaction';
-    const userId=String(activeSession?.id||'guest');
-    let txId='';
-    let url=String(l.url);
-    // Tracking must never prevent a valid partner handoff.
-    try{
-      if(typeof addTx==='function'&&activeSession?.id){
-        const x=addTx(activeSession.id,s[1],sub,'','Redirected / Pending',l.partner||'',{details:'External partner deeplink initiated',source:'Partner Deeplink',partnerUrl:l.url,sectionId:id,subIndex:idx,buttonLabel:l.buttonLabel||''});
-        txId=String(x?.id||'');
-        if(x)x.partnerUrl=url;
-        if(typeof save==='function')save();
-      }
-    }catch(trackErr){console.warn('DBest deeplink tracking skipped',trackErr)}
-    url=url.replaceAll('{DBEST_TX_ID}',txId).replaceAll('{USER_ID}',userId).replaceAll('{SECTION_ID}',String(id)).replaceAll('{SUBSECTION}',String(sub));
-    try{
-      const u=new URL(url,location.href);
-      if(txId)u.searchParams.set('dbest_tx_id',txId);
-      if(userId&&userId!=='guest')u.searchParams.set('dbest_user_id',userId);
-      u.searchParams.set('dbest_section',String(id));
-      u.searchParams.set('dbest_subsection',String(sub));
-      url=u.toString();
-    }catch(e){}
-    // Same-tab navigation is reliable in Android WebView/Chrome and avoids popup blocking.
-    try{window.location.assign(url)}catch(navErr){window.location.href=url}
-  }catch(err){console.error(err);if(typeof toast==='function')toast('Could not open partner destination')}
+   if(typeof addTx==='function'){
+    tracked=addTx(user.id,s[1],sub,'','Redirected / Pending',l.partner||'',{details:'External partner deeplink initiated',source:'Partner Deeplink',partnerUrl:l.url,sectionId:id,subIndex:idx,buttonLabel:l.buttonLabel||''});
+    txId=String(tracked?.id||'');
+    if(tracked)tracked.partnerUrl=dest.toString();
+    if(typeof save==='function')save();
+   }
+  }catch(e){console.warn('DBest partner handoff tracking skipped',e)}
+  const raw=dest.toString().replaceAll('{DBEST_TX_ID}',encodeURIComponent(txId)).replaceAll('{USER_ID}',encodeURIComponent(uid)).replaceAll('{SECTION_ID}',encodeURIComponent(String(id))).replaceAll('{SUBSECTION}',encodeURIComponent(String(sub)));
+  dest=new URL(raw,location.href);
+  // Preserve exact partner referral/source query parameters.
+  if(txId)dest.searchParams.set('dbest_tx_id',txId);
+  dest.searchParams.set('dbest_user_id',uid);
+  dest.searchParams.set('dbest_section',String(id));
+  dest.searchParams.set('dbest_subsection',String(sub));
+  const url=dest.toString();
+  const navigate=()=>{try{window.location.assign(url)}catch(e){try{window.location.href=url}catch(nav){console.error('DBest handoff navigation failed',nav)}}};
+  try{
+   // Navigating immediately can cancel the signed-in member's network ledger write.
+   // Bound the wait so external partner access still works if the ledger is unavailable.
+   const fn=tracked&&window.DBEST_TRANSACTION_LEDGER?.record;
+   if(typeof fn==='function'&&window.DBEST_MEMBER_LIVE?.getToken?.()){
+    const writing=Promise.resolve().then(()=>fn(tracked)).catch(e=>{console.warn('Handoff ledger unavailable',e?.message||e)});
+    Promise.race([writing,new Promise(resolve=>setTimeout(resolve,1100))]).then(navigate,navigate);
+   }else navigate();
+  }catch(e){navigate()}
+ }catch(e){console.error(e);if(typeof toast==='function')toast('Could not open partner destination')}
 };
 function deeplinkCard(id,i){
   const s=sectionById(id),l=linkFor(id,i);if(!s||!l?.url||l.enabled===false)return '';
@@ -103,6 +134,9 @@ function injectNow(id,i){
     const roots=[...document.querySelectorAll('.sectionContent')];
     const root=roots.filter(el=>{try{const s=getComputedStyle(el),r=el.getBoundingClientRect();return s.display!=='none'&&s.visibility!=='hidden'&&(r.width||r.height)}catch(e){return false}}).pop()||roots.pop();
     if(!root)return false;
+    const expected=String(sectionById(id)?.[1]||'').trim().toLowerCase();
+    const heroText=String(root.querySelector('.sectionHero b')?.textContent||'').trim().toLowerCase();
+    if(!expected||!heroText||heroText!==expected)return false;
     const existing=root.querySelector('[data-dbest-universal-deeplink]');
     if(existing){
       // Core UI can render an empty placeholder before central links finish loading.
@@ -115,22 +149,41 @@ function injectNow(id,i){
   }catch(e){return false}
 }
 function inject(id,i){
-  [35,180,600,1400].forEach(ms=>setTimeout(()=>injectNow(id,i),ms));
-  // Fresh devices may have no local d2_links yet. Pull the shared Owner config,
-  // then render again so deeplinks never depend on browser-local history.
-  [60,450,1200,2400].forEach(ms=>setTimeout(()=>{
-    try{
-      const p=window.DBEST_OWNER_CONTROL_LIVE?.refreshPublic?.();
-      if(p&&typeof p.then==='function')p.finally(()=>injectNow(id,i));
-      else injectNow(id,i);
-    }catch(e){injectNow(id,i)}
-  },ms));
+ [35,180,550].forEach(ms=>setTimeout(()=>injectNow(id,i),ms));
+ // One fresh settings request rather than repeated requests and stale cards.
+ if(!window.DBEST_PUBLIC_LINKS)setTimeout(()=>{
+  try{
+   const p=window.DBEST_OWNER_CONTROL_LIVE?.refreshPublic?.();
+   if(p&&typeof p.finally==='function')p.finally(()=>injectNow(id,i));
+  }catch(e){console.warn('Partner link refresh unavailable',e)}
+ },60);
 }
 const baseOpenService=window.openService;
-if(typeof baseOpenService==='function')window.openService=function(id){const out=baseOpenService.apply(this,arguments);inject(id,null);return out};
+if(typeof baseOpenService==='function')window.openService=function(id){
+ const out=baseOpenService.apply(this,arguments);
+ if(PARTNER_IDS.has(String(id)))inject(id,null);
+ return out;
+};
 const baseOpenContent=window.openContentForm;
-if(typeof baseOpenContent==='function')window.openContentForm=function(id,i){const out=baseOpenContent.apply(this,arguments);inject(id,Number(i));return out};
-
+if(typeof baseOpenContent==='function')window.openContentForm=function(id,i){
+ if(!PARTNER_IDS.has(String(id)))return baseOpenContent.apply(this,arguments);
+ const s=sectionById(id),idx=Number(i);
+ if(!s||!Number.isInteger(idx)||idx<0||idx>=s[5]?.length)return;
+ // No Insurance, Hotel, Flight or Mutual Fund click may enter a DBest payment form
+ // just because the centrally configured partner URL has not arrived yet.
+ const launch=()=>{
+  const l=linkFor(id,idx);
+  if(l?.url&&l.enabled!==false)return window.dbestUniversalExternalGo?.(id,idx);
+  if(typeof toast==='function')toast(l?.enabled===false?'Partner handoff is disabled by Owner':'Partner handoff unavailable. Please try again shortly.');
+ };
+ if(window.DBEST_PUBLIC_LINKS||linkFor(id,idx))return launch();
+ try{
+  if(typeof toast==='function')toast('Connecting to approved partner…');
+  const p=window.DBEST_OWNER_CONTROL_LIVE?.refreshPublic?.();
+  if(p&&typeof p.then==='function'){p.then(launch).catch(launch);return}
+ }catch(e){console.warn('Partner configuration refresh',e)}
+ return launch();
+};
 const baseOps=window.ownerOperations;
 if(typeof baseOps==='function')window.ownerOperations=function(){const out=baseOps.apply(this,arguments);setTimeout(()=>{document.querySelectorAll('button[onclick="ownerDeeplinkStudio()"]').forEach(b=>{const small=b.querySelector('small');if(small)small.textContent='Configure external/internal destinations for every section and subsection.'})},20);return out};
 
@@ -142,5 +195,5 @@ if(typeof baseTests==='function')window.projectTests=function(){
   }catch(e){}
   return out;
 };
-window.DBEST_UNIVERSAL_DEEPLINKS={version:VERSION,keyFor,linkFor};
+window.DBEST_UNIVERSAL_DEEPLINKS={version:VERSION,keyFor,linkFor,protectedSections:[...PARTNER_IDS]};
 })();

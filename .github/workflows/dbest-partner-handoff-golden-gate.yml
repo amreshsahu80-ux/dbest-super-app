@@ -1,0 +1,154 @@
+name: DBest Partner Handoff Frozen-Flow Gate
+
+on:
+  push:
+    branches:
+      - fix/partner-deeplink-handoffs-20261020
+      - release/partner-deeplinks-tested-20261020
+  pull_request:
+    branches:
+      - main
+      - release/cab-golden-frozen-20261020
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  partner-handoff-contract:
+    name: Partner handoff and golden-source safety
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - name: Checkout exact candidate commit
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Confirm all frozen sources remain untouched
+        shell: bash
+        env:
+          FROZEN_SHA: f7305e05d2bedc50760062316dc98ebb7dbe7c31
+        run: |
+          set -euo pipefail
+          git cat-file -e "$FROZEN_SHA^{commit}"
+          git merge-base --is-ancestor "$FROZEN_SHA" HEAD
+          changed="$(git diff --name-only "$FROZEN_SHA" HEAD)"
+          if [ -z "$changed" ]; then echo "Nothing changed."; fi
+          while IFS= read -r path; do
+            [ -n "$path" ] || continue
+            case "$path" in
+              owner-deeplink-all-sections.js|external-service-subtype-preserver-v1.js|tests/partner-deeplink-handoff-contract.cjs|tests/preview-maps-browser-smoke.cjs|.github/workflows/dbest-partner-handoff-golden-gate.yml)
+                echo "Allowed handoff-only file: $path" ;;
+              *)
+                echo "::error::FROZEN FLOW PROTECTION: unauthorized file change: $path"
+                exit 1 ;;
+            esac
+          done <<< "$changed"
+      - name: Verify syntax of handoff scripts and tests
+        run: |
+          node --check owner-deeplink-all-sections.js
+          node --check external-service-subtype-preserver-v1.js
+          node --check tests/partner-deeplink-handoff-contract.cjs
+      - name: Test partner routing, Owner authority, pending ledger and no double writes
+        run: node --test tests/partner-deeplink-handoff-contract.cjs
+      - name: Install pinned browser test runtime (CI only, no package changes)
+        run: |
+          npm install --no-save --ignore-scripts --package-lock=false playwright@1.56.0
+          npx playwright install --with-deps chromium
+      - name: Verify actual Google Maps referrer authorization on preview origin
+        env:
+          DBEST_PREVIEW_URL: https://dbest-super-app-git-fix-partner-deeplink-handoffs-465e74-db-est.vercel.app
+        run: node tests/preview-maps-browser-smoke.cjs
+
+
+  stage-production-no-domain:
+    name: Stage production build without changing live domains
+    needs: partner-handoff-contract
+    if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'fix/partner-deeplink-handoffs-20261020' && github.event.pull_request.base.ref == 'release/cab-golden-frozen-20261020' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    permissions:
+      contents: read
+      statuses: write
+    steps:
+      - name: Checkout reviewed candidate
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Ensure source remains partner-only and baseline unchanged
+        shell: bash
+        run: |
+          set -euo pipefail
+          frozen=f7305e05d2bedc50760062316dc98ebb7dbe7c31
+          git merge-base --is-ancestor "$frozen" HEAD
+          while IFS= read -r path; do
+            case "$path" in
+              owner-deeplink-all-sections.js|external-service-subtype-preserver-v1.js|tests/partner-deeplink-handoff-contract.cjs|tests/preview-maps-browser-smoke.cjs|.github/workflows/dbest-partner-handoff-golden-gate.yml) ;;
+              *) echo "::error::Frozen Cab or Marketplace change blocked: $path"; exit 1 ;;
+            esac
+          done < <(git diff --name-only "$frozen" HEAD)
+      - name: Check availability of protected staging credential
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        shell: bash
+        run: |
+          if [ -z "${VERCEL_TOKEN:-}" ]; then
+            echo "::error::Cannot stage safely: GitHub Actions secret VERCEL_TOKEN is not configured. The live domain remains untouched."
+            exit 1
+          fi
+          echo "Staging credential found (value not displayed)."
+      - name: Install pinned Vercel CLI
+        run: npm install --no-save --ignore-scripts --package-lock=false vercel@64.1.0
+      - name: Deploy with production config and skip all domain assignment
+        id: staged
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: team_9T2x7zMDZNZoDWROdWmSK5O5
+          VERCEL_PROJECT_ID: prj_Pq0un1qVi9Yt18CMqrAAKf2I1iqA
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .vercel
+          printf '{"orgId":"%s","projectId":"%s"}\n' "$VERCEL_ORG_ID" "$VERCEL_PROJECT_ID" > .vercel/project.json
+          stage_url="$(./node_modules/.bin/vercel deploy --prod --skip-domain --yes --scope db-est)"
+          [[ "$stage_url" =~ ^https://[a-z0-9-]+\.vercel\.app$ ]] || { echo "::error::Unsafe unexpected stage URL"; exit 1; }
+          printf 'staged_url=%s\n' "$stage_url" >> "$GITHUB_OUTPUT"
+          echo "Staged production-configured build (NO CUSTOM DOMAIN): $stage_url"
+      - name: Smoke check staged assets and production runtime without leaking configuration
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          STAGED_URL: ${{ steps.staged.outputs.staged_url }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./node_modules/.bin/vercel curl / --deployment "$STAGED_URL" > /tmp/dbest-home.html
+          grep -q 'DBest Super Platform' /tmp/dbest-home.html
+          ./node_modules/.bin/vercel curl /owner-deeplink-all-sections.js --deployment "$STAGED_URL" > /tmp/dbest-handoff.js
+          grep -q '2.5.0-verified-partner-handoffs' /tmp/dbest-handoff.js
+          ./node_modules/.bin/vercel curl /api/runtime-config --deployment "$STAGED_URL" > /tmp/dbest-runtime.txt
+          grep -q 'googleMapsApiKey":"AIza' /tmp/dbest-runtime.txt
+          echo "PASS: staged production build and browser Maps config present; production domains not promoted."
+
+      - name: Publish staging result as commit status (never expose credentials)
+        if: ${{ always() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          JOB_OUTCOME: ${{ job.status }}
+          REPO: ${{ github.repository }}
+          REVISION: ${{ github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$JOB_OUTCOME" in
+            success) status=success; description="Production build staged without custom domains; see Actions logs" ;;
+            *) status=failure; description="Production staging not completed; live domain unchanged" ;;
+          esac
+          payload="$(printf '{"state":"%s","context":"dbest-staged-prod-no-domain","description":"%s"}' "$status" "$description")"
+          curl -fsS --retry 2 --request POST \
+            --header "Accept: application/vnd.github+json" \
+            --header "Authorization: Bearer $GH_TOKEN" \
+            --header "X-GitHub-Api-Version: 2022-11-28" \
+            --data "$payload" \
+            "https://api.github.com/repos/$REPO/statuses/$REVISION" > /dev/null
