@@ -8,7 +8,7 @@ const fees=[['PAN Application',140],['Driving Licence',150],['ITR Filing',150],[
  try{
   const ctx=await browser.newContext({viewport:{width:390,height:844},isMobile:true,deviceScaleFactor:2});
   await ctx.route(base+'/',async route=>route.fulfill({status:200,contentType:'text/html',body:fs.readFileSync('index.html','utf8')}));
-  for(const file of ['govt-assistance-fees-v1.js','service-variable-pricing-v1.js']){
+  for(const file of ['govt-assistance-fees-v1.js','govt-payu-test-only-v1.js','service-variable-pricing-v1.js','payment-policy-router-v1.js']){
    await ctx.route('**/'+file+'*',async route=>route.fulfill({status:200,contentType:'application/javascript',body:fs.readFileSync(file,'utf8')}));
   }
   // No live Supabase or Vercel writes: block ALL backend endpoints. All form testing is pre-submit.
@@ -41,6 +41,27 @@ const fees=[['PAN Application',140],['Driving Licence',150],['ITR Filing',150],[
   assert.equal(await page.locator('.serviceFormPage .feeStrip b').first().innerText(),'₹140');
   assert.equal(await page.evaluate(()=>window.serviceSchema('govt',3).fee),30);
   console.log('PASS Lazily loaded variable-pricing module preserves fixed Government fees');
+  // Use a synthetic in-browser transaction. No actual DBest application/transaction is created.
+  await page.evaluate(()=>{
+    txs.unshift({id:'TX-SYNTH-GOVT-TEST',userId:'QA-FAKE',section:'PAN, DL, ITR',sub:'PAN Application',
+      amount:140,status:'Application Submitted / Payment Pending',meta:{sectionId:'govt',subIndex:0,application:{email:'qa@test.invalid'}}});
+    window.paymentReview('TX-SYNTH-GOVT-TEST');
+  });
+  await page.waitForSelector('[data-dbest-govt-payu-only="1"]',{timeout:10000});
+  await page.waitForTimeout(350);
+  const payments=await page.locator('.paymentPage button:visible').allTextContents();
+  assert(payments.some(x=>/PayU Test/i.test(x)),JSON.stringify(payments));
+  assert(!payments.some(x=>/Razorpay|ICICI|UPI|Pay\s+Direct/i.test(x)),JSON.stringify(payments));
+  assert(await page.locator('[data-dbest-govt-payu-submit]').isDisabled(),
+    'PayU Test button must be disabled when sandbox credentials are not configured');
+  assert.equal(await page.locator('[data-dbest-govt-payu-only="1"] .notice').innerText(),
+    'Government statutory/portal fees, if applicable, are separate.');
+  assert.equal(await page.locator('[data-dbest-govt-payu-only="1"] p').innerText(),'DBest Assistance Fee: ₹140');
+  console.log('PASS Government review: ONLY disabled PayU Test payment, other gateways hidden');
+  // Ensure another working section has exactly its existing payment options when relevant.
+  await page.evaluate(()=>window.paymentReview('TX-SYNTH-GOVT-TEST'));
+  assert.equal(await page.locator('[data-dbest-govt-payu-only="1"]').count(),1);
+  console.log('PASS Reopening payment review does not duplicate checkout');
   console.log('PASS No government submissions, payment gateway calls, or live writes');
  }finally{await browser.close()}
 })().catch(e=>{console.error(e.stack||e);process.exitCode=1});
