@@ -1,0 +1,45 @@
+name: DBest Live Insurance Travel Mutual Fund Golden Lock
+on:
+  push:
+    branches:
+      - governance/partner-handoff-frozen-release-gates-20261020
+  pull_request:
+    branches:
+      - governance/partner-handoff-frozen-release-gates-20261020
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-live-golden:
+    name: Verify partner golden source and protect Cab Marketplace
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Reject changes to any frozen production source
+        shell: bash
+        run: |
+          set -euo pipefail
+          baseline=f7305e05d2bedc50760062316dc98ebb7dbe7c31
+          git cat-file -e "$baseline^{commit}"
+          git merge-base --is-ancestor "$baseline" HEAD
+          while IFS= read -r path; do
+            [ -n "$path" ] || continue
+            case "$path" in
+              partner-handoff-golden-lock.json|tests/partner-handoff-live-golden.test.cjs|.github/workflows/dbest-partner-live-golden-gate.yml)
+                echo "Governance-only change: $path" ;;
+              *) echo "::error::Frozen Cab / Marketplace / partner source change blocked: $path"; exit 1 ;;
+            esac
+          done < <(git diff --name-only "$baseline" HEAD)
+      - name: Check syntax
+        run: |
+          node --check owner-deeplink-all-sections.js
+          node --check external-service-subtype-preserver-v1.js
+          node --check tests/partner-handoff-live-golden.test.cjs
+      - name: Run exact source hash and partner routing contract
+        run: node --test tests/partner-handoff-live-golden.test.cjs
