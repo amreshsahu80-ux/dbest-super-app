@@ -1,9 +1,9 @@
 name: Home Jobs Customer Dashboard - Isolated Release Gate
 on:
   push:
-    branches: [feat/homejobs-customer-dashboard-20261020]
+    branches: [feat/homejobs-customer-dashboard-20261020, fix/homejobs-receipt-proof-harden-20261020]
   pull_request:
-    branches: [fix/govt-fixed-pricing-and-intake-20261020]
+    branches: [fix/govt-fixed-pricing-and-intake-20261020, feat/homejobs-customer-dashboard-20261020]
   workflow_dispatch:
 permissions:
   contents: read
@@ -24,7 +24,7 @@ jobs:
           git merge-base --is-ancestor "$GOLDEN" HEAD
           while IFS= read -r file; do
             case "$file" in
-              index.html|homejobs-customer-history-v1.js|qa/homejobs/homejobs-customer-history-live/index.ts|qa/homejobs/homejobs-customer-history.test.cjs|qa/homejobs/homejobs-customer-history-mobile.test.cjs|.github/workflows/homejobs-customer-history-qa.yml)
+              index.html|homejobs-customer-history-v1.js|qa/homejobs/homejobs-customer-history-live/index.ts|qa/homejobs/homejobs-customer-history.test.cjs|qa/homejobs/homejobs-customer-history-mobile.test.cjs|.github/workflows/homejobs-customer-history-qa.yml|.github/workflows/homejobs-receipt-proof-qa.yml)
               echo "Scoped Home Jobs change: $file";;
               *) echo "::error::Working flow source must remain untouched: $file"; exit 1;;
             esac
