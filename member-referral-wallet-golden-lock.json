@@ -1,0 +1,114 @@
+{
+  "freeze_id": "DBEST-MEMBERSHIP-REFERRAL-WALLET-LIVE-GOLDEN-20261020",
+  "created_at": "2026-10-20",
+  "status": "GOLDEN LIVE BASELINE CAPTURED — production and payment systems unchanged",
+  "production": {
+    "domain": "https://dbest4u.com",
+    "deployment_id": "dpl_BH4La8R6fTTXKUPWVPJJKjyUtWkk",
+    "source_commit": "f7305e05d2bedc50760062316dc98ebb7dbe7c31",
+    "freeze_branch": "release/member-referral-wallet-golden-frozen-20261020"
+  },
+  "scope": {
+    "frozen_proven": [
+      "Paid membership signup / payment-success automatic member activation (Owner-confirmed working)",
+      "Active member identity, approved tier and member login",
+      "Direct and multilevel referral hierarchy visibility and downline privacy",
+      "Credited member wallet ledger and balance calculations",
+      "Starter-free no-wallet/no-payout restrictions",
+      "Existing Owner-managed payout rule editor and payout API authorization safeguards"
+    ],
+    "not_certified_and_out_of_scope": [
+      "Real bank settlement; zero confirmed Paid payout events",
+      "Individual payout eligibility of all members; KYC and verified bank account still required",
+      "Unpromoted member dashboard/OTP UI security fixes in draft PR #55",
+      "Hypothetical commission paid out by external insurers/travel providers"
+    ],
+    "no_mutation": [
+      "Do not change paid registration or automatic activation",
+      "Do not alter payment confirmation callbacks or ID allocations",
+      "Do not change payout amounts, calculation rules, member hierarchy or KYC records",
+      "No Cab/Marketplace/Insurance/Travel/NJ Wealth source or runtime changes"
+    ],
+    "owner_controlled_settings": "Owner remains authorized to edit payout rules through existing access controls; snapshot is guardrail evidence, not a database write-protection lock"
+  },
+  "evidence": {
+    "active_members": 29,
+    "active_paid_tier_members": 27,
+    "active_starter": 2,
+    "referrals": {
+      "with_nonblank_referral_code": 24,
+      "with_upline": 7,
+      "orphan_uplines": 0,
+      "self_referrals": 0,
+      "duplicate_nonblank_codes": 0,
+      "verified_path_depths": {
+        "1": 7,
+        "2": 2,
+        "3": 1
+      }
+    },
+    "wallet": {
+      "accounts": 9,
+      "lifetime_earned": 2996.87,
+      "lifetime_reversed": 95.4,
+      "available": 2901.47,
+      "held": 0,
+      "lifetime_paid": 0,
+      "duplicate_ledger_idempotency_keys": 0,
+      "negative_balance_count": 0
+    },
+    "payout": {
+      "payout_enabled_members": 2,
+      "verified_bank_accounts": 1,
+      "both_requirements_met": 1,
+      "eligible_with_positive_balance": 1,
+      "actual_paid_payouts": 0,
+      "historical_failed_test": "Owner-confirmed deliberate test; excluded from launch blocker"
+    },
+    "commission_rules": {
+      "enabled": 57,
+      "negative_rules": 0,
+      "total_percentage_over_100": 0
+    },
+    "member_privileged_payout_rpcs": {
+      "anonymous_can_execute": false,
+      "authenticated_can_execute": false,
+      "service_role_can_execute": true
+    }
+  },
+  "protected_files_sha1": {
+    "member-live-login-bridge.js": "437a02b869b56ec8a83e0d08fac4015bcc3d74e1",
+    "member-dashboard-controller-v1.js": "2558c01ecec5d2340b5b5321b2900cb915f3c44a",
+    "starter-member-safety-v1.js": "37323c042cdea84abba2334aa5ed126107486240",
+    "member-private-profile-documents-v1.js": "a0b15b4f152b41d468db90b545f0a8fe580f57d7",
+    "owner-payout-percentage-matrix.js": "688e119a4f1c3d7a0988bc0dbbf6efeb37fbee1a",
+    "owner-payout-entry-visible.js": "466f66b2f0af9dca2badffca05409649fbf4adc9",
+    "owner-control-live.js": "eb35a22aee0d4f18c2127a8319976ab919b5be80",
+    "membership-explainer-action-fix-v1.js": "6587be98e507b7d27918d24feea9053dfc43d151",
+    "razorpay-integration-v1.js": "c15d499638be0eaf973da71e8ec9104d6a33a42e",
+    "payu-preserve-v1.js": "599195b18e50220bb36b5bda012a9bb84c901477"
+  },
+  "backend_edge_functions": {
+    "project_id": "ydedmotbacnllkijzmvp",
+    "sha256": {
+      "member-registration-live": "c1d61fd49fff3847361877238dff4fd0c70cee8d0da1aa6b49a1d85e04bcd01e",
+      "member-login-live": "b265f243eebaa9b8632bfb10d7f0c266890926ea17f0aa3bdd05cf00c662dc02",
+      "member-network-live": "b41d74ec6ef5c8990c1b95da7e2a11080fc7a2ea098a17ecdc3565fceabd96eb",
+      "member-wallet-live": "b691fea4875aaca88cce8b8de5acab218c1fa8486555b339de9b6f39d14489f8",
+      "approve-member-and-welcome": "76be2e72d3b654cbe4f2a5b7d62b80a486b184007d7839f6958218e3cfb6695e"
+    },
+    "versions": {
+      "member-registration-live": 13,
+      "member-login-live": 15,
+      "member-network-live": 10,
+      "member-wallet-live": 8,
+      "approve-member-and-welcome": 10
+    }
+  },
+  "separate_preview": {
+    "branch": "fix/member-hierarchy-payout-audit-20261020",
+    "pr": "https://github.com/amreshsahu80-ux/dbest-super-app/pull/55",
+    "status": "Draft; UI-only hardening is NOT in this live frozen source"
+  },
+  "governance_note": "Baseline and CI gate, not GitHub branch protection rules. Any later production changes require intentional release review, source comparison and regression testing."
+}
