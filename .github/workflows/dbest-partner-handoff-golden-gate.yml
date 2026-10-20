@@ -65,7 +65,7 @@ jobs:
   stage-production-no-domain:
     name: Stage production build without changing live domains
     needs: partner-handoff-contract
-    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/fix/partner-deeplink-handoffs-20261020' && startsWith(github.event.head_commit.message, 'release(stage):') }}
+    if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'fix/partner-deeplink-handoffs-20261020' && github.event.pull_request.base.ref == 'release/cab-golden-frozen-20261020' }}
     runs-on: ubuntu-latest
     timeout-minutes: 18
     permissions:
