@@ -1,0 +1,42 @@
+name: DBest Safe Member Referral Link
+on:
+  push:
+    branches:
+      - fix/member-share-referral-link-20261020
+  pull_request:
+    branches:
+      - release/member-referral-wallet-golden-frozen-20261020
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  referral-link-contract:
+    name: Verify member referral and frozen core contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - name: Checkout with golden production ancestor
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Block any Cab Marketplace Insurance Travel payout or membership-registration changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          golden=f7305e05d2bedc50760062316dc98ebb7dbe7c31
+          git merge-base --is-ancestor "$golden" HEAD
+          while IFS= read -r path; do
+            [ -n "$path" ] || continue
+            case "$path" in
+              index.html|member-referral-share-v1.js|tests/member-referral-share-contract.cjs|.github/workflows/dbest-member-referral-share-gate.yml)
+                echo "Approved isolated referral-link change: $path" ;;
+              *) echo "::error::FROZEN MODULE TOUCHED: $path"; exit 1 ;;
+            esac
+          done < <(git diff --name-only "$golden" HEAD)
+      - name: Static syntax and existing onboarding route safety
+        run: |
+          node --check member-referral-share-v1.js
+          node --check tests/member-referral-share-contract.cjs
+      - name: Run server-authenticated referral eligibility and no-payment-change tests
+        run: node --test tests/member-referral-share-contract.cjs
