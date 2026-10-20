@@ -49,6 +49,7 @@ const fees=[['PAN Application',140],['Driving Licence',150],['ITR Filing',150],[
   });
   await page.waitForSelector('[data-dbest-govt-payu-only="1"]',{timeout:10000});
   await page.waitForTimeout(350);
+  console.log('QA-PayU isolated label:',await page.locator('[data-dbest-govt-payu-only="1"]').evaluate(el=>el.shadowRoot?.querySelector('button')?.textContent));
   const payments=await page.locator('.paymentPage button:visible').allTextContents();
   assert(payments.some(x=>/PayU Test/i.test(x)),JSON.stringify(payments));
   assert(!payments.some(x=>/Razorpay|ICICI|UPI|Pay\s+Direct/i.test(x)),JSON.stringify(payments));
