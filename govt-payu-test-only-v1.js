@@ -35,6 +35,15 @@ function currentTx(root){
  const ref=root?.querySelector('.payRef')?.textContent?.trim()||'';
  return findTx(ref);
 }
+function hideCompetingCheckout(root){
+ root.classList.add('dbestGovtPayuCheckout');
+ if(!document.getElementById('dbestGovtPayuExclusiveStyle')){
+  const style=document.createElement('style');
+  style.id='dbestGovtPayuExclusiveStyle';
+  style.textContent='.paymentPage.dbestGovtPayuCheckout button{display:none!important}.paymentPage.dbestGovtPayuCheckout .dbestPolicyCard,.paymentPage.dbestGovtPayuCheckout .dbestDualPayCard,.paymentPage.dbestGovtPayuCheckout .dbestInternalUpiBox{display:none!important}.paymentPage.dbestGovtPayuCheckout .paymentSummary>.payCard:not(:first-child){display:none!important}';
+  document.head.appendChild(style);
+ }
+}
 function removeOtherChoices(root){
  root.querySelectorAll('.dbestPolicyCard,.dbestDualPayCard,.dbestInternalUpiBox,.dbestUPIPaymentCard').forEach(e=>e.remove());
  const payCards=root.querySelectorAll('.paymentSummary > .payCard');
@@ -49,6 +58,7 @@ function removeOtherChoices(root){
 function decorate(){
  const root=paymentRoot(),tx=currentTx(root);
  if(!root||!isGovt(tx))return;
+ hideCompetingCheckout(root);
  removeOtherChoices(root);
  const id=String(tx.id);
  let card=root.querySelector('[data-dbest-govt-payu-only="1"]');
