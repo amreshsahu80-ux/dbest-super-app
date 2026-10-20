@@ -2,10 +2,10 @@
 const test=require('node:test'),assert=require('node:assert/strict');
 const fs=require('node:fs'),vm=require('node:vm'),cp=require('node:child_process');
 const code=fs.readFileSync('member-referral-share-v1.js','utf8');
-function env({id='M-1',role='leader',token='TOKEN-APPROVED',serverId=id,code='DB12345',tier=role,paymentStatus='Approved',activeStatus='Active',fetchStatus=200}={}){
+function env({id='M-1',role='leader',token='TOKEN-APPROVED',serverId=id,referralCode='DB12345',tier=role,paymentStatus='Approved',activeStatus='Active',fetchStatus=200}={}){
  const session={id,role},calls=[];
  const win={DBEST_RUNTIME_CONFIG:{supabaseUrl:'https://qa.supabase.co',supabasePublishableKey:'pub-test'},DBEST_SESSION_COMPAT:{read:()=>session},DBEST_MEMBER_LIVE:{getToken:()=>token}};
- const body={ok:true,viewerId:serverId,members:[{id:serverId,tier,status:activeStatus,paymentStatus,ref:code}]};
+ const body={ok:true,viewerId:serverId,members:[{id:serverId,tier,status:activeStatus,paymentStatus,ref:referralCode}]};
  const fakeFetch=async(url,opts)=>{calls.push({url,opts});return {ok:fetchStatus===200,status:fetchStatus,json:async()=>body}};
  const sandbox={window:win,localStorage:{getItem:()=>token},fetch:fakeFetch,
    document:{documentElement:{},addEventListener:()=>{},querySelectorAll:()=>[],getElementById:()=>null},
@@ -25,7 +25,7 @@ test('Approved Leader, Prime and Promoter members receive only their live referr
 test('Guest, Starter, visitor, unapproved, absent-code and mismatched viewer cannot generate a link',async()=>{
  const rejected=[
   {role:'guest',tier:'guest'}, {role:'starter',tier:'starter'},{role:'visitor',tier:'leader'},
-  {paymentStatus:'Pending Verification'},{activeStatus:'Pending'},{code:''},
+  {paymentStatus:'Pending Verification'},{activeStatus:'Pending'},{referralCode:''},
   {serverId:'M-OTHER'},{fetchStatus:401}
  ];
  for(const variant of rejected){
