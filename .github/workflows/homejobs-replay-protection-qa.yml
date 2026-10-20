@@ -1,0 +1,36 @@
+name: Home Jobs Replay Protection - Isolated QA
+on:
+  push:
+    branches: [fix/homejobs-request-idempotency-20261020]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  replay-protection:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Protect frozen production source
+        shell: bash
+        run: |
+          set -euo pipefail
+          GOLDEN=f08bf2fc0ab7d07083818c68b12a55ce885ef3a8
+          git merge-base --is-ancestor "$GOLDEN" HEAD
+          while IFS= read -r f; do
+            case "$f" in
+              qa/homejobs/hyperlocal-service-live-candidate.ts|qa/homejobs/homejobs-request-idempotency.test.cjs|.github/workflows/homejobs-replay-protection-qa.yml)
+              echo "HomeJobs isolated QA file $f";;
+              *) echo "::error::Unrelated/frozen production file changed: $f";exit 1;;
+            esac
+          done < <(git diff --name-only "$GOLDEN" HEAD)
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020f4
+        with:
+          node-version: '24'
+      - name: Install test-only TypeScript transpiler
+        run: npm install --no-save --ignore-scripts --package-lock=false esbuild@0.25.12
+      - name: Assert no production Supabase session/credentials touched
+        run: node --test qa/homejobs/homejobs-request-idempotency.test.cjs
