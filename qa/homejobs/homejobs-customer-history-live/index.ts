@@ -10,7 +10,7 @@ const paymentEvidence=(amount:number,status:string,mode:string,metadata:unknown)
  // and require a gateway-specific, server-verified reference to show a receipt.
  const m=(metadata&&typeof metadata==="object"&&!Array.isArray(metadata))?metadata as Record<string,unknown>:{};
  if(!Number.isFinite(amount)||amount<=0||!/^(Verified|Payment Verified|Paid|Settled|Captured|Razorpay Verified|PayU Verified)$/i.test(status.trim()))return false;
- if(m.qa===true||m.sandbox_only===true||m.is_test===true||m.demo===true||/test|sandbox|demo|qa/i.test(mode+" "+status))return false;
+ if(Object.prototype.hasOwnProperty.call(m,"qa")||m.sandbox_only===true||m.is_test===true||m.demo===true||/test|sandbox|demo|qa/i.test(mode+" "+status+" "+String(m.purpose||"")))return false;
  const ref=(v:unknown)=>String(v??"").trim();
  if(/razorpay/i.test(mode))return (m.razorpay_signature_verified===true||m.razorpay_verified===true)&&!!ref(m.razorpay_payment_id);
  if(/payu/i.test(mode))return m.payu_verified===true&&!!ref(m.payu_mihpayid);
