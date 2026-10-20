@@ -3,6 +3,8 @@ on:
   push:
     branches: [fix/homejobs-request-idempotency-20261020]
   workflow_dispatch:
+  pull_request:
+    branches: [fix/govt-fixed-pricing-and-intake-20261020]
 permissions:
   contents: read
 jobs:
