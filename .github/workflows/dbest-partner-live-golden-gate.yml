@@ -6,6 +6,7 @@ on:
   pull_request:
     branches:
       - governance/partner-handoff-frozen-release-gates-20261020
+      - release/partner-handoff-live-frozen-20261020
   workflow_dispatch:
 
 permissions:
