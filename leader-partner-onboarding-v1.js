@@ -17,7 +17,7 @@ function css(){if(document.getElementById('dbestLeaderOnboardCss'))return;const 
 #dbestLeaderOnboarding .loBtn{border:0;border-radius:16px;padding:14px 10px;color:#fff;font-weight:900;text-align:left;min-height:92px;box-shadow:0 8px 18px rgba(20,50,100,.12)}
 #dbestLeaderOnboarding .loBtn b{display:block;font-size:15px}.loBtn small{display:block;margin-top:5px;color:#eef4ff;font-size:10px;line-height:1.3}
 #dbestLeaderOnboarding .vendor{background:linear-gradient(135deg,#087f72,#21aa93)}#dbestLeaderOnboarding .vaahak{background:linear-gradient(135deg,#1765ff,#654bff)}#dbestLeaderOnboarding .service{background:linear-gradient(135deg,#c44a7f,#ef6aa4)}
-#dbestLeaderOnboarding .loStats{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-top:10px}.loStat{background:#f7f9fc;border:1px solid #e6ebf2;border-radius:12px;padding:9px}.loStat small{display:block;color:#718096;font-size:9px}.loStat b{display:block;margin-top:2px;font-size:14px}
+#dbestLeaderOnboarding .loStats{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin-top:10px}.loStat{background:#f7f9fc;border:1px solid #e6ebf2;border-radius:12px;padding:9px}.loStat small{display:block;color:#718096;font-size:9px}.loStat b{display:block;margin-top:2px;font-size:14px}
 #dbestLeaderOnboarding .loNote{margin-top:10px;padding:10px;border-radius:12px;background:#fff8e8;border:1px solid #f1dfad;color:#765719;font-size:10px;line-height:1.45}
 @media(max-width:560px){#dbestLeaderOnboarding .loGrid{grid-template-columns:1fr}.loStats{grid-template-columns:1fr 1fr!important}.loBtn{min-height:72px!important}}
 `;document.head.appendChild(s)}
@@ -37,7 +37,8 @@ async function launch(type,btn){
    if(btn){btn.disabled=false;btn.dataset.opening='0';if(btn.dataset.originalHtml)btn.innerHTML=btn.dataset.originalHtml}
  }
 }
-async function refresh(){if(!isLeader())return;try{const d=await call({action:'list'}),s=d.summary||{};const map={loStarted:s.started||0,loPending:s.pending||0,loActivated:s.activated||0,loEarned:'₹'+Number(s.earned||0).toLocaleString('en-IN')};for(const [id,v] of Object.entries(map)){const e=document.getElementById(id);if(e)e.textContent=String(v)}}catch(_){}}
+function launchCounts(data,now=Date.now()){const rows=Array.isArray(data?.rows)?data.rows:[],summary=data?.summary||{};const expired=rows.filter(r=>String(r.status)==='Launched'&&!(Date.parse(String(r.expires_at||''))>now)).length;const pending=rows.filter(r=>String(r.status)==='Claimed'||(String(r.status)==='Launched'&&Date.parse(String(r.expires_at||''))>now)).length;return {started:Number(summary.started??rows.length),pending,expired,activated:Number(summary.activated||0),earned:Number(summary.earned||0)}}
+async function refresh(){if(!isLeader())return;try{const d=await call({action:'list'}),s=launchCounts(d);const map={loStarted:s.started,loPending:s.pending,loExpired:s.expired,loActivated:s.activated,loEarned:'₹'+Number(s.earned||0).toLocaleString('en-IN')};for(const [id,v] of Object.entries(map)){const e=document.getElementById(id);if(e)e.textContent=String(v)}const note=document.getElementById('loExpiryExplanation');if(note){note.hidden=!s.expired;note.textContent=s.expired+' previous onboarding link'+(s.expired===1?' has':'s have')+' expired (links last 6 hours). Create a fresh link to continue; expired links do not represent completed activations.'}}catch(_){}}
 function mount(){
  if(!isLeader()){document.getElementById('dbestLeaderOnboarding')?.remove();return}
  css();const root=document.querySelector('.classicDash');if(!root||document.getElementById('dbestLeaderOnboarding'))return;
@@ -48,7 +49,7 @@ function mount(){
   <button class="loBtn vaahak" type="button" data-kind="Vaahak"><b>🛵 Onboard Vaahak</b><small>Complete driver/vehicle onboarding • Earn ₹200 after activation</small></button>
   <button class="loBtn service" type="button" data-kind="Service Partner"><b>🧰 Onboard Service Partner</b><small>Complete KYC/service onboarding • Earn ₹100 after activation</small></button>
  </div>
- <div class="loStats"><div class="loStat"><small>Started</small><b id="loStarted">—</b></div><div class="loStat"><small>Pending</small><b id="loPending">—</b></div><div class="loStat"><small>Activated</small><b id="loActivated">—</b></div><div class="loStat"><small>Incentive Earned</small><b id="loEarned">—</b></div></div>
+ <div class="loStats"><div class="loStat"><small>Started</small><b id="loStarted">—</b></div><div class="loStat"><small>Pending</small><b id="loPending">—</b></div><div class="loStat"><small>Expired</small><b id="loExpired">—</b></div><div class="loStat"><small>Activated</small><b id="loActivated">—</b></div><div class="loStat"><small>Incentive Earned</small><b id="loEarned">—</b></div></div><div id="loExpiryExplanation" class="loMeta" hidden></div>
  <div class="loNote"><b>Promotional incentive till 31 Oct 2026:</b> Vendor ₹300 • Vaahak ₹200 • Service Partner ₹100. Credit is generated only after verified activation by the deadline.<br><br><b>Security:</b> The Leader may fill and upload the onboarding details, but the applicant must provide their own OTP/agreement consent and company payment where applicable. No personal collection of company payments is allowed.</div>`;
  const walletBtn=[...root.querySelectorAll('button')].find(x=>/My Wallet/i.test(x.textContent||''));if(walletBtn?.parentElement)walletBtn.parentElement.insertAdjacentElement('afterend',host);else root.prepend(host);
  host.querySelectorAll('[data-kind]').forEach(b=>b.addEventListener('click',()=>launch(b.dataset.kind,b)));
@@ -58,5 +59,5 @@ function mount(){
 const raw=window.memberDash;if(typeof raw==='function'&&!raw.__dbestLeaderOnboard){const w=function(){const out=raw.apply(this,arguments);setTimeout(mount,80);return out};w.__dbestLeaderOnboard=true;window.memberDash=w;try{memberDash=w}catch(_){}}
 new MutationObserver(()=>setTimeout(mount,60)).observe(document.documentElement,{childList:true,subtree:true});
 [100,500,1200,2500].forEach(ms=>setTimeout(mount,ms));
-window.DBEST_LEADER_PARTNER_ONBOARDING={version:VERSION,mount,refresh,launch};
+window.DBEST_LEADER_PARTNER_ONBOARDING={version:VERSION,mount,refresh,launch,launchCounts};
 })();
