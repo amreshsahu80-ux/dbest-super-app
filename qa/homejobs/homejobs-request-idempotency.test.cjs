@@ -2,6 +2,14 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),{transformSync}=require('esbuild');
 const source=fs.readFileSync('qa/homejobs/hyperlocal-service-live-candidate.ts','utf8');
 const compiled=transformSync(source,{loader:'ts',format:'cjs',target:'es2022'}).code;
+const baseline=fs.readFileSync('qa/homejobs/hyperlocal-service-live-v15-baseline.ts','utf8');
+test('Only sync_job changed from known-good Edge v15; onboarding, approvals, payouts untouched',()=>{
+ const markerA="if(action==='sync_job')",markerB="if(action==='owner_set_approval')";
+ for(const v of [baseline,source]){assert(v.includes(markerA));assert(v.includes(markerB))}
+ assert.equal(baseline.slice(0,baseline.indexOf(markerA)),source.slice(0,source.indexOf(markerA)));
+ assert.equal(baseline.slice(baseline.indexOf(markerB)),source.slice(source.indexOf(markerB)));
+});
+
 function context(overrides={}){
  const memberId='QA-MEMBER',transactionId='TX-HOME-QA-01',label='Electrician';
  const data={
