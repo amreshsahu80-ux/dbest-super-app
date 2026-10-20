@@ -22,6 +22,26 @@ module.exports=async function handler(req,res){
     const verifiedSuccess=status==='success'||status==='captured';
     const actualAmount=Number(d.amt||d.amount||0),expectedAmount=Number(pending.amount||0),amountMatches=actualAmount>0&&Math.abs(actualAmount-expectedAmount)<0.01;
     const success=verifiedSuccess&&amountMatches,mihpayid=safe(d.mihpayid||b.mihpayid,120),bankRef=safe(d.bank_ref_num||d.bankReferenceNumber||b.bank_ref_num,120);
+    const govtSandbox=String(pending.section||'').trim()==='PAN, DL, ITR'&&String(pending.metadata?.sandbox_only||'')==='true';
+    if(govtSandbox){
+      // An official PayU test gateway response is NOT real money. Never record paid,
+      // verified or captured as an authoritative financial status or ledger evidence.
+      const meta={...(pending.metadata||{}),gateway:'payu',payu_txnid:txnid,
+        payu_mihpayid:'',payu_verified:false,bank_ref_num:'',
+        sandbox_payment_id:mihpayid,sandbox_verified:success,
+        verified_amount:actualAmount,payment_stage:success?'Sandbox Success':'Sandbox Failed',
+        environment:'payu_sandbox',sandbox_only:true};
+      await updateTransaction(pending.transaction_id,{
+        payment_mode:'PayU Sandbox',payment_status:success?'Sandbox Success - No Funds Collected':'Sandbox Failed - No Funds Collected',
+        reference:txnid,metadata:meta,updated_at:new Date().toISOString()
+      });
+      const p=new URLSearchParams({
+        dbest_tx_id:pending.transaction_id,payu_verified:'0',
+        payu_status:success?'sandbox_success':'sandbox_failure',
+        payu_test:'1',payu_txnid:txnid
+      });
+      return redirect(res,origin+'/?'+p.toString());
+    }
     const meta={...(pending.metadata||{}),gateway:'payu',payu_txnid:txnid,payu_mihpayid:mihpayid,bank_ref_num:bankRef,payu_verified:success,verified_amount:actualAmount,payment_stage:success?'PayU Verified':'PayU Failed',environment:process.env.VERCEL_ENV||'preview'};
     await updateTransaction(pending.transaction_id,{payment_mode:'PayU',payment_status:success?'Verified':'Failed',reference:mihpayid||txnid,metadata:meta,updated_at:new Date().toISOString()});
     const p=new URLSearchParams({dbest_tx_id:pending.transaction_id,payu_verified:success?'1':'0',payu_status:success?'success':(status||'failure'),payu_txnid:txnid});
