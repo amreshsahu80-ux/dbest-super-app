@@ -1,0 +1,38 @@
+name: Home Jobs Payment-Status Isolation
+on:
+  push:
+    branches: [fix/homejobs-payment-status-isolation-20261020]
+  pull_request:
+    branches: [feat/homejobs-customer-dashboard-20261020]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  homejobs-payment-isolation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Assert every proven production file unchanged
+        shell: bash
+        run: |
+          set -euo pipefail
+          GOLDEN=e5a1bbe0a36ed41d9d7099e55d5f17e5063d8eda
+          git merge-base --is-ancestor "$GOLDEN" HEAD
+          while IFS= read -r path; do
+            case "$path" in
+              qa/homejobs/hyperlocal-job-execution-v9-baseline.ts|qa/homejobs/hyperlocal-job-execution-payment-status-v10.ts|qa/homejobs/payment-status-isolation.test.cjs|.github/workflows/homejobs-payment-status-isolation.yml)
+              echo "Allowed isolated Home Jobs test file: $path";;
+              *) echo "::error::Frozen live source modified $path"; exit 1;;
+            esac
+          done < <(git diff --name-only "$GOLDEN" HEAD)
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020f4
+        with:
+          node-version: '24'
+      - name: Install isolated TS compiler for contract tests
+        run: npm install --no-save --ignore-scripts --package-lock=false esbuild@0.25.12
+      - name: Payment-status and job lifecycle regression contracts
+        run: node --test qa/homejobs/payment-status-isolation.test.cjs
