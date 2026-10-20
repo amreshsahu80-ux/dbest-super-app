@@ -1,0 +1,48 @@
+name: Home Jobs Customer Dashboard - Isolated Release Gate
+on:
+  push:
+    branches: [feat/homejobs-customer-dashboard-20261020]
+  pull_request:
+    branches: [fix/govt-fixed-pricing-and-intake-20261020]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  customer-history:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Diff-based freeze protection for every existing section
+        shell: bash
+        run: |
+          set -euo pipefail
+          GOLDEN=f08bf2fc0ab7d07083818c68b12a55ce885ef3a8
+          git merge-base --is-ancestor "$GOLDEN" HEAD
+          while IFS= read -r file; do
+            case "$file" in
+              index.html|homejobs-customer-history-v1.js|qa/homejobs/homejobs-customer-history-live/index.ts|qa/homejobs/homejobs-customer-history.test.cjs|qa/homejobs/homejobs-customer-history-mobile.test.cjs|.github/workflows/homejobs-customer-history-qa.yml)
+              echo "Scoped Home Jobs change: $file";;
+              *) echo "::error::Working flow source must remain untouched: $file"; exit 1;;
+            esac
+          done < <(git diff --name-only "$GOLDEN" HEAD)
+          git diff "$GOLDEN" HEAD -- index.html | grep '^+' | grep -v '^+++' | grep -v "homejobs-customer-history-v1.js" && exit 1 || true
+          # One loader reference, and no edits to the existing application sources.
+          [ "$(grep -o "'homejobs-customer-history-v1.js'" index.html | wc -l)" -eq 1 ]
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020f4
+        with:
+          node-version: '24'
+      - name: Install test-only compile and browser drivers
+        run: npm install --no-save --ignore-scripts --package-lock=false esbuild@0.25.12 playwright-core@1.56.1
+      - name: Frontend and Edge syntax validation
+        run: |
+          node --check homejobs-customer-history-v1.js
+          node --check qa/homejobs/homejobs-customer-history.test.cjs
+          node --check qa/homejobs/homejobs-customer-history-mobile.test.cjs
+      - name: Isolated member ownership, invoice evidence and operation tests
+        run: node --test qa/homejobs/homejobs-customer-history.test.cjs
+      - name: Mobile Chrome visible history and receipt check (all responses synthetic)
+        run: node qa/homejobs/homejobs-customer-history-mobile.test.cjs
