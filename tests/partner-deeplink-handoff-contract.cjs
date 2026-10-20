@@ -18,6 +18,11 @@ const desc={
   mf:['mf','Mutual Funds',['Mutual Fund Investment','Portfolio Assistance']]
 };
 const sleep=(t=12)=>new Promise(resolve=>setTimeout(resolve,t));
+async function waitUntil(predicate,timeoutMs=450){
+ const deadline=Date.now()+timeoutMs;
+ while(!predicate()&&Date.now()<deadline)await sleep(10);
+ assert(predicate(),'Expected handoff event did not occur within '+timeoutMs+'ms');
+}
 
 function env({central=true,session=true,token=true,ledgerDelay=0,ledgerFail=false,cachedLinks=null,refresh=null}={}){
   let txs=[],launches=[],messages=[],writes=[],forms=0,saves=0,login=0,baseService=0,refreshes=0;
@@ -109,7 +114,7 @@ test('Hotels n Packages routes Hotel Booking, Tour Package, Custom Itinerary to 
 });
 test('Mutual Fund investment and portfolio handoffs retain NJ Wealth partner code 13879',async()=>{
  for(let i=0;i<2;i++){
-  const x=env();x.window.openContentForm('mf',i);await sleep();
+  const x=env();x.window.openContentForm('mf',i);await waitUntil(()=>x.launches.length===1);
   assert.equal(x.forms,0);assert.equal(x.launches.length,1);
   assertPartner(x.launches[0],'mf',desc.mf[2][i],x.txs[0].id)
  }
