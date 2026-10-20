@@ -25,7 +25,7 @@ jobs:
           while IFS= read -r f; do
             [ -n "$f" ] || continue
             case "$f" in
-              index.html|service-variable-pricing-v1.js|govt-assistance-fees-v1.js|tests/govt-assistance-fees-contract.cjs|.github/workflows/dbest-govt-assistance-fees-ci.yml)
+              index.html|service-variable-pricing-v1.js|govt-assistance-fees-v1.js|tests/govt-assistance-fees-contract.cjs|tests/govt-fees-live-shell-mobile.cjs|.github/workflows/dbest-govt-assistance-fees-ci.yml)
               echo "Government fees only: $f";;
               *) echo "::error::Frozen source touched: $f";exit 1;;
             esac
@@ -41,3 +41,7 @@ jobs:
           node --check govt-assistance-fees-v1.js
           node --check service-variable-pricing-v1.js
           node --test tests/govt-assistance-fees-contract.cjs
+      - name: Install isolated Chromium automation driver (no deploy)
+        run: npm install --no-save --ignore-scripts --package-lock=false playwright-core@1.56.1
+      - name: Mobile live-shell fixture with backend writes blocked
+        run: node tests/govt-fees-live-shell-mobile.cjs
