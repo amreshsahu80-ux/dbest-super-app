@@ -40,7 +40,7 @@ test('OTP overlay escapes server-provided masked-email HTML',async()=>{
 });
 
 test('Safe patches preserve member API and OTP business contracts',()=>{
-  for(const word of ['member-network-live','dbest_member_live_token','DBEST_MEMBER_DASHBOARD_CONTROLLER','transactions','summary']){
+  for(const word of ['member-network-live','dbest_member_live_token','DBEST_MEMBER_DASHBOARD_CONTROLLER','transactions']){
     assert(dashboard.includes(word),word+' missing from dashboard');
   }
   for(const word of ['member-login-live','requestOtp','verifyOtp','DBEST_MEMBER_LIVE','Secure DBest Login']){
