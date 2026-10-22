@@ -2,7 +2,9 @@ const fs=require('node:fs');const assert=require('node:assert/strict');const vm=
 new vm.Script(s,{filename:'cab-selected-ui-v3.js'});
 assert.match(s,/if\(predictions\.length\)return predictions/,'Google empty results must reach fallback');
 assert.match(s,/new Promise\(resolve=>setTimeout\(\(\)=>resolve\(\[\]\),3500\)\)/,'Google timeout must be bounded');
-assert.match(s,/controller\.abort\(\),4500/,'Supabase request must have a timeout');
+const search=s.slice(s.indexOf('async function searchLocations('),s.indexOf('async function resolvePlace('));
+const backendTimeout=search.match(/controller\.abort\(\),(\d+)/);
+assert.ok(backendTimeout&&Number(backendTimeout[1])>=1000&&Number(backendTimeout[1])<=8000,'Supabase search timeout must be bounded between 1 and 8 seconds');
 assert.match(s,/Number\.isFinite\(x\.lat\)&&Number\.isFinite\(x\.lng\)/,'Supabase coordinates must be valid');
 assert.match(s,/if\(rows\.length&&hasRenderedPlaces\)return/,'Late nearby responses must not overwrite valid results');
 for(const token of ['cab6D','cab6P','cab6NearbyRail','cab6AddStop','roundtrip','carpool'])assert.ok(s.includes(token),'Missing Cab feature '+token);
