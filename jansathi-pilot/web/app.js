@@ -8,13 +8,7 @@ const AUTH_STORAGE="dbest-jansathi-stage-session";
 const DEMO_STORAGE="dbest-jansathi-stage-demo";
 
 const byId=id=>document.getElementById(id);
-const baseData=[
-{kind:"civic",id:"demo-1",city:"Chakradharpur",public_area:"Illustrative market road",headline:"Example damaged public road",category:"road",status:"dbest_received",emoji:"🛣️",date:"Example"},
-{kind:"news",id:"demo-2",city:"Chakradharpur",public_area:"Illustrative public hall",headline:"Example community health event",body:"Fictional local announcement, not a real scheduled event.",category:"health",emoji:"❤️",date:"Example"},
-{kind:"civic",id:"demo-3",city:"Chaibasa",public_area:"Illustrative ward",headline:"Example drainage complaint",category:"drainage",status:"dbest_received",emoji:"🕳️",date:"Example"},
-{kind:"news",id:"demo-4",city:"Jamshedpur",public_area:"Example public ground",headline:"Example neighbourhood sports meet",body:"Fictional community event.",category:"sports",emoji:"🏅",date:"Example"},
-{kind:"news",id:"demo-5",city:"Ranchi",public_area:"Example community hall",headline:"Example book discussion",body:"Fictional community news.",category:"community",emoji:"📚",date:"Example"}
-];
+const baseData=[{"kind":"news","id":"demo-news-ckp-1","city":"Chakradharpur","public_area":"Imaginary community hall","headline":"[DEMO] Community art workshop announced","body":"FICTIONAL EXAMPLE: A model neighbourhood plans a drawing and craft workshop for families. This is sample content only; no real event is announced.","category":"community","emoji":"🎨","synthetic":true},{"kind":"news","id":"demo-news-ckp-2","city":"Chakradharpur","public_area":"Illustrative school grounds","headline":"[DEMO] Students prepare a science exhibition","body":"FICTIONAL EXAMPLE: A sample school showcases simple science models, recycling ideas and local innovation during an imaginary exhibition. Not an actual school announcement.","category":"education","emoji":"🔬","synthetic":true},{"kind":"news","id":"demo-news-ckp-3","city":"Chakradharpur","public_area":"Sample public sports field","headline":"[DEMO] Friendly neighbourhood sports meet","body":"FICTIONAL EXAMPLE: A make-believe sports day includes badminton, volleyball and children's activities. No event is scheduled.","category":"sports","emoji":"🏅","synthetic":true},{"kind":"civic","id":"demo-issue-ckp-1","city":"Chakradharpur","public_area":"Imaginary market road","headline":"[DEMO] Streetlight not working in sample lane","body":"FICTIONAL ISSUE: An imaginary streetlight needs inspection. No complaint was filed.","category":"streetlight","status":"dbest_received","emoji":"💡","synthetic":true},{"kind":"civic","id":"demo-issue-ckp-2","city":"Chakradharpur","public_area":"Illustrative bus stop area","headline":"[DEMO] Sample pothole near bus stop","body":"FICTIONAL ISSUE: An example pothole is described solely for interface testing. No authority was contacted.","category":"road","status":"dbest_received","emoji":"🛣️","synthetic":true},{"kind":"news","id":"demo-news-chaibasa-1","city":"Chaibasa","public_area":"Example civic reading room","headline":"[DEMO] Community book-exchange gathering","body":"FICTIONAL EXAMPLE: Neighbours in a mock locality exchange books and share reading suggestions. This is not an actual announcement.","category":"education","emoji":"📚","synthetic":true},{"kind":"news","id":"demo-news-chaibasa-2","city":"Chaibasa","public_area":"Illustrative community garden","headline":"[DEMO] Tree-planting awareness activity","body":"FICTIONAL EXAMPLE: A demonstration group discusses the benefits of planting native trees in a model garden.","category":"community","emoji":"🌿","synthetic":true},{"kind":"civic","id":"demo-issue-chaibasa-1","city":"Chaibasa","public_area":"Imaginary ward street","headline":"[DEMO] Example blocked drainage channel","body":"FICTIONAL ISSUE: A hypothetical drain needs cleaning. This did not happen at a real address.","category":"drainage","status":"dbest_received","emoji":"🚰","synthetic":true},{"kind":"news","id":"demo-news-jsr-1","city":"Jamshedpur","public_area":"Sample public recreation area","headline":"[DEMO] Weekend fitness and cycling session","body":"FICTIONAL EXAMPLE: An imaginary neighbourhood conducts a cycling-safety and wellness discussion. No real session is advertised.","category":"health","emoji":"🚲","synthetic":true},{"kind":"news","id":"demo-news-jsr-2","city":"Jamshedpur","public_area":"Imaginary youth club","headline":"[DEMO] Youth skill-sharing meetup","body":"FICTIONAL EXAMPLE: A sample community invites volunteers to share basic computer and communication skills.","category":"education","emoji":"💻","synthetic":true},{"kind":"civic","id":"demo-issue-jsr-1","city":"Jamshedpur","public_area":"Example park approach","headline":"[DEMO] Garbage collection request in sample lane","body":"FICTIONAL ISSUE: An imaginary street requires garbage pickup. No service request has been registered.","category":"garbage","status":"dbest_received","emoji":"🗑️","synthetic":true},{"kind":"news","id":"demo-news-ranchi-1","city":"Ranchi","public_area":"Illustrative cultural centre","headline":"[DEMO] Local crafts exhibition showcase","body":"FICTIONAL EXAMPLE: Mock artisans exhibit handmade products and demonstrate traditional crafts at an imaginary event.","category":"community","emoji":"🧵","synthetic":true},{"kind":"news","id":"demo-news-ranchi-2","city":"Ranchi","public_area":"Example public learning hub","headline":"[DEMO] Digital literacy awareness session","body":"FICTIONAL EXAMPLE: An imaginary neighbourhood organizes introductory mobile safety and internet literacy activities.","category":"education","emoji":"📱","synthetic":true},{"kind":"civic","id":"demo-issue-ranchi-1","city":"Ranchi","public_area":"Imaginary park entrance","headline":"[DEMO] Example footpath needs repairs","body":"FICTIONAL ISSUE: A pretend uneven footpath is shown to illustrate issue tracking; no complaint exists.","category":"road","status":"dbest_received","emoji":"🚶","synthetic":true}];
 let local=[];try{local=JSON.parse(localStorage.getItem(DEMO_STORAGE)||"[]")}catch(e){}
 let session=null;try{session=JSON.parse(sessionStorage.getItem(AUTH_STORAGE)||"null")}catch(e){}
 function storeSession(value){session=value; if(value){sessionStorage.setItem(AUTH_STORAGE,JSON.stringify(value));}else{sessionStorage.removeItem(AUTH_STORAGE);}renderAuth();}
@@ -28,7 +22,7 @@ async function refreshTokenIfNeeded(){
  if(!res.ok||!token.access_token){storeSession(null);throw Error("Your session expired. Please sign in again.");}
  storeSession({access_token:token.access_token,refresh_token:token.refresh_token,expires_at:Math.floor(Date.now()/1000)+(token.expires_in||3600)});
 }
-let activeCity="Chakradharpur",activeKind="all",reportKind="civic",currentStories=[];
+let activeCity="Chakradharpur",activeKind="all",reportKind="civic",currentStories=[],includeSamples=true;
 byId("mode").textContent=ONLINE?"ISOLATED DATABASE MODE":"DEMO ONLY · BROWSER DATA";
 byId("systemStatus").textContent=ONLINE?"Connected to the isolated DBest JanSathi Pilot Free database. Test environment ONLY; no government submissions or live DBest logins.":"No Supabase configured. All reports are local to this browser only.";
 if(ONLINE){byId("identity").hidden=false;renderAuth();}else{byId("identity").hidden=true;}
@@ -48,17 +42,19 @@ node.appendChild(icon);
 const body=mk("div","body");
 const cat=mk("span","tag "+(story.kind==="civic"?"issue":"news"),story.kind==="civic"?"CIVIC PROBLEM":"CITIZEN-REPORTED NEWS");
 body.appendChild(cat);
+if(story.synthetic)body.appendChild(mk("span","sampleBadge","SAMPLE DATA · FICTIONAL · NOT A REAL REPORT"));
 body.appendChild(mk("h3","",story.headline||story.title||"Community update"));
-body.appendChild(mk("p","",story.kind==="civic"?"Public issue reported to JanSathi. Not an official government acknowledgement.":String(story.body||story.description||"Community-reported information, unverified by DBest.")));
+body.appendChild(mk("p","",story.synthetic?String(story.body||"Fictional demonstration only."):(story.kind==="civic"?"Public issue reported to JanSathi. Not an official government acknowledgement.":String(story.body||story.description||"Community-reported information, unverified by DBest."))));
 body.appendChild(mk("div","muted","📍 "+story.public_area+" · "+story.city));
-if(story.kind==="civic")body.appendChild(mk("span","status","DBest status: "+(story.status||"dbest_received").replace(/_/g," ")));
+if(story.kind==="civic")body.appendChild(mk("span","status",story.synthetic?"SIMULATED status: "+(story.status||"dbest_received").replace(/_/g," "):"DBest status: "+(story.status||"dbest_received").replace(/_/g," ")));
 const actions=mk("div","actions");
 if(story.kind==="civic"){const b=mk("button","mini","🔔 Follow issue");b.onclick=()=>follow(story.id);actions.appendChild(b);}
 const flag=mk("button","mini outline","⚑ Flag");flag.onclick=()=>flagPost(story);actions.appendChild(flag);body.appendChild(actions);node.appendChild(body);
 return node;
 }
 function renderCards(){
-const selected=currentStories.filter(s=>s.city===activeCity&&(activeKind==="all"||activeKind===s.kind));
+const selected=(includeSamples?baseData:[]).concat(currentStories).filter(s=>s.city===activeCity&&(activeKind==="all"||activeKind===s.kind));
+byId("feedCounter").textContent=selected.length+" posts for "+activeCity+(includeSamples?" (including fictional examples)":" (database posts only)");
 byId("feed").replaceChildren();
 if(!selected.length){byId("feed").appendChild(mk("div","empty","No "+(ONLINE?"published":"sample")+" updates for these filters."));return;}
 selected.forEach(s=>byId("feed").appendChild(card(s)));
@@ -72,9 +68,9 @@ api("/rest/v1/jansathi_news_feed?select=id,category,headline,body,city,public_ar
 ]);
 currentStories=[...civic.map(x=>({...x,kind:"civic",emoji:"🛣️"})),...news.map(x=>({...x,kind:"news",emoji:"📰"}))].sort((a,b)=>(b.created_at||"").localeCompare(a.created_at||""));
 }else{
-currentStories=baseData.concat(local.filter(x=>x.visibility!=="held")).map(x=>Object.assign({},x));}
+currentStories=local.filter(x=>x.visibility!=="held").map(x=>Object.assign({},x));}
 renderCards();
-}catch(e){byId("feed").replaceChildren(mk("div","empty","Cannot read the isolated database: "+e.message));}
+}catch(e){currentStories=[];byId("feedAlert").textContent="Live database unavailable: "+e.message+" — fictional examples are still available.";byId("feedAlert").hidden=false;renderCards();}
 }
 async function submitReport(e){
 e.preventDefault();const form=e.target;const fd=new FormData(form);
@@ -118,11 +114,13 @@ async function refreshMine(){
 }
 byId("refreshMine").onclick=()=>refreshMine();
 async function follow(reportId){
+if(String(reportId).startsWith("demo-")){toast("This issue is FICTIONAL. Following it would create a notification only for a real report.");return;}
 if(!ONLINE){toast("Following is demonstrated only; no shared notifications yet.");return;}
 try{await api("/rest/v1/jansathi_follows",{method:"POST",auth:true,headers:Object.assign(headers(true),{"Prefer":"return=minimal"}),body:JSON.stringify({report_id:reportId})});toast("You are following this public issue.");}
 catch(e){toast("Could not follow: "+e.message);}
 }
 async function flagPost(story){
+if(story.synthetic){toast("Fictional sample content cannot be flagged. Real posts have the Flag option.");return;}
 if(!ONLINE){toast("Demo flag recorded locally for illustration only.");return;}
 const reason=prompt("Briefly explain why this post needs review (minimum 5 characters):");
 if(!reason)return;if(cleanText(reason).length<5){toast("Please enter at least five characters.");return;}
@@ -131,6 +129,10 @@ catch(e){toast("Could not flag post: "+e.message);}
 }
 document.querySelectorAll("[data-kind]").forEach(b=>b.addEventListener("click",()=>{activeKind=b.dataset.kind;document.querySelectorAll("[data-kind]").forEach(x=>x.classList.toggle("active",x===b));renderCards()}));
 byId("city").addEventListener("change",e=>{activeCity=e.target.value;renderCards()});
+byId("includeSamples").addEventListener("change",e=>{includeSamples=e.target.checked;renderCards();});
+byId("fillExample").onclick=()=>{
+const example=reportKind==="civic"?{title:"[DEMO] Example damaged community path",body:"FICTIONAL ISSUE: A pretend public pathway near a sample school gate needs repair. No actual complaint will be filed by filling this form.",area:"Imaginary school approach",category:"road"}:{title:"[DEMO] Sample community reading event",body:"FICTIONAL EXAMPLE: Members of a pretend neighbourhood gather to exchange books and discuss local stories. This event is not real.",area:"Example community hall",category:"community"};
+byId("title").value=example.title;byId("body").value=example.body;byId("area").value=example.area;byId("category").value=example.category;toast("Synthetic example filled. It has NOT been submitted.");};
 document.querySelectorAll("[data-report]").forEach(b=>b.addEventListener("click",()=>{reportKind=b.dataset.report;byId("modalTitle").textContent=reportKind==="civic"?"Report a civic problem":"Post local news or event";const categories=reportKind==="civic"?["road","drainage","streetlight","garbage","water","other"]:["community","health","education","sports","festival","traffic","other"];byId("category").replaceChildren();categories.forEach(x=>{let o=mk("option","",x);o.value=x;byId("category").appendChild(o)});byId("reportCity").value=activeCity;byId("modal").classList.add("show")}));
 byId("close").onclick=()=>byId("modal").classList.remove("show");byId("modal").addEventListener("click",e=>{if(e.target.id==="modal")byId("modal").classList.remove("show")});document.addEventListener("keydown",e=>{if(e.key==="Escape")byId("modal").classList.remove("show")});
 byId("reportForm").addEventListener("submit",submitReport);
