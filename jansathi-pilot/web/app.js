@@ -102,14 +102,51 @@ function placeMatch(s){
 }
 function geoParams(){return {p_level:geo.scope,p_state:geo.state,p_district:geo.district,p_block:geo.block,
  p_town:geo.town,p_village:geo.village,p_limit:100};}
+async function loadOwnerIssueSeverity(){
+ if(!ownerCanFeature)return;
+ const list=byId("ownerSeverityList");list.replaceChildren(mk("p","muted","Loading current issue schedules…"));
+ try{
+  const rows=await api("/rest/v1/rpc/jansathi_owner_issue_followup_schedule",
+   {method:"POST",auth:true,body:JSON.stringify({p_limit:100})});
+  list.replaceChildren();
+  if(!rows.length){list.appendChild(mk("p","muted","No real issues to review. Fictional demonstration issues cannot be reclassified."));return;}
+  rows.forEach(s=>{
+   const row=mk("div","myreport");
+   row.append(mk("b","",s.issue_title),mk("small","muted",s.issue_status+" · "+s.citizen_update_count+" citizen updates"),
+    mk("span","status",s.severity.toUpperCase()+" · "+cadenceText(s.cadence_hours)+" · Next: "+localDate(s.next_eligible_at)));
+   const chooser=mk("select","select");
+   ["urgent","high","moderate","low"].forEach(level=>{const option=mk("option","",level);option.value=level;chooser.append(option);});
+   chooser.value=s.severity;
+   const change=mk("button","btn soft","Apply severity");
+   change.onclick=async()=>{
+    if(chooser.value===s.severity){toast("No severity change selected.");return;}
+    const reason=window.prompt("Reason for changing issue severity (minimum 5 characters):");
+    if(reason===null)return;
+    if(cleanText(reason).length<5){toast("Please enter a meaningful audit reason.");return;}
+    if(!window.confirm("Change the follow-up cadence to "+cadenceText(cadenceHours(chooser.value))+"?"))return;
+    change.disabled=true;
+    try{
+     await api("/rest/v1/rpc/jansathi_owner_set_civic_followup_severity",
+      {method:"POST",auth:true,body:JSON.stringify({p_report_id:s.report_id,p_severity:chooser.value,p_reason:cleanText(reason)})});
+     toast("Issue cadence updated with Owner audit.");await Promise.all([loadOwnerIssueSeverity(),refreshMine()]);
+    }catch(err){toast("Severity change rejected: "+err.message);change.disabled=false;}
+   };
+   row.append(chooser,change);list.append(row);
+  });
+ }catch(err){list.replaceChildren(mk("p","muted","Owner severity review unavailable: "+err.message));}
+}
+function cadenceHours(severity){return {urgent:48,high:168,moderate:720,low:2160}[severity]||720;}
+function cadenceText(hours){return {48:"48 hours",168:"7 days",720:"30 days",2160:"90 days"}[hours]||hours+" hours";}
+function localDate(iso){return new Date(iso).toLocaleString("en-IN",{dateStyle:"medium",timeStyle:"short"});}
+byId("ownerSeverityRefresh").onclick=loadOwnerIssueSeverity;
 async function refreshOwnerAccess(){
- ownerCanFeature=false;byId("ownerNationalPanel").hidden=true;
+ ownerCanFeature=false;byId("ownerNationalPanel").hidden=true;byId("ownerSeverityPanel").hidden=true;
  if(!ONLINE||!session)return;
  try{
   ownerCanFeature=(await api("/rest/v1/rpc/jansathi_can_manage_national",{method:"POST",auth:true,body:"{}"}))===true;
-  byId("ownerNationalPanel").hidden=!ownerCanFeature;
-  if(ownerCanFeature)await loadOwnerCandidates();
- }catch(e){ownerCanFeature=false;byId("ownerNationalPanel").hidden=true;}
+  byId("ownerNationalPanel").hidden=!ownerCanFeature;byId("ownerSeverityPanel").hidden=!ownerCanFeature;
+  if(ownerCanFeature)await Promise.all([loadOwnerCandidates(),loadOwnerIssueSeverity()]);
+ }catch(e){ownerCanFeature=false;byId("ownerNationalPanel").hidden=true;byId("ownerSeverityPanel").hidden=true;}
 }
 async function loadOwnerCandidates(){
  if(!ownerCanFeature)return;
@@ -223,20 +260,76 @@ form.reset();byId("modal").classList.remove("show");geo=Object.assign({},geo,{to
 }
 async function refreshMine(){
  const panel=byId("myReportsList");panel.replaceChildren();
- if(!ONLINE || !session){return;}
- try {
-  const [reports,news]=await Promise.all([
-   api("/rest/v1/jansathi_civic_reports?select=id,title,status,city,public_area,created_at&order=created_at.desc&limit=40",{auth:true}),
-   api("/rest/v1/jansathi_news_submissions?select=id,title,status,city,created_at&order=created_at.desc&limit=40",{auth:true})
+ if(!ONLINE||!session)return;
+ try{
+  const [reports,news,schedules,history]=await Promise.all([
+   api("/rest/v1/jansathi_civic_reports?select=id,title,status,city,created_at&order=created_at.desc&limit=40",{auth:true}),
+   api("/rest/v1/jansathi_news_submissions?select=id,title,status,city,created_at&order=created_at.desc&limit=40",{auth:true}),
+   api("/rest/v1/rpc/jansathi_my_civic_followup_schedule",{method:"POST",auth:true,body:"{}"}),
+   api("/rest/v1/jansathi_civic_followups?select=id,report_id,body,observed_status,moderation_status,submitted_at&order=submitted_at.desc&limit=120",{auth:true})
   ]);
-  let own=[...reports.map(x=>({...x,kind:"Civic"})),...news.map(x=>({...x,kind:"News"}))].sort((a,b)=>b.created_at.localeCompare(a.created_at));
-  if(!own.length){panel.appendChild(mk("p","muted","Your account has no submissions yet."));return;}
+  const scheduleMap=new Map(schedules.map(s=>[s.report_id,s]));
+  let own=[...reports.map(v=>({...v,kind:"Civic"})),...news.map(v=>({...v,kind:"News"}))].sort((a,b)=>b.created_at.localeCompare(a.created_at));
+  if(!own.length){panel.appendChild(mk("p","muted","You have not submitted any civic reports or news yet."));return;}
   own.forEach(v=>{
    const row=mk("div","myreport");
-   row.append(mk("b","",v.kind+" · "+v.title),mk("span","status","JanSathi: "+v.status.replace(/_/g," ")),mk("small","muted",v.city+" · "+new Date(v.created_at).toLocaleDateString()));
-   panel.appendChild(row);
+   row.append(mk("b","",v.kind+" · "+v.title),
+              mk("span","status","JanSathi: "+v.status.replace(/_/g," ")),
+              mk("small","muted",v.city+" · "+localDate(v.created_at)));
+   if(v.kind==="Civic"){
+    const schedule=scheduleMap.get(v.id);
+    if(schedule){
+      const closed=["resolved","rejected"].includes(v.status);
+      const canSubmit=!closed&&Date.now()>=Date.parse(schedule.next_eligible_at);
+      row.append(mk("div","followupStatus","Severity: "+schedule.severity.toUpperCase()+" · Follow-up every "+
+        cadenceText(schedule.cadence_hours)+" · "+schedule.citizen_update_count+" citizen update(s)"));
+      row.append(mk("div","muted",closed?
+        "This issue is closed or rejected: citizen updates disabled.":
+        canSubmit?"✓ Update eligible now":("Next citizen update: "+localDate(schedule.next_eligible_at))));
+      const previous=history.filter(h=>h.report_id===v.id);
+      if(previous.length){
+       const container=mk("div","followupHistory");container.append(mk("b","","Previous citizen updates"));
+       previous.slice(0,8).forEach(h=>{
+        const line=mk("div","followupPast");
+        line.append(mk("small","muted",localDate(h.submitted_at)+" · "+h.observed_status.replace(/_/g," ")+" · "+h.moderation_status),
+                    mk("span","",h.body));
+        container.append(line);
+       });
+       row.append(container);
+      }
+      if(canSubmit){
+       const form=mk("form","followupForm");
+       form.append(mk("label","","What is the issue's current condition?"));
+       const condition=mk("select","select");condition.required=true;
+       [["still_unresolved","Still unresolved"],["improving","Improving"],["getting_worse","Getting worse"],["appears_fixed","Appears fixed (unverified)"]].forEach(pair=>{
+        const o=mk("option","",pair[1]);o.value=pair[0];condition.append(o);
+       });
+       const label=mk("label","","Your latest factual observation (20–1000 characters)");
+       const note=mk("textarea","");note.minLength=20;note.maxLength=1000;note.required=true;
+       note.placeholder="Describe what changed and when you observed it. Avoid names, phone numbers or accusations.";
+       const btn=mk("button","btn","Submit citizen update");btn.type="submit";
+       form.append(condition,label,note,btn);
+       form.onsubmit=async e=>{
+        e.preventDefault();
+        const detail=cleanText(note.value);
+        if(detail.length<20){toast("Write at least 20 characters about the issue.");return;}
+        btn.disabled=true;
+        try{
+          await api("/rest/v1/rpc/jansathi_submit_civic_followup",
+           {method:"POST",auth:true,body:JSON.stringify({p_report_id:v.id,p_body:detail,p_observed_status:condition.value})});
+          toast("Citizen follow-up saved privately for review. Government issue status was not changed.");
+          await refreshMine();
+        }catch(err){toast("Update not accepted: "+err.message);btn.disabled=false;}
+       };
+       row.append(form);
+      }
+    }else{
+     row.append(mk("p","muted","Follow-up schedule is not available for this issue."));
+    }
+   }
+   panel.append(row);
   });
- }catch(e){panel.appendChild(mk("p","muted","Unable to load private reports: "+e.message));}
+ }catch(e){panel.appendChild(mk("p","muted","Could not load your private follow-up schedules: "+e.message));}
 }
 byId("refreshMine").onclick=()=>refreshMine();
 async function follow(reportId){
@@ -295,7 +388,7 @@ byId("verify").onclick=async()=>{
 };
 byId("logout").onclick=async()=>{
  if(session?.access_token){try{await api("/auth/v1/logout",{method:"POST",auth:true});}catch(e){}}
- storeSession(null);ownerCanFeature=false;byId("ownerNationalPanel").hidden=true;byId("myReportsList").replaceChildren();byId("membershipDetail").textContent="Sign in to check membership status.";toast("Signed out.");
+ storeSession(null);ownerCanFeature=false;byId("ownerNationalPanel").hidden=true;byId("ownerSeverityPanel").hidden=true;byId("myReportsList").replaceChildren();byId("membershipDetail").textContent="Sign in to check membership status.";toast("Signed out.");
 };
 if(ONLINE&&session)Promise.all([refreshMine(),refreshEligibility(),refreshOwnerAccess()]);
 refresh();
