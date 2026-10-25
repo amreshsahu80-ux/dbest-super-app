@@ -25,6 +25,8 @@ function storeSession(value){
 function renderAuth(){
  if(!ONLINE)return;
  byId("sessionLabel").textContent=session&&session.access_token?"Pilot account signed in; your publishing rights are checked from the database.":"Sign in with a pilot account to submit a verified civic report. Main DBest membership handoff is not connected.";
+ byId("accountDrawerTitle").textContent=session&&session.access_token?"✓ Signed in to pilot":"🔐 Member access";
+ byId("accountDrawerHint").textContent=session&&session.access_token?"View account and sign out":"Sign in to report, follow or support";
  byId("myReportsPanel").hidden=!(session&&session.access_token);
 }
 function refreshAccessUI(){
@@ -550,7 +552,14 @@ byId("includeSamples").addEventListener("change",e=>{includeSamples=e.target.che
 byId("fillExample").onclick=()=>{
 const example=reportKind==="civic"?{title:"[DEMO] Example damaged community path",body:"FICTIONAL ISSUE: A pretend public pathway near a sample school gate needs repair. No actual complaint will be filed by filling this form.",area:"Imaginary school approach",category:"road"}:{title:"[DEMO] Sample community reading event",body:"FICTIONAL EXAMPLE: Members of a pretend neighbourhood gather to exchange books and discuss local stories. This event is not real.",area:"Example community hall",category:"community"};
 byId("title").value=example.title;byId("body").value=example.body;byId("area").value=example.area;byId("category").value=example.category;toast("Synthetic example filled. It has NOT been submitted.");};
-document.querySelectorAll("[data-report]").forEach(b=>b.addEventListener("click",()=>{reportKind=b.dataset.report;byId("modalTitle").textContent=reportKind==="civic"?"Report a civic problem":"Post local news or event";const categories=reportKind==="civic"?["road","drainage","streetlight","garbage","water","other"]:["community","health","education","sports","festival","traffic","other"];byId("category").replaceChildren();categories.forEach(x=>{let o=mk("option","",x);o.value=x;byId("category").appendChild(o)});byId("reportCity").value=geo.town;byId("reportTown").value=geo.town;byId("reportState").value=geo.state;byId("reportDistrict").value=geo.district;byId("reportBlock").value=geo.block;byId("reportVillage").value=geo.village;byId("modal").classList.add("show");refreshAccessUI()}));
+document.querySelectorAll("[data-report]").forEach(b=>b.addEventListener("click",()=>{reportKind=b.dataset.report;if(ONLINE&&!session){
+  const drawer=byId("loginDrawer");drawer.open=true;
+  drawer.scrollIntoView({behavior:"smooth",block:"center"});
+  toast("Sign in to the JanSathi test account first. Live DBest single sign-on is not connected yet.");return;
+ }
+ if(ONLINE&&reportKind==="news"&&!paidNewsEligible){
+  toast("News publishing requires an active DBest ₹299+ plan and approved KYC, verified by the server.");return;
+ }byId("modalTitle").textContent=reportKind==="civic"?"Report a civic problem":"Post local news or event";const categories=reportKind==="civic"?["road","drainage","streetlight","garbage","water","other"]:["community","health","education","sports","festival","traffic","other"];byId("category").replaceChildren();categories.forEach(x=>{let o=mk("option","",x);o.value=x;byId("category").appendChild(o)});byId("reportCity").value=geo.town;byId("reportTown").value=geo.town;byId("reportState").value=geo.state;byId("reportDistrict").value=geo.district;byId("reportBlock").value=geo.block;byId("reportVillage").value=geo.village;byId("modal").classList.add("show");refreshAccessUI()}));
 byId("close").onclick=()=>byId("modal").classList.remove("show");byId("modal").addEventListener("click",e=>{if(e.target.id==="modal")byId("modal").classList.remove("show")});document.addEventListener("keydown",e=>{if(e.key==="Escape")byId("modal").classList.remove("show")});
 byId("reportForm").addEventListener("submit",submitReport);
 byId("refresh").onclick=refresh;
