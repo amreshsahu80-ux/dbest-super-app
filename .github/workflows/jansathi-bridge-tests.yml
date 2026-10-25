@@ -1,0 +1,25 @@
+name: JanSathi isolated SSO checks
+on:
+  push:
+    branches:
+      - feat/jansathi-isolated-backend-pilot-20261025
+    paths:
+      - 'jansathi-pilot/bridge/**'
+      - '.github/workflows/jansathi-bridge-tests.yml'
+  pull_request:
+    paths:
+      - 'jansathi-pilot/bridge/**'
+      - '.github/workflows/jansathi-bridge-tests.yml'
+permissions:
+  contents: read
+jobs:
+  isolated-bridge-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Unit and synthetic exchange tests — NO live backend calls
+        run: node --test jansathi-pilot/bridge/*.test.cjs
