@@ -1,13 +1,13 @@
 # DBest JanSathi — Isolated pilot (NOT production)
 
-**Status (25 Oct 2026):** isolated Free Supabase project `DBest JanSathi Pilot` (`zgjkzqfabbvctcjspvfd`, Mumbai) has been created and its initial migration applied. Eight tables have RLS enabled; Supabase security advisor returned zero security lints. Staging client is **not yet connected to the database** pending full integration/authentication tests. No real government message sent, and no publication to dbest4u.com. The approved 17-tile homepage mockup remains a separate baseline.
+**Status (25 Oct 2026):** isolated Free Supabase project `DBest JanSathi Pilot` (`zgjkzqfabbvctcjspvfd`, Mumbai) has been created and its initial migration applied. Eight tables have RLS enabled; Supabase security advisor returned zero security lints. Staging client is **connected to this Free Supabase project**, with a public **publishable** key only and test-account email/password sign-up / sign-in plus a private My Reports view. Database-level transactional workflow tests passed, but real browser email confirmation, OTP and end-to-end HTTP user testing are still pending. No real government message sent, and no publication to dbest4u.com. The approved 17-tile homepage mockup remains a separate baseline.
 
 ## Safety boundary
 
 - Work only on Git branch `feat/jansathi-isolated-backend-pilot-20261025` until explicit GO.
 - **NEVER run these migrations in the existing Supabase project `ydedmotbacnllkijzmvp`**.
 - Do not edit / merge `main`; do not change production Vercel project `dbest-super-app`.
-- Create a new **Free Supabase organization and a new project** if eligible. The sole connected organization `DBest App` is Pro and quoted $10/month for an additional project. Do not accept new charges without approval.
+- **DONE:** New `DBest JanSathi` Free organization and standalone project created at a confirmed $0/month project cost. Do not add paid services without approval.
 
 ## Module roles and flows
 
@@ -27,9 +27,9 @@
 
 1. **DONE:** Created the separate *Free* organization `DBest JanSathi` (`lghogrkxrhvoelgojnzg`) and the `DBest JanSathi Pilot` project (`zgjkzqfabbvctcjspvfd`) with a confirmed $0/month project cost.
 2. **DONE (initial checks):** Applied the schema as migration `20261025051539_jansathi_initial_isolated_schema`; confirmed all 8 public JanSathi tables have RLS enabled and that Supabase security advisor had zero security lints. This is NOT a substitute for adversarial authentication tests.
-3. Check REST Data API exposure and permissions for the new project's `public` schema; use only that project's publishable key in the client, not an admin/service-role key.
-4. Create a test citizen account using Supabase Auth OTP and a **separate** editor account; set trusted role only through protected Admin/server operation.
-5. Wire the JanSathi staging client to the new project and perform the test cases below. Government submission stays disabled pending verified official channels.
+3. **DONE (policy/privilege check):** REST-accessible public feeds have anonymous SELECT permission; private report tables do not. The staging frontend uses only the project's `sb_publishable_...` key, never a secret/service-role key.
+4. **PENDING for real accounts:** Use staging test-account email/password registration and email verification, and separately test editorial accounts. OTP sign-in will need the appropriate email template; do not use real DBest customer accounts here. Assign trusted roles only through protected Admin/server operation.
+5. **PARTLY DONE:** Staging client now wired to the new Free project at `https://dbest-jansathi-staging.vercel.app`. SQL-level RLS and triggers were tested with temporary synthetic users and rolled back; real signup/email/HTTP/browser flows remain to test. Government submission stays disabled pending verified official channels.
 6. Design the secure sign-on handoff from DBest's existing users without inserting their original auth secrets into the free project.
 7. Regress Cab, Marketplace, Insurance, Travel, Mutual Funds, membership, Wallet, referrals and payouts in unchanged production and safe staging. No integration to production before Owner's explicit GO.
 
