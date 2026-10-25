@@ -1,6 +1,6 @@
 # DBest JanSathi — Isolated pilot (NOT production)
 
-**Status (25 Oct 2026):** schema and implementation planning only. No Supabase migration applied, no real government message sent, and no publication to dbest4u.com. The approved 17-tile homepage mockup remains a separate baseline.
+**Status (25 Oct 2026):** isolated Free Supabase project `DBest JanSathi Pilot` (`zgjkzqfabbvctcjspvfd`, Mumbai) has been created and its initial migration applied. Eight tables have RLS enabled; Supabase security advisor returned zero security lints. Staging client is **not yet connected to the database** pending full integration/authentication tests. No real government message sent, and no publication to dbest4u.com. The approved 17-tile homepage mockup remains a separate baseline.
 
 ## Safety boundary
 
@@ -25,8 +25,8 @@
 
 ## Next deployment steps
 
-1. Create a separate *Free* organization in Supabase Dashboard and a **new** `DBest JanSathi Pilot` project. If Supabase quotes any additional charge, stop and seek approval.
-2. Apply `sql/001_isolated_schema.sql` ONLY to that new project's SQL Editor. Run the security advisor and check all 8 tables have RLS enabled.
+1. **DONE:** Created the separate *Free* organization `DBest JanSathi` (`lghogrkxrhvoelgojnzg`) and the `DBest JanSathi Pilot` project (`zgjkzqfabbvctcjspvfd`) with a confirmed $0/month project cost.
+2. **DONE (initial checks):** Applied the schema as migration `20261025051539_jansathi_initial_isolated_schema`; confirmed all 8 public JanSathi tables have RLS enabled and that Supabase security advisor had zero security lints. This is NOT a substitute for adversarial authentication tests.
 3. Check REST Data API exposure and permissions for the new project's `public` schema; use only that project's publishable key in the client, not an admin/service-role key.
 4. Create a test citizen account using Supabase Auth OTP and a **separate** editor account; set trusted role only through protected Admin/server operation.
 5. Wire the JanSathi staging client to the new project and perform the test cases below. Government submission stays disabled pending verified official channels.
