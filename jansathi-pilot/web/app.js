@@ -142,14 +142,85 @@ function cadenceHours(severity){return {urgent:48,high:168,moderate:720,low:2160
 function cadenceText(hours){return {48:"48 hours",168:"7 days",720:"30 days",2160:"90 days"}[hours]||hours+" hours";}
 function localDate(iso){return new Date(iso).toLocaleString("en-IN",{dateStyle:"medium",timeStyle:"short"});}
 byId("ownerSeverityRefresh").onclick=loadOwnerIssueSeverity;
+
+async function ownerLoadRadius(){
+ if(!ownerCanFeature)return;
+ try{
+  const list=await api("/rest/v1/rpc/jansathi_support_radii",{method:"POST",auth:true,body:"{}"});
+  const r=list&&list[0];
+  if(!r)throw Error("No configured distances.");
+  byId("ownerUrbanKm").value=r.urban_km;byId("ownerRuralKm").value=r.rural_km;
+  byId("ownerRadiusNote").textContent="Current urban "+r.urban_km+" km · rural "+r.rural_km+" km.";
+ }catch(e){byId("ownerRadiusNote").textContent="Unable to check rules: "+e.message;}
+}
+byId("ownerRadiusRefresh").onclick=ownerLoadRadius;
+byId("ownerRadiusSave").onclick=async()=>{
+ if(!ownerCanFeature)return;
+ const urban=Number(byId("ownerUrbanKm").value),rural=Number(byId("ownerRuralKm").value);
+ if(!Number.isInteger(urban)||urban<1||urban>15||!Number.isInteger(rural)||rural<1||rural>30){toast("Urban: 1–15 km, Rural: 1–30 km.");return;}
+ const reason=window.prompt("Reason for changing support distances (5–500 characters):");
+ if(reason===null)return;
+ if(cleanText(reason).length<5||cleanText(reason).length>500){toast("Please provide a valid Owner audit reason.");return;}
+ if(!window.confirm("Change nearby support rules to urban "+urban+" km, rural "+rural+" km?"))return;
+ const button=byId("ownerRadiusSave");button.disabled=true;
+ try{
+  await api("/rest/v1/rpc/jansathi_owner_set_support_radii",{method:"POST",auth:true,body:JSON.stringify({p_urban_km:urban,p_rural_km:rural,p_reason:cleanText(reason)})});
+  toast("Radius settings updated with Owner audit.");await ownerLoadRadius();
+ }catch(e){toast("Radius change rejected: "+e.message);}
+ finally{button.disabled=false;}
+};
+byId("ownerGeoRefresh").onclick=ownerReviewSites;
+async function ownerReviewSites(){
+ if(!ownerCanFeature)return;
+ const list=byId("ownerGeoList");list.replaceChildren(mk("p","muted","Loading published public issue sites…"));
+ try{
+  const reports=await api("/rest/v1/rpc/jansathi_owner_geo_review",{method:"POST",auth:true,body:"{}"});
+  list.replaceChildren();
+  if(!Array.isArray(reports)||!reports.length){
+   list.append(mk("p","muted","No real published civic issues to review. Fictional samples cannot be verified."));return;
+  }
+  for(const x of reports){
+   const card=mk("div","myreport");
+   card.append(mk("b","",x.headline||"Public issue"),
+    mk("small","muted",[x.town,x.district,x.state].filter(Boolean).join(", ")),
+    mk("small","muted","Citizen-suggested, UNVERIFIED PIN "+(x.issue_pincode||"none")+" · latitude "+(x.submitted_issue_latitude??"none")+" · longitude "+(x.submitted_issue_longitude??"none")),
+    mk("small",x.geo_approved?"status":"muted",x.geo_approved?"Owner site previously verified":"Public issue site NOT independently verified"));
+   const button=mk("button","btn soft",x.geo_approved?"Reverify public site":"Verify public issue site");
+   button.onclick=async()=>{
+    const pin=window.prompt("Enter independently verified PUBLIC ISSUE SITE PIN (do not copy unverified user data):");
+    if(pin===null)return;
+    if(!/^[1-9][0-9]{5}$/.test(cleanText(pin))){toast("Six-digit PIN is required.");return;}
+    const rawLat=window.prompt("Independently verified public issue latitude (6 to 38):");
+    if(rawLat===null)return;
+    const rawLon=window.prompt("Independently verified public issue longitude (68 to 98):");
+    if(rawLon===null)return;
+    const lat=Number(rawLat),lon=Number(rawLon);
+    if(!cleanText(rawLat)||!cleanText(rawLon)||!Number.isFinite(lat)||!Number.isFinite(lon)||lat<6||lat>38||lon<68||lon>98){
+     toast("Check the independently verified public-site coordinates.");return;
+    }
+    const reason=window.prompt("Specify independent verification evidence/reason (10–500 characters):");
+    if(reason===null)return;
+    if(cleanText(reason).length<10||cleanText(reason).length>500){toast("Provide verification evidence and an audit reason.");return;}
+    if(!window.confirm("I independently verified the PUBLIC ISSUE SITE, not the reporter's residence. Approve this PIN and coordinate?"))return;
+    button.disabled=true;
+    try{
+     await api("/rest/v1/rpc/jansathi_owner_approve_issue_geo",{method:"POST",auth:true,body:JSON.stringify({p_report_id:x.report_id,p_pincode:cleanText(pin),p_lat:lat,p_lon:lon,p_reason:cleanText(reason)})});
+     toast("Site verified. Owner action audited.");await Promise.all([ownerReviewSites(),refreshSupportState()]);
+    }catch(e){toast("Site approval rejected: "+e.message);button.disabled=false;}
+   };
+   card.append(button);list.append(card);
+  }
+ }catch(e){list.replaceChildren(mk("p","muted","Owner geo review unavailable: "+e.message));}
+}
+
 async function refreshOwnerAccess(){
- ownerCanFeature=false;byId("ownerNationalPanel").hidden=true;byId("ownerSeverityPanel").hidden=true;
+ ownerCanFeature=false;byId("ownerNationalPanel").hidden=true;byId("ownerSeverityPanel").hidden=true;byId("ownerGeoPanel").hidden=true;
  if(!ONLINE||!session)return;
  try{
   ownerCanFeature=(await api("/rest/v1/rpc/jansathi_can_manage_national",{method:"POST",auth:true,body:"{}"}))===true;
-  byId("ownerNationalPanel").hidden=!ownerCanFeature;byId("ownerSeverityPanel").hidden=!ownerCanFeature;
-  if(ownerCanFeature)await Promise.all([loadOwnerCandidates(),loadOwnerIssueSeverity()]);
- }catch(e){ownerCanFeature=false;byId("ownerNationalPanel").hidden=true;byId("ownerSeverityPanel").hidden=true;}
+  byId("ownerNationalPanel").hidden=!ownerCanFeature;byId("ownerSeverityPanel").hidden=!ownerCanFeature;byId("ownerGeoPanel").hidden=!ownerCanFeature;
+  if(ownerCanFeature)await Promise.all([loadOwnerCandidates(),loadOwnerIssueSeverity(),ownerLoadRadius(),ownerReviewSites()]);
+ }catch(e){ownerCanFeature=false;byId("ownerNationalPanel").hidden=true;byId("ownerSeverityPanel").hidden=true;byId("ownerGeoPanel").hidden=true;}
 }
 async function loadOwnerCandidates(){
  if(!ownerCanFeature)return;
@@ -455,7 +526,7 @@ byId("verify").onclick=async()=>{
 };
 byId("logout").onclick=async()=>{
  if(session?.access_token){try{await api("/auth/v1/logout",{method:"POST",auth:true});}catch(e){}}
- storeSession(null);updateSupportLocalityStatus();renderCards();ownerCanFeature=false;byId("ownerNationalPanel").hidden=true;byId("ownerSeverityPanel").hidden=true;byId("myReportsList").replaceChildren();byId("membershipDetail").textContent="Sign in to check membership status.";toast("Signed out.");
+ storeSession(null);updateSupportLocalityStatus();renderCards();ownerCanFeature=false;byId("ownerNationalPanel").hidden=true;byId("ownerSeverityPanel").hidden=true;byId("ownerGeoPanel").hidden=true;byId("myReportsList").replaceChildren();byId("membershipDetail").textContent="Sign in to check membership status.";toast("Signed out.");
 };
 if(ONLINE&&session)Promise.all([refreshMine(),refreshEligibility(),refreshOwnerAccess(),refreshSupportState()]);
 else updateSupportLocalityStatus();
