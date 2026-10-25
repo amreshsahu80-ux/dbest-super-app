@@ -67,6 +67,7 @@ function safeIssue(t){return !/(?:\b(?:rape|murder|fraud|suicide|assault|riot|sc
 function headers(auth){const h={"apikey":KEY,"Content-Type":"application/json"};if(auth){if(!session||!session.access_token)throw Error("Sign in using the isolated pilot project before submitting");h.Authorization="Bearer "+session.access_token;}return h;}
 async function api(path,opts={}){
 if(opts.auth)await refreshTokenIfNeeded(); const request=Object.assign({method:"GET",headers:headers(!!opts.auth)},opts);
+if(opts.auth){request.headers=Object.assign({},request.headers,{Authorization:"Bearer "+session.access_token});}
 delete request.auth;const res=await fetch(API+path,request);let parsed={};let raw=await res.text();try{parsed=raw?JSON.parse(raw):{}}catch(e){parsed={message:raw.slice(0,150)}}if(!res.ok)throw Error(parsed.msg||parsed.error_description||parsed.message||parsed.error||("Request failed ("+res.status+")"));return parsed;
 }
 function card(story){
