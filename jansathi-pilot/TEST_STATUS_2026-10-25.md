@@ -48,3 +48,14 @@ The staged client uses a **Supabase publishable API key**, which is designed to 
 7. Do not submit real personal data, defamatory content, or genuine service requests in this staging pilot.
 
 **No implication of a real official department receipt or acknowledgement.**
+
+
+## PIN+distance support readiness — 25 October 2026
+
+- **Done, isolated database:** postgis-enabled private trusted residence and Owner-approved public issue site; supporting allowed within owner-configurable **5 km urban / 10 km rural** defaults.
+- **Passed synthetic, rolled-back database tests:** different PIN within radius allowed; same PIN outside radius rejected; no verified home or issue site rejected; no self-support or duplicate support; Owner radius change enforced; residential tables inaccessible to ordinary client.
+- **Done, isolated staging UI:** `https://dbest-jansathi-staging.vercel.app` includes server-side eligibility check, appropriate locked messages, PIN and optional public issue coordinates on civic-submission form. No residential GPS coordinates shown.
+- **Current staging:** Vercel deployment `dpl_2LrYUnArGUoNPMBnjVrXAs2kZ7ZS` READY; main DBest deployment `dpl_G7xwtaNKs7mq8LMJRTC57x5jPXwZ` unchanged. No verified residence or issue-site rows were found at final check.
+- **Hard NO-GO for public release until completed:** connected, audited, trusted cross-organization membership and verified residence sync; India Post PIN validity/geocode validation from trusted source; Owner operational location-approval UX and moderation; real authenticated browser E2E across accounts; staging sign-on from main DBest; privacy/security/abuse review, availability and rollback drill; existing Cab/Marketplace/financial flows regression; Owner explicit GO.
+- Supabase Security Advisor reported four **INFO** lint entries for RLS-enabled private internal tables with intentionally no policies. These tables are inaccessible to browser roles by explicit grants; review security posture before public launch.
+- The PIN format check validates six-digit structure, **not** postal validity; never label it India Post-verified unless backed by trusted postal data.
