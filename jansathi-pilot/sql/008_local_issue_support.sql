@@ -144,6 +144,9 @@ create trigger jansathi_issue_support_post
 after insert or delete on public.jansathi_issue_supports
 for each row execute function jansathi_internal.update_issue_support_count();
 
+-- Recreate RPC because PostgreSQL does not allow changing a composite OUT return shape via replace.
+-- Only the new isolated JanSathi project is in scope.
+drop function public.jansathi_visible_feed(text,text,text,text,text,text,integer);
 -- New public feed stays compatible; add count for discovery and keep strict location / national behavior.
 create or replace function public.jansathi_visible_feed(
  p_level text,p_state text,p_district text default '',p_block text default '',
@@ -189,3 +192,6 @@ as $function$
  order by x.national_featured desc,x.created_at desc
  limit least(greatest(coalesce(p_limit,100),1),200)
 $function$;
+
+revoke all on function public.jansathi_visible_feed(text,text,text,text,text,text,integer) from public,anon,authenticated;
+grant execute on function public.jansathi_visible_feed(text,text,text,text,text,text,integer) to anon,authenticated;
