@@ -13,10 +13,13 @@ baseData.push({kind:"news",id:"demo-national-feature",city:"Example City",town:"
 let local=[];try{local=JSON.parse(localStorage.getItem(DEMO_STORAGE)||"[]")}catch(e){}
 let session=null;try{session=JSON.parse(sessionStorage.getItem(AUTH_STORAGE)||"null")}catch(e){}
 let paidNewsEligible=false;
+let registeredSupportLocality=null;
+let mySupportIds=new Set();
+baseData.filter(x=>x.kind==="civic").forEach((s,i)=>{s.support_count=[12,7,9,15,6][i%5];});
 function storeSession(value){
  session=value;
  if(value){sessionStorage.setItem(AUTH_STORAGE,JSON.stringify(value));}
- else {sessionStorage.removeItem(AUTH_STORAGE);paidNewsEligible=false;}
+ else {sessionStorage.removeItem(AUTH_STORAGE);paidNewsEligible=false;registeredSupportLocality=null;mySupportIds.clear();}
  renderAuth();refreshAccessUI();
 }
 function renderAuth(){
@@ -197,6 +200,79 @@ if(opts.auth)await refreshTokenIfNeeded(); const request=Object.assign({method:"
 if(opts.auth){request.headers=Object.assign({},request.headers,{Authorization:"Bearer "+session.access_token});}
 delete request.auth;const res=await fetch(API+path,request);let parsed={};let raw=await res.text();try{parsed=raw?JSON.parse(raw):{}}catch(e){parsed={message:raw.slice(0,150)}}if(!res.ok)throw Error(parsed.msg||parsed.error_description||parsed.message||parsed.error||("Request failed ("+res.status+")"));return parsed;
 }
+
+function supportMatch(s){
+ if(!registeredSupportLocality)return false;
+ const p=registeredSupportLocality,l=storyLocality(s);
+ const eq=(a,b)=>String(a||"").trim().toLowerCase()===String(b||"").trim().toLowerCase();
+ if(!eq(p.state,l.state)||!eq(p.district,l.district))return false;
+ if(l.village) return eq(p.village,l.village)&&(!l.block||eq(p.block,l.block));
+ return eq(p.town,l.town);
+}
+async function refreshSupportState(){
+ registeredSupportLocality=null;mySupportIds.clear();
+ if(!ONLINE||!session){updateSupportLocalityStatus();renderCards();return;}
+ try{
+  const [places,supports]=await Promise.all([
+   api("/rest/v1/jansathi_support_localities?select=user_id,state,district,block,town,village,last_changed_at&limit=1",{auth:true}),
+   api("/rest/v1/jansathi_issue_supports?select=report_id&limit=1000",{auth:true})
+  ]);
+  registeredSupportLocality=places[0]||null;
+  mySupportIds=new Set(supports.map(v=>v.report_id));
+ }catch(e){byId("supportLocationNote").textContent="Your locality support eligibility could not be loaded: "+e.message;}
+ updateSupportLocalityStatus();renderCards();
+}
+function updateSupportLocalityStatus(){
+ const label=byId("supportLocationNote"),home=registeredSupportLocality;
+ if(!ONLINE){label.textContent="Visual examples only. Issue supporters are not saved.";return;}
+ if(!session){label.textContent="Sign in with an email-verified pilot account to register your locality and support issues.";return;}
+ if(!home){label.textContent="Locality not registered. Choose your area above, then register it to support other people's issues.";return;}
+ const display=home.village||home.town;
+ label.textContent="Registered support locality: "+display+" · "+home.district+", "+home.state+
+ ". Address is self-declared in staging (NOT DBest KYC verified). Changes are limited to once per 30 days.";
+}
+byId("registerSupportLocality").onclick=async()=>{
+ if(!ONLINE){toast("Sample preview only; locality registration needs the isolated database.");return;}
+ if(!session){toast("Sign in with a verified JanSathi pilot account to register your locality.");return;}
+ try{
+  readGeoFields();
+  if(geo.town.length<2||geo.district.length<2||geo.state.length<2)throw Error("Provide state, district and town/city.");
+  const data={state:geo.state,district:geo.district,block:geo.block,town:geo.town,village:geo.village};
+  const message="Register "+(data.village||data.town)+", "+data.district+", "+data.state+
+    " as your issue-support locality? You can change this locality only once per 30 days. This is self-declared for staging.";
+  if(!window.confirm(message))return;
+  byId("registerSupportLocality").disabled=true;
+  if(registeredSupportLocality){
+    await api("/rest/v1/jansathi_support_localities?user_id=eq."+encodeURIComponent(registeredSupportLocality.user_id),
+     {method:"PATCH",auth:true,headers:Object.assign(headers(true),{"Prefer":"return=minimal"}),body:JSON.stringify(data)});
+  }else{
+    await api("/rest/v1/jansathi_support_localities",
+     {method:"POST",auth:true,headers:Object.assign(headers(true),{"Prefer":"return=minimal"}),body:JSON.stringify(data)});
+  }
+  await refreshSupportState();toast("Support locality registered. Other local users' issues are now eligible for support.");
+ }catch(err){toast("Locality registration not completed: "+err.message);}
+ finally{byId("registerSupportLocality").disabled=false;}
+};
+async function supportIssue(story){
+ if(story.synthetic){toast("Preview example only: "+(story.support_count||0)+" fictional residents support this sample. No vote was recorded.");return;}
+ if(!ONLINE||!session){toast("Sign in to support local issues. Reading remains free.");return;}
+ if(!registeredSupportLocality){toast("First register your locality in the location panel above.");byId("locationScopePanel").scrollIntoView({behavior:"smooth",block:"center"});return;}
+ if(!supportMatch(story)){toast("You can only support issues in your registered village or town.");return;}
+ const supported=mySupportIds.has(story.id);
+ try{
+  if(supported){
+   await api("/rest/v1/jansathi_issue_supports?report_id=eq."+encodeURIComponent(story.id),
+    {method:"DELETE",auth:true,headers:Object.assign(headers(true),{"Prefer":"return=minimal"})});
+   toast("Your support was withdrawn.");
+  }else{
+   await api("/rest/v1/jansathi_issue_supports",
+    {method:"POST",auth:true,headers:Object.assign(headers(true),{"Prefer":"return=minimal"}),body:JSON.stringify({report_id:story.id})});
+   toast("Thanks! Your support has been added to this locality's issue count.");
+  }
+  await Promise.all([refreshSupportState(),refresh()]);
+ }catch(err){toast("Unable to change your support: "+err.message);}
+}
+
 function card(story){
 const node=mk("article","story");
 const icon=mk("div","photo",story.emoji|| (story.kind==="civic"?"🛣️":"📰"));
@@ -211,7 +287,16 @@ body.appendChild(mk("p","",story.synthetic?String(story.body||"Fictional demonst
 body.appendChild(mk("div","muted","📍 "+story.public_area+" · "+story.city));
 if(story.kind==="civic")body.appendChild(mk("span","status",story.synthetic?"SIMULATED status: "+(story.status||"dbest_received").replace(/_/g," "):"DBest status: "+(story.status||"dbest_received").replace(/_/g," ")));
 const actions=mk("div","actions");
-if(story.kind==="civic"){const b=mk("button","mini","🔔 Follow issue");b.onclick=()=>follow(story.id);actions.appendChild(b);}
+if(story.kind==="civic"){
+ const voted=mySupportIds.has(story.id);
+ const support=mk("button","mini supportIssueBtn",story.synthetic?
+  "👍 Support Issue · "+(story.support_count||0)+" (DEMO)":
+  (voted?"✓ Supported · ":"👍 Support Issue · ")+(story.support_count||0));
+ support.setAttribute("aria-label",story.synthetic?"Fictional issue support example":voted?"Withdraw support for this issue":"Support this local issue");
+ support.onclick=()=>supportIssue(story);
+ actions.appendChild(support);
+ const b=mk("button","mini","🔔 Follow issue");b.onclick=()=>follow(story.id);actions.appendChild(b);
+}
 const flag=mk("button","mini outline","⚑ Flag");flag.onclick=()=>flagPost(story);actions.appendChild(flag);body.appendChild(actions);node.appendChild(body);
 return node;
 }
@@ -361,7 +446,7 @@ byId("signup").onclick=async()=>{
  if(!email.includes("@")||password.length<10){toast("Enter a valid email and a password of at least 10 characters.");return;}
  try{
   const data=await api("/auth/v1/signup",{method:"POST",body:JSON.stringify({email,password})});
-  if(data.access_token){storeSession({access_token:data.access_token,refresh_token:data.refresh_token,expires_at:Math.floor(Date.now()/1000)+(data.expires_in||3600)});toast("Test account created and signed in. Membership status will be checked.");await Promise.all([refreshMine(),refreshEligibility(),refreshOwnerAccess()]);}
+  if(data.access_token){storeSession({access_token:data.access_token,refresh_token:data.refresh_token,expires_at:Math.floor(Date.now()/1000)+(data.expires_in||3600)});toast("Test account created and signed in. Membership status will be checked.");await Promise.all([refreshMine(),refreshEligibility(),refreshOwnerAccess(),refreshSupportState()]);}
   else toast("Check your email for the Supabase confirmation link, then return and use Sign in.");
  }catch(e){toast("Sign-up failed: "+e.message)}
 };
@@ -372,7 +457,7 @@ byId("login").onclick=async()=>{
   const data=await api("/auth/v1/token?grant_type=password",{method:"POST",body:JSON.stringify({email,password})});
   if(!data.access_token)throw Error("No access token received");
   storeSession({access_token:data.access_token,refresh_token:data.refresh_token,expires_at:Math.floor(Date.now()/1000)+(data.expires_in||3600)});
-  toast("Signed in to JanSathi Pilot.");await Promise.all([refreshMine(),refreshEligibility(),refreshOwnerAccess()]);
+  toast("Signed in to JanSathi Pilot.");await Promise.all([refreshMine(),refreshEligibility(),refreshOwnerAccess(),refreshSupportState()]);
  }catch(e){toast("Sign-in failed: "+e.message)}
 };
 byId("sendCode").onclick=async()=>{
@@ -383,13 +468,14 @@ byId("sendCode").onclick=async()=>{
 byId("verify").onclick=async()=>{
  let email=cleanText(byId("email").value),token=cleanText(byId("code").value);
  if(!token){toast("Enter the email OTP only if your email contained a numerical code.");return;}
- try{const data=await api("/auth/v1/verify",{method:"POST",body:JSON.stringify({email,token,type:"email"})});if(!data.access_token)throw Error("No session token returned");storeSession({access_token:data.access_token,refresh_token:data.refresh_token,expires_at:Math.floor(Date.now()/1000)+(data.expires_in||3600)});toast("Signed in to JanSathi Pilot");await Promise.all([refreshMine(),refreshEligibility(),refreshOwnerAccess()]);}
+ try{const data=await api("/auth/v1/verify",{method:"POST",body:JSON.stringify({email,token,type:"email"})});if(!data.access_token)throw Error("No session token returned");storeSession({access_token:data.access_token,refresh_token:data.refresh_token,expires_at:Math.floor(Date.now()/1000)+(data.expires_in||3600)});toast("Signed in to JanSathi Pilot");await Promise.all([refreshMine(),refreshEligibility(),refreshOwnerAccess(),refreshSupportState()]);}
  catch(e){toast("Verification failed: "+e.message)}
 };
 byId("logout").onclick=async()=>{
  if(session?.access_token){try{await api("/auth/v1/logout",{method:"POST",auth:true});}catch(e){}}
- storeSession(null);ownerCanFeature=false;byId("ownerNationalPanel").hidden=true;byId("ownerSeverityPanel").hidden=true;byId("myReportsList").replaceChildren();byId("membershipDetail").textContent="Sign in to check membership status.";toast("Signed out.");
+ storeSession(null);updateSupportLocalityStatus();renderCards();ownerCanFeature=false;byId("ownerNationalPanel").hidden=true;byId("ownerSeverityPanel").hidden=true;byId("myReportsList").replaceChildren();byId("membershipDetail").textContent="Sign in to check membership status.";toast("Signed out.");
 };
-if(ONLINE&&session)Promise.all([refreshMine(),refreshEligibility(),refreshOwnerAccess()]);
+if(ONLINE&&session)Promise.all([refreshMine(),refreshEligibility(),refreshOwnerAccess(),refreshSupportState()]);
+else updateSupportLocalityStatus();
 refresh();
 })();
