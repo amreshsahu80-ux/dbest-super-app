@@ -1,6 +1,6 @@
 # DBest JanSathi — Isolated pilot (NOT production)
 
-**Status (25 Oct 2026):** isolated Free Supabase project `DBest JanSathi Pilot` (`zgjkzqfabbvctcjspvfd`, Mumbai) has been created and its initial migration applied. Eight tables have RLS enabled; Supabase security advisor returned zero security lints. Staging client is **connected to this Free Supabase project**, with a public **publishable** key only and test-account email/password sign-up / sign-in plus a private My Reports view. Database-level transactional workflow tests passed, but real browser email confirmation, OTP and end-to-end HTTP user testing are still pending. No real government message sent, and no publication to dbest4u.com. The approved 17-tile homepage mockup remains a separate baseline.
+**Status (25 Oct 2026):** isolated Free Supabase project `DBest JanSathi Pilot` (`zgjkzqfabbvctcjspvfd`, Mumbai) has been created and its initial migration applied. Nine JanSathi public tables now have RLS enabled, including a read-only DBest membership-entitlement table; Supabase security advisor returned zero security lints. Staging client is **connected to this Free Supabase project**, with a public **publishable** key only and test-account email/password sign-up / sign-in plus a private My Reports view. Database-level transactional workflow tests passed, but real browser email confirmation, OTP and end-to-end HTTP user testing are still pending. No real government message sent, and no publication to dbest4u.com. The approved 17-tile homepage mockup remains a separate baseline. Approved membership access rules (₹299+ verified publishing; verified free civic reporting) are documented in `ACCESS_POLICY.md` and implemented by `sql/002_paid_member_publication_gate.sql`.
 
 ## Safety boundary
 
@@ -50,3 +50,12 @@
 - Verify a clean `main` and unchanged production Vercel deployment.
 
 **This branch is preparatory code, not a tested live feature.**
+
+## Membership gating update — 25 October 2026
+
+- `sql/002_paid_member_publication_gate.sql` applied to the isolated JanSathi Free project only.
+- **News publishing: verified Promoter ₹299 / Prime ₹599 / Leader ₹999**, active membership, verified identity and KYC confirmed by a trusted DBest sync.
+- **Reading: everyone**, including Free Starter and ₹49 Guest.
+- **Civic issues: verified Free/Guest users 2 per rolling 7 days; eligible verified paid members 5 per rolling 24 hours**, enforced server-side.
+- The trusted membership synchronization between Pro and Free organizations is **NOT YET CONNECTED**; staging correctly refuses paid publishing until verified membership data is supplied securely. No duplicate JanSathi fee.
+- SQL transaction tests of all tier gates, denied self-upgrades, quota limits, and identity verification passed with synthetic data rolled back. Refer to `ACCESS_POLICY.md`.
