@@ -201,78 +201,53 @@ if(opts.auth){request.headers=Object.assign({},request.headers,{Authorization:"B
 delete request.auth;const res=await fetch(API+path,request);let parsed={};let raw=await res.text();try{parsed=raw?JSON.parse(raw):{}}catch(e){parsed={message:raw.slice(0,150)}}if(!res.ok)throw Error(parsed.msg||parsed.error_description||parsed.message||parsed.error||("Request failed ("+res.status+")"));return parsed;
 }
 
-function supportMatch(s){
- if(!registeredSupportLocality)return false;
- const p=registeredSupportLocality,l=storyLocality(s);
- const eq=(a,b)=>String(a||"").trim().toLowerCase()===String(b||"").trim().toLowerCase();
- if(!eq(p.state,l.state)||!eq(p.district,l.district))return false;
- if(l.village) return eq(p.village,l.village)&&(!l.block||eq(p.block,l.block));
- return eq(p.town,l.town);
-}
+function supportMatch(s){return distanceEligibleIds.has(s.id);}
+let residenceVerified=false;
+let distanceEligibleIds=new Set();
 async function refreshSupportState(){
- registeredSupportLocality=null;mySupportIds.clear();
+ registeredSupportLocality=null;mySupportIds.clear();residenceVerified=false;distanceEligibleIds.clear();
  if(!ONLINE||!session){updateSupportLocalityStatus();renderCards();return;}
  try{
-  const [places,supports]=await Promise.all([
-   api("/rest/v1/jansathi_support_localities?select=user_id,state,district,block,town,village,last_changed_at&limit=1",{auth:true}),
-   api("/rest/v1/jansathi_issue_supports?select=report_id&limit=1000",{auth:true})
+  const [supports,residence,allowed]=await Promise.all([
+    api("/rest/v1/jansathi_issue_supports?select=report_id&limit=1000",{auth:true}),
+    api("/rest/v1/rpc/jansathi_my_residence_status",{method:"POST",auth:true,body:"{}"}),
+    api("/rest/v1/rpc/jansathi_my_supportable_issues",{method:"POST",auth:true,body:JSON.stringify({p_limit:100})})
   ]);
-  registeredSupportLocality=places[0]||null;
-  mySupportIds=new Set(supports.map(v=>v.report_id));
- }catch(e){byId("supportLocationNote").textContent="Your locality support eligibility could not be loaded: "+e.message;}
+  mySupportIds=new Set(supports.map(x=>x.report_id));
+  residenceVerified=Boolean(residence&&residence.length&&residence[0].verified===true);
+  distanceEligibleIds=new Set(allowed.map(x=>x.report_id));
+ }catch(e){byId("supportLocationNote").textContent="Verification unavailable: "+e.message;}
  updateSupportLocalityStatus();renderCards();
 }
 function updateSupportLocalityStatus(){
- const label=byId("supportLocationNote"),home=registeredSupportLocality;
- if(!ONLINE){label.textContent="Visual examples only. Issue supporters are not saved.";return;}
- if(!session){label.textContent="Sign in with an email-verified pilot account to register your locality and support issues.";return;}
- if(!home){label.textContent="Locality not registered. Choose your area above, then register it to support other people's issues.";return;}
- const display=home.village||home.town;
- label.textContent="Registered support locality: "+display+" · "+home.district+", "+home.state+
- ". Address is self-declared in staging (NOT DBest KYC verified). Changes are limited to once per 30 days.";
+ const label=byId("supportLocationNote");
+ label.textContent=!ONLINE?"Fictional preview only.":!session?
+ "Read freely; sign in to check support eligibility.":residenceVerified?
+ "DBest-verified residential area linked. Only nearby independently verified issues are eligible.":
+ "Trusted DBest residential verification not connected. Real support votes are locked; selecting a locality here is not proof of residence.";
 }
-byId("registerSupportLocality").onclick=async()=>{
- if(!ONLINE){toast("Sample preview only; locality registration needs the isolated database.");return;}
- if(!session){toast("Sign in with a verified JanSathi pilot account to register your locality.");return;}
- try{
-  readGeoFields();
-  if(geo.town.length<2||geo.district.length<2||geo.state.length<2)throw Error("Provide state, district and town/city.");
-  const data={state:geo.state,district:geo.district,block:geo.block,town:geo.town,village:geo.village};
-  const message="Register "+(data.village||data.town)+", "+data.district+", "+data.state+
-    " as your issue-support locality? You can change this locality only once per 30 days. This is self-declared for staging.";
-  if(!window.confirm(message))return;
-  byId("registerSupportLocality").disabled=true;
-  if(registeredSupportLocality){
-    await api("/rest/v1/jansathi_support_localities?user_id=eq."+encodeURIComponent(registeredSupportLocality.user_id),
-     {method:"PATCH",auth:true,headers:Object.assign(headers(true),{"Prefer":"return=minimal"}),body:JSON.stringify(data)});
-  }else{
-    await api("/rest/v1/jansathi_support_localities",
-     {method:"POST",auth:true,headers:Object.assign(headers(true),{"Prefer":"return=minimal"}),body:JSON.stringify(data)});
-  }
-  await refreshSupportState();toast("Support locality registered. Other local users' issues are now eligible for support.");
- }catch(err){toast("Locality registration not completed: "+err.message);}
- finally{byId("registerSupportLocality").disabled=false;}
+byId("registerSupportLocality").onclick=()=>{
+ toast("This selector saves only a viewing area. A trusted DBest home location must be linked before support voting is unlocked.");
 };
 async function supportIssue(story){
- if(story.synthetic){toast("Preview example only: "+(story.support_count||0)+" fictional residents support this sample. No vote was recorded.");return;}
- if(!ONLINE||!session){toast("Sign in to support local issues. Reading remains free.");return;}
- if(!registeredSupportLocality){toast("First register your locality in the location panel above.");byId("locationScopePanel").scrollIntoView({behavior:"smooth",block:"center"});return;}
- if(!supportMatch(story)){toast("You can only support issues in your registered village or town.");return;}
+ if(story.synthetic){toast("Fictional example: "+(story.support_count||0)+" sample endorsements, no vote cast.");return;}
+ if(!ONLINE||!session){toast("Sign in to check support eligibility.");return;}
  const supported=mySupportIds.has(story.id);
+ if(!supported&&!residenceVerified){toast("Vote locked until trusted DBest residence verification is connected.");return;}
+ if(!supported&&!supportMatch(story)){toast("Verified residence is outside this issue's eligible distance.");return;}
  try{
   if(supported){
    await api("/rest/v1/jansathi_issue_supports?report_id=eq."+encodeURIComponent(story.id),
     {method:"DELETE",auth:true,headers:Object.assign(headers(true),{"Prefer":"return=minimal"})});
-   toast("Your support was withdrawn.");
+   toast("Support withdrawn.");
   }else{
    await api("/rest/v1/jansathi_issue_supports",
     {method:"POST",auth:true,headers:Object.assign(headers(true),{"Prefer":"return=minimal"}),body:JSON.stringify({report_id:story.id})});
-   toast("Thanks! Your support has been added to this locality's issue count.");
+   toast("Verified local support recorded.");
   }
   await Promise.all([refreshSupportState(),refresh()]);
- }catch(err){toast("Unable to change your support: "+err.message);}
+ }catch(e){toast("Support not accepted: "+e.message);}
 }
-
 function card(story){
 const node=mk("article","story");
 const icon=mk("div","photo",story.emoji|| (story.kind==="civic"?"🛣️":"📰"));
@@ -320,6 +295,13 @@ renderCards();
 async function submitReport(e){
 e.preventDefault();const form=e.target;const fd=new FormData(form);
 const data={title:cleanText(fd.get("title")),city:cleanText(fd.get("city")),public_area:cleanText(fd.get("area")),town:cleanText(fd.get("city")),village:cleanText(fd.get("village")),block:cleanText(fd.get("block")),district:cleanText(fd.get("district")),state:cleanText(fd.get("state"))};
+if(reportKind==="civic"){
+ const pin=cleanText(fd.get("issue_pincode")),lat=cleanText(fd.get("issue_latitude")),lon=cleanText(fd.get("issue_longitude"));
+ if(pin&&!/^[1-9][0-9]{5}$/.test(pin)){toast("Enter a six-digit issue PIN, or leave blank.");return;}
+ if(Boolean(lat)!==Boolean(lon)){toast("Both public issue latitude and longitude must be supplied together.");return;}
+ if(lat&&(!Number.isFinite(Number(lat))||!Number.isFinite(Number(lon)))){toast("Invalid issue coordinates.");return;}
+ if(pin)data.issue_pincode=pin;if(lat){data.submitted_issue_latitude=Number(lat);data.submitted_issue_longitude=Number(lon);}
+}
 if(data.district.length<2||data.state.length<2||data.town.length<2){toast("State, district and town are required for accurate geographic visibility.");return;}
 const content=cleanText(fd.get("body"));
 if(data.title.length<8||content.length<15||data.public_area.length<3){toast("Please provide a meaningful title, public landmark, and details.");return;}
