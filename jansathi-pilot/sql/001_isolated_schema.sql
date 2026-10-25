@@ -221,9 +221,12 @@ begin
  else
     delete from public.jansathi_civic_feed where id=new.id;
  end if;
- if tg_op='INSERT' or new.status is distinct from old.status then
+ if tg_op='INSERT' then
     insert into public.jansathi_civic_events(report_id,status,note)
-    values(new.id,new.status,'Status recorded within DBest JanSathi');
+    values(new.id,new.status,'DBest JanSathi received the issue');
+ elsif new.status is distinct from old.status then
+    insert into public.jansathi_civic_events(report_id,status,note)
+    values(new.id,new.status,'Status updated in DBest JanSathi');
  end if;
  return new;
 end $$;
@@ -242,7 +245,11 @@ alter table public.jansathi_abuse_flags enable row level security;
 alter table public.jansathi_authority_routes enable row level security;
 
 -- Explicit minimal table privileges; RLS controls rows.
-revoke all on all tables in schema public from anon, authenticated;
+revoke all on public.jansathi_civic_reports, public.jansathi_civic_feed,
+  public.jansathi_civic_events, public.jansathi_news_submissions,
+  public.jansathi_news_feed, public.jansathi_follows,
+  public.jansathi_abuse_flags, public.jansathi_authority_routes
+from anon, authenticated;
 grant select,insert on public.jansathi_civic_reports to authenticated;
 grant update on public.jansathi_civic_reports to authenticated;
 grant select on public.jansathi_civic_feed to anon,authenticated;
