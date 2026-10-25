@@ -387,7 +387,9 @@ body.appendChild(cat);
 if(story.synthetic)body.appendChild(mk("span","sampleBadge","SAMPLE DATA · FICTIONAL · NOT A REAL REPORT"));
 if(story.national_featured)body.appendChild(mk("span","nationalTag","🇮🇳 "+(story.synthetic?"DEMO · ":"")+"OWNER FEATURED NATIONWIDE"));
 body.appendChild(mk("h3","",story.headline||story.title||"Community update"));
-body.appendChild(mk("p","",story.synthetic?String(story.body||"Fictional demonstration only."):(story.kind==="civic"?"Public issue reported to JanSathi. Not an official government acknowledgement.":String(story.body||story.description||"Community-reported information, unverified by DBest."))));
+const summaryText=story.synthetic?String(story.body||"Fictional demonstration only."):(story.kind==="civic"?"Public issue reported to JanSathi. Not an official government acknowledgement.":String(story.body||story.description||"Community-reported information, unverified by DBest."));
+body.appendChild(mk("p","storyExcerpt",summaryText));
+if(summaryText.length>115){const more=mk("button","expandStory","Read details");more.type="button";more.setAttribute("aria-expanded","false");more.onclick=()=>{const expanded=node.classList.toggle("storyExpanded");more.textContent=expanded?"Show less":"Read details";more.setAttribute("aria-expanded",String(expanded));};body.appendChild(more);}
 body.appendChild(mk("div","muted","📍 "+story.public_area+" · "+story.city));
 if(story.kind==="civic")body.appendChild(mk("span","status",story.synthetic?"SIMULATED status: "+(story.status||"dbest_received").replace(/_/g," "):"DBest status: "+(story.status||"dbest_received").replace(/_/g," ")));
 const actions=mk("div","actions");
