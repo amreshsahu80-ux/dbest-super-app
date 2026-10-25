@@ -319,10 +319,68 @@ async function supportIssue(story){
   await Promise.all([refreshSupportState(),refresh()]);
  }catch(e){toast("Support not accepted: "+e.message);}
 }
+
+// Photographs depict real-world subjects; ALL associated JanSathi demo stories are invented.
+// These files are from openly licensed Wikimedia Commons pages. They are not evidence of
+// any issue or news event in the displayed locality. Keep credit + license visible.
+const DEMO_PHOTOS=Object.freeze({
+ "demo-issue-ckp-1":{
+  image:"https://upload.wikimedia.org/wikipedia/commons/thumb/7/7f/Street_light_off.jpg/500px-Street_light_off.jpg",
+  source:"https://commons.wikimedia.org/wiki/File:Street_light_off.jpg",
+  artist:"Himanshum14",license:"CC BY-SA 4.0",
+  licenseUrl:"https://creativecommons.org/licenses/by-sa/4.0/",
+  alt:"Actual photograph of a streetlight, shown as an illustrative civic infrastructure image"
+ },
+ "demo-issue-ckp-2":{
+  image:"https://upload.wikimedia.org/wikipedia/commons/thumb/3/36/Potholes_in_Bengaluru_road.jpg/500px-Potholes_in_Bengaluru_road.jpg",
+  source:"https://commons.wikimedia.org/wiki/File:Potholes_in_Bengaluru_road.jpg",
+  artist:"Mallikarjunasj",license:"CC0 1.0",
+  licenseUrl:"https://creativecommons.org/publicdomain/zero/1.0/",
+  alt:"Real photograph of a damaged Bengaluru road with a pothole, used only as an example"
+ },
+ "demo-issue-jsr-1":{
+  image:"https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c7/India_-_Bombay_-_31_-_garbage_dump_%282799575380%29.jpg/330px-India_-_Bombay_-_31_-_garbage_dump_%282799575380%29.jpg",
+  source:"https://commons.wikimedia.org/wiki/File:India_-_Bombay_-_31_-_garbage_dump_(2799575380).jpg",
+  artist:"McKay Savage",license:"CC BY 2.0",
+  licenseUrl:"https://creativecommons.org/licenses/by/2.0/",
+  alt:"Real photograph of a waste dump in Mumbai, not a verified Jamshedpur complaint"
+ },
+ "demo-news-ckp-2":{
+  image:"https://thumb.wikimedia.org/wikipedia/commons/thumb/7/74/Science_Exhibition_at_School.jpg/960px-Science_Exhibition_at_School.jpg",
+  source:"https://commons.wikimedia.org/wiki/File:Science_Exhibition_at_School.jpg",
+  artist:"Abhi 32253",license:"CC BY-SA 4.0",
+  licenseUrl:"https://creativecommons.org/licenses/by-sa/4.0/",
+  alt:"Real photograph of a school science exhibition, not news of a Chakradharpur event"
+ },
+ "demo-news-chaibasa-2":{
+  image:"https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1d/Children_planting_in_Chalakudy_River_bank.JPG/330px-Children_planting_in_Chalakudy_River_bank.JPG",
+  source:"https://commons.wikimedia.org/wiki/File:Children_planting_in_Chalakudy_River_bank.JPG",
+  artist:"Zabna",license:"CC BY-SA 4.0",
+  licenseUrl:"https://creativecommons.org/licenses/by-sa/4.0/",
+  alt:"Real photograph of tree planting in Kerala, not a verified Chaibasa news event"
+ }
+});
+
 function card(story){
 const node=mk("article","story");
-const icon=mk("div","photo",story.emoji|| (story.kind==="civic"?"🛣️":"📰"));
-node.appendChild(icon);
+const photo=story.synthetic?DEMO_PHOTOS[story.id]:null;
+if(photo){
+ const media=mk("figure","samplePhoto");
+ const img=mk("img","samplePhotoImg");
+ img.src=photo.image;img.alt=photo.alt;img.loading="lazy";img.decoding="async";
+ img.width=520;img.height=320;img.referrerPolicy="no-referrer";
+ img.addEventListener("error",()=>{media.classList.add("photoFallback");img.hidden=true;media.insertBefore(mk("div","photo",story.emoji||"📰"),media.firstChild);},{once:true});
+ const caption=mk("figcaption","photoCredit");
+ caption.appendChild(mk("strong","","ILLUSTRATIVE PHOTO · NOT THIS INCIDENT"));
+ const source=mk("a","","Photo: "+photo.artist+" · "+photo.license);
+ source.href=photo.source;source.target="_blank";source.rel="noopener noreferrer";
+ source.title="Original Wikimedia Commons photograph and license details";
+ caption.appendChild(source);
+ media.append(img,caption);node.appendChild(media);
+}else{
+ const icon=mk("div","photo",story.emoji|| (story.kind==="civic"?"🛣️":"📰"));
+ node.appendChild(icon);
+}
 const body=mk("div","body");
 const cat=mk("span","tag "+(story.kind==="civic"?"issue":"news"),story.kind==="civic"?"CIVIC PROBLEM":"CITIZEN-REPORTED NEWS");
 body.appendChild(cat);
