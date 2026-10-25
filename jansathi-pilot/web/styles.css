@@ -22,3 +22,71 @@
 .story .samplePhoto.photoFallback .photo{height:100%;min-height:140px}
 .story .samplePhoto.photoFallback .photoCredit{background:rgba(5,24,45,.9)}
 @media(max-width:580px){.story .samplePhoto{aspect-ratio:16/9}}
+
+/* JanSathi clear-image-first homepage — isolated preview */
+:root{--js-text:#1a2942;--js-muted:#607088}
+body{background:#f3f6fc;color:var(--js-text)}
+main.wrap{padding-bottom:42px}
+.bar{gap:11px;flex-wrap:wrap}
+.bar .brand small{font-size:10px}
+.hero{position:relative;overflow:hidden;padding:26px 25px;border-radius:21px;margin:12px 0 16px;background:linear-gradient(125deg,#133663,#175a94 63%,#15877c)}
+.hero:before{content:"";position:absolute;width:220px;height:220px;border-radius:50%;background:#ffffff14;right:-60px;top:-85px}
+.hero h1{font-size:clamp(27px,4vw,41px);line-height:1.1;max-width:620px;letter-spacing:-1px;margin:8px 0 10px}
+.hero p{font-size:14px;max-width:510px;line-height:1.4}
+.hero .buttons{gap:10px;flex-wrap:wrap;margin-top:18px}
+.hero .btn{border-radius:12px;font-size:14px;padding:12px 17px;position:relative}
+#systemStatus{margin:10px 0;padding:10px 13px;border-radius:10px;font-size:11px}
+main.wrap>.headrow{margin:13px 0 8px}
+main.wrap>.headrow h2{font-size:22px;letter-spacing:-.4px;margin:0 0 3px}
+main.wrap>.headrow p{font-size:12px}
+main.wrap>.headrow .filters{gap:7px}
+#city{border-radius:10px;min-height:38px}
+.compactDrawer{border:1px solid #dce5f2;border-radius:12px;background:#fff;margin:8px 0;overflow:hidden}
+.compactDrawer>summary{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:12px 15px;font-size:13px;font-weight:800;list-style:none;cursor:pointer}
+.compactDrawer>summary::-webkit-details-marker{display:none}
+.compactDrawer>summary:after{content:"⌄";color:#43638c;font-size:18px;transition:transform .2s}
+.compactDrawer[open]>summary:after{transform:rotate(180deg)}
+.compactDrawer>summary small{font-size:11px;font-weight:500;color:var(--js-muted);margin-left:auto}
+.compactDrawer>section.panel{margin:0;border:0;border-top:1px solid #e1e9f5;border-radius:0;background:#fff}
+.compactDrawer>.memberPolicy,.compactDrawer>.followupGuide{margin:0}
+.infoDrawer{margin:18px 0}
+.infoDrawer>p{padding:0 16px}
+.infoDrawer .panel{border-radius:0}
+.samplePanel{display:flex;flex-wrap:wrap;align-items:center;gap:5px 12px;background:#eaf4ff;border:1px solid #cbdcf5;padding:10px 13px;margin:9px 0 13px}
+.samplePanel>b{font-size:12px;color:#185081}
+.samplePanel .sampleIntro{font-size:11px;color:#385e82;flex:1 1 270px}
+.samplePanel .sampleSwitch{font-size:11px;margin:0}
+.samplePanel #feedCounter{flex:1 1 100%;font-size:10px}
+.samplePanel #feedAlert{flex:1 1 100%}
+.minorDetails{width:100%;font-size:11px;color:#516b86}
+.minorDetails>summary{display:inline-block;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.minorDetails>p{margin:7px 0;line-height:1.5}
+.feed{gap:14px;margin:10px 0 16px}
+.story{border:1px solid #dae3ee;border-radius:17px;box-shadow:0 5px 15px #162d4b0c}
+.story .samplePhoto{aspect-ratio:16/9}
+.story .body{padding:14px;gap:8px}
+.story .body h3{font-size:16px;line-height:1.32;letter-spacing:-.2px}
+.story .storyExcerpt{font-size:12px;line-height:1.5;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden;color:#566b83}
+.story.storyExpanded .storyExcerpt{display:block;overflow:visible}
+.story .expandStory{background:none;border:0;color:#175c9f;font-size:11px;font-weight:800;padding:0;text-align:left;cursor:pointer;align-self:flex-start}
+.story .photoCredit{padding:13px 10px 8px}
+.story .tag{font-size:10px}
+.story .sampleBadge{font-size:9px;max-width:100%}
+.story .actions{padding-top:7px;border-top:1px solid #ebeff5;margin-top:6px;justify-content:flex-start;gap:7px;flex-wrap:wrap}
+.story .actions .mini{min-height:32px}
+.feedMicrocopy{font-size:11px;color:#687b93;display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin:5px 0 20px}
+.microDot{width:6px;height:6px;background:#16846e;border-radius:50%}
+@media(max-width:600px){
+ .hero{margin-top:9px;padding:23px 19px}
+ .hero h1{font-size:29px}
+ .hero p{font-size:13px}
+ .hero .buttons{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+ .hero .buttons .btn{font-size:12px;padding:12px 8px;white-space:normal;line-height:1.2}
+ main.wrap>.headrow{flex-direction:column;align-items:stretch;gap:9px}
+ main.wrap>.headrow .filters{width:100%}
+ .compactDrawer>summary{flex-wrap:wrap;padding:11px 12px;gap:7px}
+ .compactDrawer>summary small{flex:1 1 100%;margin-left:0}
+ .story .samplePhoto{aspect-ratio:16/9}
+ .story .body{padding:13px}
+ .samplePanel{margin:9px 0 12px}
+}
