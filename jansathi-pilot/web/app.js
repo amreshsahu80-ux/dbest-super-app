@@ -11,8 +11,42 @@ const byId=id=>document.getElementById(id);
 const baseData=[{"kind":"news","id":"demo-news-ckp-1","city":"Chakradharpur","public_area":"Imaginary community hall","headline":"[DEMO] Community art workshop announced","body":"FICTIONAL EXAMPLE: A model neighbourhood plans a drawing and craft workshop for families. This is sample content only; no real event is announced.","category":"community","emoji":"🎨","synthetic":true},{"kind":"news","id":"demo-news-ckp-2","city":"Chakradharpur","public_area":"Illustrative school grounds","headline":"[DEMO] Students prepare a science exhibition","body":"FICTIONAL EXAMPLE: A sample school showcases simple science models, recycling ideas and local innovation during an imaginary exhibition. Not an actual school announcement.","category":"education","emoji":"🔬","synthetic":true},{"kind":"news","id":"demo-news-ckp-3","city":"Chakradharpur","public_area":"Sample public sports field","headline":"[DEMO] Friendly neighbourhood sports meet","body":"FICTIONAL EXAMPLE: A make-believe sports day includes badminton, volleyball and children's activities. No event is scheduled.","category":"sports","emoji":"🏅","synthetic":true},{"kind":"civic","id":"demo-issue-ckp-1","city":"Chakradharpur","public_area":"Imaginary market road","headline":"[DEMO] Streetlight not working in sample lane","body":"FICTIONAL ISSUE: An imaginary streetlight needs inspection. No complaint was filed.","category":"streetlight","status":"dbest_received","emoji":"💡","synthetic":true},{"kind":"civic","id":"demo-issue-ckp-2","city":"Chakradharpur","public_area":"Illustrative bus stop area","headline":"[DEMO] Sample pothole near bus stop","body":"FICTIONAL ISSUE: An example pothole is described solely for interface testing. No authority was contacted.","category":"road","status":"dbest_received","emoji":"🛣️","synthetic":true},{"kind":"news","id":"demo-news-chaibasa-1","city":"Chaibasa","public_area":"Example civic reading room","headline":"[DEMO] Community book-exchange gathering","body":"FICTIONAL EXAMPLE: Neighbours in a mock locality exchange books and share reading suggestions. This is not an actual announcement.","category":"education","emoji":"📚","synthetic":true},{"kind":"news","id":"demo-news-chaibasa-2","city":"Chaibasa","public_area":"Illustrative community garden","headline":"[DEMO] Tree-planting awareness activity","body":"FICTIONAL EXAMPLE: A demonstration group discusses the benefits of planting native trees in a model garden.","category":"community","emoji":"🌿","synthetic":true},{"kind":"civic","id":"demo-issue-chaibasa-1","city":"Chaibasa","public_area":"Imaginary ward street","headline":"[DEMO] Example blocked drainage channel","body":"FICTIONAL ISSUE: A hypothetical drain needs cleaning. This did not happen at a real address.","category":"drainage","status":"dbest_received","emoji":"🚰","synthetic":true},{"kind":"news","id":"demo-news-jsr-1","city":"Jamshedpur","public_area":"Sample public recreation area","headline":"[DEMO] Weekend fitness and cycling session","body":"FICTIONAL EXAMPLE: An imaginary neighbourhood conducts a cycling-safety and wellness discussion. No real session is advertised.","category":"health","emoji":"🚲","synthetic":true},{"kind":"news","id":"demo-news-jsr-2","city":"Jamshedpur","public_area":"Imaginary youth club","headline":"[DEMO] Youth skill-sharing meetup","body":"FICTIONAL EXAMPLE: A sample community invites volunteers to share basic computer and communication skills.","category":"education","emoji":"💻","synthetic":true},{"kind":"civic","id":"demo-issue-jsr-1","city":"Jamshedpur","public_area":"Example park approach","headline":"[DEMO] Garbage collection request in sample lane","body":"FICTIONAL ISSUE: An imaginary street requires garbage pickup. No service request has been registered.","category":"garbage","status":"dbest_received","emoji":"🗑️","synthetic":true},{"kind":"news","id":"demo-news-ranchi-1","city":"Ranchi","public_area":"Illustrative cultural centre","headline":"[DEMO] Local crafts exhibition showcase","body":"FICTIONAL EXAMPLE: Mock artisans exhibit handmade products and demonstrate traditional crafts at an imaginary event.","category":"community","emoji":"🧵","synthetic":true},{"kind":"news","id":"demo-news-ranchi-2","city":"Ranchi","public_area":"Example public learning hub","headline":"[DEMO] Digital literacy awareness session","body":"FICTIONAL EXAMPLE: An imaginary neighbourhood organizes introductory mobile safety and internet literacy activities.","category":"education","emoji":"📱","synthetic":true},{"kind":"civic","id":"demo-issue-ranchi-1","city":"Ranchi","public_area":"Imaginary park entrance","headline":"[DEMO] Example footpath needs repairs","body":"FICTIONAL ISSUE: A pretend uneven footpath is shown to illustrate issue tracking; no complaint exists.","category":"road","status":"dbest_received","emoji":"🚶","synthetic":true}];
 let local=[];try{local=JSON.parse(localStorage.getItem(DEMO_STORAGE)||"[]")}catch(e){}
 let session=null;try{session=JSON.parse(sessionStorage.getItem(AUTH_STORAGE)||"null")}catch(e){}
-function storeSession(value){session=value; if(value){sessionStorage.setItem(AUTH_STORAGE,JSON.stringify(value));}else{sessionStorage.removeItem(AUTH_STORAGE);}renderAuth();}
-function renderAuth(){if(!ONLINE)return;byId("sessionLabel").textContent=session&&session.access_token?"Test account signed in. You may submit and view your reports.":"Sign in using an isolated test account. This does not use your DBest login.";byId("myReportsPanel").hidden=!(session&&session.access_token);}
+let paidNewsEligible=false;
+function storeSession(value){
+ session=value;
+ if(value){sessionStorage.setItem(AUTH_STORAGE,JSON.stringify(value));}
+ else {sessionStorage.removeItem(AUTH_STORAGE);paidNewsEligible=false;}
+ renderAuth();refreshAccessUI();
+}
+function renderAuth(){
+ if(!ONLINE)return;
+ byId("sessionLabel").textContent=session&&session.access_token?"Pilot account signed in; your publishing rights are checked from the database.":"Sign in with a pilot account to submit a verified civic report. Main DBest membership handoff is not connected.";
+ byId("myReportsPanel").hidden=!(session&&session.access_token);
+}
+function refreshAccessUI(){
+ const label=byId("memberAccessStatus");
+ if(ONLINE && paidNewsEligible && session){label.textContent="Verified active ₹299+ member — news publishing enabled";label.className="pill";}
+ else if(session){label.textContent="Paid news publishing locked — trusted DBest membership verification pending";label.className="pill warn";}
+ else{label.textContent="Reading open to everyone · news publishing requires ₹299+ verified membership";label.className="pill warn";}
+ if(byId("modal").classList.contains("show")){
+   byId("formAccessNote").textContent=reportKind==="news"?
+     paidNewsEligible && session?"Verified paid member: your submission will undergo JanSathi safety screening.":"Preview only — publishing news requires verified active DBest membership of ₹299 or above. Choosing a tier here does not unlock access.":
+     session?"Your account must have a verified email or phone. Unpaid users may submit 2 civic issues per rolling 7 days; eligible paid members up to 5 per 24 hours.":"Preview only — sign in with an email-verified pilot account to report a civic issue.";
+   byId("send").disabled=ONLINE && (!session||(reportKind==="news"&&!paidNewsEligible));
+ }
+}
+async function refreshEligibility(){
+ paidNewsEligible=false;refreshAccessUI();
+ if(!ONLINE||!session)return;
+ try{
+  const rows=await api("/rest/v1/jansathi_member_entitlements?select=tier,membership_status,kyc_verified,source_verified_at,membership_expires_at&limit=1",{auth:true});
+  const x=rows[0];
+  paidNewsEligible=Boolean(x&&["promoter","prime","leader"].includes(x.tier)&&x.membership_status==="active"&&x.kyc_verified===true&&Date.parse(x.source_verified_at)>Date.now()-86400000&&(!x.membership_expires_at||Date.parse(x.membership_expires_at)>Date.now()));
+  if(x){byId("membershipDetail").textContent="Membership record: "+x.tier+" · "+x.membership_status+(paidNewsEligible?" · verified":" · verification not active");}
+  else{byId("membershipDetail").textContent="No paid membership entitlement is linked to this pilot account. Only a trusted DBest server will be able to link it.";}
+ }catch(err){byId("membershipDetail").textContent="Could not confirm paid membership: "+err.message+". Publishing stays locked.";}
+ refreshAccessUI();
+}
 async function refreshTokenIfNeeded(){
  if(!session||!session.access_token)throw Error("Please sign in to the isolated JanSathi pilot first.");
  if(session.expires_at && session.expires_at>Math.floor(Date.now()/1000)+90)return;
@@ -25,7 +59,7 @@ async function refreshTokenIfNeeded(){
 let activeCity="Chakradharpur",activeKind="all",reportKind="civic",currentStories=[],includeSamples=true;
 byId("mode").textContent=ONLINE?"ISOLATED DATABASE MODE":"DEMO ONLY · BROWSER DATA";
 byId("systemStatus").textContent=ONLINE?"Connected to the isolated DBest JanSathi Pilot Free database. Test environment ONLY; no government submissions or live DBest logins.":"No Supabase configured. All reports are local to this browser only.";
-if(ONLINE){byId("identity").hidden=false;renderAuth();}else{byId("identity").hidden=true;}
+if(ONLINE){byId("identity").hidden=false;renderAuth();refreshAccessUI();}else{byId("identity").hidden=true;byId("membershipDetail").textContent="Visual demo mode — no membership verification is connected.";refreshAccessUI();}
 function toast(txt){const n=byId("toast");n.textContent=txt;n.classList.add("on");clearTimeout(window._tip);window._tip=setTimeout(()=>n.classList.remove("on"),4000);}
 function mk(tag,cls,txt){const el=document.createElement(tag);if(cls)el.className=cls;if(txt!=null)el.textContent=txt;return el;}
 function cleanText(t){return String(t||"").trim();}
@@ -83,6 +117,8 @@ const values=reportKind==="civic"?
 try{
 byId("send").disabled=true;
 if(ONLINE){
+if(!session)throw Error("Sign in to the isolated JanSathi Pilot before submitting.");
+if(reportKind==="news"&&!paidNewsEligible)throw Error("Verified active DBest Promoter/Prime/Leader membership (₹299+) is required to publish news.");
 const table=reportKind==="civic"?"jansathi_civic_reports":"jansathi_news_submissions";
 await api("/rest/v1/"+table,{method:"POST",auth:true,headers:Object.assign(headers(true),{"Prefer":"return=representation"}),body:JSON.stringify(values)});
 toast(reportKind==="civic"?"Report saved by JanSathi. NO government submission occurred.":"News saved. Routine news can publish automatically; sensitive posts are held for review.");
@@ -93,7 +129,7 @@ local.unshift(item);try{localStorage.setItem(DEMO_STORAGE,JSON.stringify(local.s
 toast(unsafe?"Saved privately in demo for moderation review.":"Saved in this browser only. This is not public publication or official delivery.");
 }
 form.reset();byId("modal").classList.remove("show");activeCity=data.city;byId("city").value=activeCity;await refresh();if(ONLINE)await refreshMine();
-}catch(err){toast("Submission not completed: "+err.message)}finally{byId("send").disabled=false;}
+}catch(err){toast("Submission not completed: "+err.message)}finally{refreshAccessUI();}
 }
 async function refreshMine(){
  const panel=byId("myReportsList");panel.replaceChildren();
@@ -133,7 +169,7 @@ byId("includeSamples").addEventListener("change",e=>{includeSamples=e.target.che
 byId("fillExample").onclick=()=>{
 const example=reportKind==="civic"?{title:"[DEMO] Example damaged community path",body:"FICTIONAL ISSUE: A pretend public pathway near a sample school gate needs repair. No actual complaint will be filed by filling this form.",area:"Imaginary school approach",category:"road"}:{title:"[DEMO] Sample community reading event",body:"FICTIONAL EXAMPLE: Members of a pretend neighbourhood gather to exchange books and discuss local stories. This event is not real.",area:"Example community hall",category:"community"};
 byId("title").value=example.title;byId("body").value=example.body;byId("area").value=example.area;byId("category").value=example.category;toast("Synthetic example filled. It has NOT been submitted.");};
-document.querySelectorAll("[data-report]").forEach(b=>b.addEventListener("click",()=>{reportKind=b.dataset.report;byId("modalTitle").textContent=reportKind==="civic"?"Report a civic problem":"Post local news or event";const categories=reportKind==="civic"?["road","drainage","streetlight","garbage","water","other"]:["community","health","education","sports","festival","traffic","other"];byId("category").replaceChildren();categories.forEach(x=>{let o=mk("option","",x);o.value=x;byId("category").appendChild(o)});byId("reportCity").value=activeCity;byId("modal").classList.add("show")}));
+document.querySelectorAll("[data-report]").forEach(b=>b.addEventListener("click",()=>{reportKind=b.dataset.report;byId("modalTitle").textContent=reportKind==="civic"?"Report a civic problem":"Post local news or event";const categories=reportKind==="civic"?["road","drainage","streetlight","garbage","water","other"]:["community","health","education","sports","festival","traffic","other"];byId("category").replaceChildren();categories.forEach(x=>{let o=mk("option","",x);o.value=x;byId("category").appendChild(o)});byId("reportCity").value=activeCity;byId("modal").classList.add("show");refreshAccessUI()}));
 byId("close").onclick=()=>byId("modal").classList.remove("show");byId("modal").addEventListener("click",e=>{if(e.target.id==="modal")byId("modal").classList.remove("show")});document.addEventListener("keydown",e=>{if(e.key==="Escape")byId("modal").classList.remove("show")});
 byId("reportForm").addEventListener("submit",submitReport);
 byId("refresh").onclick=refresh;
@@ -142,7 +178,7 @@ byId("signup").onclick=async()=>{
  if(!email.includes("@")||password.length<10){toast("Enter a valid email and a password of at least 10 characters.");return;}
  try{
   const data=await api("/auth/v1/signup",{method:"POST",body:JSON.stringify({email,password})});
-  if(data.access_token){storeSession({access_token:data.access_token,refresh_token:data.refresh_token,expires_at:Math.floor(Date.now()/1000)+(data.expires_in||3600)});toast("Test account created and signed in.");await refreshMine();}
+  if(data.access_token){storeSession({access_token:data.access_token,refresh_token:data.refresh_token,expires_at:Math.floor(Date.now()/1000)+(data.expires_in||3600)});toast("Test account created and signed in. Membership status will be checked.");await Promise.all([refreshMine(),refreshEligibility()]);}
   else toast("Check your email for the Supabase confirmation link, then return and use Sign in.");
  }catch(e){toast("Sign-up failed: "+e.message)}
 };
@@ -153,7 +189,7 @@ byId("login").onclick=async()=>{
   const data=await api("/auth/v1/token?grant_type=password",{method:"POST",body:JSON.stringify({email,password})});
   if(!data.access_token)throw Error("No access token received");
   storeSession({access_token:data.access_token,refresh_token:data.refresh_token,expires_at:Math.floor(Date.now()/1000)+(data.expires_in||3600)});
-  toast("Signed in to JanSathi Pilot.");await refreshMine();
+  toast("Signed in to JanSathi Pilot.");await Promise.all([refreshMine(),refreshEligibility()]);
  }catch(e){toast("Sign-in failed: "+e.message)}
 };
 byId("sendCode").onclick=async()=>{
@@ -164,13 +200,13 @@ byId("sendCode").onclick=async()=>{
 byId("verify").onclick=async()=>{
  let email=cleanText(byId("email").value),token=cleanText(byId("code").value);
  if(!token){toast("Enter the email OTP only if your email contained a numerical code.");return;}
- try{const data=await api("/auth/v1/verify",{method:"POST",body:JSON.stringify({email,token,type:"email"})});if(!data.access_token)throw Error("No session token returned");storeSession({access_token:data.access_token,refresh_token:data.refresh_token,expires_at:Math.floor(Date.now()/1000)+(data.expires_in||3600)});toast("Signed in to JanSathi Pilot");await refreshMine();}
+ try{const data=await api("/auth/v1/verify",{method:"POST",body:JSON.stringify({email,token,type:"email"})});if(!data.access_token)throw Error("No session token returned");storeSession({access_token:data.access_token,refresh_token:data.refresh_token,expires_at:Math.floor(Date.now()/1000)+(data.expires_in||3600)});toast("Signed in to JanSathi Pilot");await Promise.all([refreshMine(),refreshEligibility()]);}
  catch(e){toast("Verification failed: "+e.message)}
 };
 byId("logout").onclick=async()=>{
  if(session?.access_token){try{await api("/auth/v1/logout",{method:"POST",auth:true});}catch(e){}}
- storeSession(null);byId("myReportsList").replaceChildren();toast("Signed out.");
+ storeSession(null);byId("myReportsList").replaceChildren();byId("membershipDetail").textContent="Sign in to check membership status.";toast("Signed out.");
 };
-if(ONLINE&&session)refreshMine();
+if(ONLINE&&session)Promise.all([refreshMine(),refreshEligibility()]);
 refresh();
 })();
