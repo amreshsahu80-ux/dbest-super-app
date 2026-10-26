@@ -90,3 +90,41 @@ main.wrap>.headrow .filters{gap:7px}
  .story .body{padding:13px}
  .samplePanel{margin:9px 0 12px}
 }
+
+/* Minimal JanSathi two-image home. All legacy controls are in explicitly navigated secondary views. */
+.pageView[hidden],.secondaryPage[hidden]{display:none!important}
+body{background:#f5f8fc}
+.jansathiMain{padding-bottom:91px}
+.homeView{min-height:calc(100dvh - 164px);max-width:920px;margin:0 auto}
+.homeHeading{text-align:center;margin:20px auto 22px}
+.homeHeading h1{margin:0;color:#172943;font-size:clamp(22px,3vw,30px);letter-spacing:-.6px}
+.homeHeading p{margin:2px 0 0;font-size:12px;color:#76849b}
+.mainTiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:21px;margin:22px 0}
+.mainTile{appearance:none;width:100%;padding:0;border:1px solid #dce5ef;border-radius:20px;background:#fff;box-shadow:0 14px 35px rgba(24,53,87,.09);text-align:center;overflow:hidden;cursor:pointer;transition:transform .15s ease,box-shadow .15s ease}
+.mainTile:hover{transform:translateY(-3px);box-shadow:0 16px 35px rgba(24,53,87,.17)}
+.mainTile:focus-visible,.janNav button:focus-visible{outline:3px solid #287adb;outline-offset:3px}
+.tilePicture{position:relative;display:block;height:clamp(220px,28vw,365px);background:linear-gradient(135deg,#dce9f4,#c2d6e8);overflow:hidden}
+.tilePicture img{display:block;width:100%;height:100%;object-fit:cover;object-position:center}
+.tileImageMissing{display:grid;place-items:center;font-size:100px}
+.tileLabel{display:block;font-size:clamp(18px,2.3vw,24px);font-weight:850;letter-spacing:-.35px;padding:23px 12px;color:#193653}
+.photoLicense{max-width:650px;margin:5px auto 0;font-size:10px;color:#7d899a;text-align:center}
+.photoLicense summary{cursor:pointer;display:inline-block}
+.photoLicense p{margin:6px 0 0;font-size:10px;line-height:1.4}
+.photoLicense a{color:#486b92}
+.secondaryPage{max-width:1070px;margin:18px auto}
+.secondaryPage>h2{font-size:20px;margin:4px 0 13px}
+.secondaryPage .notice{font-size:11px}
+.compactMessage{padding:20px;background:#fff;border-radius:12px;text-align:center}
+.janNav{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom) + 8px);display:flex;justify-content:space-around;align-items:stretch;width:min(650px,calc(100% - 24px));padding:7px;border:1px solid #e2e9f2;border-radius:18px;background:#fffffff5;box-shadow:0 12px 36px #223d6523;backdrop-filter:blur(14px);z-index:19}
+.janNav button{border:0;border-radius:12px;padding:9px 12px;background:transparent;color:#6b7f99;font-size:12px;cursor:pointer;flex:1;display:flex;align-items:center;justify-content:center;gap:5px;font-weight:750}
+.janNav button.active{color:#175cbe;background:#eaf2ff}
+.janNav button span{font-size:19px;font-weight:600}
+@media(max-width:600px){
+ .homeView{min-height:calc(100dvh - 155px)}.homeHeading{margin:17px auto 20px}
+ .mainTiles{grid-template-columns:1fr;gap:19px;margin:18px auto;max-width:510px}
+ .tilePicture{height:clamp(180px,33vh,260px)}
+ .tileLabel{padding:15px 10px;font-size:20px}
+ .janNav button{font-size:10px;gap:3px;padding:9px 4px;flex-direction:column}
+ .janNav button span{font-size:18px}
+ .secondaryPage{margin-top:14px}
+}
