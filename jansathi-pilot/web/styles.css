@@ -151,3 +151,9 @@ body{background:#f5f8fc}
  .tileLabel{padding:13px 5px;font-size:clamp(12px,3.9vw,17px);line-height:1.2;min-height:52px;display:flex;align-items:center;justify-content:center}
  .tileBackup{font-size:54px}
 }
+
+/* Both tile photos are inlined WebP: no external image hosts required. */
+.tileProblem img{object-position:left center!important}
+.tileNews img{object-position:right center!important}
+.tileDemoCaption{font-size:10px;color:#72839a;text-align:center;margin:4px 0 0}
+@media(max-width:600px){.mainTiles{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:11px!important}}
