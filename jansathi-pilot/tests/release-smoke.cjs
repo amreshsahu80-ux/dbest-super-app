@@ -29,6 +29,8 @@ photos.forEach((base64,i)=>{
  assert.equal(b.toString('ascii',8,12),'WEBP','must be a valid WebP container marker');
 });
 assert.match(css,/grid-template-columns:repeat\(2,minmax\(0,1fr\)\)!important/,'keep tiles side-by-side on mobile');
+assert.match(css,/\.tileProblem img\{left:0!important\}/,'problem tile must show the road crop');
+assert.match(css,/\.tileNews img\{left:-100%!important\}/,'news tile must show the news crop');
 const ids=[...html.matchAll(/\bid="([^"]+)"/g)].map(m=>m[1]);
 assert.equal(ids.length,new Set(ids).size,'all HTML IDs must be unique');
 const references=[...js.matchAll(/byId\(["']([^"']+)["']\)/g)].map(m=>m[1]);
