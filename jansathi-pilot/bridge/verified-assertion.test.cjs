@@ -38,7 +38,7 @@ const rejects=[
  sign({...valid,source_session_expires_at:now-1}),
  sign(valid,secret,{alg:'none',typ:'DBEST-JANSATHI-HANDOFF'}),
  sign(valid,'other-synthetic-secret-very-long-2026'),
- sign(valid).replace(/.$/,'A'),
+ (()=>{const [h,p,s]=sign(valid).split('.');return h+'.'+(p[0]==='A'?'B':'A')+p.slice(1)+'.'+s;})(),
  'malformed',
 ];
 for(const [i,candidate] of rejects.entries())
