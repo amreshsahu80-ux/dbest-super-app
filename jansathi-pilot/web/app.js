@@ -255,14 +255,56 @@ async function loadOwnerEditorialQueue(){
  }catch(e){list.replaceChildren(mk("p","muted","Editorial review unavailable: "+e.message));}
 }
 byId("ownerEditorialRefresh").onclick=loadOwnerEditorialQueue;
+
+async function loadOwnerAbuseQueue(){
+ if(!ownerCanFeature)return;
+ const list=byId("ownerAbuseList");
+ list.replaceChildren(mk("p","muted","Loading reported content…"));
+ try{
+  const rows=await api("/rest/v1/rpc/jansathi_editor_abuse_queue",
+   {method:"POST",auth:true,body:JSON.stringify({p_limit:60})});
+  list.replaceChildren();
+  if(!Array.isArray(rows)||!rows.length){
+   list.appendChild(mk("p","muted","No unresolved content reports."));return;
+  }
+  rows.forEach(flag=>{
+   const card=mk("div","myreport");
+   card.append(mk("b","",String(flag.kind||"").toUpperCase()+" · "+(flag.headline||"Post unavailable")),
+    mk("small","muted","Flagged "+localDate(flag.created_at)),
+    mk("p","muted",String(flag.reason||"")));
+   const actions=mk("div","buttons");
+   [["dismissed","Dismiss flag"],["removed","Withdraw post"]].forEach(([decision,label])=>{
+    const button=mk("button","btn soft",label);button.type="button";
+    button.onclick=async()=>{
+     const why=window.prompt("Editorial review reason (10–500 characters):");
+     if(why===null)return;
+     const reason=cleanText(why);
+     if(reason.length<10||reason.length>500){toast("Enter a documented reason of 10–500 characters.");return;}
+     if(!window.confirm(label+"? This is an audited action."))return;
+     button.disabled=true;
+     try{
+      await api("/rest/v1/rpc/jansathi_editor_resolve_abuse_flag",
+       {method:"POST",auth:true,body:JSON.stringify({
+        p_flag_id:flag.flag_id,p_action:decision,p_reason:reason})});
+      toast("Content flag reviewed and logged.");
+      await Promise.all([loadOwnerAbuseQueue(),loadOwnerEditorialQueue(),refresh()]);
+     }catch(e){toast("Review could not complete: "+e.message);button.disabled=false;}
+    };actions.append(button);
+   });
+   card.append(actions);list.append(card);
+  });
+ }catch(e){list.replaceChildren(mk("p","muted","Flag review unavailable: "+e.message));}
+}
+byId("ownerAbuseRefresh").onclick=loadOwnerAbuseQueue;
+
 async function refreshOwnerAccess(){
- ownerCanFeature=false;byId("ownerEditorialPanel").hidden=true;byId("ownerNationalPanel").hidden=true;byId("ownerSeverityPanel").hidden=true;byId("ownerGeoPanel").hidden=true;
+ ownerCanFeature=false;byId("ownerAbusePanel").hidden=true;byId("ownerEditorialPanel").hidden=true;byId("ownerNationalPanel").hidden=true;byId("ownerSeverityPanel").hidden=true;byId("ownerGeoPanel").hidden=true;
  if(!ONLINE||!session)return;
  try{
   ownerCanFeature=(await api("/rest/v1/rpc/jansathi_can_manage_national",{method:"POST",auth:true,body:"{}"}))===true;
-  byId("ownerEditorialPanel").hidden=!ownerCanFeature;byId("ownerNationalPanel").hidden=!ownerCanFeature;byId("ownerSeverityPanel").hidden=!ownerCanFeature;byId("ownerGeoPanel").hidden=!ownerCanFeature;
-  if(ownerCanFeature)await Promise.all([loadOwnerEditorialQueue(),loadOwnerCandidates(),loadOwnerIssueSeverity(),ownerLoadRadius(),ownerReviewSites()]);
- }catch(e){ownerCanFeature=false;byId("ownerNationalPanel").hidden=true;byId("ownerSeverityPanel").hidden=true;byId("ownerGeoPanel").hidden=true;}
+  byId("ownerAbusePanel").hidden=!ownerCanFeature;byId("ownerEditorialPanel").hidden=!ownerCanFeature;byId("ownerNationalPanel").hidden=!ownerCanFeature;byId("ownerSeverityPanel").hidden=!ownerCanFeature;byId("ownerGeoPanel").hidden=!ownerCanFeature;
+  if(ownerCanFeature)await Promise.all([loadOwnerAbuseQueue(),loadOwnerEditorialQueue(),loadOwnerCandidates(),loadOwnerIssueSeverity(),ownerLoadRadius(),ownerReviewSites()]);
+ }catch(e){ownerCanFeature=false;byId("ownerAbusePanel").hidden=true;byId("ownerEditorialPanel").hidden=true;byId("ownerNationalPanel").hidden=true;byId("ownerSeverityPanel").hidden=true;byId("ownerGeoPanel").hidden=true;}
 }
 async function loadOwnerCandidates(){
  if(!ownerCanFeature)return;
