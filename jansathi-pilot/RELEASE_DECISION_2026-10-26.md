@@ -4,10 +4,18 @@
 
 Owner approved pursuing final polish and live deployment, but functional launch safety gates **have not passed**. This file documents actual verified status and prevents accidental release of unfinished membership/abuse/location workflows.
 
+
+## Staging visual polish verification — 26 October 2026 evening
+
+- Resolved composite-image crop bleed: `Report a Problem` shows the left-hand road photograph; `Report a News` shows the right-hand school-event photograph, with both cards side by side on narrow mobile screens.
+- GitHub source commits `2898d66d` (CSS) and `a15e448b` (regression assertions) on isolated JanSathi feature branch; CI workflow extended at `d0928bff` to execute visual/static release smoke checks on future commits.
+- Rebuilt staging Vercel `dpl_En4qjiTcSLNVCvGe3dA14epwFzWJ` — READY. Verified HTTP 200 for both landing HTML and updated CSS at `https://dbest-jansathi-staging.vercel.app`. No real-account browser E2E was performed.
+- Main DBest production `dpl_G7xwtaNKs7mq8LMJRTC57x5jPXwZ` remains unchanged. This is **not** a production GO; blocking identity, residence, news moderation, E2E and rollback criteria below continue to apply.
+
 ## Verified achievements
 
 - Approved home UI: **two large side-by-side image tiles** (Report a Problem and Report a News) with mobile two-column layout; embedded WebP composite image means neither tile needs an external image host. Sample image caption states illustrative content.
-- Current JanSathi staging: https://dbest-jansathi-staging.vercel.app, Vercel READY deployment `dpl_3177cYdCknhv387VGTAa54n5sKdz`.
+- Current JanSathi staging: https://dbest-jansathi-staging.vercel.app, Vercel READY deployment `dpl_En4qjiTcSLNVCvGe3dA14epwFzWJ`.
 - JanSathi Free Supabase project `zgjkzqfabbvctcjspvfd` is healthy with RLS-backed private submissions and public filtered feeds.
 - Static review: **10/10 checks passed** on homepage, image assets, mobile layout, UI element references, login/news gates, preservation of owner controls and JavaScript syntax.
 - Reusable no-dependency smoke regression test added at `jansathi-pilot/tests/release-smoke.cjs`.
