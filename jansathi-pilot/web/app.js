@@ -552,8 +552,28 @@ byId("includeSamples").addEventListener("change",e=>{includeSamples=e.target.che
 byId("fillExample").onclick=()=>{
 const example=reportKind==="civic"?{title:"[DEMO] Example damaged community path",body:"FICTIONAL ISSUE: A pretend public pathway near a sample school gate needs repair. No actual complaint will be filed by filling this form.",area:"Imaginary school approach",category:"road"}:{title:"[DEMO] Sample community reading event",body:"FICTIONAL EXAMPLE: Members of a pretend neighbourhood gather to exchange books and discuss local stories. This event is not real.",area:"Example community hall",category:"community"};
 byId("title").value=example.title;byId("body").value=example.body;byId("area").value=example.area;byId("category").value=example.category;toast("Synthetic example filled. It has NOT been submitted.");};
+
+// Two-card home navigation. All existing report, Owner and eligibility controls remain in secondary views.
+function showJanSathiScreen(view){
+ const screen=["home","explore","history","account"].includes(view)?view:"home";
+ for(const name of ["home","explore","history","account"]){
+  const panel=byId(name+"View");if(panel)panel.hidden=(name!==screen);
+ }
+ document.querySelectorAll("[data-screen]").forEach(el=>{
+  const active=el.dataset.screen===screen;el.classList.toggle("active",active);
+  if(active)el.setAttribute("aria-current","page");else el.removeAttribute("aria-current");
+ });
+ if(screen==="account"){const drawer=byId("loginDrawer");if(drawer)drawer.open=true;}
+ const historyMsg=byId("historyEmptyMsg");if(historyMsg)historyMsg.hidden=!!(session&&session.access_token);
+ window.scrollTo({top:0,behavior:"instant"});
+}
+document.querySelectorAll("[data-screen]").forEach(el=>el.addEventListener("click",()=>showJanSathiScreen(el.dataset.screen)));
+document.querySelectorAll(".mainTile .tilePicture img").forEach(img=>{
+ img.addEventListener("error",()=>{img.hidden=true;img.parentElement.classList.add("tileImageMissing");img.parentElement.textContent=img.closest('[data-report]').dataset.report==="civic"?"🛣️":"📰";},{once:true});
+});
+
 document.querySelectorAll("[data-report]").forEach(b=>b.addEventListener("click",()=>{reportKind=b.dataset.report;if(ONLINE&&!session){
-  const drawer=byId("loginDrawer");drawer.open=true;
+  showJanSathiScreen("account");const drawer=byId("loginDrawer");drawer.open=true;
   drawer.scrollIntoView({behavior:"smooth",block:"center"});
   toast("Sign in to the JanSathi test account first. Live DBest single sign-on is not connected yet.");return;
  }
