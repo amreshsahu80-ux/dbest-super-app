@@ -157,3 +157,10 @@ body{background:#f5f8fc}
 .tileNews img{object-position:right center!important}
 .tileDemoCaption{font-size:10px;color:#72839a;text-align:center;margin:4px 0 0}
 @media(max-width:600px){.mainTiles{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:11px!important}}
+
+/* JanSathi finishing pass: show only the appropriate half of the embedded
+   road/news WebP collage. Do not let each tile bleed into the other story. */
+.tileProblem img,.tileNews img{width:200%;height:100%;max-width:none;object-fit:cover;object-position:center!important}
+.tileProblem img{left:0!important}
+.tileNews img{left:-100%!important}
+@media(prefers-reduced-motion:reduce){.mainTile{transition:none}.mainTile:hover{transform:none}}
