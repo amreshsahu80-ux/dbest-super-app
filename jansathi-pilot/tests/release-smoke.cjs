@@ -36,7 +36,7 @@ assert.equal(ids.length,new Set(ids).size,'all HTML IDs must be unique');
 const references=[...js.matchAll(/byId\(["']([^"']+)["']\)/g)].map(m=>m[1]);
 const unresolved=[...new Set(references)].filter(id=>!ids.includes(id));
 assert.deepEqual(unresolved,[],'all existing UI controls must remain present');
-for(const id of ['ownerGeoPanel','ownerSeverityPanel','ownerNationalPanel','loginDrawer','myReportsPanel']){
+for(const id of ['ownerEditorialPanel','ownerEditorialRefresh','ownerEditorialList','ownerGeoPanel','ownerSeverityPanel','ownerNationalPanel','loginDrawer','myReportsPanel']){
  assert.ok(ids.includes(id),'critical control missing: '+id);
 }
 assert.match(js,/if\(ONLINE&&!session\)/,'report submission requires sign-in');
