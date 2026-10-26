@@ -10,10 +10,18 @@ Target Supabase project: `zgjkzqfabbvctcjspvfd` — DBest JanSathi Pilot.
 - Main DBest Pro database `ydedmotbacnllkijzmvp` has not been modified; Cab/Marketplace/payout flows are untouched.
 - JanSathi approved side-by-side image tiles remain in the existing READY staging deployment.
 
+## Prepared on draft branch (not deployed or activated)
+
+- `bridge/dbest-pro-issuer/index.ts`: DBest first-party server-side member-token validation using DBest Pro's own server credentials, returning only a short-lived (45-second) HMAC-signed assertion with a unique nonce. Intended future Edge Function, **not currently installed on DBest Pro**.
+- `bridge/verified-assertion.cjs`: strict HMAC signature, issuer, audience, short validity, email, member status and tier verification. Source exists and parses; the Node regression file `bridge/verified-assertion.test.cjs` is committed but its Node execution is **not yet verified**.
+- `bridge/assertion-exchange.cjs`: separate JanSathi-side, disabled-by-default candidate to consume the signed assertion, atomically claim its one-use nonce and create the isolated JanSathi Auth session. It requires future server secrets and a reviewed member session revocation design.
+- These files intentionally avoid copying the DBest Pro service-role key to the JanSathi Free project. The older raw-token `bridge/exchange.cjs` is superseded for the intended production SSO design and must **not** be activated.
+- The proof cannot be delivered across unrelated browser origins until a safe strict-origin handoff UI is integrated and tested. No token/assertion will be put in URLs, logs, or email.
+
 ## Not yet connected (blocking public launch)
 1. DBest App Pro membership service is not accessible under the currently connected **DBest JanSathi** Supabase organization. The two project organizations cannot be accessed simultaneously through the present connector context.
 2. DBest production member login uses an opaque session token in the source origin's browser localStorage; JanSathi's separate origin cannot read that token, and it must never appear in a URL. Source needs a reviewed same-origin server-verified handoff that emits a brief signed one-time assertion.
-3. JanSathi needs to verify the signature, consume its newly added single-use nonce, and mint the distinct JanSathi Auth session with locked member linkage. The candidate `bridge/exchange.cjs` remains disabled and is NOT deployed as a working SSO endpoint.
+3. JanSathi needs to verify the signature, consume its newly added single-use nonce, and mint the distinct JanSathi Auth session with locked member linkage. The new signed-assertion issuer, verifier, and exchange candidate all remain unconfigured and NOT deployed; the old raw-token bridge is superseded.
 4. DBest session expiry, logout, suspension, and KYC/payment revocation must propagate to JanSathi privilege checks without a 24-hour stale entitlement window; real-account E2E and rollback testing remain outstanding.
 5. Verified residential identity/provenance (not just entered PIN) and independently validated public issue location are needed before local support votes are enabled.
 6. Staging Vercel contains no server-side SSO environment keys. None should be exposed in browser code or pasted into chat.
