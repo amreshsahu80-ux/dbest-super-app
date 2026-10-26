@@ -569,7 +569,18 @@ function showJanSathiScreen(view){
 }
 document.querySelectorAll("[data-screen]").forEach(el=>el.addEventListener("click",()=>showJanSathiScreen(el.dataset.screen)));
 document.querySelectorAll(".mainTile .tilePicture img").forEach(img=>{
- img.addEventListener("error",()=>{img.hidden=true;img.parentElement.classList.add("tileImageMissing");img.parentElement.textContent=img.closest('[data-report]').dataset.report==="civic"?"🛣️":"📰";},{once:true});
+ // Thumbnail links can be unavailable on some networks: try an alternate URL before
+ // falling back to the always-visible graphic beneath the photograph.
+ const fail=()=>{
+  const other=img.dataset.fallbackSrc;
+  if(other && !img.dataset.triedAlternate){
+   img.dataset.triedAlternate="true";img.src=other;return;
+  }
+  img.hidden=true;
+  img.parentElement.classList.add("tileImageMissing");
+ };
+ img.addEventListener("error",fail);
+ if(img.complete && img.naturalWidth===0)fail();
 });
 
 document.querySelectorAll("[data-report]").forEach(b=>b.addEventListener("click",()=>{reportKind=b.dataset.report;if(ONLINE&&!session){
