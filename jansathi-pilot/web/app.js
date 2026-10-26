@@ -215,13 +215,53 @@ async function ownerReviewSites(){
  }catch(e){list.replaceChildren(mk("p","muted","Owner geo review unavailable: "+e.message));}
 }
 
+async function loadOwnerEditorialQueue(){
+ if(!ownerCanFeature)return;
+ const list=byId("ownerEditorialList");
+ list.replaceChildren(mk("p","muted","Loading private editorial queue…"));
+ try{
+  const rows=await api("/rest/v1/jansathi_news_submissions?select=id,title,body,city,public_area,status,created_at&status=in.(held,pending,published)&order=created_at.desc&limit=60",{auth:true});
+  list.replaceChildren();
+  if(!Array.isArray(rows)||!rows.length){
+   list.appendChild(mk("p","muted","No real news is awaiting review."));return;
+  }
+  rows.forEach(item=>{
+   const card=mk("div","myreport");
+   const state=item.status==="published"?"Published · withdraw if incorrect":"Awaiting review · not public";
+   card.append(mk("b","",item.title),mk("small","muted",item.city+" · "+item.public_area),
+     mk("p","muted",item.body),mk("span","status",state));
+   const actions=mk("div","buttons");
+   const decisions=item.status==="published"?[["removed","Withdraw"]]:[["published","Publish"],["rejected","Reject"]];
+   decisions.forEach(([action,label])=>{
+    const button=mk("button","btn soft",label);
+    button.type="button";
+    button.onclick=async()=>{
+     const reason=window.prompt("Fact-check / moderation reason (minimum 10 characters):");
+     if(reason===null)return;
+     const trimmed=cleanText(reason);
+     if(trimmed.length<10||trimmed.length>500){toast("Provide a review reason of 10–500 characters.");return;}
+     if(!window.confirm(label+" this real news item? This decision is audited."))return;
+     button.disabled=true;
+     try{
+      await api("/rest/v1/rpc/jansathi_editor_moderate_news",{method:"POST",auth:true,
+        body:JSON.stringify({p_news_id:item.id,p_action:action,p_reason:trimmed})});
+      toast("Editorial decision recorded.");await Promise.all([loadOwnerEditorialQueue(),refresh()]);
+     }catch(e){toast("Editorial decision failed: "+e.message);button.disabled=false;}
+    };
+    actions.appendChild(button);
+   });
+   card.append(actions);list.append(card);
+  });
+ }catch(e){list.replaceChildren(mk("p","muted","Editorial review unavailable: "+e.message));}
+}
+byId("ownerEditorialRefresh").onclick=loadOwnerEditorialQueue;
 async function refreshOwnerAccess(){
- ownerCanFeature=false;byId("ownerNationalPanel").hidden=true;byId("ownerSeverityPanel").hidden=true;byId("ownerGeoPanel").hidden=true;
+ ownerCanFeature=false;byId("ownerEditorialPanel").hidden=true;byId("ownerNationalPanel").hidden=true;byId("ownerSeverityPanel").hidden=true;byId("ownerGeoPanel").hidden=true;
  if(!ONLINE||!session)return;
  try{
   ownerCanFeature=(await api("/rest/v1/rpc/jansathi_can_manage_national",{method:"POST",auth:true,body:"{}"}))===true;
-  byId("ownerNationalPanel").hidden=!ownerCanFeature;byId("ownerSeverityPanel").hidden=!ownerCanFeature;byId("ownerGeoPanel").hidden=!ownerCanFeature;
-  if(ownerCanFeature)await Promise.all([loadOwnerCandidates(),loadOwnerIssueSeverity(),ownerLoadRadius(),ownerReviewSites()]);
+  byId("ownerEditorialPanel").hidden=!ownerCanFeature;byId("ownerNationalPanel").hidden=!ownerCanFeature;byId("ownerSeverityPanel").hidden=!ownerCanFeature;byId("ownerGeoPanel").hidden=!ownerCanFeature;
+  if(ownerCanFeature)await Promise.all([loadOwnerEditorialQueue(),loadOwnerCandidates(),loadOwnerIssueSeverity(),ownerLoadRadius(),ownerReviewSites()]);
  }catch(e){ownerCanFeature=false;byId("ownerNationalPanel").hidden=true;byId("ownerSeverityPanel").hidden=true;byId("ownerGeoPanel").hidden=true;}
 }
 async function loadOwnerCandidates(){
@@ -448,7 +488,7 @@ if(!session)throw Error("Sign in to the isolated JanSathi Pilot before submittin
 if(reportKind==="news"&&!paidNewsEligible)throw Error("Verified active DBest Promoter/Prime/Leader membership (₹299+) is required to publish news.");
 const table=reportKind==="civic"?"jansathi_civic_reports":"jansathi_news_submissions";
 await api("/rest/v1/"+table,{method:"POST",auth:true,headers:Object.assign(headers(true),{"Prefer":"return=representation"}),body:JSON.stringify(values)});
-toast(reportKind==="civic"?"Report saved by JanSathi. NO government submission occurred.":"News saved. Routine news can publish automatically; sensitive posts are held for review.");
+toast(reportKind==="civic"?"Report saved by JanSathi. NO government submission occurred.":"News submitted for editorial review. It is not public until approved.");
 }else{
 let unsafe=!safeIssue(data.title+" "+content+" "+data.public_area);
 const item={id:"LOCAL-"+Date.now(),kind:reportKind==="civic"?"civic":"news",city:data.city,public_area:data.public_area,headline:data.title,body:content,description:content,emoji:reportKind==="civic"?"🛣️":"📰",status:"dbest_received",visibility:unsafe?"held":"published"};
