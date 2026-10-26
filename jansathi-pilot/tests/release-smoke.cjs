@@ -39,6 +39,10 @@ assert.deepEqual(unresolved,[],'all existing UI controls must remain present');
 for(const id of ['ownerEditorialPanel','ownerEditorialRefresh','ownerEditorialList','ownerGeoPanel','ownerSeverityPanel','ownerNationalPanel','loginDrawer','myReportsPanel']){
  assert.ok(ids.includes(id),'critical control missing: '+id);
 }
+assert.ok(ids.includes('ownerAbusePanel')&&ids.includes('ownerAbuseList')&&ids.includes('ownerAbuseRefresh'),'abuse review controls must exist');
+assert.match(js,/async function loadOwnerAbuseQueue\(\)/,'abuse queue loaded');
+assert.match(js,/jansathi_editor_resolve_abuse_flag/,'review resolution backend is called');
+assert.match(js,/loadOwnerAbuseQueue\(\),loadOwnerEditorialQueue\(\)/,'abuse panel is included in owner load');
 assert.match(js,/if\(ONLINE&&!session\)/,'report submission requires sign-in');
 assert.match(js,/reportKind==="news"&&!paidNewsEligible/,'news permission gate');
 assert.doesNotMatch(html+js,/SUPABASE_SERVICE_ROLE_KEY|JANSATHI_SERVICE_ROLE_KEY|DBEST_PRO_SERVICE_ROLE_KEY/);
