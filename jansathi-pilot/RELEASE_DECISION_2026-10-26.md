@@ -5,6 +5,18 @@
 Owner approved pursuing final polish and live deployment, but functional launch safety gates **have not passed**. This file documents actual verified status and prevents accidental release of unfinished membership/abuse/location workflows.
 
 
+
+## Additional abuse-control implementation — 26 October 2026
+
+- Isolated JanSathi Free migration `015_abuse_flag_review_controls.sql` applied successfully: flags require a publicly visible target, an explanatory reason, one report per target/reporter in 30 days, and a limit of eight flags per authenticated reporter per 24 hours. Unauthorized/anonymous actions fail closed.
+- Editorial abuse review now has authenticated Owner/editor RPCs for private queue access and audited dismiss/withdraw actions. A withdrawn news article is removed from the public news feed; a withdrawn civic post receives the existing `rejected` workflow status and is removed from the public civic feed. No automated takedown solely because of a user flag.
+- New `ownerAbusePanel` integrated into the existing Owner secondary view without changing the two-tile home. JanSathi staging deployment `dpl_8ovCgkbsqavJ4aHH5ZErMsM1yXxU` READY and canonical alias `https://dbest-jansathi-staging.vercel.app` verified against that exact deployment (HTTP 200 HTML and app.js).
+- Reversible SQL integration PASS: authenticated user duplicate prevention; regular user denied review queue; editor-only dismiss with an audit decision; published synthetic news withdrawn with feed item removed and audit written. Test transactions ROLLED BACK. Tables/auth user counts remained zero after testing.
+- Static mobile/image/Owner UI smoke and synthetic bridge test GitHub Actions run `40361746854` SUCCESS. **These are not live account/SSO tests.**
+- Current connected Supabase only exposes `DBest JanSathi Pilot` in its organization, not source Pro `ydedmotbacnllkijzmvp`; main production backend membership evidence cannot be read or synchronized through this connection. Zero linked member entitlements remain. The verified DBest-to-JanSathi SSO handoff remains a release blocker.
+- Security Advisor has internal RLS-without-policy INFO notices (by design) and three `authenticated_security_definer_function_executable` WARN notices for explicitly authenticated, role-checked Owner/editor RPCs. These are intentionally callable only through server-verifiable editor checks, and require final security review before any public release.
+- **NO-GO for integrated production** remains. Main DBest deployment `dpl_G7xwtaNKs7mq8LMJRTC57x5jPXwZ` unchanged; no Cab, Marketplace, onboarding, payout, Insurance/Travel/MF code modified.
+
 ## Evening hardening and moderation test results — 26 October 2026
 
 - **News auto-publication removed** at the database trigger: every newly inserted news record stays `held` until an authorized editor approves it.
