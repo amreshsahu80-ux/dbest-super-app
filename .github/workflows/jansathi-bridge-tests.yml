@@ -5,10 +5,14 @@ on:
       - feat/jansathi-isolated-backend-pilot-20261025
     paths:
       - 'jansathi-pilot/bridge/**'
+      - 'jansathi-pilot/web/**'
+      - 'jansathi-pilot/tests/**'
       - '.github/workflows/jansathi-bridge-tests.yml'
   pull_request:
     paths:
       - 'jansathi-pilot/bridge/**'
+      - 'jansathi-pilot/web/**'
+      - 'jansathi-pilot/tests/**'
       - '.github/workflows/jansathi-bridge-tests.yml'
 permissions:
   contents: read
@@ -21,5 +25,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: JanSathi visual, static and syntax release smoke
+        run: node jansathi-pilot/tests/release-smoke.cjs
       - name: Unit and synthetic exchange tests — NO live backend calls
         run: node --test jansathi-pilot/bridge/*.test.cjs
