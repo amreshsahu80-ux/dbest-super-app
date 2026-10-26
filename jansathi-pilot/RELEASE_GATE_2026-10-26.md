@@ -1,9 +1,17 @@
 # JanSathi live release gate — 26 Oct 2026
 **Decision: NO-GO for public functional release** (Owner approval to proceed is acknowledged; the technical release prerequisites remain unmet).
 
+
+## Staging visual polish verification — 26 October 2026 evening
+
+- Resolved composite-image crop bleed: `Report a Problem` shows the left-hand road photograph; `Report a News` shows the right-hand school-event photograph, with both cards side by side on narrow mobile screens.
+- GitHub source commits `2898d66d` (CSS) and `a15e448b` (regression assertions) on isolated JanSathi feature branch; CI workflow extended at `d0928bff` to execute visual/static release smoke checks on future commits.
+- Rebuilt staging Vercel `dpl_En4qjiTcSLNVCvGe3dA14epwFzWJ` — READY. Verified HTTP 200 for both landing HTML and updated CSS at `https://dbest-jansathi-staging.vercel.app`. No real-account browser E2E was performed.
+- Main DBest production `dpl_G7xwtaNKs7mq8LMJRTC57x5jPXwZ` remains unchanged. This is **not** a production GO; blocking identity, residence, news moderation, E2E and rollback criteria below continue to apply.
+
 ## Verified on 26 Oct 2026
 - **JanSathi UI PASS:** two side-by-side image tiles, “Report a Problem” and “Report a News”, with embedded WebP visual sources and no external image host dependency.
-- **Staging Vercel PASS:** `dbest-jansathi-staging.vercel.app` points to READY deployment `dpl_3177cYdCknhv387VGTAa54n5sKdz`.
+- **Staging Vercel PASS:** `dbest-jansathi-staging.vercel.app` points to READY deployment `dpl_En4qjiTcSLNVCvGe3dA14epwFzWJ`.
 - **Production regression protection PASS (baseline only):** DBest project `dbest-super-app` production deployment remains `dpl_G7xwtaNKs7mq8LMJRTC57x5jPXwZ`. No edits to Cab, Marketplace, payments, members or payouts.
 - **Source isolation PASS:** JanSathi PR #71 remains **draft, unmerged**.
 - **JanSathi backend PASS for availability:** Free Supabase project `zgjkzqfabbvctcjspvfd` ACTIVE_HEALTHY. RLS enabled on civic, news, entitlements, support, and private residence/issue-site tables.
