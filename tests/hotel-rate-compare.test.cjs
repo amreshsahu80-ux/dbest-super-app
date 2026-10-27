@@ -53,7 +53,7 @@ test('real property photos carry source, photographer, licence and property iden
  assert.equal((out.match(/Photo source<\/a>/g)||[]).length,5);
  assert.equal((out.match(/data-property-id=/g)||[]).length,5);
  assert.match(out,/CC BY-SA 4\.0/);
- assert.match(out,/GFDL 1\.2/);
+ assert.match(out,/CC BY-SA 3\.0/);
  assert.match(out,/commons\.wikimedia\.org/);
 });
 test('owner supplier rate not exposed in public price box; demo selling price distinct',()=>{
@@ -96,4 +96,16 @@ test('no real OTA feed or checkout is wired into demo',()=>{
  assert.match(html,/permission/);
  assert.match(html,/Snapshot older than 3 hours/);
  assert.doesNotMatch(html, /<script\b[^>]+src=["']https:\/\/[^"']+["']/i);
+});
+
+test('untrusted CSV cannot replace illustrative public hotel prices',()=>{
+ const {el}=boot();
+ const htmlGuest=el('results').innerHTML;
+ assert.match(htmlGuest,/MMT/);
+ assert.match(htmlGuest,/Demo/);
+ assert.match(html,/o\.accepted=false;o\.reviewState='candidate';imported\.push\(o\)/);
+ assert.doesNotMatch(html,/o\.accepted=true;imported\.push\(o\)/);
+ const offerMatch=html.match(/function offers\(h\)\{[\s\S]*?\}\nfunction render\(/);
+ assert.ok(offerMatch);
+ assert.doesNotMatch(offerMatch[0],/matchQuote|total_inr/);
 });
