@@ -182,3 +182,53 @@ test('owner OTP UI keeps an existing code usable and throttles resend without we
  const scripts=[...html.matchAll(/<script>\s*([\s\S]+?)<\/script>/g)];
  scripts.forEach(m=>new vm.Script(m[1]));
 });
+
+test('hotel Owner validation accepts verified session even with >16KB server settings',async()=>{
+ const env={HOTEL_REVIEW_SUPABASE_URL:'https://example.supabase.co',HOTEL_REVIEW_PUBLISHABLE_KEY:'sb_publishable_abcdefghijklmnopqrstuvwxyz0123456789'};
+ const saved=global.fetch;
+ let calls=0;
+ try {
+  global.fetch=async(url,opts)=>{
+   calls++;
+   assert.match(String(url),/\/functions\/v1\/owner-control-live$/);
+   assert.equal(opts.method,'POST');
+   assert.equal(opts.headers['x-dbest-owner-token'],'opaque-owner-session-123456789');
+   assert.equal(JSON.parse(opts.body).action,'get_owner');
+   return new Response(JSON.stringify({ok:true,config:{oversizedValue:'x'.repeat(23000)}}),
+     {status:200,headers:{'content-type':'application/json'}});
+  };
+  assert.equal(await standalone._test.validateOwner(env,'opaque-owner-session-123456789'),true);
+  assert.equal(calls,1);
+  global.fetch=async()=>new Response(JSON.stringify({error:'owner_session_invalid'}),
+    {status:401,headers:{'content-type':'application/json'}});
+  assert.equal(await standalone._test.validateOwner(env,'fake-owner-token-123456789'),false);
+  assert.equal(await standalone._test.validateOwner(env,''),false);
+ }finally{global.fetch=saved}
+});
+test('hotel OTP verification returns HttpOnly session without forwarding DBest settings',async()=>{
+ const env={VERCEL_ENV:'production',HOTEL_REVIEW_DEPLOYMENT_MODE:'isolated-preview',
+   HOTEL_REVIEW_SUPABASE_URL:'https://example.supabase.co',
+   HOTEL_REVIEW_PUBLISHABLE_KEY:'sb_publishable_abcdefghijklmnopqrstuvwxyz0123456789'};
+ const savedEnv=process.env,savedFetch=global.fetch;
+ process.env=env;
+ const routes=[];
+ try{
+  global.fetch=async(url,opts)=>{
+   const path=String(url);routes.push(path);
+   if(path.endsWith('/verify-owner-otp'))return new Response(JSON.stringify({ok:true,ownerToken:'opaque-owner-session-123456789'}),
+     {status:200,headers:{'content-type':'application/json'}});
+   if(path.endsWith('/owner-control-live'))return new Response(JSON.stringify({ok:true,config:'s'.repeat(25000)}),
+     {status:200,headers:{'content-type':'application/json'}});
+   throw Error('Unexpected endpoint');
+  };
+  const {res,headers}=responseStub();
+  const host='dbest-hotel-review-preview.vercel.app';
+  await standalone({method:'POST',url:'/api/hotel-review-owner-auth',headers:{host,origin:'https://'+host},
+    body:{action:'verify_otp',email:'owner@example.com',code:'123456'}},res);
+  assert.equal(res.statusCode,200);
+  assert.deepEqual(res.body,{ok:true,authenticated:true,expiresIn:7200});
+  assert.match(headers['set-cookie'],/HttpOnly; Secure; SameSite=Strict/);
+  assert.equal(JSON.stringify(res.body).includes('config'),false);
+  assert.equal(routes.length,2);
+ }finally{process.env=savedEnv;global.fetch=savedFetch}
+});
