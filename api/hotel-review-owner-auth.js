@@ -2,7 +2,7 @@
 
 // Preview-only Owner OTP bridge for the DBest hotel review workbench.
 // No supplier tariff payload is accepted, stored, approved or returned by this API.
-// Do not expose SUPABASE_SECRET_KEY to a browser or use this on production.
+// Use a branch-only public publishable key to reach existing DBest OTP and read-only Owner validation. Never expose service keys or use on production.
 const BRANCH='feat/hotel-rate-compare-isolated-20261027';
 const cookieName='dbest_hotel_owner_preview';
 function json(res,status,data) {
@@ -18,7 +18,7 @@ function usableEnvironment(env) {
   return env.VERCEL_ENV==='preview' &&
     env.VERCEL_GIT_COMMIT_REF===BRANCH &&
     /^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(String(env.HOTEL_REVIEW_SUPABASE_URL||'')) &&
-    typeof env.SUPABASE_SECRET_KEY==='string' && env.SUPABASE_SECRET_KEY.length>16;
+    typeof env.HOTEL_REVIEW_PUBLISHABLE_KEY==='string' && /^sb_publishable_[a-zA-Z0-9_-]{20,}$/.test(env.HOTEL_REVIEW_PUBLISHABLE_KEY);
 }
 function allowedOrigin(req){
   const origin=String(req.headers.origin||''),host=String(req.headers.host||'');
@@ -39,12 +39,12 @@ function writeCookie(res,token) {
 function clearCookie(res) {
   res.setHeader('Set-Cookie',cookieName+'=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Strict');
 }
-async function callSupabase(env,path,body) {
+async function callSupabase(env,path,body,extraHeaders={}) {
  const c=new AbortController(),timer=setTimeout(()=>c.abort(),6500);
  try {
    const response=await fetch(env.HOTEL_REVIEW_SUPABASE_URL+path,{
      method:'POST',
-     headers:{apikey:env.SUPABASE_SECRET_KEY,'Content-Type':'application/json'},
+     headers:{apikey:env.HOTEL_REVIEW_PUBLISHABLE_KEY,Authorization:'Bearer '+env.HOTEL_REVIEW_PUBLISHABLE_KEY,'Content-Type':'application/json',...extraHeaders},
      body:JSON.stringify(body),signal:c.signal
    });
    // Do not reflect upstream contents/errors containing sensitive information.
@@ -56,8 +56,10 @@ async function callSupabase(env,path,body) {
 }
 async function validateOwner(env,token) {
  if(!token)return false;
- const result=await callSupabase(env,'/rest/v1/rpc/validate_owner_session',{p_token:token});
- return result.ok&&typeof result.data==='string'&&result.data.includes('@');
+ // Existing DBest function validates session server-side before returning Owner settings.
+ // The response body is intentionally discarded: none of its contents reach the preview client.
+ const result=await callSupabase(env,'/functions/v1/owner-control-live',{action:'get_owner'},{'x-dbest-owner-token':token});
+ return result.ok&&result.data?.ok===true;
 }
 const perInstance=new Map();
 function rateLimit(req) {
