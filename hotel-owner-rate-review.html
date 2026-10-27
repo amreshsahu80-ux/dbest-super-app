@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow,noarchive"><meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'none'; connect-src 'self'; form-action 'none'; base-uri 'none'">
 <title>DBest Hotel Rates · Private-data review prototype</title>
 <style>
 :root{font-family:Inter,system-ui,Arial,sans-serif;color:#182b43;background:#f3f7fb;font-size:14px}*{box-sizing:border-box}body{margin:0}button,input,select,textarea{font:inherit}
@@ -27,12 +27,24 @@ td small{display:block;color:#6c8196;margin-top:4px}.field-note{min-width:170px}
 a{color:#1566aa}footer{border-top:1px solid #dce7f0;padding:23px 16px;text-align:center;color:#6c8094;font-size:12px}
 #messages{color:#9a3b19;font-size:12px;white-space:pre-wrap;margin-top:8px}#status{font-size:13px;font-weight:700;color:#2d678d}.help{font-size:12px;background:#f8fbff;border:1px solid #e1ebf5;border-radius:12px;padding:11px;margin:9px 0}
 @media(max-width:850px){.controls{grid-template-columns:1fr 1fr}.grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:500px){.controls{grid-template-columns:1fr}.grid{gap:8px}.metric{padding:12px}.metric b{font-size:23px}header{padding:20px 16px}}
-</style>
+[hidden]{display:none!important}.auth-form{display:grid;gap:13px;max-width:430px}.auth-form input{min-height:44px}.auth-row{display:flex;gap:8px;flex-wrap:wrap}.auth-status{min-height:23px;font-weight:700;color:#34597d}.auth-shell{max-width:750px;margin:20px auto;padding:0 16px}.auth-shell .card{padding:24px}.auth-help{color:#5e7188;font-size:13px}</style>
 <script defer src="/hotel-review/approval-gate.js"></script></head><body>
 <header><div style="font-weight:900;letter-spacing:.7px;font-size:12px">DBest · Hotel Contracting</div>
 <h1>Tariff Approval Workbench</h1><p>Isolated supplier review · no live publication · all imported quotes held by default</p></header>
-<main>
-<div class="alert"><b>Security boundary:</b> This is a browser-only pilot, <b>not</b> the authenticated DBest Owner Console. File data is processed locally on this page; it is not sent to a server or saved permanently. Do not treat review recommendations as authorization to publish prices. For confidential commercial information, use only a trusted machine and approved operational access.</div>
+<section id="hotelOwnerAuth" class="auth-shell" aria-label="Secure DBest Owner sign-in">
+<div class="card"><div class="badge" style="display:inline-block;margin-bottom:12px">Owner OTP · isolated preview</div>
+<h2>Verify your DBest Owner account</h2>
+<p class="auth-help">Only an authorized DBest Owner email can unlock the local tariff-review workbench. OTPs are checked by the existing DBest Owner verification service. No supplier files are uploaded or stored on the server.</p>
+<form id="hotelOwnerOtpForm" class="auth-form" autocomplete="off">
+<div><label for="ownerEmail">Authorized Owner email</label><input type="email" name="email" id="ownerEmail" required maxlength="254" placeholder="Enter your authorized Owner email" autocomplete="email"></div>
+<div class="auth-row"><button id="sendOwnerOtp" class="btn" type="button">Send secure OTP</button></div>
+<div id="ownerOtpInput" hidden><label for="ownerOtp">Six-digit Owner OTP</label><input id="ownerOtp" name="one-time-code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" placeholder="Enter latest six-digit OTP">
+<button id="verifyOwnerOtp" type="submit" class="btn">Verify and open workbench</button></div>
+<p id="ownerAuthStatus" class="auth-status" role="status">Checking preview Owner session…</p></form>
+<div class="alert"><b>No public rate publication.</b> Verification only unlocks a local CSV review UI. All supplier rows still remain on hold and require a separate authenticated server-side approval process.</div>
+</div></section>
+<main id="hotelOwnerWorkbench" hidden>
+<div class="alert"><b>Security boundary:</b> This is an isolated OTP-verified preview, <b>not</b> the live DBest Owner Console. Only login requests contact the existing Owner authentication service. Imported supplier files stay in this browser and are not uploaded or saved. Do not treat review recommendations as authorization to publish prices. For confidential commercial information, use only a trusted machine and approved operational access.</div>
 <div class="card">
 <div class="heading"><div><h2>1. Load your approval queue</h2><p class="muted small">Use the <b>HOTEL RATE APPROVAL</b> tab from DBest_Hotel_Rate_Owner_Approval_Queue_2026-10-27.xlsx. Export that tab as CSV (UTF-8) in Excel or Google Sheets. Other sheets cannot be imported.</p></div><span class="badge">HOLD by default</span></div>
 <label for="file">Select local CSV (max 8MB)</label><input class="file" id="file" type="file" accept=".csv,text/csv" aria-describedby="status"/>
@@ -57,14 +69,14 @@ a{color:#1566aa}footer{border-top:1px solid #dce7f0;padding:23px 16px;text-align
 </section>
 <div class="card">
 <h2>3. Export review recommendations</h2>
-<p class="muted small">This creates a local audit CSV containing tariff IDs, review decisions, reviewer and notes. It always marks publication as HOLD. The authenticated backend must independently recheck the supplier record, taxes, permissions, reviewer authorization and source validity before any public rate is approved.</p>
+<p class="muted small">This creates a local audit CSV containing tariff IDs, review decisions, reviewer and notes. It always marks publication as HOLD. The separately protected, future publishing backend must independently recheck the supplier record, taxes, permissions, reviewer authorization and source validity before any public rate is approved.</p>
 <div class="controls" style="grid-template-columns:minmax(160px,1fr) 2fr auto">
 <div><label for="reviewer">Reviewer identifier</label><input type="text" id="reviewer" maxlength="120" placeholder="Name or staff ID"></div>
 <div class="small muted">There is no direct write-back to the live outreach sheet or DBest database.</div>
 <button type="button" id="download" class="btn" disabled>Download review CSV</button></div>
 <div class="help"><b>Real OTA connections:</b> Booking.com Demand API requires managed-affiliate access and appropriate permitted usage. MMT and Goibibo feed rights are unverified. Only licensed/authorized sources and server-side approvals can advance a rate to public comparison.</div>
 </div>
-</main><footer>DBest internal feature pilot · CAB, Marketplace, member wallet, production booking and payout flows unchanged</footer>
+</main><footer><button id="hotelOwnerSignOut" type="button" class="btn secondary" hidden>Sign out of Owner preview</button> DBest internal feature pilot · CAB, Marketplace, member wallet, production booking and payout flows unchanged</footer>
 <script>
 (function(){
 'use strict';
@@ -120,5 +132,69 @@ $('download').addEventListener('click',()=>{
  const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='dbest-hotel-review-decisions.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),500);
 });
 render();
+})();
+</script><script>
+(function(){
+'use strict';
+const $=id=>document.getElementById(id);
+const endpoint='/api/hotel-review-owner-auth';
+const status=$('ownerAuthStatus');
+const ownerForm=$('hotelOwnerOtpForm');
+function unlocked(ok,message){
+ $('hotelOwnerAuth').hidden=!!ok;
+ $('hotelOwnerWorkbench').hidden=!ok;
+ $('hotelOwnerSignOut').hidden=!ok;
+ if(message)status.textContent=message;
+}
+async function request(body) {
+ const method=body?'POST':'GET';
+ const response=await fetch(endpoint,{
+  method,credentials:'same-origin',
+  headers:body?{'Content-Type':'application/json'}:{},
+  body:body?JSON.stringify(body):undefined,
+  cache:'no-store'
+ });
+ let data={};try{data=await response.json()}catch{}
+ if(!response.ok)throw Error(data.error||'verification_unavailable');
+ return data;
+}
+let sending=false;
+$('sendOwnerOtp').addEventListener('click',async()=>{
+ if(sending)return;
+ const email=$('ownerEmail').value.trim().toLowerCase();
+ if(!ownerForm.reportValidity())return;
+ sending=true;$('sendOwnerOtp').disabled=true;
+ status.textContent='Requesting Owner OTP…';
+ try{
+  const data=await request({action:'send_otp',email});
+  if(!data.ok)throw Error('OTP could not be sent');
+  $('ownerOtpInput').hidden=false;
+  status.textContent='OTP requested. Check your authorized Owner mailbox.';
+ }catch(e){status.textContent='Could not send OTP: '+e.message;}
+ finally{sending=false;$('sendOwnerOtp').disabled=false}
+});
+ownerForm.addEventListener('submit',async e=>{
+ e.preventDefault();
+ const email=$('ownerEmail').value.trim().toLowerCase();
+ const code=$('ownerOtp').value.trim();
+ if(!/^\d{6}$/.test(code)){status.textContent='Enter a valid six-digit Owner OTP.';return}
+ const btn=$('verifyOwnerOtp');btn.disabled=true;status.textContent='Checking Owner session…';
+ try{
+  const data=await request({action:'verify_otp',email,code});
+  if(!data.authenticated)throw Error('owner_not_verified');
+  $('ownerOtp').value='';
+  unlocked(true,'Owner verified. Local review tools are unlocked.');
+ }catch(e){unlocked(false,'Owner verification failed: '+e.message)}
+ finally{btn.disabled=false}
+});
+$('hotelOwnerSignOut').addEventListener('click',async()=>{
+ try{await request({action:'logout'})}catch(e){}
+ // Clear the local review inputs, notes, and any imported supplier data before signing out.
+ location.reload();
+});
+(async()=>{try{
+ const result=await request();
+ unlocked(!!result.authenticated,result.authenticated?'Owner session verified.':'Please sign in to review supplier tariffs.');
+}catch(e){unlocked(false,'Owner verification unavailable ('+e.message+'). No rates are accessible.') }} )();
 })();
 </script></body></html>
