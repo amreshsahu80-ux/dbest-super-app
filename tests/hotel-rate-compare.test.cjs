@@ -23,6 +23,7 @@ function boot() {
   const context = {
     document: {
       getElementById:el,
+      addEventListener(){},
       createElement(tag){return {tagName:tag,style:{},textContent:'',className:'',parentNode:{},remove(){}};}
     },
     window:{scrollTo(){}},
