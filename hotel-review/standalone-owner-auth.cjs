@@ -56,10 +56,26 @@ async function callSupabase(env,path,body,extraHeaders={}) {
 }
 async function validateOwner(env,token) {
  if(!token)return false;
- // Existing DBest function validates session server-side before returning Owner settings.
- // The response body is intentionally discarded: none of its contents reach the preview client.
- const result=await callSupabase(env,'/functions/v1/owner-control-live',{action:'get_owner'},{'x-dbest-owner-token':token});
- return result.ok&&result.data?.ok===true;
+ // DBest returns full Owner settings after a VALID session. The settings JSON can
+ // exceed 16 KB; only the HTTP 200 from this strictly authenticated read-only
+ // action is required. Never deserialize, store or return its confidential body.
+ const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),6500);
+ try{
+  const response=await fetch(env.HOTEL_REVIEW_SUPABASE_URL+'/functions/v1/owner-control-live',{
+   method:'POST',
+   headers:{
+    apikey:env.HOTEL_REVIEW_PUBLISHABLE_KEY,
+    Authorization:'Bearer '+env.HOTEL_REVIEW_PUBLISHABLE_KEY,
+    'Content-Type':'application/json',
+    'x-dbest-owner-token':token
+   },
+   body:JSON.stringify({action:'get_owner'}),
+   signal:controller.signal
+  });
+  const verified=response.status===200 && String(response.headers.get('content-type')||'').includes('application/json');
+  try{await response.body?.cancel()}catch(e){}
+  return verified;
+ }finally{clearTimeout(timer)}
 }
 const perInstance=new Map();
 function rateLimit(req) {
