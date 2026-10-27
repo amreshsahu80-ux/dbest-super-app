@@ -91,3 +91,19 @@ test('Owner validation proxies only read-only session-check action and never ret
  assert.doesNotMatch(auth,/SUPABASE_SERVICE_ROLE_KEY|SUPABASE_SECRET_KEY/);
  assert.match(auth,/discarded/);
 });
+
+const standalone=require('../hotel-review/standalone-owner-auth.cjs');
+test('standalone hotel pilot requires explicit isolated deployment config and never uses the live DBest hostname',async()=>{
+ const e={VERCEL_ENV:'production',HOTEL_REVIEW_DEPLOYMENT_MODE:'isolated-preview',HOTEL_REVIEW_SUPABASE_URL:'https://demo.supabase.co',HOTEL_REVIEW_PUBLISHABLE_KEY:'sb_publishable_abcdefghijklmnopqrstuvxyz'};
+ assert.equal(standalone._test.usableEnvironment(e),true);
+ assert.equal(standalone._test.usableEnvironment({...e,VERCEL_ENV:'preview'}),false);
+ assert.equal(standalone._test.usableEnvironment({...e,HOTEL_REVIEW_DEPLOYMENT_MODE:''}),false);
+ const {res}=responseStub();
+ await standalone({method:'GET',headers:{host:'dbest4u.com'}},res);
+ assert.equal(res.statusCode,403);
+ assert.equal(res.body.error,'isolated_pilot_only');
+ const src=fs.readFileSync('hotel-review/standalone-owner-auth.cjs','utf8');
+ assert.match(src,/owner-control-live/);
+ assert.doesNotMatch(src,/save_snapshot/);
+ assert.doesNotMatch(src,/SUPABASE_SERVICE_ROLE_KEY|SUPABASE_SECRET_KEY/);
+});
