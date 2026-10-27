@@ -10,21 +10,23 @@
   function parseCSV(raw) {
     const text = String(raw || '').replace(/^\uFEFF/, '');
     if (text.length > 8000000) throw new Error('CSV is too large; limit is 8 MB.');
-    const rows=[]; let row=[],cell='',quoted=false;
+    const rows=[]; let row=[],cell='',quoted=false,justClosed=false;
     for(let i=0;i<text.length;i++){
       const ch=text[i];
       if(quoted){
         if(ch==='"' && text[i+1]==='"'){cell+='"';i++;}
-        else if(ch==='"')quoted=false;
+        else if(ch==='"'){quoted=false;justClosed=true;}
         else cell+=ch;
+      } else if(justClosed && ch!==',' && ch!=='\r' && ch!=='\n'){
+        if(ch!==' ' && ch!=='\t')throw new Error('Malformed quote in CSV field.');
       } else if(ch==='"'){
         if(cell!=='')throw new Error('Malformed quote in CSV field.');
         quoted=true;
-      } else if(ch===','){row.push(cell);cell='';}
+      } else if(ch===','){row.push(cell);cell='';justClosed=false;}
       else if(ch==='\r'||ch==='\n'){
         if(ch==='\r' && text[i+1]==='\n')i++;
         row.push(cell);if(row.some(x=>String(x).trim()!=='')) rows.push(row);
-        row=[];cell='';
+        row=[];cell='';justClosed=false;
         if(rows.length>10000)throw new Error('CSV exceeds 10,000 rows.');
       } else cell+=ch;
       if(cell.length>30000)throw new Error('CSV field exceeds 30,000 characters.');
