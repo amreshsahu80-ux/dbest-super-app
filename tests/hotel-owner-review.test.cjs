@@ -166,3 +166,19 @@ test('standalone Owner API: unauthenticated GET and cross-origin POST stay denie
    assert.equal(x.res.statusCode,413,'Oversize requests are rejected before OTP handling');
  }finally{process.env=prior;}
 });
+
+test('owner OTP UI keeps an existing code usable and throttles resend without weakening verification',()=>{
+ const html=fs.readFileSync('hotel-owner-rate-review.html','utf8');
+ assert.match(html,/id="ownerOtpInput"/);
+ assert.doesNotMatch(html,/id="ownerOtpInput" hidden/);
+ assert.match(html,/Already have a valid Owner OTP\?/);
+ assert.match(html,/sessionStorage\.setItem\(cooldownKey/);
+ assert.match(html,/sendButton\.disabled=sending\|\|seconds>0/);
+ assert.match(html,/startCooldown\(65\)/);
+ assert.match(html,/e\.httpStatus===429/);
+ assert.match(html,/five incorrect attempts require requesting a new code/i);
+ assert.match(html,/e\.httpStatus===401\?'Please sign in/);
+ assert.match(html,/OTP sending is limited to one request per Owner email every 60 seconds/);
+ const scripts=[...html.matchAll(/<script>\s*([\s\S]+?)<\/script>/g)];
+ scripts.forEach(m=>new vm.Script(m[1]));
+});
