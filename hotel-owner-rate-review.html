@@ -38,6 +38,7 @@ a{color:#1566aa}footer{border-top:1px solid #dce7f0;padding:23px 16px;text-align
 <form id="hotelOwnerOtpForm" class="auth-form" autocomplete="off">
 <div><label for="ownerEmail">Authorized Owner email</label><input type="email" name="email" id="ownerEmail" required maxlength="254" placeholder="Enter your authorized Owner email" autocomplete="email"></div>
 <div class="auth-row"><button id="sendOwnerOtp" class="btn" type="button">Send secure OTP</button></div>
+<p id="ownerOtpCooldown" class="auth-help">For security, request a new OTP only if needed.</p>
 <div id="ownerOtpInput" hidden><label for="ownerOtp">Six-digit Owner OTP</label><input id="ownerOtp" name="one-time-code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" placeholder="Enter latest six-digit OTP">
 <button id="verifyOwnerOtp" type="submit" class="btn">Verify and open workbench</button></div>
 <p id="ownerAuthStatus" class="auth-status" role="status">Checking preview Owner session…</p></form>
@@ -140,12 +141,43 @@ const $=id=>document.getElementById(id);
 const endpoint='/api/hotel-review-owner-auth';
 const status=$('ownerAuthStatus');
 const ownerForm=$('hotelOwnerOtpForm');
+const sendButton=$('sendOwnerOtp');
+const cooldownHint=$('ownerOtpCooldown');
+const cooldownKey='dbest_hotel_preview_otp_next_send';
+let sending=false,verifying=false;
+let nextAllowed=0;
+try{nextAllowed=Number(sessionStorage.getItem(cooldownKey)||0)||0}catch(e){}
 function unlocked(ok,message){
  $('hotelOwnerAuth').hidden=!!ok;
  $('hotelOwnerWorkbench').hidden=!ok;
  $('hotelOwnerSignOut').hidden=!ok;
  if(message)status.textContent=message;
 }
+function errorText(code){
+ const messages={
+  rate_limited:'OTP request limit reached. Please allow at least 60 seconds after your last request; use a valid existing code instead of resending.',
+  otp_not_sent:'OTP could not be sent. Check your authorized Owner email and try again after the cooldown.',
+  invalid_or_expired_otp:'That code is invalid or expired. Use the newest OTP within 10 minutes; five incorrect attempts require requesting a new code.',
+  owner_session_invalid:'The Owner session could not be verified. Please use a newly requested OTP after the cooldown.',
+  preview_owner_login_not_configured:'The secure preview login is unavailable. No supplier files can be opened.',
+  owner_auth_unavailable:'Owner login could not be reached. Please retry later.',
+  verification_unavailable:'Owner login returned an unexpected response.'
+ };
+ return messages[code]||'Owner login could not complete ('+String(code||'unknown_error')+').';
+}
+function startCooldown(seconds){
+ nextAllowed=Math.max(nextAllowed,Date.now()+Math.max(1,Number(seconds)||60)*1000);
+ try{sessionStorage.setItem(cooldownKey,String(nextAllowed))}catch(e){}
+ refreshCooldown();
+}
+function refreshCooldown(){
+ const seconds=Math.max(0,Math.ceil((nextAllowed-Date.now())/1000));
+ sendButton.disabled=sending||seconds>0;
+ sendButton.textContent=seconds?'Resend in '+seconds+'s':'Send secure OTP';
+ cooldownHint.textContent=seconds?'For security, another OTP may be requested in '+seconds+' seconds. Previously issued codes remain valid for up to 10 minutes.':'OTP sending is limited to one request per Owner email every 60 seconds; codes expire after 10 minutes.';
+}
+refreshCooldown();
+setInterval(refreshCooldown,1000);
 async function request(body) {
  const method=body?'POST':'GET';
  const response=await fetch(endpoint,{
@@ -155,46 +187,55 @@ async function request(body) {
   cache:'no-store'
  });
  let data={};try{data=await response.json()}catch{}
- if(!response.ok)throw Error(data.error||'verification_unavailable');
+ if(!response.ok){
+  const err=new Error(data.error||'verification_unavailable');
+  err.httpStatus=response.status;
+  err.retryAfter=Number(response.headers.get('Retry-After')||0);
+  throw err;
+ }
  return data;
 }
-let sending=false;
-$('sendOwnerOtp').addEventListener('click',async()=>{
- if(sending)return;
+sendButton.addEventListener('click',async()=>{
+ if(sending||Date.now()<nextAllowed)return;
  const email=$('ownerEmail').value.trim().toLowerCase();
  if(!ownerForm.reportValidity())return;
- sending=true;$('sendOwnerOtp').disabled=true;
+ sending=true;refreshCooldown();
  status.textContent='Requesting Owner OTP…';
  try{
   const data=await request({action:'send_otp',email});
-  if(!data.ok)throw Error('OTP could not be sent');
+  if(!data.ok)throw Error('otp_not_sent');
   $('ownerOtpInput').hidden=false;
-  status.textContent='OTP requested. Check your authorized Owner mailbox.';
- }catch(e){status.textContent='Could not send OTP: '+e.message;}
- finally{sending=false;$('sendOwnerOtp').disabled=false}
+  startCooldown(65);
+  status.textContent='OTP requested. Check your authorized Owner mailbox. Use the latest six-digit code within 10 minutes; please do not resend.';
+ }catch(e){
+  if(e.httpStatus===429||e.message==='rate_limited')startCooldown(Math.max(65,e.retryAfter||0));
+  status.textContent=errorText(e.message);
+ }finally{sending=false;refreshCooldown()}
 });
 ownerForm.addEventListener('submit',async e=>{
  e.preventDefault();
+ if(verifying)return;
  const email=$('ownerEmail').value.trim().toLowerCase();
  const code=$('ownerOtp').value.trim();
  if(!/^\d{6}$/.test(code)){status.textContent='Enter a valid six-digit Owner OTP.';return}
- const btn=$('verifyOwnerOtp');btn.disabled=true;status.textContent='Checking Owner session…';
+ verifying=true;const btn=$('verifyOwnerOtp');btn.disabled=true;status.textContent='Checking Owner session…';
  try{
   const data=await request({action:'verify_otp',email,code});
-  if(!data.authenticated)throw Error('owner_not_verified');
+  if(!data.authenticated)throw Error('owner_session_invalid');
   $('ownerOtp').value='';
   unlocked(true,'Owner verified. Local review tools are unlocked.');
- }catch(e){unlocked(false,'Owner verification failed: '+e.message)}
- finally{btn.disabled=false}
+ }catch(e){unlocked(false,errorText(e.message))}
+ finally{verifying=false;btn.disabled=false}
 });
 $('hotelOwnerSignOut').addEventListener('click',async()=>{
  try{await request({action:'logout'})}catch(e){}
- // Clear the local review inputs, notes, and any imported supplier data before signing out.
  location.reload();
 });
 (async()=>{try{
  const result=await request();
  unlocked(!!result.authenticated,result.authenticated?'Owner session verified.':'Please sign in to review supplier tariffs.');
-}catch(e){unlocked(false,'Owner verification unavailable ('+e.message+'). No rates are accessible.') }} )();
+}catch(e){
+ unlocked(false,e.httpStatus===401?'Please sign in to review supplier tariffs.':errorText(e.message));
+}} )();
 })();
 </script></body></html>
