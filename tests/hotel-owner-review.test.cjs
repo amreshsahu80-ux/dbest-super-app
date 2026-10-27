@@ -47,7 +47,7 @@ test('owner review page has no external assets/network, no included supplier rec
  assert.match(html,/api\/hotel-review-owner-auth/);
 });
 
-const gate=require('../api/hotel-review-owner-auth.js');
+const gate=require('../hotel-review/owner-auth-handler.cjs');
 function responseStub(){
  const headers={},res={statusCode:200,setHeader(k,v){headers[k.toLowerCase()]=v},end(body){res.body=JSON.parse(body);return res}};
  return {res,headers};
@@ -67,6 +67,7 @@ test('Owner API requires exact preview branch, public key, URL and matching POST
  assert.equal(gate._test.usableEnvironment(env),true);
  assert.equal(gate._test.usableEnvironment({...env,VERCEL_ENV:'production'}),false);
  assert.equal(gate._test.usableEnvironment({...env,VERCEL_GIT_COMMIT_REF:'main'}),false);
+ assert.equal(gate._test.usableEnvironment({...env,VERCEL_GIT_COMMIT_REF:undefined}),true);
  assert.equal(gate._test.usableEnvironment({...env,HOTEL_REVIEW_PUBLISHABLE_KEY:''}),false);
  assert.equal(gate._test.allowedOrigin({headers:{origin:'https://preview.vercel.app',host:'preview.vercel.app'}}),true);
  assert.equal(gate._test.allowedOrigin({headers:{origin:'https://hostile.tld',host:'preview.vercel.app'}}),false);
