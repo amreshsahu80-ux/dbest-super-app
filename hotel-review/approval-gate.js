@@ -6,6 +6,7 @@
 })(typeof window === 'object' ? window : undefined, function () {
   'use strict';
   const required = ['Rate ID','Hotel ID','Hotel / Property','Room Category','Occupancy','Supplier Quote INR','Taxes / GST','Meal Plan','Validity','Cancellation','Source Email ID','Original Review Status','Owner Decision','Publication Gate'];
+  const rateHistoryRequired = ['Rate ID','Hotel ID','Hotel Name','Email Message ID','Room Category','Occupancy','Rate INR','Taxes','Meal Plan','Validity','Confidence / Review Status'];
   const allowed = ['HOLD','VERIFY','REJECT'];
   function parseCSV(raw) {
     const text = String(raw || '').replace(/^\uFEFF/, '');
@@ -39,30 +40,40 @@
     const rows=parseCSV(csv);
     if(!rows.length)throw new Error('The review queue file is empty.');
     const header=rows.shift().map(h=>String(h).trim());
-    const missing=required.filter(h=>!header.includes(h));
-    if(missing.length)throw new Error('Missing review queue columns: '+missing.join(', '));
+    if(new Set(header).size!==header.length)throw new Error('Duplicate CSV header names');
+    const isApproval=required.every(h=>header.includes(h));
+    const isHistory=!isApproval && rateHistoryRequired.every(h=>header.includes(h));
+    if(!isApproval&&!isHistory){
+      const missing=required.filter(h=>!header.includes(h));
+      throw new Error('Missing review queue columns: '+missing.join(', ')+'. Alternatively export the full Rate History tab from the Hotel Contracting master.');
+    }
+    const sourceType=isApproval?'owner_approval_queue':'hotel_rate_history';
     const index=Object.fromEntries(header.map((h,i)=>[h,i]));
     const records=[],warnings=[],ids=new Set();
     rows.forEach((r,idx)=>{
       function get(h){return String(r[index[h]]??'').trim();}
       const id=get('Rate ID'),hotelId=get('Hotel ID');
-      if(!id||!hotelId||!get('Hotel / Property')){warnings.push('Row '+(idx+2)+' skipped: missing identity.');return;}
+      const hotel=get(isApproval?'Hotel / Property':'Hotel Name');
+      if(!id||!hotelId||!hotel){warnings.push('Row '+(idx+2)+' skipped: missing identity.');return;}
       if(ids.has(id)){warnings.push('Row '+(idx+2)+' skipped: duplicate Rate ID '+id.slice(0,40));return;}
       ids.add(id);
-      const quoted=get('Supplier Quote INR');
-      const amount=quoted && /^\d+(?:\.\d{1,2})?$/.test(quoted) ? Number(quoted) : null;
-      // Imported self-declared "approved" fields are *never* treated as DBest approvals.
+      const quoted=get(isApproval?'Supplier Quote INR':'Rate INR');
+      const numeric=quoted.replace(/,/g,'');
+      const amount=numeric && /^\d+(?:\.\d{1,2})?$/.test(numeric) ? Number(numeric) : null;
+      if(!Number.isFinite(amount)||amount<=0)warnings.push('Row '+(idx+2)+': rate missing or nonnumeric; cannot confirm tariff.');
+      // Imported source flags never become Owner approvals. Both formats stay on HOLD.
       records.push({
-        id, hotelId,hotel:get('Hotel / Property'),room:get('Room Category'),
+        id, hotelId,hotel,room:get('Room Category'),
         occupancy:get('Occupancy'),amount:Number.isFinite(amount)&&amount>0?amount:null,
-        taxes:get('Taxes / GST'),meal:get('Meal Plan'),validity:get('Validity'),
-        cancellation:get('Cancellation'),sourceReference:get('Source Email ID'),
-        sourceReview:get('Original Review Status'),sourceDecision:get('Owner Decision'),
-        sourceGate:get('Publication Gate'),
-        decision:'HOLD',note:'',reviewer:'',reviewedAt:''
+        taxes:get(isApproval?'Taxes / GST':'Taxes'),meal:get('Meal Plan'),validity:get('Validity'),
+        cancellation:get('Cancellation'),sourceReference:get(isApproval?'Source Email ID':'Email Message ID'),
+        sourceReview:get(isApproval?'Original Review Status':'Confidence / Review Status'),
+        sourceDecision:isApproval?get('Owner Decision'):'NOT_REVIEWED',
+        sourceGate:isApproval?get('Publication Gate'):'HOLD',
+        sourceType,decision:'HOLD',note:'',reviewer:'',reviewedAt:''
       });
     });
-    return {records,warnings,count:records.length,publicationEnabled:false};
+    return {records,warnings,count:records.length,publicationEnabled:false,sourceType};
   }
   function decide(record,decision,note,reviewer,stamp) {
     if(!record||!allowed.includes(decision))throw new Error('Invalid review decision.');
@@ -93,5 +104,5 @@
     ].map(csvCell).join(',')));
     return '\uFEFF'+lines.join('\r\n')+'\r\n';
   }
-  return Object.freeze({required,allowed,parseCSV,importQueue,decide,summary,exportDecisions});
+  return Object.freeze({required,rateHistoryRequired,allowed,parseCSV,importQueue,decide,summary,exportDecisions});
 });
