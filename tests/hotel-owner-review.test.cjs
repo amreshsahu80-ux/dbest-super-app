@@ -35,11 +35,49 @@ test('CSV export escapes spreadsheet-formula cells',()=>{
 });
 test('owner review page has no external assets/network, no included supplier records',()=>{
  const html=fs.readFileSync('hotel-owner-rate-review.html','utf8');
- assert.match(html,/connect-src 'none'/);assert.match(html,/HOTEL RATE APPROVAL/);
- assert.match(html,/not<\/b> the authenticated DBest Owner Console/);
+ assert.match(html,/connect-src 'self'/);assert.match(html,/HOTEL RATE APPROVAL/);
+ assert.match(html,/not<\/b> the live DBest Owner Console/);
  assert.match(html,/hotel-review\/approval-gate\.js/);
  assert.match(html,/publication as HOLD/);
  assert.doesNotMatch(html,/source-test|4725|ND-01/);
- const js=html.match(/<script>\s*([\s\S]+?)<\/script>/);
- assert.ok(js);new vm.Script(js[1]);
+ const scripts=[...html.matchAll(/<script>\s*([\s\S]+?)<\/script>/g)];
+ assert.ok(scripts.length>=2);for(const script of scripts)new vm.Script(script[1]);
+ assert.match(html,/id="hotelOwnerWorkbench" hidden/);
+ assert.match(html,/id="hotelOwnerAuth"/);
+ assert.match(html,/api\/hotel-review-owner-auth/);
+});
+
+const gate=require('../api/hotel-review-owner-auth.js');
+function responseStub(){
+ const headers={},res={statusCode:200,setHeader(k,v){headers[k.toLowerCase()]=v},end(body){res.body=JSON.parse(body);return res}};
+ return {res,headers};
+}
+test('Owner API defaults closed on missing branch-only preview configuration',async()=>{
+ const original=process.env;
+ try{
+  process.env={VERCEL_ENV:'production',VERCEL_GIT_COMMIT_REF:'main'};
+  const {res}=responseStub();
+  await gate({method:'GET',headers:{}},res);
+  assert.equal(res.statusCode,503);
+  assert.equal(res.body.error,'preview_owner_login_not_configured');
+ }finally{process.env=original}
+});
+test('Owner API requires exact preview branch, a secret, URL and matching POST Origin',()=>{
+ const env={VERCEL_ENV:'preview',VERCEL_GIT_COMMIT_REF:'feat/hotel-rate-compare-isolated-20261027',HOTEL_REVIEW_SUPABASE_URL:'https://demo.supabase.co',SUPABASE_SECRET_KEY:'sandbox-secret-123456789'};
+ assert.equal(gate._test.usableEnvironment(env),true);
+ assert.equal(gate._test.usableEnvironment({...env,VERCEL_ENV:'production'}),false);
+ assert.equal(gate._test.usableEnvironment({...env,VERCEL_GIT_COMMIT_REF:'main'}),false);
+ assert.equal(gate._test.usableEnvironment({...env,SUPABASE_SECRET_KEY:''}),false);
+ assert.equal(gate._test.allowedOrigin({headers:{origin:'https://preview.vercel.app',host:'preview.vercel.app'}}),true);
+ assert.equal(gate._test.allowedOrigin({headers:{origin:'https://hostile.tld',host:'preview.vercel.app'}}),false);
+});
+test('Owner opaque token is never returned from authentication metadata and cookie is HttpOnly',()=>{
+ const {res,headers}=responseStub();
+ gate._test.writeCookie(res,'opaque-session-token-abcdefghijklmnop');
+ assert.match(headers['set-cookie'],/HttpOnly; Secure; SameSite=Strict/);
+ const req={headers:{cookie:headers['set-cookie'].split(';')[0]}};
+ assert.equal(gate._test.cookieToken(req),'opaque-session-token-abcdefghijklmnop');
+ const blank=responseStub();
+ gate._test.clearCookie(blank.res);
+ assert.match(blank.headers['set-cookie'],/Max-Age=0/);
 });
