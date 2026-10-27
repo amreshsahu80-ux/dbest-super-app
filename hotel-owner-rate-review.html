@@ -39,7 +39,7 @@ a{color:#1566aa}footer{border-top:1px solid #dce7f0;padding:23px 16px;text-align
 <div><label for="ownerEmail">Authorized Owner email</label><input type="email" name="email" id="ownerEmail" required maxlength="254" placeholder="Enter your authorized Owner email" autocomplete="email"></div>
 <div class="auth-row"><button id="sendOwnerOtp" class="btn" type="button">Send secure OTP</button></div>
 <p id="ownerOtpCooldown" class="auth-help">For security, request a new OTP only if needed.</p>
-<div id="ownerOtpInput" hidden><label for="ownerOtp">Six-digit Owner OTP</label><input id="ownerOtp" name="one-time-code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" placeholder="Enter latest six-digit OTP">
+<div id="ownerOtpInput"><p class="auth-help">Already have a valid Owner OTP? Enter it below without requesting another.</p><label for="ownerOtp">Six-digit Owner OTP</label><input id="ownerOtp" name="one-time-code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" placeholder="Enter latest six-digit OTP">
 <button id="verifyOwnerOtp" type="submit" class="btn">Verify and open workbench</button></div>
 <p id="ownerAuthStatus" class="auth-status" role="status">Checking preview Owner session…</p></form>
 <div class="alert"><b>No public rate publication.</b> Verification only unlocks a local CSV review UI. All supplier rows still remain on hold and require a separate authenticated server-side approval process.</div>
