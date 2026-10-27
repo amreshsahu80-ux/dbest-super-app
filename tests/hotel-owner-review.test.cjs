@@ -144,3 +144,25 @@ test('Rate History cannot mark quoted supplier rates publishable even with unsou
  assert.ok(parsed.warnings.some(x=>x.includes('nonnumeric')));
  assert.equal(q.summary(parsed.records).publishable,0);
 });
+
+test('standalone Owner API: unauthenticated GET and cross-origin POST stay denied',async()=>{
+ const prior=process.env;
+ process.env={VERCEL_ENV:'production',HOTEL_REVIEW_DEPLOYMENT_MODE:'isolated-preview',
+ HOTEL_REVIEW_SUPABASE_URL:'https://example.supabase.co',
+ HOTEL_REVIEW_PUBLISHABLE_KEY:'sb_publishable_abcdefghijklmnopqrstuvwxyz0123456789'};
+ try {
+   const host='dbest-hotel-review-preview.vercel.app';
+   let x=responseStub();
+   await standalone({method:'GET',headers:{host}},x.res);
+   assert.equal(x.res.statusCode,401,'Missing HttpOnly session fails closed');
+   assert.deepEqual(x.res.body,{ok:false,authenticated:false});
+   assert.match(x.headers['set-cookie'],/Max-Age=0/);
+   x=responseStub();
+   await standalone({method:'POST',headers:{host,origin:'https://attacker.example', 'content-length':'20'},body:{action:'logout'}},x.res);
+   assert.equal(x.res.statusCode,403,'Cross-origin POST never reaches session operation');
+   assert.equal(x.res.body.error,'origin_not_allowed');
+   x=responseStub();
+   await standalone({method:'POST',headers:{host,origin:'https://'+host, 'content-length':'99999'},body:{action:'verify_otp'}},x.res);
+   assert.equal(x.res.statusCode,413,'Oversize requests are rejected before OTP handling');
+ }finally{process.env=prior;}
+});
