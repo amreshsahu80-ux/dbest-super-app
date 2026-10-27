@@ -58,7 +58,8 @@ test('real property photos carry source, photographer, licence and property iden
 test('owner supplier rate not exposed in public price box; demo selling price distinct',()=>{
  const {el}=boot(),guest=el('results').innerHTML,owner=el('ownerRows').innerHTML;
  assert.match(guest,/DBest illustrative guest price/);
- assert.match(owner,/Rambagh Palace/);\n assert.doesNotMatch(guest,/Private B2B base/);
+ assert.match(owner,/Rambagh Palace/);
+ assert.doesNotMatch(guest,/Private B2B base/);
 });
 test('image load and error events update owner diagnostics, with unavailable-image fallback',()=>{
  const {el}=boot(),listeners=el('results').listeners;
