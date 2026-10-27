@@ -84,7 +84,7 @@ test('Owner opaque token is never returned from authentication metadata and cook
 });
 
 test('Owner validation proxies only read-only session-check action and never returns remote config',async()=>{
- const auth=fs.readFileSync('api/hotel-review-owner-auth.js','utf8');
+ const auth=fs.readFileSync('hotel-review/owner-auth-handler.cjs','utf8');
  assert.match(auth,/action:'get_owner'/);
  assert.match(auth,/owner-control-live/);
  assert.doesNotMatch(auth,/save_snapshot/);
