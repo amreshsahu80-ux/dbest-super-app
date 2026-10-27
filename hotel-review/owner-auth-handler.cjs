@@ -73,6 +73,7 @@ function rateLimit(req) {
 }
 async function handler(req,res) {
   if(!usableEnvironment(process.env))return json(res,503,{ok:false,error:'preview_owner_login_not_configured'});
+  if(req.method==='GET'&&String(req.url||'').includes('health=1'))return json(res,200,{ok:true,previewOwnerAuthConfigured:true});
   if(req.method==='OPTIONS')return json(res,405,{ok:false,error:'method_not_allowed'});
   if(req.method!=='GET'&&req.method!=='POST')return json(res,405,{ok:false,error:'method_not_allowed'});
   if(req.method==='POST'&&!allowedOrigin(req))return json(res,403,{ok:false,error:'origin_not_allowed'});
