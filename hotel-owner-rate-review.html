@@ -46,7 +46,7 @@ a{color:#1566aa}footer{border-top:1px solid #dce7f0;padding:23px 16px;text-align
 <main id="hotelOwnerWorkbench" hidden>
 <div class="alert"><b>Security boundary:</b> This is an isolated OTP-verified preview, <b>not</b> the live DBest Owner Console. Only login requests contact the existing Owner authentication service. Imported supplier files stay in this browser and are not uploaded or saved. Do not treat review recommendations as authorization to publish prices. For confidential commercial information, use only a trusted machine and approved operational access.</div>
 <div class="card">
-<div class="heading"><div><h2>1. Load your approval queue</h2><p class="muted small">Use the <b>HOTEL RATE APPROVAL</b> tab from DBest_Hotel_Rate_Owner_Approval_Queue_2026-10-27.xlsx. Export that tab as CSV (UTF-8) in Excel or Google Sheets. Other sheets cannot be imported.</p></div><span class="badge">HOLD by default</span></div>
+<div class="heading"><div><h2>1. Load your approval queue</h2><p class="muted small">Use either the <b>Rate History</b> tab from the connected <b>DBest India Hotel Contracting | Master Database 2026-27</b> or the <b>HOTEL RATE APPROVAL</b> tab from the separate Owner Approval Queue workbook. Export only that tab as <b>CSV (UTF-8)</b>. Other tabs are not supported.</p></div><span class="badge">HOLD by default</span></div>
 <label for="file">Select local CSV (max 8MB)</label><input class="file" id="file" type="file" accept=".csv,text/csv" aria-describedby="status"/>
 <div class="row"><span id="status" role="status">No file loaded.</span><button type="button" id="clear" class="btn secondary">Clear session</button></div>
 <div id="messages" role="alert"></div></div>
@@ -106,7 +106,7 @@ $('file').addEventListener('change',async e=>{
   if(file.size>8000000) throw new Error('8 MB file limit exceeded');
   const result=DBestTariffReview.importQueue(await file.text());
   records=result.records;warnings=result.warnings;page=0;
-  $('status').textContent=result.count.toLocaleString('en-IN')+' lines loaded into this browser only';
+  $('status').textContent=result.count.toLocaleString('en-IN')+' lines loaded from '+(result.sourceType==='hotel_rate_history'?'Rate History':'Owner Approval Queue')+' into this browser only';
   $('messages').textContent=warnings.slice(0,10).join('\n')+(warnings.length>10?'\n…plus '+(warnings.length-10)+' further warnings':'');
   render();
  } catch(ex){$('status').textContent='Import failed';$('messages').textContent=String(ex.message||ex);}
