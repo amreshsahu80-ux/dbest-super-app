@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive"><meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<title>DBest Hotel Rates · Private-data review prototype</title>
+<style>
+:root{font-family:Inter,system-ui,Arial,sans-serif;color:#182b43;background:#f3f7fb;font-size:14px}*{box-sizing:border-box}body{margin:0}button,input,select,textarea{font:inherit}
+header{background:linear-gradient(115deg,#0c2d52,#155a85);color:white;padding:26px max(16px,calc((100vw - 1200px)/2));}
+header h1{margin:4px 0;font-size:clamp(24px,3vw,34px)}header p{margin:6px 0 0;color:#d5eafa;font-size:13px}
+main{max-width:1200px;margin:20px auto 55px;padding:0 16px}
+.alert{padding:13px 16px;border-radius:12px;background:#fff6de;border:1px solid #f1d79c;color:#6c4b15;margin:13px 0;line-height:1.6}
+.card{background:white;border:1px solid #e0e8f2;border-radius:17px;padding:18px;margin:15px 0;box-shadow:0 10px 30px #1237590a}
+.heading{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+h2{font-size:19px;margin:0 0 8px}p{line-height:1.6}.muted{color:#60748d}.small{font-size:12px}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:18px 0}
+.metric{background:white;border:1px solid #e1e9f3;border-radius:15px;padding:16px}.metric b{font-size:28px;display:block;color:#10446c}.metric span{font-size:12px;color:#6e7e90}
+.btn{background:#1c68b2;border:1px solid #1c68b2;color:white;border-radius:9px;padding:10px 16px;font-weight:800;cursor:pointer}
+.btn.secondary{color:#1c5e9f;background:#f1f7ff;border-color:#cbdff4}.btn:disabled{opacity:.45;cursor:default}
+.file{padding:15px;background:#f4f8fd;border:1px dashed #9cb6cd;border-radius:12px;max-width:100%;width:100%;margin:10px 0}
+.controls{display:grid;grid-template-columns:2fr 1fr 1fr auto auto;gap:9px;align-items:end;margin:14px 0}
+label{display:block;font-size:12px;font-weight:800;color:#566a80;margin-bottom:6px}
+input[type=text],select,textarea{border:1px solid #cbd7e4;border-radius:9px;padding:10px 12px;width:100%;min-width:0;background:white;color:#182b43}
+input:focus,select:focus,textarea:focus{outline:2px solid #66a8e2;outline-offset:1px}
+.table{overflow:auto;border-radius:12px;border:1px solid #e3eaf1}table{border-collapse:collapse;min-width:900px;width:100%;font-size:12px}th{background:#eef4fa;color:#4d617b;font-size:11px;letter-spacing:.4px;text-transform:uppercase;text-align:left;white-space:nowrap}td,th{border-bottom:1px solid #e6ecf3;padding:10px;vertical-align:top}tr:last-child td{border-bottom:0}td .amount{font-weight:800;color:#144d84;white-space:nowrap}
+td small{display:block;color:#6c8196;margin-top:4px}.field-note{min-width:170px}.field-decision{min-width:135px}.badge{background:#f8e9cc;border-radius:25px;color:#8a5a14;padding:5px 10px;font-size:11px;font-weight:800}
+.row{display:flex;gap:9px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+a{color:#1566aa}footer{border-top:1px solid #dce7f0;padding:23px 16px;text-align:center;color:#6c8094;font-size:12px}
+#messages{color:#9a3b19;font-size:12px;white-space:pre-wrap;margin-top:8px}#status{font-size:13px;font-weight:700;color:#2d678d}.help{font-size:12px;background:#f8fbff;border:1px solid #e1ebf5;border-radius:12px;padding:11px;margin:9px 0}
+@media(max-width:850px){.controls{grid-template-columns:1fr 1fr}.grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:500px){.controls{grid-template-columns:1fr}.grid{gap:8px}.metric{padding:12px}.metric b{font-size:23px}header{padding:20px 16px}}
+</style>
+<script defer src="/hotel-review/approval-gate.js"></script></head><body>
+<header><div style="font-weight:900;letter-spacing:.7px;font-size:12px">DBest · Hotel Contracting</div>
+<h1>Tariff Approval Workbench</h1><p>Isolated supplier review · no live publication · all imported quotes held by default</p></header>
+<main>
+<div class="alert"><b>Security boundary:</b> This is a browser-only pilot, <b>not</b> the authenticated DBest Owner Console. File data is processed locally on this page; it is not sent to a server or saved permanently. Do not treat review recommendations as authorization to publish prices. For confidential commercial information, use only a trusted machine and approved operational access.</div>
+<div class="card">
+<div class="heading"><div><h2>1. Load your approval queue</h2><p class="muted small">Use the <b>HOTEL RATE APPROVAL</b> tab from DBest_Hotel_Rate_Owner_Approval_Queue_2026-10-27.xlsx. Export that tab as CSV (UTF-8) in Excel or Google Sheets. Other sheets cannot be imported.</p></div><span class="badge">HOLD by default</span></div>
+<label for="file">Select local CSV (max 8MB)</label><input class="file" id="file" type="file" accept=".csv,text/csv" aria-describedby="status"/>
+<div class="row"><span id="status" role="status">No file loaded.</span><button type="button" id="clear" class="btn secondary">Clear session</button></div>
+<div id="messages" role="alert"></div></div>
+<div class="grid" aria-live="polite">
+<div class="metric"><b id="total">0</b><span>Loaded quote lines</span></div>
+<div class="metric"><b id="hold">0</b><span>Hold</span></div>
+<div class="metric"><b id="verify">0</b><span>Recommend verification</span></div>
+<div class="metric"><b id="reject">0</b><span>Reject</span></div>
+</div>
+<section class="card" aria-label="Owner review table">
+<div class="heading"><div><h2>2. Review supplier offers</h2><p class="muted small">Quotes stay on hold regardless of previous workbook flags. Mark for follow-up or reject; this screen cannot activate customer rates.</p></div><span class="badge">0 publishable</span></div>
+<div class="controls">
+<div><label for="search">Find hotel / tariff / room</label><input id="search" type="text" placeholder="Search quote ID, hotel, category…" autocomplete="off"></div>
+<div><label for="decisionFilter">Review recommendation</label><select id="decisionFilter"><option value="all">All</option><option value="HOLD">HOLD</option><option value="VERIFY">Verify</option><option value="REJECT">Reject</option></select></div>
+<div><label for="pageSize">Rows per page</label><select id="pageSize"><option>25</option><option>50</option><option>100</option></select></div>
+<button class="btn secondary" id="prev" type="button">Previous</button><button class="btn secondary" id="next" type="button">Next</button>
+</div>
+<div class="row small muted" style="margin-bottom:10px"><span id="count">No records loaded</span><span id="page">Page 0 / 0</span></div>
+<div class="table"><table><thead><tr><th>Quote and property</th><th>Room / occupancy</th><th>B2B quoted</th><th>Taxes &amp; terms</th><th>Decision</th><th>Reason / follow-up</th></tr></thead><tbody id="tbody"><tr><td colspan="6" class="muted">Select a CSV to begin.</td></tr></tbody></table></div>
+</section>
+<div class="card">
+<h2>3. Export review recommendations</h2>
+<p class="muted small">This creates a local audit CSV containing tariff IDs, review decisions, reviewer and notes. It always marks publication as HOLD. The authenticated backend must independently recheck the supplier record, taxes, permissions, reviewer authorization and source validity before any public rate is approved.</p>
+<div class="controls" style="grid-template-columns:minmax(160px,1fr) 2fr auto">
+<div><label for="reviewer">Reviewer identifier</label><input type="text" id="reviewer" maxlength="120" placeholder="Name or staff ID"></div>
+<div class="small muted">There is no direct write-back to the live outreach sheet or DBest database.</div>
+<button type="button" id="download" class="btn" disabled>Download review CSV</button></div>
+<div class="help"><b>Real OTA connections:</b> Booking.com Demand API requires managed-affiliate access and appropriate permitted usage. MMT and Goibibo feed rights are unverified. Only licensed/authorized sources and server-side approvals can advance a rate to public comparison.</div>
+</div>
+</main><footer>DBest internal feature pilot · CAB, Marketplace, member wallet, production booking and payout flows unchanged</footer>
+<script>
+(function(){
+'use strict';
+const $=id=>document.getElementById(id);
+let records=[],warnings=[],page=0;
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+const fmt=n=>typeof n==='number'?'₹'+n.toLocaleString('en-IN',{maximumFractionDigits:2}):'Needs verification';
+function filtered(){const q=$('search').value.toLowerCase().trim(),v=$('decisionFilter').value;
+ return records.map((r,i)=>({r,i})).filter(({r})=>(v==='all'||r.decision===v)&&(!q||[r.id,r.hotelId,r.hotel,r.room,r.occupancy].some(x=>String(x||'').toLowerCase().includes(q))));
+}
+function metrics(){const m=DBestTariffReview.summary(records);['total','hold','verify','reject'].forEach(k=>$(k).textContent=m[k==='total'?'total':k.toUpperCase()].toLocaleString('en-IN'));$('download').disabled=!records.length;}
+function render(){
+ metrics();const all=filtered(),size=Number($('pageSize').value)||25,max=Math.max(1,Math.ceil(all.length/size));page=Math.max(0,Math.min(page,max-1));const shown=all.slice(page*size,(page+1)*size);
+ $('count').textContent=records.length?all.length.toLocaleString('en-IN')+' matching / '+records.length.toLocaleString('en-IN')+' imported':'No records loaded';
+ $('page').textContent='Page '+(records.length?page+1:0)+' / '+(records.length?max:0);
+ $('prev').disabled=page===0;$('next').disabled=page>=max-1||!records.length;
+ $('tbody').innerHTML=shown.length?shown.map(({r,i})=>'<tr><td><b>'+esc(r.hotel)+'</b><small>'+esc(r.id)+' • '+esc(r.hotelId)+'</small></td>'+
+ '<td>'+esc(r.room)+'<small>'+esc(r.occupancy)+' • '+esc(r.meal)+'</small></td>'+
+ '<td><span class="amount">'+fmt(r.amount)+'</span><small>'+esc(r.sourceReview)+'</small></td>'+
+ '<td>'+esc(r.taxes)+'<small>'+esc(r.validity)+' · '+esc(r.cancellation)+'</small></td>'+
+ '<td><select class="field-decision" aria-label="Review recommendation" data-index="'+i+'" data-field="decision">'+['HOLD','VERIFY','REJECT'].map(d=>'<option '+(r.decision===d?'selected ':'')+'value="'+d+'">'+({HOLD:'Hold',VERIFY:'Needs verification',REJECT:'Reject'}[d])+'</option>').join('')+'</select></td>'+
+ '<td><input class="field-note" data-index="'+i+'" data-field="note" maxlength="1000" type="text" placeholder="Reason / missing terms…" value="'+esc(r.note)+'"><small>No auto-publishing</small></td></tr>').join(''):'<tr><td colspan="6" class="muted">No records match. Change your filters or load a CSV.</td></tr>';
+}
+$('file').addEventListener('change',async e=>{
+ const file=e.target.files&&e.target.files[0];if(!file)return;
+ try {
+  if(file.size>8000000) throw new Error('8 MB file limit exceeded');
+  const result=DBestTariffReview.importQueue(await file.text());
+  records=result.records;warnings=result.warnings;page=0;
+  $('status').textContent=result.count.toLocaleString('en-IN')+' lines loaded into this browser only';
+  $('messages').textContent=warnings.slice(0,10).join('\n')+(warnings.length>10?'\n…plus '+(warnings.length-10)+' further warnings':'');
+  render();
+ } catch(ex){$('status').textContent='Import failed';$('messages').textContent=String(ex.message||ex);}
+ e.target.value='';
+});
+$('tbody').addEventListener('change',e=>{
+ const field=e.target.dataset.field,idx=Number(e.target.dataset.index);if(!['decision','note'].includes(field)||!Number.isInteger(idx)||!records[idx])return;
+ const r=records[idx];try{
+  const decision=field==='decision'?e.target.value:r.decision;
+  const note=field==='note'?e.target.value:r.note;
+  DBestTariffReview.decide(r,decision,note,$('reviewer').value);
+  $('messages').textContent=''; render();
+ } catch(err){$('messages').textContent=err.message;render();}
+});
+$('tbody').addEventListener('input',e=>{if(e.target.dataset.field==='note'){const i=Number(e.target.dataset.index);if(records[i])records[i].note=e.target.value;}});
+for(const id of ['search','decisionFilter','pageSize'])$(id).addEventListener(id==='search'?'input':'change',()=>{page=0;render()});
+$('prev').addEventListener('click',()=>{page--;render()});$('next').addEventListener('click',()=>{page++;render()});
+$('clear').addEventListener('click',()=>{records=[];warnings=[];page=0;$('file').value='';$('status').textContent='No file loaded.';$('messages').textContent='';render()});
+$('download').addEventListener('click',()=>{
+ if(!records.length)return;
+ const csv=DBestTariffReview.exportDecisions(records);
+ const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+ const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='dbest-hotel-review-decisions.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),500);
+});
+render();
+})();
+</script></body></html>
