@@ -72,7 +72,7 @@ function rateLimit(req) {
  return false;
 }
 async function handler(req,res) {
-  if(!/^dbest-hotel-owner-pilot(?:-[a-z0-9-]+)?\.vercel\.app$/.test(String(req.headers?.host||'')))return json(res,403,{ok:false,error:'isolated_pilot_only'});
+  if(!/^(?:dbest-hotel-owner-pilot|dbest-hotel-review-preview)(?:-[a-z0-9-]+)?\.vercel\.app$/.test(String(req.headers?.host||'')))return json(res,403,{ok:false,error:'isolated_pilot_only'});
   if(!usableEnvironment(process.env))return json(res,503,{ok:false,error:'preview_owner_login_not_configured'});
   if(req.method==='OPTIONS')return json(res,405,{ok:false,error:'method_not_allowed'});
   if(req.method!=='GET'&&req.method!=='POST')return json(res,405,{ok:false,error:'method_not_allowed'});
