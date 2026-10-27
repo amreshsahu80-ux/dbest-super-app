@@ -116,3 +116,31 @@ test('hotel review parser runs before inline workbench startup',()=>{
  assert.ok(page.indexOf(match[0])<page.indexOf('DBestTariffReview.summary'));
  assert.match(page,/id="hotelOwnerWorkbench" hidden/);
 });
+
+
+test('direct Rate History CSV import maps contracting source to HOLD-only review',()=>{
+ const headers=['Rate ID','Hotel ID','Hotel Name','Email Message ID','Date Received','Room Category','Occupancy','Rate INR','Taxes','Meal Plan','Extra Bed','Child Policy','Cancellation','Payment Terms','Validity','Group Rates','Confidence / Review Status','Notes'];
+ const cells=['SAMPLE-R1','TEST-HOTEL-1','Fictional Test Property','test-msg-ref','2026-10-27','Standard','Double','4567','Taxes pending','Breakfast','','','','','Subject to confirmation','','Quoted; verification needed',''];
+ const csv=headers.join(',')+'\n'+cells.join(',');
+ const imported=q.importQueue(csv);
+ assert.equal(imported.sourceType,'hotel_rate_history');
+ assert.equal(imported.records.length,1);
+ assert.equal(imported.records[0].amount,4567);
+ assert.equal(imported.records[0].hotel,'Fictional Test Property');
+ assert.equal(imported.records[0].sourceReference,'test-msg-ref');
+ assert.equal(imported.records[0].sourceReview,'Quoted; verification needed');
+ assert.equal(imported.records[0].sourceGate,'HOLD');
+ assert.equal(imported.records[0].decision,'HOLD');
+ assert.equal(imported.publicationEnabled,false);
+ assert.equal(q.summary(imported.records).publishable,0);
+ assert.doesNotMatch(q.exportDecisions(imported.records),/4567/);
+});
+test('Rate History cannot mark quoted supplier rates publishable even with unsound source data',()=>{
+ const h=q.rateHistoryRequired;
+ const base=h.map(x=>x==='Rate ID'?'SANDBOX-R2':x==='Hotel ID'?'TEST-HOTEL':x==='Hotel Name'?'Demo Hotel':x==='Rate INR'?'not a number':x==='Confidence / Review Status'?'Approved by source':'').join(',');
+ const parsed=q.importQueue(h.join(',')+'\n'+base);
+ assert.equal(parsed.records[0].amount,null);
+ assert.equal(parsed.records[0].decision,'HOLD');
+ assert.ok(parsed.warnings.some(x=>x.includes('nonnumeric')));
+ assert.equal(q.summary(parsed.records).publishable,0);
+});
