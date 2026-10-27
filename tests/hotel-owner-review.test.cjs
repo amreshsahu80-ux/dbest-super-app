@@ -36,7 +36,7 @@ test('CSV export escapes spreadsheet-formula cells',()=>{
 test('owner review page has no external assets/network, no included supplier records',()=>{
  const html=fs.readFileSync('hotel-owner-rate-review.html','utf8');
  assert.match(html,/connect-src 'none'/);assert.match(html,/HOTEL RATE APPROVAL/);
- assert.match(html,/not the authenticated DBest Owner Console/);
+ assert.match(html,/not<\/b> the authenticated DBest Owner Console/);
  assert.match(html,/hotel-review\/approval-gate\.js/);
  assert.match(html,/publication as HOLD/);
  assert.doesNotMatch(html,/source-test|4725|ND-01/);
