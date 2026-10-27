@@ -62,12 +62,12 @@ test('Owner API defaults closed on missing branch-only preview configuration',as
   assert.equal(res.body.error,'preview_owner_login_not_configured');
  }finally{process.env=original}
 });
-test('Owner API requires exact preview branch, a secret, URL and matching POST Origin',()=>{
- const env={VERCEL_ENV:'preview',VERCEL_GIT_COMMIT_REF:'feat/hotel-rate-compare-isolated-20261027',HOTEL_REVIEW_SUPABASE_URL:'https://demo.supabase.co',SUPABASE_SECRET_KEY:'sandbox-secret-123456789'};
+test('Owner API requires exact preview branch, public key, URL and matching POST Origin',()=>{
+ const env={VERCEL_ENV:'preview',VERCEL_GIT_COMMIT_REF:'feat/hotel-rate-compare-isolated-20261027',HOTEL_REVIEW_SUPABASE_URL:'https://demo.supabase.co',HOTEL_REVIEW_PUBLISHABLE_KEY:'sb_publishable_sandbox123456789ABCDEFGHIJKLM'};
  assert.equal(gate._test.usableEnvironment(env),true);
  assert.equal(gate._test.usableEnvironment({...env,VERCEL_ENV:'production'}),false);
  assert.equal(gate._test.usableEnvironment({...env,VERCEL_GIT_COMMIT_REF:'main'}),false);
- assert.equal(gate._test.usableEnvironment({...env,SUPABASE_SECRET_KEY:''}),false);
+ assert.equal(gate._test.usableEnvironment({...env,HOTEL_REVIEW_PUBLISHABLE_KEY:''}),false);
  assert.equal(gate._test.allowedOrigin({headers:{origin:'https://preview.vercel.app',host:'preview.vercel.app'}}),true);
  assert.equal(gate._test.allowedOrigin({headers:{origin:'https://hostile.tld',host:'preview.vercel.app'}}),false);
 });
@@ -80,4 +80,13 @@ test('Owner opaque token is never returned from authentication metadata and cook
  const blank=responseStub();
  gate._test.clearCookie(blank.res);
  assert.match(blank.headers['set-cookie'],/Max-Age=0/);
+});
+
+test('Owner validation proxies only read-only session-check action and never returns remote config',async()=>{
+ const auth=fs.readFileSync('api/hotel-review-owner-auth.js','utf8');
+ assert.match(auth,/action:'get_owner'/);
+ assert.match(auth,/owner-control-live/);
+ assert.doesNotMatch(auth,/save_snapshot/);
+ assert.doesNotMatch(auth,/SUPABASE_SERVICE_ROLE_KEY|SUPABASE_SECRET_KEY/);
+ assert.match(auth,/discarded/);
 });
