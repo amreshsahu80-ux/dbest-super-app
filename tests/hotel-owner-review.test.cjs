@@ -107,3 +107,12 @@ test('standalone hotel pilot requires explicit isolated deployment config and ne
  assert.doesNotMatch(src,/save_snapshot/);
  assert.doesNotMatch(src,/SUPABASE_SERVICE_ROLE_KEY|SUPABASE_SECRET_KEY/);
 });
+
+test('hotel review parser runs before inline workbench startup',()=>{
+ const page=fs.readFileSync('hotel-owner-rate-review.html','utf8');
+ const match=page.match(/<script([^>]*)src="\/hotel-review\/approval-gate\.js"([^>]*)><\/script>/);
+ assert.ok(match,'parser script present');
+ assert.doesNotMatch(match[0],/\bdefer\b|\basync\b|type="module"/);
+ assert.ok(page.indexOf(match[0])<page.indexOf('DBestTariffReview.summary'));
+ assert.match(page,/id="hotelOwnerWorkbench" hidden/);
+});
