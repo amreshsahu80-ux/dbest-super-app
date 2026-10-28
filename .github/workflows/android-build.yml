@@ -7,6 +7,11 @@ on:
       - 'android-app/**'
       - '.github/workflows/android-build.yml'
 
+# Restricted to read access for the build plus commit-status reporting.
+permissions:
+  contents: read
+  statuses: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -30,3 +35,19 @@ jobs:
           name: dbest-release-unsigned-aab
           path: android-app/app/build/outputs/bundle/release/app-release.aab
           if-no-files-found: error
+      - name: Report Android build result on commit
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUILD_RESULT: ${{ job.status }}
+        run: |
+          if [ "$BUILD_RESULT" = "success" ]; then
+            state=success
+          else
+            state=failure
+          fi
+          gh api -X POST "repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
+            -f state="$state" \
+            -f context="DBest Android AAB verification" \
+            -f description="Android build: $BUILD_RESULT" \
+            -f target_url="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
