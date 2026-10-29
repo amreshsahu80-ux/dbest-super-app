@@ -115,6 +115,29 @@ test('guest comparison endpoint uses only server catalogue property reference, n
  assert.equal(res.json.providers.length,0);
  assert.equal(headers['Cache-Control'],'private, no-store');
 });
+test('status endpoint reports provider readiness without hotel selection or paid calls',async()=>{
+ const source=fs.readFileSync('hotel-review/hotel-ota-api.template.cjs','utf8');
+ let billed=0;
+ const moduleStub={exports:{}},provider={
+  configured:()=> 'PAID_LOOKUPS_DISABLED',
+  getPublicB2C:async()=>{billed++;throw Error('must not bill');}
+ };
+ const cat={_test:{validHost:host=>host==='dbest-hotel-review-preview.vercel.app'}};
+ vm.runInNewContext(source,{
+  module:moduleStub,
+  require:p=>p.includes('hotel-catalog')?cat:provider,
+  URL,process:{env:{}},console,Map,Date
+ });
+ const output={setHeader(){},end(s){this.body=JSON.parse(s)}};
+ await moduleStub.exports({method:'GET',
+  headers:{host:'dbest-hotel-review-preview.vercel.app'},
+  url:'/api/hotel-ota-b2c?view=status'},output);
+ assert.equal(output.statusCode,200);
+ assert.equal(output.body.status,'PAID_LOOKUPS_DISABLED');
+ assert.equal(output.body.liveConnected,false);
+ assert.equal(billed,0);
+ assert.doesNotMatch(JSON.stringify(output.body),/DATAFORSEO_LOGIN|DATAFORSEO_PASSWORD|supplierB2B/);
+});
 test('guest UI never auto-charges on catalogue load; public OTA requests require click',()=>{
  const page=fs.readFileSync('hotel-simple-flow.html','utf8');
  assert.match(page,/data-ota=/);
