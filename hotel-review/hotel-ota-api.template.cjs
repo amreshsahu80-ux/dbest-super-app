@@ -20,6 +20,16 @@ async function handler(req,res){
  if(!catalog._test.validHost(req.headers?.host))return reply(res,403,{status:'ISOLATED_PREVIEW_ONLY'});
  if(req.method!=='GET')return reply(res,405,{status:'METHOD_NOT_ALLOWED'});
  const qs=new URL(req.url||'/', 'https://internal.test').searchParams;
+ if(qs.get('view')==='status'){
+  const gate=ota.configured(process.env);
+  return reply(res,200,{
+   status:gate,liveConnected:gate==='READY',
+   provider:'GOOGLE_HOTELS_PUBLIC_B2C',
+   comparisonBasis:'Public pre-login OTA rates for selected dates; not final all-in confirmed totals',
+   note:gate==='READY'?'On-demand live B2C lookups enabled. Hotel and date selection required.':
+    'Live OTA lookups are disabled pending provider access, spending cap and display permission.'
+  });
+ }
  const id=String(qs.get('hotelId')||'').slice(0,135);
  const hotel=catalog._publicHotelById(id);
  if(!hotel)return reply(res,404,{status:'UNKNOWN_HOTEL',providers:[]});
