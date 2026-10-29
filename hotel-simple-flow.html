@@ -1,7 +1,7 @@
 <!doctype html><html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow,noarchive">
 <meta name="referrer" content="no-referrer"><meta name="theme-color" content="#102e54">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src https://commons.wikimedia.org data:; style-src 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src https://commons.wikimedia.org data:; style-src 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'; form-action 'none'; base-uri 'none'">
 <title>DBest Stays · Direct Hotels & OTA Comparison Pilot</title>
 <style>
 :root{font-family:Inter,system-ui,sans-serif;color:#1c3047;background:#f4f7fb;font-size:14px}*{box-sizing:border-box}body{margin:0}input,select,button{font:inherit}button{cursor:pointer}a{color:#146cb3}a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #f0a52b;outline-offset:2px}
@@ -31,11 +31,17 @@ label{display:block;font-size:11px;color:#566d84;font-weight:850;margin-bottom:7
 <script>
 (function(){
 'use strict';
-const hotels=[{"id":"DBEST-REPL-20261024-149","name":"Rambagh Palace","city":"Jaipur","area":"Bhawani Singh Road","photo":{"url":"https://commons.wikimedia.org/wiki/Special:Redirect/file/Rambagh_Palace_view_from_garden%2C_July_2016.jpg?width=960","credit":"Sunnya343","license":"CC BY-SA 4.0","licenseUrl":"https://creativecommons.org/licenses/by-sa/4.0/","source":"https://commons.wikimedia.org/wiki/File:Rambagh_Palace_view_from_garden%2C_July_2016.jpg"}},{"id":"HOTEL-NANDAN-GHY","name":"Hotel Nandan","city":"Guwahati","area":"Paltan Bazaar","photo":null},{"id":"HIST-015","name":"Novotel Guwahati GS Road","city":"Guwahati","area":"GS Road, Dispur","photo":{"url":"https://commons.wikimedia.org/wiki/Special:Redirect/file/Novotel_Guwahati_GS_Road.jpg?width=960","credit":"Akashdoley13","license":"CC BY-SA 4.0","licenseUrl":"https://creativecommons.org/licenses/by-sa/4.0/","source":"https://commons.wikimedia.org/wiki/File:Novotel_Guwahati_GS_Road.jpg"}},{"id":"DBEST-REPL-20261024-138","name":"Royal Orchid Beach Resort & Spa Goa","city":"Goa","area":"Utorda Beach","photo":{"url":"https://commons.wikimedia.org/wiki/Special:Redirect/file/RoyalOrchid_Goa3450.jpg?width=960","credit":"ChandruROHL","license":"CC BY-SA 4.0","licenseUrl":"https://creativecommons.org/licenses/by-sa/4.0/","source":"https://commons.wikimedia.org/wiki/File:RoyalOrchid_Goa3450.jpg"}},{"id":"DBEST-REPL-20261024-146","name":"Taj Lake Palace","city":"Udaipur","area":"Lake Pichola","photo":{"url":"https://commons.wikimedia.org/wiki/Special:Redirect/file/The_TAJ_Lake_Palace%2C_Udaipur.jpg?width=960","credit":"Vishsd","license":"CC BY-SA 4.0","licenseUrl":"https://creativecommons.org/licenses/by-sa/4.0/","source":"https://commons.wikimedia.org/wiki/File:The_TAJ_Lake_Palace%2C_Udaipur.jpg"}},{"id":"DBEST-REPL-20261025-419","name":"Windamere Hotel Darjeeling","city":"Darjeeling","area":"Observatory Hill","photo":{"url":"https://commons.wikimedia.org/wiki/Special:Redirect/file/Darjeeling_Windermere_Hotel.jpg?width=960","credit":"P.K.Niyogi","license":"CC BY-SA 3.0","licenseUrl":"https://creativecommons.org/licenses/by-sa/3.0/","source":"https://commons.wikimedia.org/wiki/File:Darjeeling_Windermere_Hotel.jpg"}}];
+let hotels=[{"id":"DBEST-REPL-20261024-149","name":"Rambagh Palace","city":"Jaipur","area":"Bhawani Singh Road","photo":{"url":"https://commons.wikimedia.org/wiki/Special:Redirect/file/Rambagh_Palace_view_from_garden%2C_July_2016.jpg?width=960","credit":"Sunnya343","license":"CC BY-SA 4.0","licenseUrl":"https://creativecommons.org/licenses/by-sa/4.0/","source":"https://commons.wikimedia.org/wiki/File:Rambagh_Palace_view_from_garden%2C_July_2016.jpg"}},{"id":"HOTEL-NANDAN-GHY","name":"Hotel Nandan","city":"Guwahati","area":"Paltan Bazaar","photo":null},{"id":"HIST-015","name":"Novotel Guwahati GS Road","city":"Guwahati","area":"GS Road, Dispur","photo":{"url":"https://commons.wikimedia.org/wiki/Special:Redirect/file/Novotel_Guwahati_GS_Road.jpg?width=960","credit":"Akashdoley13","license":"CC BY-SA 4.0","licenseUrl":"https://creativecommons.org/licenses/by-sa/4.0/","source":"https://commons.wikimedia.org/wiki/File:Novotel_Guwahati_GS_Road.jpg"}},{"id":"DBEST-REPL-20261024-138","name":"Royal Orchid Beach Resort & Spa Goa","city":"Goa","area":"Utorda Beach","photo":{"url":"https://commons.wikimedia.org/wiki/Special:Redirect/file/RoyalOrchid_Goa3450.jpg?width=960","credit":"ChandruROHL","license":"CC BY-SA 4.0","licenseUrl":"https://creativecommons.org/licenses/by-sa/4.0/","source":"https://commons.wikimedia.org/wiki/File:RoyalOrchid_Goa3450.jpg"}},{"id":"DBEST-REPL-20261024-146","name":"Taj Lake Palace","city":"Udaipur","area":"Lake Pichola","photo":{"url":"https://commons.wikimedia.org/wiki/Special:Redirect/file/The_TAJ_Lake_Palace%2C_Udaipur.jpg?width=960","credit":"Vishsd","license":"CC BY-SA 4.0","licenseUrl":"https://creativecommons.org/licenses/by-sa/4.0/","source":"https://commons.wikimedia.org/wiki/File:The_TAJ_Lake_Palace%2C_Udaipur.jpg"}},{"id":"DBEST-REPL-20261025-419","name":"Windamere Hotel Darjeeling","city":"Darjeeling","area":"Observatory Hill","photo":{"url":"https://commons.wikimedia.org/wiki/Special:Redirect/file/Darjeeling_Windermere_Hotel.jpg?width=960","credit":"P.K.Niyogi","license":"CC BY-SA 3.0","licenseUrl":"https://creativecommons.org/licenses/by-sa/3.0/","source":"https://commons.wikimedia.org/wiki/File:Darjeeling_Windermere_Hotel.jpg"}}];
 const $=id=>document.getElementById(id);
 const html=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const cityList=[...new Set(hotels.map(h=>h.city))].sort();
-cityList.forEach(city=>{const o=document.createElement('option');o.value=city;o.textContent=city;$('city').appendChild(o)});
+const previewPhotos=Object.fromEntries(hotels.map(h=>[h.name.toLowerCase(),h.photo]));
+function fillCities(){
+ const selected=$('city').value;
+ $('city').innerHTML='<option value="all">All destinations</option>';
+ [...new Set(hotels.map(h=>h.city))].sort().forEach(city=>{const o=document.createElement('option');o.value=city;o.textContent=city;$('city').appendChild(o)});
+ if([...$('city').options].some(o=>o.value===selected))$('city').value=selected;
+}
+fillCities();
 function iso(d){const p=n=>String(n).padStart(2,'0');return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())}
 const today=new Date(),tomorrow=new Date(today);tomorrow.setDate(today.getDate()+1);const dayAfter=new Date(tomorrow);dayAfter.setDate(tomorrow.getDate()+1);
 $('checkIn').min=iso(today);$('checkIn').value=iso(tomorrow);$('checkOut').min=iso(tomorrow);$('checkOut').value=iso(dayAfter);
@@ -47,14 +53,14 @@ function card(h){
  '<div class="noimg">Property / room photos<br>awaiting usage permission</div>';
  const rows=['DBest direct',...platforms].map((p,i)=>'<div class="price-row"><strong>'+html(p)+'</strong><span class="pending">'+(i?'Live feed not connected':'Confirm final rate')+'</span></div>').join('');
  return '<article class="hotel"><div class="media">'+image+'</div><div class="content"><h3 class="name">'+html(h.name)+'</h3><div class="location">⌖ '+html(h.area)+', '+html(h.city)+'</div>'+
- '<div class="tags"><span class="tag">Real property</span><span class="tag">Room type to confirm</span><span class="tag">Availability on request</span></div>'+
+ '<div class="tags"><span class="tag">Real property</span><span class="tag">'+(h.rateCount?html(h.rateCount+' received supplier quote(s)'):'Room type to confirm')+'</span><span class="tag">Availability on request</span></div>'+
  '<div class="prices">'+rows+'</div><div class="fine" style="margin-bottom:13px">Savings: shown only when tax-inclusive DBest and live OTA rates match the same room and stay. No verified comparison yet.</div>'+
  '<div class="bottom"><button type="button" class="btn" data-book="'+html(h.id)+'">Request direct booking</button></div></div></article>';
 }
 function render(){
  const out=hotels.filter(h=>state.city==='all'||h.city===state.city);
  $('results').innerHTML=out.map(card).join('')||'<p>No matching sample properties. Choose another destination.</p>';
- $('searchSummary').textContent=out.length+' sample properties · actual hotel photos where independently licensed';
+ $('searchSummary').textContent=out.length+' properties · supplier quotation received where indicated · licensed photos when available';
  $('results').querySelectorAll('img[data-property-image]').forEach(img=>img.addEventListener('error',()=>{
   img.style.display='none';const no=document.createElement('div');no.className='noimg';no.textContent='Property image currently unavailable';img.parentNode.appendChild(no);
  },{once:true}));
@@ -78,5 +84,18 @@ $('results').addEventListener('click',e=>{
 $('copy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText($('requestText').value);$('copy').textContent='Copied';setTimeout(()=>$('copy').textContent='Copy request',1800)}catch(e){$('requestText').select();document.execCommand('copy')}});
 $('close').addEventListener('click',()=>$('requestModal').close());
 render();
+fetch('/api/hotel-catalog',{cache:'no-store',credentials:'same-origin'})
+.then(async response=>{if(!response.ok)throw Error('Catalog unavailable');return response.json()})
+.then(data=>{
+ if(!Array.isArray(data.hotels)||!data.hotels.length)return;
+ const byName=new Map(hotels.map(h=>[h.name.toLowerCase(),h]));
+ hotels=data.hotels.map(h=>{
+  const exact=byName.get(String(h.hotel||'').toLowerCase());
+  return {id:h.id,name:h.hotel,city:h.city,area:h.state||'',photo:exact?.photo||previewPhotos[String(h.hotel||'').toLowerCase()]||null,
+    rateCount:h.rateCount||0,roomTypes:h.rooms||[]};
+ });
+ fillCities();render();
+ $('searchSummary').textContent=hotels.length+' hotel partners with outreach quotations · booking price subject to confirmation';
+}).catch(()=>{$('searchSummary').textContent='Featured licensed sample hotels · connected catalogue temporarily unavailable';});
 })();
 </script></body></html>
