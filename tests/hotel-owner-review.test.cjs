@@ -232,3 +232,32 @@ test('hotel OTP verification returns HttpOnly session without forwarding DBest s
   assert.equal(routes.length,2);
  }finally{process.env=savedEnv;global.fetch=savedFetch}
 });
+
+test('Owner OTP bridge allows upstream cold starts and uses safe stage diagnostics',async()=>{
+ const auth=fs.readFileSync('hotel-review/standalone-owner-auth.cjs','utf8');
+ assert.equal((auth.match(/,15000\)/g)||[]).length,2);
+ assert.doesNotMatch(auth,/setTimeout\(\(\)=>[a-z]+\.abort\(\),6500\)/);
+ const oldEnv=process.env,oldFetch=global.fetch;
+ process.env={VERCEL_ENV:'production',HOTEL_REVIEW_DEPLOYMENT_MODE:'isolated-preview',
+  HOTEL_REVIEW_SUPABASE_URL:'https://example.supabase.co',
+  HOTEL_REVIEW_PUBLISHABLE_KEY:'sb_publishable_abcdefghijklmnopqrstuvwxyz0123456789'};
+ global.fetch=async()=>{throw Error('NEVER-EXPOSE-PRIVATE-UPSTREAM-ERROR-CONTENT')};
+ try{
+  const {res}=responseStub(),host='dbest-hotel-review-preview.vercel.app';
+  await standalone({method:'POST',headers:{host,origin:'https://'+host,'x-forwarded-for':'203.0.113.214'},
+    body:{action:'verify_otp',email:'owner@example.com',code:'000000'}},res);
+  assert.equal(res.statusCode,502);
+  assert.deepEqual(res.body,{ok:false,error:'owner_auth_unavailable',stage:'verify_otp'});
+  assert.doesNotMatch(JSON.stringify(res.body),/NEVER-EXPOSE|owner@example.com|000000/);
+ }finally{process.env=oldEnv;global.fetch=oldFetch}
+});
+test('Owner OTP mobile field is masked and stage-specific failures are explained',()=>{
+ const html=fs.readFileSync('hotel-owner-rate-review.html','utf8');
+ assert.match(html,/id="ownerOtp" name="one-time-code" type="password"/);
+ assert.match(html,/return detail\[stage\]/);
+ assert.match(html,/err\.stage=typeof data\.stage/);
+ assert.match(html,/OTP mail service did not respond/);
+ assert.match(html,/Owner session check was unavailable/);
+ const scripts=[...html.matchAll(/<script>\s*([\s\S]+?)<\/script>/g)];
+ scripts.forEach(m=>new vm.Script(m[1]));
+});
