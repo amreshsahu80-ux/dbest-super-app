@@ -52,8 +52,12 @@ async function handler(req,res){
   cache.set(key,{at:Date.now(),data});
   if(cache.size>30)cache.delete(cache.keys().next().value);
   return send(res,200,data);
- }catch{
-  return send(res,502,{status:'GOOGLE_PUBLIC_BROWSER_UNAVAILABLE',providers:[],live:false});
+ }catch(error){
+  const detail=String(error&&error.message||'').slice(0,160);
+  console.error('DBEST_GOOGLE_BROWSER_PILOT',detail);
+  // Debug is exposed ONLY in the isolated, explicitly enabled preview.
+  return send(res,502,{status:'GOOGLE_PUBLIC_BROWSER_UNAVAILABLE',
+   providers:[],live:false,diagnostic:detail.replace(/https?:\/\/\S+/g,'[source-url]')});
  }
 }
 module.exports=handler;
