@@ -40,7 +40,7 @@ function clearCookie(res) {
   res.setHeader('Set-Cookie',cookieName+'=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Strict');
 }
 async function callSupabase(env,path,body,extraHeaders={}) {
- const c=new AbortController(),timer=setTimeout(()=>c.abort(),6500);
+ const c=new AbortController(),timer=setTimeout(()=>c.abort(),15000);
  try {
    const response=await fetch(env.HOTEL_REVIEW_SUPABASE_URL+path,{
      method:'POST',
@@ -59,7 +59,7 @@ async function validateOwner(env,token) {
  // DBest returns full Owner settings after a VALID session. The settings JSON can
  // exceed 16 KB; only the HTTP 200 from this strictly authenticated read-only
  // action is required. Never deserialize, store or return its confidential body.
- const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),6500);
+ const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),15000);
  try{
   const response=await fetch(env.HOTEL_REVIEW_SUPABASE_URL+'/functions/v1/owner-control-live',{
    method:'POST',
@@ -94,6 +94,7 @@ async function handler(req,res) {
   if(req.method!=='GET'&&req.method!=='POST')return json(res,405,{ok:false,error:'method_not_allowed'});
   if(req.method==='POST'&&!allowedOrigin(req))return json(res,403,{ok:false,error:'origin_not_allowed'});
   if(req.method==='POST'&&Number(req.headers['content-length']||0)>4096)return json(res,413,{ok:false,error:'request_too_large'});
+  let stage='session_check';
   try{
     const op=req.method==='GET'?'status':String((req.body||{}).action||'').trim();
     if(op==='status'){
@@ -106,6 +107,7 @@ async function handler(req,res) {
       if(rateLimit(req))return json(res,429,{ok:false,error:'rate_limited'});
       const email=String(req.body?.email||'').trim().toLowerCase();
       if(email.length>254||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return json(res,400,{ok:false,error:'invalid_email'});
+      stage='send_otp';
       const sent=await callSupabase(process.env,'/functions/v1/send-owner-otp',{email});
       if(!sent.ok)return json(res,sent.status===429?429:400,{ok:false,error:sent.status===429?'rate_limited':'otp_not_sent'});
       return json(res,200,{ok:true,otpSent:true});
@@ -116,17 +118,22 @@ async function handler(req,res) {
       const code=String(req.body?.code||'').trim();
       if(email.length>254||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||!/^\d{6}$/.test(code))
         return json(res,400,{ok:false,error:'invalid_input'});
+      stage='verify_otp';
       const verification=await callSupabase(process.env,'/functions/v1/verify-owner-otp',{email,code});
       const token=verification.data?.ownerToken;
       if(!verification.ok||!verification.data?.ok||typeof token!=='string'||!token)
         return json(res,401,{ok:false,error:'invalid_or_expired_otp'});
       // Fail closed: independently validate the opaque owner token via server-side RPC.
+      stage='verify_session';
       if(!(await validateOwner(process.env,token)))return json(res,401,{ok:false,error:'owner_session_invalid'});
       writeCookie(res,token);
       return json(res,200,{ok:true,authenticated:true,expiresIn:7200});
     }
     return json(res,400,{ok:false,error:'unknown_action'});
-  }catch{return json(res,502,{ok:false,error:'owner_auth_unavailable'})}
+  }catch(error){
+    // Stage-only diagnostic: no token, OTP, email, provider response or exception text.
+    return json(res,502,{ok:false,error:'owner_auth_unavailable',stage});
+  }
 }
 module.exports=handler;
 module.exports._test={usableEnvironment,allowedOrigin,cookieToken,validateOwner,clearCookie,writeCookie};
