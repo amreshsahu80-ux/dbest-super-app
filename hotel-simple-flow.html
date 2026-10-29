@@ -192,21 +192,27 @@ $('results').addEventListener('click',async e=>{
  if(otaButton){
   const h=hotels.find(x=>x.id===otaButton.dataset.ota);if(!h)return;
   if(state.rooms!==1){h.otaStatus='Public OTA lookup currently supports one room per comparison.';render();return}
-  h.otaStatus='Checking public OTA hotel pages · no paid API trial where mapped…';render();
+  h.otaStatus='Checking Google Hotels public B2C offers for selected stay…';render();
   try{
    const args=new URLSearchParams({hotelId:h.id,checkIn:state.checkIn,checkOut:state.checkOut,
     adults:String(state.adults),rooms:String(state.rooms)});
    const freePilot=h.id==='HOTEL-NANDAN-GHY';
-   const resp=await fetch((freePilot?'/api/hotel-free-ota?':'/api/hotel-ota-b2c?')+args.toString(),{credentials:'same-origin',cache:'no-store'});
+   const resp=await fetch((freePilot?'/api/hotel-google-b2c?':'/api/hotel-ota-b2c?')+args.toString(),{credentials:'same-origin',cache:'no-store'});
    const payload=await resp.json();
    if(!resp.ok)throw Error('Provider temporarily unavailable');
    if(payload.live&&Array.isArray(payload.providers)){
     h.publicOta=payload;
-    h.otaStatus='Public OTA prices checked '+new Date(payload.checkedAt).toLocaleString('en-IN')+
+    h.otaStatus='Public OTA prices from Google Hotels checked '+new Date(payload.checkedAt).toLocaleString('en-IN')+
      '. Prices per night; room, taxes and availability must be checked at checkout.';
    }else{
     h.publicOta=null;
-    h.otaStatus=payload.status==='NO_VERIFIED_PUBLIC_PAGE_OFFERS'? 'Free public-page trial checked MakeMyTrip and Goibibo; no verified date-specific rates returned ('+(payload.sourceStatus||[]).map(x=>x.provider+': '+x.status.replaceAll('_',' ').toLowerCase()).join('; ')+').':
+    h.otaStatus=payload.status==='BROWSER_PILOT_DISABLED'?'Public browser comparison has not been activated for this pilot deployment.':
+     payload.status==='GOOGLE_PUBLIC_BROWSER_UNAVAILABLE'?'Google Hotels browser could not verify prices. No rate substituted.':
+     payload.status==='PAGE_DATES_OR_PROPERTY_NOT_VERIFIED'?'Google Hotels did not confirm the exact property and stay dates.':
+     payload.status==='OCCUPANCY_NOT_SUPPORTED'?'This public-rate pilot currently supports 2 adults, 1 room only.':
+     payload.status==='PILOT_HOURLY_LIMIT'?'Browser rate-lookup pilot limit reached. Please try another time.':
+     payload.status==='NO_VERIFIED_PUBLIC_GOOGLE_B2C_OFFERS'?'No publicly verified OTA prices found for these dates.':
+     payload.status==='NO_VERIFIED_PUBLIC_PAGE_OFFERS'? 'Free public-page trial checked MakeMyTrip and Goibibo; no verified date-specific rates returned.':
      payload.status==='PUBLIC_PAGE_PILOT_NOT_MAPPED'?'No direct public OTA page verified yet for this hotel.':
      payload.status==='PAID_LOOKUPS_DISABLED'?'Automatic B2C comparison not connected for this property; free page pilot is limited to verified listings.':
      payload.status==='PROVIDER_CREDENTIALS_MISSING'?'OTA API account credentials are not connected.':
@@ -262,7 +268,7 @@ fetch('/api/hotel-ota-b2c?view=status',{credentials:'same-origin',cache:'no-stor
  .then(data=>{
   $('otaReadiness').textContent=data.liveConnected?
    'Public B2C OTA lookup ready · choose hotel and dates, then check prices':
-   'Free public-page pilot for select properties · paid OTA feed remains disabled';
+   'No paid OTA price API · selected Hotel Nandan browser comparison pilot available on demand';
  })
  .catch(()=>{$('otaReadiness').textContent='Live B2C OTA feed status unavailable';});
 fetch('/api/hotel-catalog',{cache:'no-store',credentials:'same-origin'})
