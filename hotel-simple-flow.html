@@ -192,11 +192,12 @@ $('results').addEventListener('click',async e=>{
  if(otaButton){
   const h=hotels.find(x=>x.id===otaButton.dataset.ota);if(!h)return;
   if(state.rooms!==1){h.otaStatus='Public OTA lookup currently supports one room per comparison.';render();return}
-  h.otaStatus='Checking the public Google Hotels B2C feed…';render();
+  h.otaStatus='Checking public OTA hotel pages · no paid API trial where mapped…';render();
   try{
    const args=new URLSearchParams({hotelId:h.id,checkIn:state.checkIn,checkOut:state.checkOut,
     adults:String(state.adults),rooms:String(state.rooms)});
-   const resp=await fetch('/api/hotel-ota-b2c?'+args.toString(),{credentials:'same-origin',cache:'no-store'});
+   const freePilot=h.id==='HOTEL-NANDAN-GHY';
+   const resp=await fetch((freePilot?'/api/hotel-free-ota?':'/api/hotel-ota-b2c?')+args.toString(),{credentials:'same-origin',cache:'no-store'});
    const payload=await resp.json();
    if(!resp.ok)throw Error('Provider temporarily unavailable');
    if(payload.live&&Array.isArray(payload.providers)){
@@ -205,7 +206,9 @@ $('results').addEventListener('click',async e=>{
      '. Prices per night; room, taxes and availability must be checked at checkout.';
    }else{
     h.publicOta=null;
-    h.otaStatus=payload.status==='PAID_LOOKUPS_DISABLED'?'Live OTA feed awaiting connection and budget approval.':
+    h.otaStatus=payload.status==='NO_VERIFIED_PUBLIC_PAGE_OFFERS'? 'Free public-page trial checked MakeMyTrip and Goibibo; no verified date-specific rates returned ('+(payload.sourceStatus||[]).map(x=>x.provider+': '+x.status.replaceAll('_',' ').toLowerCase()).join('; ')+').':
+     payload.status==='PUBLIC_PAGE_PILOT_NOT_MAPPED'?'No direct public OTA page verified yet for this hotel.':
+     payload.status==='PAID_LOOKUPS_DISABLED'?'Automatic B2C comparison not connected for this property; free page pilot is limited to verified listings.':
      payload.status==='PROVIDER_CREDENTIALS_MISSING'?'OTA API account credentials are not connected.':
      payload.status==='PUBLIC_DISPLAY_PERMISSION_NOT_CONFIRMED'?'Commercial price-display authorization is not configured.':
      payload.status==='SPENDING_LIMIT_NOT_CONFIRMED'?'Provider account spending limit must be enabled.':
@@ -259,7 +262,7 @@ fetch('/api/hotel-ota-b2c?view=status',{credentials:'same-origin',cache:'no-stor
  .then(data=>{
   $('otaReadiness').textContent=data.liveConnected?
    'Public B2C OTA lookup ready · choose hotel and dates, then check prices':
-   'Live OTA B2C prices not connected yet · supplier rates remain available';
+   'Free public-page pilot for select properties · paid OTA feed remains disabled';
  })
  .catch(()=>{$('otaReadiness').textContent='Live B2C OTA feed status unavailable';});
 fetch('/api/hotel-catalog',{cache:'no-store',credentials:'same-origin'})
