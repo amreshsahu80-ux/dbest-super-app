@@ -57,7 +57,7 @@ test('pilot URL source is read-only, fixed source list; guest markup has no raw 
  assert.match(route,/stayValidator\.validateStay/);
  assert.doesNotMatch(route,/\breq\.body\b|DATAFORSEO_PASSWORD|api\.dataforseo\.com/);
  const html=fs.readFileSync('hotel-simple-flow.html','utf8');
- assert.match(html,/\/api\/hotel-free-ota\?/);
+ assert.match(html,/\/api\/hotel-google-b2c\?/);
  const scripts=[...html.matchAll(/<script>\s*([\s\S]*?)<\/script>/g)];
  for(const script of scripts)new vm.Script(script[1]);
 });
