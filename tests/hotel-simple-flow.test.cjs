@@ -81,7 +81,8 @@ test('new guest screen uses licensed property images and no fictional OTA rates'
  assert.match(page,/Actual property photograph/);
  assert.match(page,/commons\.wikimedia\.org/);
  assert.match(page,/No verified comparison yet/);
- assert.match(page,/Live feed not connected/);
+ assert.match(page,/B2C price pending/);
+ assert.match(page,/on-demand lookup|On-demand lookup/);
  assert.match(page,/Request direct booking/);
  assert.match(page,/mailto:support@thebestservices.org.in/);
  assert.doesNotMatch(page,/\"ota\":\s*\[\d+/);
