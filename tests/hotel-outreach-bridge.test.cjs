@@ -98,3 +98,17 @@ test('deployed private snapshot API returns only public hotel metadata to guests
  await handler({method:'GET',url:'/api/hotel-catalog',headers:{host:'dbest4u.com'}},call.res);
  assert.equal(call.res.statusCode,403);
 });
+
+test('guest destination accepts typed city, state or partial text and updates from source catalogue',()=>{
+ const page=fs.readFileSync('hotel-simple-flow.html','utf8');
+ assert.match(page,/<input id="destination"[^>]*type="search"[^>]*list="destinations"/);
+ assert.match(page,/<datalist id="destinations"><\/datalist>/);
+ assert.match(page,/function fillDestinations\(\)/);
+ assert.match(page,/state\.destination\.toLocaleLowerCase\(\)/);
+ assert.match(page,/locality\.includes\(destination\)/);
+ assert.match(page,/\$\('destination'\)\.addEventListener\('input'/);
+ assert.match(page,/fillDestinations\(\);render\(\)/);
+ assert.doesNotMatch(page,/id="city" class="field"><option/);
+ const scripts=[...page.matchAll(/<script>\s*([\s\S]+?)<\/script>/g)];
+ scripts.forEach(m=>new vm.Script(m[1]));
+});
