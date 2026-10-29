@@ -53,6 +53,27 @@ function pricedOffers(hotelId,offset,limit,env){
  return {status:'CONTRACTED_SUPPLIER_RATES_WITH_OWNER_MARKUP',total:rows.length,offset,limit,
   offers,availabilityVerified:false};
 }
+function sellingSummaries(env){
+ const pct=ownerMarkup(env);
+ if(pct===null)return {status:'OWNER_MARKUP_NOT_CONFIGURED',hotels:[],liveOTAConnected:false};
+ const choices=new Map(),valid=new Set(DATA.publicHotels.map(h=>h.id));
+ for(const r of DATA.rates){
+  if(!valid.has(r.hotelId)||r.commercialApproval!=='AUTO_ACCEPTED_DBEST'||
+     typeof r.amount!=='number'||!Number.isFinite(r.amount)||r.amount<=0)continue;
+  const old=choices.get(r.hotelId);
+  if(!old||r.amount<old.amount)choices.set(r.hotelId,r);
+ }
+ const hotels=[...choices.entries()].map(([id,r])=>({
+  id,price:Math.round(r.amount*(1+pct/100)*100)/100,currency:'INR',
+  room:publicText(r.room),occupancy:publicText(r.occupancy),
+  taxStatus:taxStatus(r.taxes),
+  label:'RECEIVED_CONTRACTED_RATE_REFERENCE',
+  availability:'RECONFIRM_FOR_DATES',
+  otaB2CPrice:null
+ }));
+ return {status:'DBEST_CONTRACTED_SELLING_REFERENCES',hotels,liveOTAConnected:false,
+  note:'Lowest received contracted rate reference, not a selected-date all-in hotel quote. Room, seasonal, tax and occupancy conditions apply.'};
+}
 function validHost(host){
  return /^(?:dbest-hotel-review-preview)(?:-[a-z0-9-]+)?\.vercel\.app$/.test(String(host||''));
 }
@@ -60,6 +81,9 @@ async function handler(req,res){
  if(!validHost(req.headers?.host))return respond(res,403,{error:'isolated_pilot_only'});
  if(req.method!=='GET')return respond(res,405,{error:'method_not_allowed'});
  const q=Object.fromEntries(new URL(req.url||'/', 'https://internal.test').searchParams.entries());
+ if(q.view==='offers-summary'){
+   return respond(res,200,sellingSummaries(process.env));
+ }
  if(q.view==='offers'){
    const hotelId=String(q.hotelId||'').trim().slice(0,135);
    if(!hotelId||!DATA.publicHotels.some(h=>h.id===hotelId))
@@ -89,4 +113,4 @@ async function handler(req,res){
   note:'Direct bookings require hotel confirmation. Live OTA rates and savings are not connected.'});
 }
 module.exports=handler;
-module.exports._test={validHost,ownerMarkup,taxStatus,pricedOffers};
+module.exports._test={validHost,ownerMarkup,taxStatus,pricedOffers,sellingSummaries};
