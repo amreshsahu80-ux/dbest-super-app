@@ -35,7 +35,7 @@ async function handler(req,res){
     notes:'Commercial quotes auto-accepted; none is automatically bookable. B2B supplier prices never returned to guest requests.'});
  }
  return respond(res,200,{status:'OUTREACH_SNAPSHOT_NOT_LIVE_INVENTORY',
-  hotels:DATA.publicHotels,stats:DATA.stats,liveOTAConnected:false,
+  hotels:DATA.publicHotels,stats:DATA.stats,snapshotGeneratedAt:DATA.snapshotGeneratedAt||null,liveOTAConnected:false,
   note:'Direct bookings require hotel confirmation. Live OTA rates and savings are not connected.'});
 }
 module.exports=handler;
