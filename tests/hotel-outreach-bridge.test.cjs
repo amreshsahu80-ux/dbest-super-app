@@ -99,6 +99,55 @@ test('deployed private snapshot API returns only public hotel metadata to guests
  assert.equal(call.res.statusCode,403);
 });
 
+test('Owner markup must be configured server-side; accepted quotations become customer special rates without supplier disclosure',async()=>{
+ const sample=bridge.build(hotelsHeader,hotelRows,ratesHeader,rateRows);
+ const source=fs.readFileSync('hotel-review/hotel-catalog-api.template.cjs','utf8')
+  .replace('const DATA=__PRIVATE_SNAPSHOT__;', 'const DATA='+JSON.stringify(sample)+';');
+ const auth={_test:{cookieToken:()=>'',validateOwner:async()=>false}};
+ function create(env){
+  const moduleStub={exports:{}};
+  vm.runInNewContext(source,{module:moduleStub,require:()=>auth,URL,process:{env},console});
+  return moduleStub.exports;
+ }
+ function response(){
+  const headers={};return {res:{statusCode:200,setHeader(k,v){headers[k.toLowerCase()]=v},end(s){this.body=JSON.parse(s)}},headers};
+ }
+ const req={method:'GET',url:'/api/hotel-catalog?view=offers&hotelId=H-1',
+  headers:{host:'dbest-hotel-review-preview.vercel.app'}};
+ let call=response();
+ await create({})(req,call.res);
+ assert.equal(call.res.statusCode,200);
+ assert.equal(call.res.body.status,'OWNER_MARKUP_NOT_CONFIGURED');
+ assert.equal(call.res.body.offers.length,0);
+ call=response();
+ await create({HOTEL_REVIEW_MARKUP_PERCENT:'12.5'})(req,call.res);
+ const value=call.res.body;
+ assert.equal(value.status,'CONTRACTED_SUPPLIER_RATES_WITH_OWNER_MARKUP');
+ assert.equal(value.total,2);
+ assert.equal(value.offers[0].price,5315.63);
+ assert.equal(value.offers[1].price,5062.5);
+ assert.equal(value.offers[0].taxStatus,'TAX_TERMS_UNCLEAR');
+ assert.equal(value.offers[1].taxStatus,'TAX_INCLUDED');
+ assert.ok(value.offers.every(o=>o.commercialStatus==='CONTRACTED_FINAL'));
+ const raw=JSON.stringify(value);
+ for(const forbidden of ['4725','4500','email-id','sourceRef','review','amount'])
+  assert.equal(raw.includes(forbidden),false,'Leaked private field '+forbidden);
+ call=response();
+ await create({HOTEL_REVIEW_MARKUP_PERCENT:'100'})(req,call.res);
+ assert.equal(call.res.body.status,'OWNER_MARKUP_NOT_CONFIGURED');
+ const nohotel=response();
+ await create({HOTEL_REVIEW_MARKUP_PERCENT:'12.5'})({...req,url:'/api/hotel-catalog?view=offers&hotelId=not-a-hotel'},nohotel.res);
+ assert.equal(nohotel.res.statusCode,404);
+});
+test('B2C comparison and DBest selling price preview are explicit and do not infer OTA prices',()=>{
+ const page=fs.readFileSync('hotel-simple-flow.html','utf8');
+ assert.match(page,/View DBest Special Rates/);
+ assert.match(page,/view=offers&hotelId=/);
+ assert.match(page,/PUBLIC B2C OTA selling prices/);
+ assert.match(page,/No verified comparison yet/);
+ assert.match(page,/Book with DBest/);
+ assert.doesNotMatch(page,/ota:\s*\[\d+/);
+});
 test('guest destination accepts typed city, state or partial text and updates from source catalogue',()=>{
  const page=fs.readFileSync('hotel-simple-flow.html','utf8');
   assert.match(page,/<input id="destination"[^>]*type="search"[^>]*role="combobox"/);
