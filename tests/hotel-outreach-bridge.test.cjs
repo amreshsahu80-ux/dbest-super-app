@@ -169,7 +169,9 @@ test('Owner markup save is local-only pending private storage and never publishe
  assert.match(owner,/dbest:owner-authenticated',loadLocalMarkup/);
  assert.match(owner,/localStorage\.setItem\(markupStorageKey,String\(v\)\)/);
  assert.match(owner,/not published to customer prices/);
- assert.match(owner,/Cloud-wide saving requires a separate private storage connection/);
+ assert.match(owner,/protected isolated Vercel environment setting/);
+ assert.match(owner,/id="ownerServerMarkup"/);
+ assert.match(owner,/ACTIVE SELLING MARKUP/);
  assert.doesNotMatch(owner,/localStorage\.setItem\([^,]+,\s*JSON\.stringify\(records/);
  assert.match(owner,/v\*2!==Math\.round\(v\*2\)/);
  const scripts=[...owner.matchAll(/<script>\s*([\s\S]+?)<\/script>/g)];
