@@ -128,7 +128,7 @@ function card(h){
   '<span class="pending">Selling reference unavailable</span>';
  const rows='<div class="price-row"><strong>DBest Special Rate</strong><span style="text-align:right">'+dbestReference+'</span></div>'+
   consumerHotelSearch.map(site=>'<div class="price-row"><strong>'+html(site.name)+' · Public B2C</strong>'+
-    '<span style="text-align:right"><span class="pending">No connected live-rate feed</span>'+
+    '<span style="text-align:right"><span class="pending">Live feed not connected</span>'+
     '<small style="display:block"><a target="_blank" rel="noopener noreferrer" href="'+html(site.url)+'">Open consumer hotel search</a></small></span></div>').join('');
  const roomOptions=(Array.isArray(h.roomTypes)?h.roomTypes:[]).filter(x=>typeof x==='string'&&x.trim()).slice(0,12);
  const roomSelect=roomOptions.length?'<div class="room-choice"><label for="room-'+html(h.id)+'">Requested room category</label><select class="field" id="room-'+html(h.id)+'" data-room="'+html(h.id)+'"><option value="">Any available room</option>'+roomOptions.map(room=>'<option value="'+html(room)+'">'+html(room)+'</option>').join('')+'</select></div>':'';
