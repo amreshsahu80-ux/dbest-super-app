@@ -53,7 +53,7 @@ a{color:#1566aa}footer{border-top:1px solid #dce7f0;padding:23px 16px;text-align
 <div id="messages" role="alert"></div></div>
 <div class="card"><h2>Owner selling markup</h2><p class="small muted">Only the authenticated Owner can adjust this preview control. Accepted hotel B2B quotations are not separately approved again. A rate may still need final tax, allocation and date-specific confirmation before it can be sold.</p>
 <div class="row" style="justify-content:flex-start"><div><label for="hotelMarkup">Markup on supplier rate (%)</label><input type="number" id="hotelMarkup" min="0" max="50" step="0.5" value="0" class="field-note" style="max-width:145px" aria-label="Owner markup percentage"></div>
-<a href="/hotel-simple-flow.html" class="btn secondary" style="display:inline-block;text-decoration:none">View customer hotel preview</a></div><p class="small muted">For private owner preview only. Markup and supplier rates are not written to the live website or stored by this browser pilot. Guest pricing requires final GST and room availability.</p></div>
+<button type="button" class="btn" id="saveHotelMarkup">Save on this device</button><a href="/hotel-simple-flow.html" class="btn secondary" style="display:inline-block;text-decoration:none">View customer hotel preview</a></div><p id="hotelMarkupStatus" class="small muted" role="status">Owner markup is not yet saved on this device.</p><p class="small muted">This saves only the percentage in this browser after Owner sign-in. It does not synchronize across devices or change public prices. Supplier rates are never saved to browser storage. Cloud-wide saving requires a separate private storage connection.</p></div>
 <div class="grid" aria-live="polite">
 <div class="metric"><b id="total">0</b><span>Loaded quote lines</span></div>
 <div class="metric"><b id="hold">0</b><span>Awaiting booking-price confirmation</span></div>
@@ -92,7 +92,37 @@ function markupPreview(n){if(typeof n!=='number')return 'Quoted rate missing';co
 function filtered(){const q=$('search').value.toLowerCase().trim(),v=$('decisionFilter').value;
  return records.map((r,i)=>({r,i})).filter(({r})=>(v==='all'||r.decision===v)&&(!q||[r.id,r.hotelId,r.hotel,r.room,r.occupancy].some(x=>String(x||'').toLowerCase().includes(q))));
 }
-$('hotelMarkup').addEventListener('change',()=>render());
+const markupStorageKey='dbest_hotel_owner_preview_markup_v1';
+function loadLocalMarkup(){
+ try{
+  const saved=localStorage.getItem(markupStorageKey);
+  if(saved===null)return;
+  const v=Number(saved);
+  if(!Number.isFinite(v)||v<0||v>50||v*2!==Math.round(v*2))return;
+  $('hotelMarkup').value=String(v);
+  $('hotelMarkupStatus').textContent='Saved percentage loaded from this device: '+v+'%.';
+  render();
+ }catch(e){$('hotelMarkupStatus').textContent='Browser storage unavailable; markup can still be previewed.'}
+}
+function saveLocalMarkup(){
+ if($('hotelOwnerWorkbench').hidden)return;
+ const v=Number($('hotelMarkup').value);
+ if(!Number.isFinite(v)||v<0||v>50||v*2!==Math.round(v*2)){
+  $('hotelMarkupStatus').textContent='Use a markup between 0% and 50%, in 0.5% steps.';
+  return;
+ }
+ try{
+  localStorage.setItem(markupStorageKey,String(v));
+  $('hotelMarkupStatus').textContent='Saved '+v+'% on this device only; not published to customer prices.';
+ }catch(e){$('hotelMarkupStatus').textContent='Could not save in this browser. Cloud storage is not connected.'}
+ render();
+}
+document.addEventListener('dbest:owner-authenticated',loadLocalMarkup);
+$('saveHotelMarkup').addEventListener('click',saveLocalMarkup);
+$('hotelMarkup').addEventListener('change',()=>{
+ $('hotelMarkupStatus').textContent='Unsaved markup change. Choose Save on this device.';
+ render();
+});
 function metrics(){const m=DBestTariffReview.summary(records);['total','hold','verify','reject'].forEach(k=>$(k).textContent=m[k==='total'?'total':k.toUpperCase()].toLocaleString('en-IN'));$('download').disabled=!records.length;}
 function render(){
  metrics();const all=filtered(),size=Number($('pageSize').value)||25,max=Math.max(1,Math.ceil(all.length/size));page=Math.max(0,Math.min(page,max-1));const shown=all.slice(page*size,(page+1)*size);
