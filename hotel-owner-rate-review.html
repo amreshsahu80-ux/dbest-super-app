@@ -51,9 +51,9 @@ a{color:#1566aa}footer{border-top:1px solid #dce7f0;padding:23px 16px;text-align
 <label for="file">Select local CSV (max 8MB)</label><input class="file" id="file" type="file" accept=".csv,text/csv" aria-describedby="status"/>
 <div class="row"><span id="status" role="status">No file loaded.</span><button type="button" id="clear" class="btn secondary">Clear session</button></div>
 <div id="messages" role="alert"></div></div>
-<div class="card"><h2>Owner selling markup</h2><p class="small muted">Only the authenticated Owner can adjust this preview control. Accepted hotel B2B quotations are not separately approved again. A rate may still need final tax, allocation and date-specific confirmation before it can be sold.</p>
+<div class="card"><h2>Owner selling markup</h2><p class="small muted">Every genuine Hotel Outreach quotation is commercially final upon receipt. Only the DBest Owner controls the additional selling markup; guest prices are calculated server-side from this project’s protected markup setting.</p><p id="ownerServerMarkup" class="small muted" role="status">Checking isolated project selling markup…</p><p class="small muted">The control below is for a local arithmetic preview only. Saving on this device does NOT change the server selling rate.</p>
 <div class="row" style="justify-content:flex-start"><div><label for="hotelMarkup">Markup on supplier rate (%)</label><input type="number" id="hotelMarkup" min="0" max="50" step="0.5" value="0" class="field-note" style="max-width:145px" aria-label="Owner markup percentage"></div>
-<button type="button" class="btn" id="saveHotelMarkup">Save on this device</button><a href="/hotel-simple-flow.html" class="btn secondary" style="display:inline-block;text-decoration:none">View customer hotel preview</a></div><p id="hotelMarkupStatus" class="small muted" role="status">Owner markup is not yet saved on this device.</p><p class="small muted">This saves only the percentage in this browser after Owner sign-in. It does not synchronize across devices or change public prices. Supplier rates are never saved to browser storage. Cloud-wide saving requires a separate private storage connection.</p></div>
+<button type="button" class="btn" id="saveHotelMarkup">Save on this device</button><a href="/hotel-simple-flow.html" class="btn secondary" style="display:inline-block;text-decoration:none">View customer hotel preview</a></div><p id="hotelMarkupStatus" class="small muted" role="status">Owner markup is not yet saved on this device.</p><p class="small muted">This saves only the percentage in this browser after Owner sign-in. It does not synchronize across devices or change public prices. Supplier rates are never saved to browser storage. The active selling rate is controlled by the protected isolated Vercel environment setting, not this browser field.</p></div>
 <div class="grid" aria-live="polite">
 <div class="metric"><b id="total">0</b><span>Loaded quote lines</span></div>
 <div class="metric"><b id="hold">0</b><span>Awaiting booking-price confirmation</span></div>
@@ -151,6 +151,11 @@ async function loadOwnerCatalogue(){
    {credentials:'same-origin',cache:'no-store'});
   if(!head.ok)throw new Error('Owner catalogue access denied or unavailable');
   const first=await head.json();
+  if(first.ownerMarkupStorage==='ISOLATED_VERCEL_PROJECT_ENVIRONMENT' && typeof first.ownerSellingMarkup==='number'){
+    $('ownerServerMarkup').textContent='ACTIVE SELLING MARKUP: '+first.ownerSellingMarkup+'% (protected isolated Vercel project setting; this is the value used for customer rates).';
+  }else{
+    $('ownerServerMarkup').textContent='Selling markup is NOT YET CONFIGURED on the isolated server. Customer special rates stay hidden until the Owner sets it.';
+  }
   if(!Array.isArray(first.rows)||!Number.isInteger(first.total))throw Error('Invalid private catalogue response');
   const all=[...first.rows],total=Math.min(first.total,10000);
   for(let offset=limit;offset<total;offset+=1000){
