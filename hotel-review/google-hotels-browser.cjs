@@ -92,8 +92,8 @@ async function getPublicGoogleRates(hotel,stay,{puppeteer,chromium}={}){
  if(stay.rooms!==1||stay.adults!==2)
   return {status:'OCCUPANCY_NOT_SUPPORTED',providers:[],live:false};
  const url=overviewUrl(mapped.entity,stay);
- const p=puppeteer||require('puppeteer-core');
- const c=chromium||require('@sparticuz/chromium').default;
+ const p=puppeteer||(await import('puppeteer-core')).default;
+ const c=chromium||(await import('@sparticuz/chromium')).default;
  let browser;
  try{
   browser=await p.launch({
