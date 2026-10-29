@@ -140,7 +140,8 @@ test('Owner markup must be configured server-side; accepted quotations become cu
  assert.equal(nohotel.res.statusCode,404);
 });
 test('customer summary exposes Owner-marked-up contracted references, not net tariffs or fake OTA rates',async()=>{
- const snapshot=bridge.build(hotelsHeader,hotelRows,ratesHeader,rateRows);
+ const extraRow=['R-3','H-1','Test Contracted Hotel','Extra person','1000','Per person','GST included','CP Breakfast','November','72 hours','email-extra','Quoted'];
+ const snapshot=bridge.build(hotelsHeader,hotelRows,ratesHeader,[...rateRows,extraRow]);
  const templateSource=fs.readFileSync('hotel-review/hotel-catalog-api.template.cjs','utf8');
  const compiled=templateSource.replace('const DATA=__PRIVATE_SNAPSHOT__;', 'const DATA='+JSON.stringify(snapshot)+';');
  const moduleStub={exports:{}};
@@ -152,7 +153,8 @@ test('customer summary exposes Owner-marked-up contracted references, not net ta
  assert.equal(output.statusCode,200);
  assert.equal(output.body.status,'DBEST_CONTRACTED_SELLING_REFERENCES');
  assert.equal(output.body.hotels.length,1);
- assert.equal(output.body.hotels[0].price,4725);
+ assert.equal(output.body.hotels[0].price,4725); // 4500 room +5%, never the 1000 extra-person tariff
+ assert.notEqual(output.body.hotels[0].room,'Extra person');
  assert.equal(output.body.hotels[0].label,'RECEIVED_CONTRACTED_RATE_REFERENCE');
  assert.equal(output.body.liveOTAConnected,false);
  const json=JSON.stringify(output.body);
