@@ -140,3 +140,18 @@ test('owner markup is private and auto-acceptance does not enable unauthenticate
  const scripts=[...owner.matchAll(/<script>\s*([\s\S]+?)<\/script>/g)];
  scripts.forEach(s=>new vm.Script(s[1]));
 });
+
+test('licensed hotel photos survive Wikimedia redirects and never show broken icons',()=>{
+ const page=fs.readFileSync('hotel-simple-flow.html','utf8');
+ assert.match(page,/img-src https:\/\/commons\.wikimedia\.org https:\/\/thumb\.wikimedia\.org https:\/\/upload\.wikimedia\.org data:/);
+ assert.match(page,/verifiedPhotoById/);
+ assert.match(page,/DBEST-REPL-20261023-082/);
+ assert.match(page,/DBEST-REPL-20261027-240/);
+ assert.match(page,/DBEST-RECOVERY-20261022-008/);
+ assert.match(page,/propertyPhotoPlaceholder/);
+ assert.match(page,/Verified hotel photograph pending/);
+ assert.match(page,/addEventListener\('error',event=>/);
+ assert.match(page,/image\.remove\(\)/);
+ const scripts=[...page.matchAll(/<script>\s*([\s\S]+?)<\/script>/g)];
+ for(const script of scripts)new vm.Script(script[1]);
+});
