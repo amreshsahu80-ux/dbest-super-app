@@ -47,3 +47,17 @@ test('catalogue endpoint remains a template in GitHub, not a public source file'
  const inline=[...page.matchAll(/<script>\s*([\s\S]+?)<\/script>/g)];
  inline.forEach(m=>new vm.Script(m[1]));
 });
+
+test('authenticated Owner workbench loads only the private catalog and never exposes supplier records on guest page',()=>{
+ const owner=fs.readFileSync('hotel-owner-rate-review.html','utf8');
+ assert.match(owner,/dbest:owner-authenticated/);
+ assert.match(owner,/loadOwnerCatalogue/);
+ assert.match(owner,/\/api\/hotel-catalog\?view=owner&offset=/);
+ assert.match(owner,/credentials:'same-origin'/);
+ assert.match(owner,/commercialApproval:'AUTO_ACCEPTED_DBEST'/);
+ const scripts=[...owner.matchAll(/<script>\s*([\s\S]+?)<\/script>/g)];
+ scripts.forEach(m=>new vm.Script(m[1]));
+ const guest=fs.readFileSync('hotel-simple-flow.html','utf8');
+ assert.match(guest,/fetch\('\/api\/hotel-catalog'/);
+ assert.doesNotMatch(guest,/view=owner/);
+});
