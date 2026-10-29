@@ -127,7 +127,12 @@ function card(h){
   '<b>'+moneyINR(h.contractedSellingReference)+'</b><small style="display:block;color:#61788d">Lowest received contracted rate reference · date, room, occupancy and taxes may change the total</small>':
   '<span class="pending">Selling reference unavailable</span>';
  const publicOta=h.publicOta&&h.publicOta.live&&Array.isArray(h.publicOta.providers)?h.publicOta.providers:[];
- const findProvider=name=>publicOta.find(p=>p.provider.toLowerCase().replace(/[^a-z0-9]/g,'')===name.toLowerCase().replace(/[^a-z0-9]/g,''));
+ // Canonicalize names only to align actual B2C prices with their OTA rows.
+ const siteKey=name=>{
+  const v=String(name||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+  return ({makemytripcom:'makemytrip',goibibocom:'goibibo',bookingcom:'bookingcom'}[v]||v);
+ };
+ const findProvider=name=>publicOta.find(p=>siteKey(p.provider)===siteKey(name));
  function otaRow(name,offer,url){
   const price=offer?'<b>'+moneyINR(offer.pricePerNight)+'/night</b>':'<span class="pending">'+
    (h.publicOta&&h.publicOta.live?'Not listed in feed':'B2C price pending')+'</span>';
@@ -136,10 +141,10 @@ function card(h){
    '<small style="display:block"><a target="_blank" rel="noopener noreferrer" href="'+html(link)+'">'+
    (offer?'View public rate':'Open consumer hotel search')+'</a></small></span></div>';
  }
- const listed=new Set(consumerHotelSearch.map(s=>s.name.toLowerCase().replace(/[^a-z0-9]/g,'')));
+ const listed=new Set(consumerHotelSearch.map(s=>siteKey(s.name)));
  const rows='<div class="price-row"><strong>DBest Special Rate</strong><span style="text-align:right">'+dbestReference+'</span></div>'+
   consumerHotelSearch.map(site=>otaRow(site.name,findProvider(site.name),site.url)).join('')+
-  publicOta.filter(p=>!listed.has(p.provider.toLowerCase().replace(/[^a-z0-9]/g,''))).slice(0,5)
+  publicOta.filter(p=>!listed.has(siteKey(p.provider))).slice(0,8)
    .map(p=>otaRow(p.provider,p,p.url||'https://www.google.com/travel/hotels')).join('');
  const roomOptions=(Array.isArray(h.roomTypes)?h.roomTypes:[]).filter(x=>typeof x==='string'&&x.trim()).slice(0,12);
  const roomSelect=roomOptions.length?'<div class="room-choice"><label for="room-'+html(h.id)+'">Requested room category</label><select class="field" id="room-'+html(h.id)+'" data-room="'+html(h.id)+'"><option value="">Any available room</option>'+roomOptions.map(room=>'<option value="'+html(room)+'">'+html(room)+'</option>').join('')+'</select></div>':'';
