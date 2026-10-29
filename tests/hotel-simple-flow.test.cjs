@@ -104,6 +104,21 @@ test('editable destination combines catalogue cities, property names, partial ma
  assert.equal(suggestion('not a city',items).length,0);
 });
 
+test('DBest booking is visible, includes selected room, and does not pretend a confirmed reservation',()=>{
+ const page=fs.readFileSync('hotel-simple-flow.html','utf8');
+ assert.match(page,/Book with DBest/);
+ assert.match(page,/class="direct-panel"/);
+ assert.match(page,/data-room=/);
+ assert.match(page,/requestedRoom/);
+ assert.match(page,/DBest Advantage/);
+ assert.match(page,/No verified price comparison yet/);
+ assert.match(page,/No reservation or room hold is created/);
+ const request=policy.bookingRequest({hotel:'Hotel Nandan',room:'Deluxe Double',
+  checkIn:'2026-11-15',checkOut:'2026-11-16',adults:2,rooms:1});
+ assert.equal(request.status,'REQUEST_ONLY_NOT_BOOKED');
+ assert.match(request.body,/Room: Deluxe Double/);
+ assert.match(request.body,/NOT yet confirmed/);
+});
 test('owner markup is private and auto-acceptance does not enable unauthenticated publication',()=>{
  const owner=fs.readFileSync('hotel-owner-rate-review.html','utf8');
  assert.match(owner,/id="hotelOwnerWorkbench" hidden/);
