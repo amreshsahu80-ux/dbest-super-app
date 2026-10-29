@@ -74,7 +74,7 @@ function fromStructuredHtml(html,stay){
 }
 async function inspect(source,stay,fetchImpl=fetch){
  const url=pageUrl(source,stay);
- const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),7000);
+ const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),12000);
  try{
   const resp=await fetchImpl(url,{
    method:'GET',redirect:'manual',
