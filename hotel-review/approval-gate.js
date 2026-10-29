@@ -70,7 +70,7 @@
         sourceReview:get(isApproval?'Original Review Status':'Confidence / Review Status'),
         sourceDecision:isApproval?get('Owner Decision'):'NOT_REVIEWED',
         sourceGate:isApproval?get('Publication Gate'):'HOLD',
-        sourceType,decision:'HOLD',note:'',reviewer:'',reviewedAt:''
+        sourceType,commercialApproval:'AUTO_ACCEPTED_DBEST',bookingStatus:'RECONFIRM_WITH_HOTEL',guestRatePublished:false,decision:'HOLD',note:'',reviewer:'',reviewedAt:''
       });
     });
     return {records,warnings,count:records.length,publicationEnabled:false,sourceType};
