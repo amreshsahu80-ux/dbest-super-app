@@ -38,6 +38,7 @@ test('markup is an Owner-controlled arithmetic operation, not public net tariff'
 test('savings require real, authorized, tax-inclusive and truly matching live rates',()=>{
  const now=Date.parse('2026-11-01T12:00:00Z');
  const ota={...template,platform:'Booking.com',taxInclusiveTotal:7300,
+  audience:'PUBLIC_B2C',sourceRateType:'SELL',
   authorizedFeed:true,checkedAt:'2026-11-01T11:58:00Z'};
  const valid=policy.comparison(template,[ota],now);
  assert.equal(valid.savings,800);
@@ -45,6 +46,9 @@ test('savings require real, authorized, tax-inclusive and truly matching live ra
  assert.equal(valid.reason,'LIVE_COMPARISON');
  for(const bad of [
   {...ota,authorizedFeed:false},
+  {...ota,audience:'B2B_AGENT'},
+  {...ota,audience:'PUBLIC_B2C',sourceRateType:'NET'},
+  {...ota,sourceRateType:'CORPORATE'},
   {...ota,checkedAt:'2026-11-01T11:20:00Z'},
   {...ota,roomMappingId:'a-different-room'},
   {...ota,meal:'Room only'},
@@ -57,6 +61,12 @@ test('savings require real, authorized, tax-inclusive and truly matching live ra
  assert.equal(unavailable.savings,null);
  assert.equal(unavailable.reason,'NO_AUTHORIZED_COMPARABLE_LIVE_OTA');
  assert.equal(policy.comparison({...template,taxIncluded:false},[ota],now).savings,null);
+});
+test('received contracted tariff does not need fresh individual Owner approval or hotel booking confirmation for commercial pricing',()=>{
+ const eligible={...template,hotelConfirmation:false};
+ assert.equal(policy.hasConfirmedSupplierTotal(eligible),true);
+ assert.equal(policy.isPublicB2C({...template,sourceRateType:'SELL',audience:'PUBLIC_B2C',authorizedFeed:true}),true);
+ assert.equal(policy.isPublicB2C({...template,sourceRateType:'NET',audience:'PUBLIC_B2C',authorizedFeed:true}),false);
 });
 test('direct booking action sends a request, never a confirmed booking',()=>{
  const q=policy.bookingRequest({hotel:'Hotel Nandan',checkIn:'2026-11-15',
