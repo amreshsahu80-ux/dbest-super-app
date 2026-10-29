@@ -101,13 +101,13 @@ test('deployed private snapshot API returns only public hotel metadata to guests
 
 test('guest destination accepts typed city, state or partial text and updates from source catalogue',()=>{
  const page=fs.readFileSync('hotel-simple-flow.html','utf8');
- assert.match(page,/<input id="destination"[^>]*type="search"[^>]*list="destinations"/);
- assert.match(page,/<datalist id="destinations"><\/datalist>/);
- assert.match(page,/function fillDestinations\(\)/);
+  assert.match(page,/<input id="destination"[^>]*type="search"[^>]*role="combobox"/);
+  assert.match(page,/id="destinationSuggestions"[^>]*role="listbox"/);
+  assert.match(page,/function buildDestinationIndex\(\)/);
  assert.match(page,/state\.destination\.toLocaleLowerCase\(\)/);
  assert.match(page,/locality\.includes\(destination\)/);
  assert.match(page,/\$\('destination'\)\.addEventListener\('input'/);
- assert.match(page,/fillDestinations\(\);render\(\)/);
+  assert.match(page,/buildDestinationIndex\(\);if\(document\.activeElement===\$\('destination'\)\)showDestinations\(\);render\(\)/);
  assert.doesNotMatch(page,/id="city" class="field"><option/);
  const scripts=[...page.matchAll(/<script>\s*([\s\S]+?)<\/script>/g)];
  scripts.forEach(m=>new vm.Script(m[1]));
