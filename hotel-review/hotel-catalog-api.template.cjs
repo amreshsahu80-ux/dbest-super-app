@@ -80,7 +80,9 @@ async function handler(req,res){
    const limit=Math.min(Math.max(1,Number.parseInt(q.limit,10)||100),200);
    return respond(res,200,{view:'OWNER_ONLY',total:all.length,offset,limit,
     rows:all.slice(offset,offset+limit),stats:DATA.stats,
-    notes:'Commercial quotes auto-accepted; none is automatically bookable. B2B supplier prices never returned to guest requests.'});
+    ownerSellingMarkup:ownerMarkup(process.env),
+    ownerMarkupStorage:'ISOLATED_VERCEL_PROJECT_ENVIRONMENT',
+    notes:'Received supplier quotes commercially final; room availability remains separate. Supplier rates never returned to guest requests.'});
  }
  return respond(res,200,{status:'OUTREACH_SNAPSHOT_NOT_LIVE_INVENTORY',
   hotels:DATA.publicHotels,stats:DATA.stats,snapshotGeneratedAt:DATA.snapshotGeneratedAt||null,liveOTAConnected:false,
