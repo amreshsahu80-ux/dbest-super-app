@@ -23,7 +23,7 @@ label{display:block;font-size:11px;color:#566d84;font-weight:850;margin-bottom:7
 <button class="btn" type="submit">Find hotels</button>
 </form>
 <div class="notice"><b>Important:</b> This is a design-and-booking-request preview, not connected live inventory. Hotel photos are independently licensed where shown; prices, discounts and availability are intentionally <b>not invented</b>. An automatically received hotel quote can enter the DBest catalogue, but the hotel must confirm the requested dates and final payable amount before a reservation is confirmed.</div>
-<div class="sectionhead"><div><h2>Featured properties</h2><div class="muted" id="searchSummary">Actual property photography where licensed</div></div><div class="muted">INR · same-room OTA comparison activates when authorized feeds are connected</div></div>
+<div class="sectionhead"><div><h2>Featured properties</h2><div class="muted" id="searchSummary">Actual property photography where licensed</div></div><div class="muted" id="otaReadiness" role="status">Checking live B2C price-feed availability…</div></div>
 <div style="max-width:450px;margin:0 0 15px"><label for="hotelSearch">Search property name or city</label><input class="field" id="hotelSearch" type="search" placeholder="Search contracted properties…" autocomplete="off"></div>
 <section class="grid" id="results" aria-live="polite"></section>
 <div style="text-align:center;margin:20px"><button id="loadMore" type="button" class="btn secondary" hidden>Show 30 more hotels</button></div>
@@ -253,6 +253,15 @@ $('results').addEventListener('click',async e=>{
 $('copy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText($('requestText').value);$('copy').textContent='Copied';setTimeout(()=>$('copy').textContent='Copy request',1800)}catch(e){$('requestText').select();document.execCommand('copy')}});
 $('close').addEventListener('click',()=>$('requestModal').close());
 render();
+// Readiness check is free: no dates, hotel identifiers or paid provider requests.
+fetch('/api/hotel-ota-b2c?view=status',{credentials:'same-origin',cache:'no-store'})
+ .then(async response=>{if(!response.ok)throw Error('status unavailable');return response.json()})
+ .then(data=>{
+  $('otaReadiness').textContent=data.liveConnected?
+   'Public B2C OTA lookup ready · choose hotel and dates, then check prices':
+   'Live OTA B2C prices not connected yet · supplier rates remain available';
+ })
+ .catch(()=>{$('otaReadiness').textContent='Live B2C OTA feed status unavailable';});
 fetch('/api/hotel-catalog',{cache:'no-store',credentials:'same-origin'})
 .then(async response=>{if(!response.ok)throw Error('Catalog unavailable');return response.json()})
 .then(async data=>{
