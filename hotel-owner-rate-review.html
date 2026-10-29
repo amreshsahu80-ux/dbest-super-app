@@ -39,7 +39,7 @@ a{color:#1566aa}footer{border-top:1px solid #dce7f0;padding:23px 16px;text-align
 <div><label for="ownerEmail">Authorized Owner email</label><input type="email" name="email" id="ownerEmail" required maxlength="254" placeholder="Enter your authorized Owner email" autocomplete="email"></div>
 <div class="auth-row"><button id="sendOwnerOtp" class="btn" type="button">Send secure OTP</button></div>
 <p id="ownerOtpCooldown" class="auth-help">For security, request a new OTP only if needed.</p>
-<div id="ownerOtpInput"><p class="auth-help">Already have a valid Owner OTP? Enter it below without requesting another.</p><label for="ownerOtp">Six-digit Owner OTP</label><input id="ownerOtp" name="one-time-code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" placeholder="Enter latest six-digit OTP">
+<div id="ownerOtpInput"><p class="auth-help">Already have a valid Owner OTP? Enter it below without requesting another.</p><label for="ownerOtp">Six-digit Owner OTP</label><input id="ownerOtp" name="one-time-code" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" placeholder="Enter latest six-digit OTP">
 <button id="verifyOwnerOtp" type="submit" class="btn">Verify and open workbench</button></div>
 <p id="ownerAuthStatus" class="auth-status" role="status">Checking preview Owner session…</p></form>
 <div class="alert"><b>No public rate publication.</b> Verification only unlocks a local CSV review UI. All supplier rows still remain on hold and require a separate authenticated server-side approval process.</div>
@@ -153,7 +153,17 @@ function unlocked(ok,message){
  $('hotelOwnerSignOut').hidden=!ok;
  if(message)status.textContent=message;
 }
-function errorText(code){
+function errorText(code,stage){
+ if(code==='owner_auth_unavailable'){
+  const detail={
+   send_otp:'OTP mail service did not respond. The message may still arrive; check your inbox before requesting another code.',
+   verify_otp:'The OTP verification service did not respond. Keep your existing code private; do not request a new one immediately.',
+   verify_session:'OTP verification returned, but the Owner session check was unavailable. You may need a new code after service recovery.',
+   session_check:'Saved Owner session could not be checked. You can still sign in with an OTP below.'
+  };
+  return detail[stage]||'Owner login service is unavailable. No request was approved.';
+ }
+
  const messages={
   rate_limited:'OTP request limit reached. Please allow at least 60 seconds after your last request; use a valid existing code instead of resending.',
   otp_not_sent:'OTP could not be sent. Check your authorized Owner email and try again after the cooldown.',
@@ -190,6 +200,7 @@ async function request(body) {
  if(!response.ok){
   const err=new Error(data.error||'verification_unavailable');
   err.httpStatus=response.status;
+  err.stage=typeof data.stage==='string'?data.stage:'';
   err.retryAfter=Number(response.headers.get('Retry-After')||0);
   throw err;
  }
@@ -209,7 +220,7 @@ sendButton.addEventListener('click',async()=>{
   status.textContent='OTP requested. Check your authorized Owner mailbox. Use the latest six-digit code within 10 minutes; please do not resend.';
  }catch(e){
   if(e.httpStatus===429||e.message==='rate_limited')startCooldown(Math.max(65,e.retryAfter||0));
-  status.textContent=errorText(e.message);
+  status.textContent=errorText(e.message,e.stage);
  }finally{sending=false;refreshCooldown()}
 });
 ownerForm.addEventListener('submit',async e=>{
@@ -224,7 +235,7 @@ ownerForm.addEventListener('submit',async e=>{
   if(!data.authenticated)throw Error('owner_session_invalid');
   $('ownerOtp').value='';
   unlocked(true,'Owner verified. Local review tools are unlocked.');
- }catch(e){unlocked(false,errorText(e.message))}
+ }catch(e){unlocked(false,errorText(e.message,e.stage))}
  finally{verifying=false;btn.disabled=false}
 });
 $('hotelOwnerSignOut').addEventListener('click',async()=>{
@@ -235,7 +246,7 @@ $('hotelOwnerSignOut').addEventListener('click',async()=>{
  const result=await request();
  unlocked(!!result.authenticated,result.authenticated?'Owner session verified.':'Please sign in to review supplier tariffs.');
 }catch(e){
- unlocked(false,e.httpStatus===401?'Please sign in to review supplier tariffs.':errorText(e.message));
+ unlocked(false,e.httpStatus===401?'Please sign in to review supplier tariffs.':errorText(e.message,e.stage));
 }} )();
 })();
 </script></body></html>
