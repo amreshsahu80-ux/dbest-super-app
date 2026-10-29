@@ -74,9 +74,6 @@ function bookingRequest(data){
  'Adults: '+Number(data.adults),
  'Rooms: '+Number(data.rooms),
  'Meal plan: '+String(data.meal||'Confirm'),
- ...([['Guest name',data.contactName],['Contact mobile',data.contactPhone],['Contact email',data.contactEmail]]
-  .filter(([,value])=>String(value||'').trim())
-  .map(([label,value])=>label+': '+String(value).replace(/[\r\n\t\x00-\x1f]/g,' ').trim().slice(0,120))),
  'Please confirm room inventory, all taxes, final selling price, cancellation, payment and booking reference before collection.'
  ].join('\n');
  return {status:'REQUEST_ONLY_NOT_BOOKED',subject:'DBest hotel booking request - '+String(data.hotel).slice(0,90),body};
