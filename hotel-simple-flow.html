@@ -114,11 +114,22 @@ $('checkIn').min=iso(today);$('checkIn').value=iso(tomorrow);$('checkOut').min=i
 let visibleCount=30;
 let state={destination:'',checkIn:$('checkIn').value,checkOut:$('checkOut').value,adults:2,rooms:1};
 const platforms=['MakeMyTrip','Booking.com','Goibibo'];
+const consumerHotelSearch=[
+ {name:'MakeMyTrip',url:'https://www.makemytrip.com/hotels/'},
+ {name:'Booking.com',url:'https://www.booking.com/'},
+ {name:'Goibibo',url:'https://www.goibibo.com/hotels/'}
+];
 function card(h){
  const image=h.photo?'<img loading="lazy" decoding="async" src="'+html(h.photo.url)+'" alt="Actual property photograph of '+html(h.name)+'" data-property-image="1">'+
  '<div class="credit">Photo: '+html(h.photo.credit)+' · <a href="'+html(h.photo.source)+'" target="_blank" rel="noopener noreferrer">Source</a> · <a href="'+html(h.photo.licenseUrl)+'" target="_blank" rel="noopener noreferrer">'+html(h.photo.license)+'</a></div>':
  '<div class="noimg">Property / room photos<br>awaiting usage permission</div>';
- const rows=['DBest direct',...platforms].map((p,i)=>'<div class="price-row"><strong>'+html(p)+'</strong><span class="pending">'+(i?'Live feed not connected':'Confirm final selling price')+'</span></div>').join('');
+ const dbestReference=(typeof h.contractedSellingReference==='number'&&Number.isFinite(h.contractedSellingReference))?
+  '<b>'+moneyINR(h.contractedSellingReference)+'</b><small style="display:block;color:#61788d">Lowest received contracted rate reference · date, room, occupancy and taxes may change the total</small>':
+  '<span class="pending">Selling reference unavailable</span>';
+ const rows='<div class="price-row"><strong>DBest Special Rate</strong><span style="text-align:right">'+dbestReference+'</span></div>'+
+  consumerHotelSearch.map(site=>'<div class="price-row"><strong>'+html(site.name)+' · Public B2C</strong>'+
+    '<span style="text-align:right"><span class="pending">No connected live-rate feed</span>'+
+    '<small style="display:block"><a target="_blank" rel="noopener noreferrer" href="'+html(site.url)+'">Open consumer hotel search</a></small></span></div>').join('');
  const roomOptions=(Array.isArray(h.roomTypes)?h.roomTypes:[]).filter(x=>typeof x==='string'&&x.trim()).slice(0,12);
  const roomSelect=roomOptions.length?'<div class="room-choice"><label for="room-'+html(h.id)+'">Requested room category</label><select class="field" id="room-'+html(h.id)+'" data-room="'+html(h.id)+'"><option value="">Any available room</option>'+roomOptions.map(room=>'<option value="'+html(room)+'">'+html(room)+'</option>').join('')+'</select></div>':'';
  return '<article class="hotel"><div class="media">'+image+'</div><div class="content"><h3 class="name">'+html(h.name)+'</h3><div class="location">⌖ '+html(h.area)+', '+html(h.city)+'</div>'+
@@ -197,7 +208,7 @@ $('close').addEventListener('click',()=>$('requestModal').close());
 render();
 fetch('/api/hotel-catalog',{cache:'no-store',credentials:'same-origin'})
 .then(async response=>{if(!response.ok)throw Error('Catalog unavailable');return response.json()})
-.then(data=>{
+.then(async data=>{
  if(!Array.isArray(data.hotels)||!data.hotels.length)return;
  const byName=new Map(hotels.map(h=>[h.name.toLowerCase(),h]));
  hotels=data.hotels.map(h=>{
@@ -205,6 +216,24 @@ fetch('/api/hotel-catalog',{cache:'no-store',credentials:'same-origin'})
   return {id:h.id,name:h.hotel,city:h.city,area:h.state||'',photo:exact?.photo||previewPhotos[String(h.hotel||'').toLowerCase()]||null,
     rateCount:h.rateCount||0,roomTypes:h.rooms||[]};
  });
+ // The server sends only a marked-up reference, never the confidential net tariff.
+ try {
+  const refResponse=await fetch('/api/hotel-catalog?view=offers-summary',
+    {cache:'no-store',credentials:'same-origin'});
+  if(refResponse.ok){
+   const refPayload=await refResponse.json();
+   if(refPayload.status==='DBEST_CONTRACTED_SELLING_REFERENCES'&&Array.isArray(refPayload.hotels)){
+    const byId=new Map(refPayload.hotels.map(v=>[v.id,v]));
+    for(const h of hotels){
+     const v=byId.get(h.id);
+     if(v&&typeof v.price==='number'&&v.price>0){
+      h.contractedSellingReference=v.price;
+      h.contractedReferenceTaxStatus=v.taxStatus;
+     }
+    }
+   }
+  }
+ }catch(error){ /* Customer search and booking requests remain available. */ }
  buildDestinationIndex();if(document.activeElement===$('destination'))showDestinations();render();
  $('searchSummary').textContent=hotels.length+' hotel partners with outreach quotations · '+(data.snapshotGeneratedAt?'snapshot '+new Date(data.snapshotGeneratedAt).toLocaleString('en-IN')+' · ':'')+'supplier contracted tariffs accepted; availability before booking';
 }).catch(()=>{$('searchSummary').textContent='Featured licensed sample hotels · connected catalogue temporarily unavailable';});
