@@ -196,8 +196,8 @@ $('results').addEventListener('click',async e=>{
   try{
    const args=new URLSearchParams({hotelId:h.id,checkIn:state.checkIn,checkOut:state.checkOut,
     adults:String(state.adults),rooms:String(state.rooms)});
-   const freePilot=h.id==='HOTEL-NANDAN-GHY';
-   const resp=await fetch((freePilot?'/api/hotel-google-b2c?':'/api/hotel-ota-b2c?')+args.toString(),{credentials:'same-origin',cache:'no-store'});
+   // The isolated server verifies approved mapping before launching any browser.
+   const resp=await fetch('/api/hotel-google-b2c?'+args.toString(),{credentials:'same-origin',cache:'no-store'});
    const payload=await resp.json();
    if(!resp.ok)throw Error('Provider temporarily unavailable');
    if(payload.live&&Array.isArray(payload.providers)){
@@ -209,6 +209,7 @@ $('results').addEventListener('click',async e=>{
     h.otaStatus=payload.status==='BROWSER_PILOT_DISABLED'?'Public browser comparison has not been activated for this pilot deployment.':
      payload.status==='GOOGLE_PUBLIC_BROWSER_UNAVAILABLE'?'Google Hotels browser could not verify prices. No rate substituted.':
      payload.status==='PAGE_DATES_OR_PROPERTY_NOT_VERIFIED'?'Google Hotels did not confirm the exact property and stay dates.':
+     payload.status==='PROPERTY_NOT_MAPPED'?'Public Google Hotels listing has not yet been verified for this hotel. No rate shown.':
      payload.status==='OCCUPANCY_NOT_SUPPORTED'?'This public-rate pilot currently supports 2 adults, 1 room only.':
      payload.status==='PILOT_HOURLY_LIMIT'?'Browser rate-lookup pilot limit reached. Please try another time.':
      payload.status==='NO_VERIFIED_PUBLIC_GOOGLE_B2C_OFFERS'?'No publicly verified OTA prices found for these dates.':
@@ -268,7 +269,7 @@ fetch('/api/hotel-ota-b2c?view=status',{credentials:'same-origin',cache:'no-stor
  .then(data=>{
   $('otaReadiness').textContent=data.liveConnected?
    'Public B2C OTA lookup ready · choose hotel and dates, then check prices':
-   'No paid OTA price API · selected Hotel Nandan browser comparison pilot available on demand';
+   'No paid OTA price API · Google Hotels browser comparison on mapped properties · choose dates and click Check';
  })
  .catch(()=>{$('otaReadiness').textContent='Live B2C OTA feed status unavailable';});
 fetch('/api/hotel-catalog',{cache:'no-store',credentials:'same-origin'})
