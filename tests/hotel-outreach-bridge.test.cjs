@@ -54,7 +54,7 @@ test('authenticated Owner workbench loads only the private catalog and never exp
  assert.match(owner,/loadOwnerCatalogue/);
  assert.match(owner,/\/api\/hotel-catalog\?view=owner&offset=/);
  assert.match(owner,/credentials:'same-origin'/);
- assert.match(owner,/commercialApproval:'AUTO_ACCEPTED_DBEST'/);
+ assert.match(owner,/commercialApproval==='AUTO_ACCEPTED_DBEST'/);
  const scripts=[...owner.matchAll(/<script>\s*([\s\S]+?)<\/script>/g)];
  scripts.forEach(m=>new vm.Script(m[1]));
  const guest=fs.readFileSync('hotel-simple-flow.html','utf8');
