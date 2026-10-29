@@ -21,10 +21,17 @@ function autoAccept(rates){
  })).filter(r=>r.rateId&&r.hotelId&&r.hotel);
 }
 function hasConfirmedSupplierTotal(q){
+ // Contracted tariffs are commercially accepted when received. Booking
+ // confirmation is separate from rate publication and B2C comparisons.
+ // Complete tax/date/room/distribution rights still govern comparable totals.
  return q && q.approval==='AUTO_ACCEPTED_DBEST' &&
   validMoney(q.taxInclusiveTotal) && q.taxIncluded===true &&
-  q.validityConfirmed===true && q.hotelConfirmation===true &&
-  q.redistributionAuthorized===true;
+  q.validityConfirmed===true && q.redistributionAuthorized===true;
+}
+function isPublicB2C(q){
+ // Never compare against wholesale, corporate, agent, B2B or net OTA rates.
+ return q && q.audience==='PUBLIC_B2C' && q.sourceRateType==='SELL' &&
+  q.authorizedFeed===true && q.redistributionAuthorized===true;
 }
 function sameStay(a,b){
  return String(a.hotelId||'')===String(b.hotelId||'') &&
@@ -39,7 +46,7 @@ function sameStay(a,b){
 function comparableRate(dbest,ota,now=Date.now()){
  if(!hasConfirmedSupplierTotal(dbest)||!ota||!sameStay(dbest,ota))return false;
  if(!validMoney(ota.taxInclusiveTotal)||ota.taxIncluded!==true||
-    ota.authorizedFeed!==true||ota.redistributionAuthorized!==true)return false;
+    !isPublicB2C(ota))return false;
  const stamp=Date.parse(String(ota.checkedAt||''));
  return Number.isFinite(stamp)&&stamp<=now+60000&&now-stamp<=15*60*1000;
 }
@@ -71,5 +78,5 @@ function bookingRequest(data){
  ].join('\n');
  return {status:'REQUEST_ONLY_NOT_BOOKED',subject:'DBest hotel booking request - '+String(data.hotel).slice(0,90),body};
 }
-return Object.freeze({autoAccept,markup,hasConfirmedSupplierTotal,comparableRate,comparison,bookingRequest});
+return Object.freeze({autoAccept,markup,hasConfirmedSupplierTotal,isPublicB2C,comparableRate,comparison,bookingRequest});
 });
