@@ -15,7 +15,9 @@ const SOURCES=Object.freeze({
  'HOTEL-NANDAN-GHY':Object.freeze({
   hotel:'Hotel Nandan',city:'Guwahati',
   entity:'ChkImq6GmM_XyKKZARoML2cvMXE2YjZ6cnBwEAE'
- })
+ }),
+ 'HIST-016':Object.freeze({hotel:'Vivanta Guwahati',city:'Guwahati',entity:'CgsIr-bv8efM1eyfARAB'}),
+ 'DBEST-REPL-20261026-697':Object.freeze({hotel:'Ginger Agartala',city:'Agartala',entity:'CgoI05W_ufDezpBjEAE'})
 });
 const PROVIDERS=Object.freeze([
  'MakeMyTrip.com','Goibibo.com','Booking.com','Agoda',
