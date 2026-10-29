@@ -23,8 +23,8 @@ test('only exact OTA offer lines before similar hotels are parsed',()=>{
  assert.equal(rows.find(x=>x.provider==='MakeMyTrip.com').pricePerNight,5707);
  assert.equal(rows.find(x=>x.provider==='Goibibo.com').pricePerNight,5302);
  assert.ok(rows.every(x=>x.pricePerNight>0&&x.currency==='INR'));
- assert.equal(google.parsePrices('Hotel Nandan\n₹5,707'),[].length);
- assert.equal(google.parsePrices('All options\nGoibibo.com\n₹5,302\nNo booking'),[].length);
+ assert.equal(google.parsePrices('Hotel Nandan\n₹5,707').length,0);
+ assert.equal(google.parsePrices('All options\nGoibibo.com\n₹5,302\nNo booking').length,0);
 });
 test('real browser lookup shape uses confirmed dates and never claims savings',async()=>{
  let evaluated=0,closed=false;
