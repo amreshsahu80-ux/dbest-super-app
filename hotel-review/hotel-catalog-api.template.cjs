@@ -53,13 +53,21 @@ function pricedOffers(hotelId,offset,limit,env){
  return {status:'CONTRACTED_SUPPLIER_RATES_WITH_OWNER_MARKUP',total:rows.length,offset,limit,
   offers,availabilityVerified:false};
 }
+function isAccommodationRoomRate(r){
+ const room=String(r.room||'').toLowerCase(),occ=String(r.occupancy||'').toLowerCase();
+ // Ancillary items are genuine contracted tariffs, but NOT a bookable
+ // accommodation room rate and cannot become a hotel's headline price.
+ if(!room||/(?:extra[ -]?(?:person|adult|child|bed)|additional|supplement|surcharge|taxes?|gst|meal|breakfast|lunch|dinner|airport|transfer|pickup|drop|transport|child[ -]?policy|upgrade|early[ -]?check|late[ -]?check|per[ -]?person|per[ -]?pax|per[ -]?head|rollaway|activity|excursion|day[ -]?use|hourly|package[ -]?add)/i.test(room))return false;
+ if(/(?:per[ -]?(?:person|pax|head)|extra[ -]?(?:adult|child|person)|additional[ -]?person|supplement)/i.test(occ))return false;
+ return /(?:room|deluxe|standard|executive|suite|villa|cottage|bungalow|superior|premium|premier|heritage|classic|luxury|king|queen|twin|double|single|studio|family|tent|cabana|dorm)/i.test(room);
+}
 function sellingSummaries(env){
  const pct=ownerMarkup(env);
  if(pct===null)return {status:'OWNER_MARKUP_NOT_CONFIGURED',hotels:[],liveOTAConnected:false};
  const choices=new Map(),valid=new Set(DATA.publicHotels.map(h=>h.id));
  for(const r of DATA.rates){
   if(!valid.has(r.hotelId)||r.commercialApproval!=='AUTO_ACCEPTED_DBEST'||
-     typeof r.amount!=='number'||!Number.isFinite(r.amount)||r.amount<=0)continue;
+     !isAccommodationRoomRate(r)||typeof r.amount!=='number'||!Number.isFinite(r.amount)||r.amount<=0)continue;
   const old=choices.get(r.hotelId);
   if(!old||r.amount<old.amount)choices.set(r.hotelId,r);
  }
@@ -113,4 +121,4 @@ async function handler(req,res){
   note:'Direct bookings require hotel confirmation. Live OTA rates and savings are not connected.'});
 }
 module.exports=handler;
-module.exports._test={validHost,ownerMarkup,taxStatus,pricedOffers,sellingSummaries};
+module.exports._test={validHost,ownerMarkup,taxStatus,pricedOffers,sellingSummaries,isAccommodationRoomRate};
