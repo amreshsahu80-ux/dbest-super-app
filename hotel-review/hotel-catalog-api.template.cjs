@@ -20,7 +20,7 @@ function respond(res,status,data){
 // expose unmarked supplier net prices to anonymous guests.
 function ownerMarkup(env){
  const raw=String(env.HOTEL_REVIEW_MARKUP_PERCENT??'').trim();
- if(!/^(?:\\d{1,2})(?:\\.\\d)?$/.test(raw))return null;
+ if(!/^(?:\d{1,2})(?:\.\d)?$/.test(raw))return null;
  const pct=Number(raw);
  return pct>=0&&pct<=50&&pct*2===Math.round(pct*2)?pct:null;
 }
@@ -33,7 +33,7 @@ function taxStatus(value){
 }
 function publicText(v){
  // Preserve room and meal labels while excluding any embedded supplier amounts.
- return String(v||'').replace(/(?:₹|INR\\s*)[\\s,]*\\d[\\d,.]*/gi,'[amount withheld]').slice(0,125);
+ return String(v||'').replace(/(?:₹|INR\s*)[\s,]*\d[\d,.]*/gi,'[amount withheld]').slice(0,125);
 }
 function pricedOffers(hotelId,offset,limit,env){
  const markupPct=ownerMarkup(env);
