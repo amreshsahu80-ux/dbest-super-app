@@ -15,6 +15,44 @@ function respond(res,status,data){
  res.setHeader('Vary','Cookie');
  return res.end(JSON.stringify(data));
 }
+// The Owner selects the markup in the separate Vercel hotel's protected
+// environment. No default is assumed: missing configuration must never
+// expose unmarked supplier net prices to anonymous guests.
+function ownerMarkup(env){
+ const raw=String(env.HOTEL_REVIEW_MARKUP_PERCENT??'').trim();
+ if(!/^(?:\\d{1,2})(?:\\.\\d)?$/.test(raw))return null;
+ const pct=Number(raw);
+ return pct>=0&&pct<=50&&pct*2===Math.round(pct*2)?pct:null;
+}
+function taxStatus(value){
+ const s=String(value||'').toLowerCase();
+ if(/(?:gst|tax(?:es)?).{0,24}(?:extra|additional|excluded|exclusive|not included|separate)|(?:extra|exclusive|excluding).{0,24}(?:gst|tax(?:es)?)/.test(s))return 'TAX_ADDITIONAL';
+ if(/(?:gst|tax(?:es)?).{0,24}(?:included|inclusive)|(?:included|inclusive).{0,24}(?:gst|tax(?:es)?)/.test(s)&&
+    !/(?:pending|not specified|unclear|subject|conflicts|except)/.test(s))return 'TAX_INCLUDED';
+ return 'TAX_TERMS_UNCLEAR';
+}
+function publicText(v){
+ // Preserve room and meal labels while excluding any embedded supplier amounts.
+ return String(v||'').replace(/(?:₹|INR\\s*)[\\s,]*\\d[\\d,.]*/gi,'[amount withheld]').slice(0,125);
+}
+function pricedOffers(hotelId,offset,limit,env){
+ const markupPct=ownerMarkup(env);
+ if(markupPct===null)return {status:'OWNER_MARKUP_NOT_CONFIGURED',total:0,offers:[],availabilityVerified:false};
+ const rows=DATA.rates.filter(r=>r.hotelId===hotelId&&
+    r.commercialApproval==='AUTO_ACCEPTED_DBEST');
+ const offers=rows.slice(offset,offset+limit).map(r=>{
+   const usable=typeof r.amount==='number'&&Number.isFinite(r.amount)&&r.amount>0;
+   return {
+    room:publicText(r.room),occupancy:publicText(r.occupancy),meal:publicText(r.meal),
+    price:usable?Math.round(r.amount*(1+markupPct/100)*100)/100:null,
+    currency:'INR',taxStatus:taxStatus(r.taxes),
+    validity:'Supplier tariff conditions apply',commercialStatus:'CONTRACTED_FINAL',
+    availability:'CHECK_BEFORE_CONFIRMING'
+   };
+ });
+ return {status:'CONTRACTED_SUPPLIER_RATES_WITH_OWNER_MARKUP',total:rows.length,offset,limit,
+  offers,availabilityVerified:false};
+}
 function validHost(host){
  return /^(?:dbest-hotel-review-preview)(?:-[a-z0-9-]+)?\.vercel\.app$/.test(String(host||''));
 }
@@ -22,6 +60,16 @@ async function handler(req,res){
  if(!validHost(req.headers?.host))return respond(res,403,{error:'isolated_pilot_only'});
  if(req.method!=='GET')return respond(res,405,{error:'method_not_allowed'});
  const q=Object.fromEntries(new URL(req.url||'/', 'https://internal.test').searchParams.entries());
+ if(q.view==='offers'){
+   const hotelId=String(q.hotelId||'').trim().slice(0,135);
+   if(!hotelId||!DATA.publicHotels.some(h=>h.id===hotelId))
+     return respond(res,404,{error:'hotel_not_found'});
+   const offset=Math.min(Math.max(0,Number.parseInt(q.offset,10)||0),100000);
+   const limit=Math.min(Math.max(1,Number.parseInt(q.limit,10)||25),100);
+   return respond(res,200,{hotelId, ...pricedOffers(hotelId,offset,limit,process.env),
+     liveOTAConnected:false,
+     note:'Accepted contracted tariffs with configured Owner markup. Not a live inventory check or an all-in comparison where additional taxes apply.'});
+ }
  if(q.view==='owner'){
    const token=auth._test.cookieToken(req);
    let ok=false;try{ok=await auth._test.validateOwner(process.env,token)}catch(e){}
@@ -39,4 +87,4 @@ async function handler(req,res){
   note:'Direct bookings require hotel confirmation. Live OTA rates and savings are not connected.'});
 }
 module.exports=handler;
-module.exports._test={validHost};
+module.exports._test={validHost,ownerMarkup,taxStatus,pricedOffers};
