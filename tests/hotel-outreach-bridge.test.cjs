@@ -66,7 +66,7 @@ test('deployed private snapshot API returns only public hotel metadata to guests
  const sample=bridge.build(hotelsHeader,hotelRows,ratesHeader,rateRows);
  sample.snapshotGeneratedAt='2026-10-30T00:00:00.000Z';
  const source=fs.readFileSync('hotel-review/hotel-catalog-api.template.cjs','utf8')
-  .replace('__PRIVATE_SNAPSHOT__',JSON.stringify(sample));
+  .replace('const DATA=__PRIVATE_SNAPSHOT__;', 'const DATA='+JSON.stringify(sample)+';');
  const moduleStub={exports:{}};
  const auth={_test:{cookieToken:()=>'',validateOwner:async()=>false}};
  vm.runInNewContext(source,{module:moduleStub,require:()=>auth,URL,process:{env:{}},console});
