@@ -139,11 +139,36 @@ test('Owner markup must be configured server-side; accepted quotations become cu
  await create({HOTEL_REVIEW_MARKUP_PERCENT:'12.5'})({...req,url:'/api/hotel-catalog?view=offers&hotelId=not-a-hotel'},nohotel.res);
  assert.equal(nohotel.res.statusCode,404);
 });
+test('customer summary exposes Owner-marked-up contracted references, not net tariffs or fake OTA rates',async()=>{
+ const snapshot=bridge.build(hotelsHeader,hotelRows,ratesHeader,rateRows);
+ const templateSource=fs.readFileSync('hotel-review/hotel-catalog-api.template.cjs','utf8');
+ const compiled=templateSource.replace('const DATA=__PRIVATE_SNAPSHOT__;', 'const DATA='+JSON.stringify(snapshot)+';');
+ const moduleStub={exports:{}};
+ const auth={_test:{cookieToken:()=>'',validateOwner:async()=>false}};
+ vm.runInNewContext(compiled,{module:moduleStub,require:()=>auth,URL,process:{env:{HOTEL_REVIEW_MARKUP_PERCENT:'5'}},console});
+ const response={headers:{host:'dbest-hotel-review-preview.vercel.app'},method:'GET',url:'/api/hotel-catalog?view=offers-summary'};
+ const output={statusCode:200,setHeader(){},end(body){this.body=JSON.parse(body)}};
+ await moduleStub.exports(response,output);
+ assert.equal(output.statusCode,200);
+ assert.equal(output.body.status,'DBEST_CONTRACTED_SELLING_REFERENCES');
+ assert.equal(output.body.hotels.length,1);
+ assert.equal(output.body.hotels[0].price,4725);
+ assert.equal(output.body.hotels[0].label,'RECEIVED_CONTRACTED_RATE_REFERENCE');
+ assert.equal(output.body.liveOTAConnected,false);
+ const json=JSON.stringify(output.body);
+ for(const key of ['sourceRef','supplierB2BAmount','commercialApproval','markupPercent','sourceEmail'])
+  assert.equal(json.includes(key),false);
+});
 test('B2C comparison and DBest selling price preview are explicit and do not infer OTA prices',()=>{
  const page=fs.readFileSync('hotel-simple-flow.html','utf8');
  assert.match(page,/View DBest Special Rates/);
  assert.match(page,/view=offers&hotelId=/);
  assert.match(page,/PUBLIC B2C OTA selling prices/);
+ assert.match(page,/view=offers-summary/);
+ assert.match(page,/DBest Special Rate/);
+ assert.match(page,/Open consumer hotel search/);
+ assert.match(page,/https:\/\/www\.makemytrip\.com\/hotels\//);
+ assert.match(page,/https:\/\/www\.goibibo\.com\/hotels\//);
  assert.match(page,/No verified comparison yet/);
  assert.match(page,/Book with DBest/);
  assert.doesNotMatch(page,/ota:\s*\[\d+/);
