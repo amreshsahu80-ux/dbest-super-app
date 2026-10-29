@@ -28,9 +28,9 @@ a{color:#1566aa}footer{border-top:1px solid #dce7f0;padding:23px 16px;text-align
 #messages{color:#9a3b19;font-size:12px;white-space:pre-wrap;margin-top:8px}#status{font-size:13px;font-weight:700;color:#2d678d}.help{font-size:12px;background:#f8fbff;border:1px solid #e1ebf5;border-radius:12px;padding:11px;margin:9px 0}
 @media(max-width:850px){.controls{grid-template-columns:1fr 1fr}.grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:500px){.controls{grid-template-columns:1fr}.grid{gap:8px}.metric{padding:12px}.metric b{font-size:23px}header{padding:20px 16px}}
 [hidden]{display:none!important}.auth-form{display:grid;gap:13px;max-width:430px}.auth-form input{min-height:44px}.auth-row{display:flex;gap:8px;flex-wrap:wrap}.auth-status{min-height:23px;font-weight:700;color:#34597d}.auth-shell{max-width:750px;margin:20px auto;padding:0 16px}.auth-shell .card{padding:24px}.auth-help{color:#5e7188;font-size:13px}</style>
-<script src="/hotel-review/approval-gate.js"></script></head><body>
+<script src="/hotel-review/approval-gate.js"></script><script src="/hotel-review/simple-flow-policy.js"></script></head><body>
 <header><div style="font-weight:900;letter-spacing:.7px;font-size:12px">DBest · Hotel Contracting</div>
-<h1>Tariff Approval Workbench</h1><p>Isolated supplier review · no live publication · all imported quotes held by default</p></header>
+<h1>Automatic Tariff Catalogue</h1><p>Incoming hotel quotes auto-accepted commercially · Owner-only markup · booking confirmation separate</p></header>
 <section id="hotelOwnerAuth" class="auth-shell" aria-label="Secure DBest Owner sign-in">
 <div class="card"><div class="badge" style="display:inline-block;margin-bottom:12px">Owner OTP · isolated preview</div>
 <h2>Verify your DBest Owner account</h2>
@@ -47,26 +47,29 @@ a{color:#1566aa}footer{border-top:1px solid #dce7f0;padding:23px 16px;text-align
 <main id="hotelOwnerWorkbench" hidden>
 <div class="alert"><b>Security boundary:</b> This is an isolated OTP-verified preview, <b>not</b> the live DBest Owner Console. Only login requests contact the existing Owner authentication service. Imported supplier files stay in this browser and are not uploaded or saved. Do not treat review recommendations as authorization to publish prices. For confidential commercial information, use only a trusted machine and approved operational access.</div>
 <div class="card">
-<div class="heading"><div><h2>1. Load your approval queue</h2><p class="muted small">Use either the <b>Rate History</b> tab from the connected <b>DBest India Hotel Contracting | Master Database 2026-27</b> or the <b>HOTEL RATE APPROVAL</b> tab from the separate Owner Approval Queue workbook. Export only that tab as <b>CSV (UTF-8)</b>. Other tabs are not supported.</p></div><span class="badge">HOLD by default</span></div>
+<div class="heading"><div><h2>1. Import outreach tariffs</h2><p class="muted small">Use either the <b>Rate History</b> tab from the connected <b>DBest India Hotel Contracting | Master Database 2026-27</b> or the <b>HOTEL RATE APPROVAL</b> tab from the separate Owner Approval Queue workbook. Export only that tab as <b>CSV (UTF-8)</b>. Other tabs are not supported.</p></div><span class="badge">Commercially auto-accepted</span></div>
 <label for="file">Select local CSV (max 8MB)</label><input class="file" id="file" type="file" accept=".csv,text/csv" aria-describedby="status"/>
 <div class="row"><span id="status" role="status">No file loaded.</span><button type="button" id="clear" class="btn secondary">Clear session</button></div>
 <div id="messages" role="alert"></div></div>
+<div class="card"><h2>Owner selling markup</h2><p class="small muted">Only the authenticated Owner can adjust this preview control. Accepted hotel B2B quotations are not separately approved again. A rate may still need final tax, allocation and date-specific confirmation before it can be sold.</p>
+<div class="row" style="justify-content:flex-start"><div><label for="hotelMarkup">Markup on supplier rate (%)</label><input type="number" id="hotelMarkup" min="0" max="50" step="0.5" value="0" class="field-note" style="max-width:145px" aria-label="Owner markup percentage"></div>
+<a href="/hotel-simple-flow.html" class="btn secondary" style="display:inline-block;text-decoration:none">View customer hotel preview</a></div><p class="small muted">For private owner preview only. Markup and supplier rates are not written to the live website or stored by this browser pilot. Guest pricing requires final GST and room availability.</p></div>
 <div class="grid" aria-live="polite">
 <div class="metric"><b id="total">0</b><span>Loaded quote lines</span></div>
-<div class="metric"><b id="hold">0</b><span>Hold</span></div>
+<div class="metric"><b id="hold">0</b><span>Awaiting booking-price confirmation</span></div>
 <div class="metric"><b id="verify">0</b><span>Recommend verification</span></div>
 <div class="metric"><b id="reject">0</b><span>Reject</span></div>
 </div>
 <section class="card" aria-label="Owner review table">
-<div class="heading"><div><h2>2. Review supplier offers</h2><p class="muted small">Quotes stay on hold regardless of previous workbook flags. Mark for follow-up or reject; this screen cannot activate customer rates.</p></div><span class="badge">0 publishable</span></div>
+<div class="heading"><div><h2>2. Automatically accepted supplier offers</h2><p class="muted small">All imported hotel outreach quotations are commercially auto-accepted by DBest. Flag exceptions only; final all-in prices and rooms must still be confirmed before customer booking.</p></div><span class="badge">0 publishable</span></div>
 <div class="controls">
 <div><label for="search">Find hotel / tariff / room</label><input id="search" type="text" placeholder="Search quote ID, hotel, category…" autocomplete="off"></div>
-<div><label for="decisionFilter">Review recommendation</label><select id="decisionFilter"><option value="all">All</option><option value="HOLD">HOLD</option><option value="VERIFY">Verify</option><option value="REJECT">Reject</option></select></div>
+<div><label for="decisionFilter">Booking follow-up status</label><select id="decisionFilter"><option value="all">All</option><option value="HOLD">HOLD</option><option value="VERIFY">Verify</option><option value="REJECT">Reject</option></select></div>
 <div><label for="pageSize">Rows per page</label><select id="pageSize"><option>25</option><option>50</option><option>100</option></select></div>
 <button class="btn secondary" id="prev" type="button">Previous</button><button class="btn secondary" id="next" type="button">Next</button>
 </div>
 <div class="row small muted" style="margin-bottom:10px"><span id="count">No records loaded</span><span id="page">Page 0 / 0</span></div>
-<div class="table"><table><thead><tr><th>Quote and property</th><th>Room / occupancy</th><th>B2B quoted</th><th>Taxes &amp; terms</th><th>Decision</th><th>Reason / follow-up</th></tr></thead><tbody id="tbody"><tr><td colspan="6" class="muted">Select a CSV to begin.</td></tr></tbody></table></div>
+<div class="table"><table><thead><tr><th>Quote and property</th><th>Room / occupancy</th><th>B2B quoted</th><th>Taxes &amp; terms</th><th>Booking follow-up</th><th>Reason / follow-up</th></tr></thead><tbody id="tbody"><tr><td colspan="6" class="muted">Select a CSV to begin.</td></tr></tbody></table></div>
 </section>
 <div class="card">
 <h2>3. Export review recommendations</h2>
@@ -85,9 +88,11 @@ const $=id=>document.getElementById(id);
 let records=[],warnings=[],page=0;
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const fmt=n=>typeof n==='number'?'₹'+n.toLocaleString('en-IN',{maximumFractionDigits:2}):'Needs verification';
+function markupPreview(n){if(typeof n!=='number')return 'Quoted rate missing';const pct=Number($('hotelMarkup').value)||0;try{return fmt(DBestHotelFlow.markup(n,pct))+' (before final taxes)'}catch{return 'Owner markup invalid'}}
 function filtered(){const q=$('search').value.toLowerCase().trim(),v=$('decisionFilter').value;
  return records.map((r,i)=>({r,i})).filter(({r})=>(v==='all'||r.decision===v)&&(!q||[r.id,r.hotelId,r.hotel,r.room,r.occupancy].some(x=>String(x||'').toLowerCase().includes(q))));
 }
+$('hotelMarkup').addEventListener('change',()=>render());
 function metrics(){const m=DBestTariffReview.summary(records);['total','hold','verify','reject'].forEach(k=>$(k).textContent=m[k==='total'?'total':k.toUpperCase()].toLocaleString('en-IN'));$('download').disabled=!records.length;}
 function render(){
  metrics();const all=filtered(),size=Number($('pageSize').value)||25,max=Math.max(1,Math.ceil(all.length/size));page=Math.max(0,Math.min(page,max-1));const shown=all.slice(page*size,(page+1)*size);
@@ -96,16 +101,17 @@ function render(){
  $('prev').disabled=page===0;$('next').disabled=page>=max-1||!records.length;
  $('tbody').innerHTML=shown.length?shown.map(({r,i})=>'<tr><td><b>'+esc(r.hotel)+'</b><small>'+esc(r.id)+' • '+esc(r.hotelId)+'</small></td>'+
  '<td>'+esc(r.room)+'<small>'+esc(r.occupancy)+' • '+esc(r.meal)+'</small></td>'+
- '<td><span class="amount">'+fmt(r.amount)+'</span><small>'+esc(r.sourceReview)+'</small></td>'+
+ '<td><span class="amount">'+fmt(r.amount)+'</span><small>DBest: auto-accepted from outreach</small><small>Indicative with Owner markup: '+esc(markupPreview(r.amount))+'</small><small>'+esc(r.sourceReview)+'</small></td>'+
  '<td>'+esc(r.taxes)+'<small>'+esc(r.validity)+' · '+esc(r.cancellation)+'</small></td>'+
- '<td><select class="field-decision" aria-label="Review recommendation" data-index="'+i+'" data-field="decision">'+['HOLD','VERIFY','REJECT'].map(d=>'<option '+(r.decision===d?'selected ':'')+'value="'+d+'">'+({HOLD:'Hold',VERIFY:'Needs verification',REJECT:'Reject'}[d])+'</option>').join('')+'</select></td>'+
- '<td><input class="field-note" data-index="'+i+'" data-field="note" maxlength="1000" type="text" placeholder="Reason / missing terms…" value="'+esc(r.note)+'"><small>No auto-publishing</small></td></tr>').join(''):'<tr><td colspan="6" class="muted">No records match. Change your filters or load a CSV.</td></tr>';
+ '<td><select class="field-decision" aria-label="Review recommendation" data-index="'+i+'" data-field="decision">'+['HOLD','VERIFY','REJECT'].map(d=>'<option '+(r.decision===d?'selected ':'')+'value="'+d+'">'+({HOLD:'Reconfirm room',VERIFY:'Check quote details',REJECT:'Exclude from selling'}[d])+'</option>').join('')+'</select></td>'+
+ '<td><input class="field-note" data-index="'+i+'" data-field="note" maxlength="1000" type="text" placeholder="Reason / missing terms…" value="'+esc(r.note)+'"><small>Commercially auto-accepted · no instant booking</small></td></tr>').join(''):'<tr><td colspan="6" class="muted">No records match. Change your filters or load a CSV.</td></tr>';
 }
 $('file').addEventListener('change',async e=>{
  const file=e.target.files&&e.target.files[0];if(!file)return;
  try {
   if(file.size>8000000) throw new Error('8 MB file limit exceeded');
   const result=DBestTariffReview.importQueue(await file.text());
+  if(!result.records.every(r=>r.commercialApproval==='AUTO_ACCEPTED_DBEST'))throw new Error('Commercial intake policy missing');
   records=result.records;warnings=result.warnings;page=0;
   $('status').textContent=result.count.toLocaleString('en-IN')+' lines loaded from '+(result.sourceType==='hotel_rate_history'?'Rate History':'Owner Approval Queue')+' into this browser only';
   $('messages').textContent=warnings.slice(0,10).join('\n')+(warnings.length>10?'\n…plus '+(warnings.length-10)+' further warnings':'');
