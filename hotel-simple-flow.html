@@ -125,7 +125,7 @@ function card(h){
  '<div class="tags"><span class="tag">Real property</span><span class="tag">'+(h.rateCount?html(h.rateCount+' received supplier quote(s)'):'Room type to confirm')+'</span><span class="tag">Availability on request</span></div>'+
  '<div class="direct-panel">'+roomSelect+'<div class="booking-row"><button type="button" class="btn" data-book="'+html(h.id)+'">Book with DBest</button></div><small>Direct booking enquiry — DBest will confirm room availability, final taxes and selling price before booking or payment.</small></div>'+
  '<div class="prices">'+rows+'</div><div class="advantage"><b>DBest Advantage</b><span>Direct contracted-hotel enquiry and assisted booking. Actual ₹ savings will appear only after matching verified OTA rates.</span></div>'+
- '<div class="fine">No verified price comparison yet. No reservation or room hold is created by this request.</div></div></article>';
+ '<div class="fine">No verified comparison yet. No reservation or room hold is created by this request.</div></div></article>';
 }
 function render(){
  const search=$('hotelSearch').value.trim().toLowerCase();
