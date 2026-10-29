@@ -102,7 +102,7 @@ fetch('/api/hotel-catalog',{cache:'no-store',credentials:'same-origin'})
     rateCount:h.rateCount||0,roomTypes:h.rooms||[]};
  });
  fillCities();render();
- $('searchSummary').textContent=hotels.length+' hotel partners with outreach quotations · booking price subject to confirmation';
+ $('searchSummary').textContent=hotels.length+' hotel partners with outreach quotations · '+(data.snapshotGeneratedAt?'snapshot '+new Date(data.snapshotGeneratedAt).toLocaleString('en-IN')+' · ':'')+'booking price subject to confirmation';
 }).catch(()=>{$('searchSummary').textContent='Featured licensed sample hotels · connected catalogue temporarily unavailable';});
 })();
 </script></body></html>
