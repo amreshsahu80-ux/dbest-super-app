@@ -165,7 +165,8 @@ test('B2C comparison and DBest selling price preview are explicit and do not inf
  const page=fs.readFileSync('hotel-simple-flow.html','utf8');
  assert.match(page,/View DBest Special Rates/);
  assert.match(page,/view=offers&hotelId=/);
- assert.match(page,/PUBLIC B2C OTA selling prices/);
+ assert.match(page,/Public B2C/);
+ assert.match(page,/data-ota=/);
  assert.match(page,/view=offers-summary/);
  assert.match(page,/DBest Special Rate/);
  assert.match(page,/Open consumer hotel search/);
