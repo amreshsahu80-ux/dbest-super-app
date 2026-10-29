@@ -142,7 +142,7 @@ test('guest UI never auto-charges on catalogue load; public OTA requests require
  const page=fs.readFileSync('hotel-simple-flow.html','utf8');
  assert.match(page,/data-ota=/);
  assert.match(page,/e\.target\.closest\('button\[data-ota\]'\)/);
- assert.match(page,/fetch\('\/api\/hotel-ota-b2c\?'/);
+ assert.match(page,/fetch\('\/api\/hotel-google-b2c\?'/);
  assert.match(page,/room, taxes and stay terms/);
  const inline=[...page.matchAll(/<script>\s*([\s\S]+?)<\/script>/g)];
  for(const part of inline)new vm.Script(part[1]);
