@@ -23,7 +23,9 @@ label{display:block;font-size:11px;color:#566d84;font-weight:850;margin-bottom:7
 </form>
 <div class="notice"><b>Important:</b> This is a design-and-booking-request preview, not connected live inventory. Hotel photos are independently licensed where shown; prices, discounts and availability are intentionally <b>not invented</b>. An automatically received hotel quote can enter the DBest catalogue, but the hotel must confirm the requested dates and final payable amount before a reservation is confirmed.</div>
 <div class="sectionhead"><div><h2>Featured properties</h2><div class="muted" id="searchSummary">Actual property photography where licensed</div></div><div class="muted">INR · same-room OTA comparison activates when authorized feeds are connected</div></div>
+<div style="max-width:450px;margin:0 0 15px"><label for="hotelSearch">Search property name or city</label><input class="field" id="hotelSearch" type="search" placeholder="Search contracted properties…" autocomplete="off"></div>
 <section class="grid" id="results" aria-live="polite"></section>
+<div style="text-align:center;margin:20px"><button id="loadMore" type="button" class="btn secondary" hidden>Show 30 more hotels</button></div>
 <section class="simple-guide"><h2 style="margin:0 0 15px">How DBest booking will work</h2><div class="steps"><div class="step"><b>1. Supplier rate automatically received</b><p>Hotel outreach responses enter the DBest catalogue. Owner controls selling markup privately.</p></div><div class="step"><b>2. Compare matching live prices</b><p>Display actual OTA rates and savings only for identical dates, room, occupancy, meals, cancellation terms and tax-inclusive totals.</p></div><div class="step"><b>3. Request a direct booking</b><p>Send the requested stay details to DBest. Confirmation and payment follow only after hotel inventory and the final amount are verified.</p></div></div></section>
 </main>
 <dialog class="dialog" id="requestModal"><div class="d-head"><h2>Request direct booking</h2><div class="muted">This is a booking request, not a confirmed reservation.</div></div><div class="d-body"><p>Share these stay details with DBest. Our team must confirm exact room inventory, final taxes and cancellation terms before you make payment.</p><textarea readonly id="requestText"></textarea><p class="fine">No payment will be collected on this preview and no room is held by this action.</p></div><div class="d-actions"><button class="btn secondary" id="close" type="button">Close</button><button class="btn secondary" id="copy" type="button">Copy request</button><a class="btn" id="email" href="#" style="text-decoration:none;display:grid;place-items:center">Email DBest booking team</a></div></dialog>
@@ -45,6 +47,7 @@ fillCities();
 function iso(d){const p=n=>String(n).padStart(2,'0');return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())}
 const today=new Date(),tomorrow=new Date(today);tomorrow.setDate(today.getDate()+1);const dayAfter=new Date(tomorrow);dayAfter.setDate(tomorrow.getDate()+1);
 $('checkIn').min=iso(today);$('checkIn').value=iso(tomorrow);$('checkOut').min=iso(tomorrow);$('checkOut').value=iso(dayAfter);
+let visibleCount=30;
 let state={city:'all',checkIn:$('checkIn').value,checkOut:$('checkOut').value,adults:2,rooms:1};
 const platforms=['MakeMyTrip','Booking.com','Goibibo'];
 function card(h){
@@ -58,8 +61,10 @@ function card(h){
  '<div class="bottom"><button type="button" class="btn" data-book="'+html(h.id)+'">Request direct booking</button></div></div></article>';
 }
 function render(){
- const out=hotels.filter(h=>state.city==='all'||h.city===state.city);
- $('results').innerHTML=out.map(card).join('')||'<p>No matching sample properties. Choose another destination.</p>';
+ const search=$('hotelSearch').value.trim().toLowerCase();
+ const out=hotels.filter(h=>(state.city==='all'||h.city===state.city)&&(!search||(h.name+' '+h.city).toLowerCase().includes(search)));
+ $('results').innerHTML=out.slice(0,visibleCount).map(card).join('')||'<p>No matching contracted hotels. Choose another destination.</p>';
+ $('loadMore').hidden=out.length<=visibleCount;
  $('searchSummary').textContent=out.length+' properties · supplier quotation received where indicated · licensed photos when available';
  $('results').querySelectorAll('img[data-property-image]').forEach(img=>img.addEventListener('error',()=>{
   img.style.display='none';const no=document.createElement('div');no.className='noimg';no.textContent='Property image currently unavailable';img.parentNode.appendChild(no);
@@ -71,8 +76,10 @@ $('searchForm').addEventListener('submit',e=>{
  const checkIn=$('checkIn').value,checkOut=$('checkOut').value;
  if(!checkIn||!checkOut||checkOut<=checkIn){alert('Please select a valid check-in and check-out.');return}
  const [adults,rooms]=$('guests').value.split(':').map(Number);
- state={city:$('city').value,checkIn,checkOut,adults,rooms};render();
+ state={city:$('city').value,checkIn,checkOut,adults,rooms};visibleCount=30;render();
 });
+$('loadMore').addEventListener('click',()=>{visibleCount+=30;render()});
+$('hotelSearch').addEventListener('input',()=>{visibleCount=30;render()});
 $('results').addEventListener('click',e=>{
  const b=e.target.closest('button[data-book]');if(!b)return;
  const h=hotels.find(h=>h.id===b.dataset.book);if(!h)return;
