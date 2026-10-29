@@ -61,3 +61,40 @@ test('authenticated Owner workbench loads only the private catalog and never exp
  assert.match(guest,/fetch\('\/api\/hotel-catalog'/);
  assert.doesNotMatch(guest,/view=owner/);
 });
+
+test('deployed private snapshot API returns only public hotel metadata to guests',async()=>{
+ const sample=bridge.build(hotelsHeader,hotelRows,ratesHeader,rateRows);
+ sample.snapshotGeneratedAt='2026-10-30T00:00:00.000Z';
+ const source=fs.readFileSync('hotel-review/hotel-catalog-api.template.cjs','utf8')
+  .replace('__PRIVATE_SNAPSHOT__',JSON.stringify(sample));
+ const moduleStub={exports:{}};
+ const auth={_test:{cookieToken:()=>'',validateOwner:async()=>false}};
+ vm.runInNewContext(source,{module:moduleStub,require:()=>auth,URL,process:{env:{}},console});
+ const handler=moduleStub.exports;
+ function reply(){
+  const headers={};
+  return {res:{statusCode:200,setHeader(k,v){headers[k.toLowerCase()]=v;},end(txt){this.body=JSON.parse(txt)}},headers};
+ }
+ let call=reply();
+ await handler({method:'GET',url:'/api/hotel-catalog',headers:{host:'dbest-hotel-review-preview.vercel.app'}},call.res);
+ assert.equal(call.res.statusCode,200);
+ assert.equal(call.res.body.hotels.length,1);
+ assert.equal(call.res.body.snapshotGeneratedAt,sample.snapshotGeneratedAt);
+ const payload=JSON.stringify(call.res.body);
+ for(const forbidden of ['4725','4500','email-id','sourceRef','commercialApproval'])
+  assert.equal(payload.includes(forbidden),false,'Guest price disclosure: '+forbidden);
+ call=reply();
+ await handler({method:'GET',url:'/api/hotel-catalog?view=owner',headers:{host:'dbest-hotel-review-preview.vercel.app'}},call.res);
+ assert.equal(call.res.statusCode,401);
+ assert.match(call.res.body.error,/owner_session_required/);
+ auth._test.cookieToken=()=> 'test-owner-session';
+ auth._test.validateOwner=async()=>true;
+ call=reply();
+ await handler({method:'GET',url:'/api/hotel-catalog?view=owner&offset=0&limit=2',headers:{host:'dbest-hotel-review-preview.vercel.app'}},call.res);
+ assert.equal(call.res.statusCode,200);
+ assert.equal(call.res.body.rows[0].amount,4725);
+ assert.equal(call.headers['cache-control'].includes('no-store'),true);
+ call=reply();
+ await handler({method:'GET',url:'/api/hotel-catalog',headers:{host:'dbest4u.com'}},call.res);
+ assert.equal(call.res.statusCode,403);
+});
