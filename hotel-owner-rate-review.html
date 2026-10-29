@@ -106,6 +106,47 @@ function render(){
  '<td><select class="field-decision" aria-label="Review recommendation" data-index="'+i+'" data-field="decision">'+['HOLD','VERIFY','REJECT'].map(d=>'<option '+(r.decision===d?'selected ':'')+'value="'+d+'">'+({HOLD:'Reconfirm room',VERIFY:'Check quote details',REJECT:'Exclude from selling'}[d])+'</option>').join('')+'</select></td>'+
  '<td><input class="field-note" data-index="'+i+'" data-field="note" maxlength="1000" type="text" placeholder="Reason / missing terms…" value="'+esc(r.note)+'"><small>Commercially auto-accepted · no instant booking</small></td></tr>').join(''):'<tr><td colspan="6" class="muted">No records match. Change your filters or load a CSV.</td></tr>';
 }
+let ownerCatalogueLoading=false;
+function normalizeOwnerRate(r){
+ return {...r,sourceReference:r.sourceRef||'',sourceReview:'Auto-accepted from Hotel Outreach',
+  sourceDecision:'AUTO_ACCEPTED_DBEST',sourceGate:'BOOKING_CONFIRMATION_REQUIRED',
+  decision:'HOLD',note:'',reviewer:'',reviewedAt:''};
+}
+async function loadOwnerCatalogue(){
+ if(ownerCatalogueLoading)return;
+ ownerCatalogueLoading=true;
+ $('status').textContent='Loading the private Hotel Outreach catalogue…';
+ try{
+  const limit=200,head=await fetch('/api/hotel-catalog?view=owner&offset=0&limit='+limit,
+   {credentials:'same-origin',cache:'no-store'});
+  if(!head.ok)throw new Error('Owner catalogue access denied or unavailable');
+  const first=await head.json();
+  if(!Array.isArray(first.rows)||!Number.isInteger(first.total))throw Error('Invalid private catalogue response');
+  const all=[...first.rows],total=Math.min(first.total,10000);
+  for(let offset=limit;offset<total;offset+=1000){
+    const offsets=Array.from({length:5},(_,i)=>offset+i*limit).filter(n=>n<total);
+    const parts=await Promise.all(offsets.map(async start=>{
+      const res=await fetch('/api/hotel-catalog?view=owner&offset='+start+'&limit='+limit,
+        {credentials:'same-origin',cache:'no-store'});
+      if(!res.ok)throw Error('Owner session expired during catalogue load');
+      const payload=await res.json();
+      if(!Array.isArray(payload.rows))throw Error('Invalid page from hotel catalogue');
+      return payload.rows;
+    }));
+    for(const part of parts)all.push(...part);
+    $('status').textContent='Loading authenticated supplier rates: '+all.length.toLocaleString('en-IN')+
+     ' of '+total.toLocaleString('en-IN');
+  }
+  records=all.map(normalizeOwnerRate);warnings=[];page=0;render();
+  $('status').textContent=records.length.toLocaleString('en-IN')+
+   ' outreach tariffs automatically accepted by DBest (private Owner catalogue; snapshot).';
+  $('messages').textContent='All bookings still require hotel inventory and final tax confirmation. Rates are not publicly published.';
+ }catch(e){
+  $('status').textContent='Private catalogue not loaded. You may still use a local CSV.';
+  $('messages').textContent=String(e.message||e);
+ }finally{ownerCatalogueLoading=false}
+}
+document.addEventListener('dbest:owner-authenticated',loadOwnerCatalogue);
 $('file').addEventListener('change',async e=>{
  const file=e.target.files&&e.target.files[0];if(!file)return;
  try {
@@ -158,6 +199,7 @@ function unlocked(ok,message){
  $('hotelOwnerWorkbench').hidden=!ok;
  $('hotelOwnerSignOut').hidden=!ok;
  if(message)status.textContent=message;
+ if(ok)document.dispatchEvent(new Event('dbest:owner-authenticated'));
 }
 function errorText(code,stage){
  if(code==='owner_auth_unavailable'){
