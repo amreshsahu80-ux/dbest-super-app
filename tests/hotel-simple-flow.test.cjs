@@ -79,6 +79,31 @@ test('new guest screen uses licensed property images and no fictional OTA rates'
  const scripts=[...page.matchAll(/<script>\s*([\s\S]+?)<\/script>/g)];
  assert.equal(scripts.length,1);scripts.forEach(s=>new vm.Script(s[1]));
 });
+
+test('editable destination combines catalogue cities, property names, partial matching, and mobile-accessible suggestions',()=>{
+ const page=fs.readFileSync('hotel-simple-flow.html','utf8');
+ assert.match(page,/<input id="destination"[^>]*type="search"[^>]*role="combobox"/);
+ assert.match(page,/id="destinationSuggestions"[^>]*role="listbox"/);
+ assert.match(page,/aria-expanded="false"/);
+ assert.match(page,/function buildDestinationIndex\(/);
+ assert.match(page,/function showDestinations\(/);
+ assert.match(page,/No catalogue suggestions found/);
+ assert.match(page,/if\(document\.activeElement===\$\('destination'\)\)showDestinations\(\)/);
+ const start=page.indexOf('function destinationMatches(');
+ const end=page.indexOf('function closeDestinations()',start);
+ assert.ok(start>0&&end>start);
+ const suggestion=vm.runInNewContext(page.slice(start,end)+'\ndestinationMatches');
+ const items=[
+  {value:'Jaipur',kind:'city'}, {value:'Udaipur',kind:'city'},
+  {value:'Rambagh Palace',kind:'property'}, {value:'Guwahati',kind:'city'},
+  {value:'Royal Orchid Jaipur',kind:'property'}
+ ];
+ assert.deepEqual(Array.from(suggestion('jai',items),v=>v.value),['Jaipur','Royal Orchid Jaipur']);
+ assert.deepEqual(Array.from(suggestion('PALACE',items),v=>v.value),['Rambagh Palace']);
+ assert.deepEqual(Array.from(suggestion('UDA',items),v=>v.value),['Udaipur']);
+ assert.equal(suggestion('not a city',items).length,0);
+});
+
 test('owner markup is private and auto-acceptance does not enable unauthenticated publication',()=>{
  const owner=fs.readFileSync('hotel-owner-rate-review.html','utf8');
  assert.match(owner,/id="hotelOwnerWorkbench" hidden/);
