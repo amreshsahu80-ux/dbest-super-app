@@ -121,4 +121,8 @@ async function handler(req,res){
   note:'Direct bookings require hotel confirmation. Live OTA rates and savings are not connected.'});
 }
 module.exports=handler;
+module.exports._publicHotelById=function(id){
+ const hotel=DATA.publicHotels.find(h=>h.id===id);
+ return hotel?Object.freeze({id:hotel.id,hotel:hotel.hotel,city:hotel.city,state:hotel.state}):null;
+};
 module.exports._test={validHost,ownerMarkup,taxStatus,pricedOffers,sellingSummaries,isAccommodationRoomRate};
