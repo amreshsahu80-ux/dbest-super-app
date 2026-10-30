@@ -318,11 +318,11 @@ $('guestContactForm').addEventListener('submit',event=>{
  event.preventDefault();
  if(!bookingSelection||!$('guestContactForm').reportValidity())return;
  const name=$('guestFullName').value.trim(),email=$('guestEmail').value.trim(),phone=$('guestPhone').value.trim();
- if(name.length<2||!/^\\+?[0-9() .-]{7,25}$/.test(phone)){
+ if(name.length<2||!/^\+?[0-9() .-]{7,25}$/.test(phone)){
   $('bookingComposeStatus').textContent='Please enter a valid full name and telephone number.';return;
  }
  const req=DBestHotelFlow.bookingRequest({...bookingSelection,meal:'To confirm'});
- const body='Guest name: '+name+'\\nEmail: '+email+'\\nTelephone: '+phone+'\\n\\n'+req.body;
+ const body='Guest name: '+name+'\nEmail: '+email+'\nTelephone: '+phone+'\n\n'+req.body;
  $('requestText').value=body;
  $('requestText').hidden=false;
  $('email').href='mailto:support@thebestservices.org.in?subject='+encodeURIComponent(req.subject)+'&body='+encodeURIComponent(body);
