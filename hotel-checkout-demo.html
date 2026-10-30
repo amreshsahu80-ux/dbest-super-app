@@ -412,7 +412,10 @@ function scheduleVisibleGuestRates(){
  if(guestRateTimer!==null)clearTimeout(guestRateTimer);
  if(![1,2].includes(state.adults)||state.rooms!==1)return;
  const guests=state.adults,rooms=state.rooms;
- const matches=hotels.filter(searchableHotel).slice(0,12);
+ const matches=hotels.filter(searchableHotel).sort((a,b)=>{
+  const rank=h=>h.id==='HOTEL-NANDAN-GHY'?0:autoMappedHotels.has(h.id)?1:2;
+  return rank(a)-rank(b)||a.name.localeCompare(b.name);
+ }).slice(0,12);
  const ids=matches.filter(h=>{
   const key=currentGuestRateKey(h), cached=guestRateCache.get(key);
   if(cached&&Date.now()-cached.checkedAt<15*60*1000){h.guestRate=cached.value;return false}
@@ -478,7 +481,8 @@ function renderComparisonHeadline(matches){
    (cheapest&&cheapest.pricePerNight<best.price?' Another OTA has a lower displayed headline price.':'')+'</p>';
   return;
  }
- const loading=selected.some(h=>h.otaStatus?.startsWith('Checking'))||!matches.length===false&&selected.some(h=>h.guestRateLoading);
+ const loading=selected.some(h=>h.otaStatus?.startsWith('Checking')||h.guestRateLoading)||
+   loaded.some(h=>h.guestRate===null||h.guestRate===undefined);
  const onlyNoMapping=selected.length===0&&matches.length>0;
  const blocked=selected.some(h=>/limit reached|unavailable|could not be verified|No verified live/i.test(h.otaStatus||''));
  box.innerHTML='<strong>'+ (onlyNoMapping?'Public OTA price comparison not yet connected for these hotels':
