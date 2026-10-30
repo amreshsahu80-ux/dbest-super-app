@@ -239,17 +239,94 @@ $('results').addEventListener('error',event=>{
  media.querySelector('[data-photo-credit]')?.remove();
  image.remove();
 },true);
+function validPublicRateStay(){
+ return state.checkIn&&state.checkOut&&state.checkOut>state.checkIn&&state.adults===2&&state.rooms===1;
+}
+function searchableHotel(h){
+ const destination=state.destination.trim().toLocaleLowerCase();
+ const search=$('hotelSearch').value.trim().toLocaleLowerCase();
+ const locality=[h.city,h.area].join(' ').toLocaleLowerCase();
+ const hotel=[h.name,h.city,h.area].join(' ').toLocaleLowerCase();
+ return (!destination||locality.includes(destination)||h.name.toLocaleLowerCase().includes(destination)) &&
+  (!search||hotel.includes(search));
+}
+function autoRateCandidates(){
+ const query=(state.destination+' '+$('hotelSearch').value).trim().toLocaleLowerCase();
+ if(query.length<3||!validPublicRateStay())return [];
+ return hotels.filter(h=>autoMappedHotels.has(h.id)&&searchableHotel(h))
+  .sort((a,b)=>{
+   const rank=h=>h.name.toLocaleLowerCase()===query?0:h.name.toLocaleLowerCase().startsWith(query)?1:2;
+   return rank(a)-rank(b)||a.name.localeCompare(b.name);
+  }).slice(0,AUTO_MAX_HOTELS_PER_SEARCH);
+}
+function scheduleVisibleAutoRateLookups(){
+ if(autoCheckTimer!==null)clearTimeout(autoCheckTimer);
+ const candidates=autoRateCandidates();
+ if(!candidates.length)return;
+ autoCheckTimer=setTimeout(()=>{
+  autoCheckTimer=null;
+  for(const h of candidates)void loadPublicOtaRates(h,false);
+ },650);
+}
+async function loadPublicOtaRates(h,force=false){
+ const stayKey=currentStayKey(),key=h.id+'|'+stayKey;
+ if(!validPublicRateStay()){
+  h.otaStatus='This comparison supports valid dates, 2 adults and 1 room.';
+  render();return;
+ }
+ if(!autoMappedHotels.has(h.id)){
+  h.otaStatus='Exact public OTA property listing is not mapped yet. No invented rate.';
+  render();return;
+ }
+ const checked=Date.parse(h.publicOta?.checkedAt||'');
+ if(!force&&h.publicOta?.live&&h.publicOta.stay&&
+   h.publicOta.stay.checkIn===state.checkIn&&h.publicOta.stay.checkOut===state.checkOut&&
+   h.publicOta.stay.adults===state.adults&&h.publicOta.stay.rooms===state.rooms&&
+   Date.now()-checked<AUTO_RATE_FRESH_MS)return;
+ if(!force&&h.lastAutoAttemptKey===key&&Date.now()-h.lastAutoAttemptAt<AUTO_ERROR_COOLDOWN_MS)return;
+ if(autoInFlight.has(key))return autoInFlight.get(key);
+ h.lastAutoAttemptKey=key;h.lastAutoAttemptAt=Date.now();
+ h.otaStatus='Checking live public OTA rates automatically…';
+ const args=new URLSearchParams({hotelId:h.id,checkIn:state.checkIn,checkOut:state.checkOut,
+  adults:String(state.adults),rooms:String(state.rooms)});
+ const job=(async()=>{
+  try{
+   const resp=await fetch('/api/hotel-google-b2c?'+args.toString(),{credentials:'same-origin',cache:'no-store'});
+   const payload=await resp.json();
+   if(stayKey!==currentStayKey())return;
+   if(!resp.ok)throw Error('Provider temporarily unavailable');
+   if(payload.live&&Array.isArray(payload.providers)&&payload.stay&&
+      payload.stay.checkIn===state.checkIn&&payload.stay.checkOut===state.checkOut&&
+      payload.stay.adults===state.adults&&payload.stay.rooms===state.rooms){
+    h.publicOta=payload;
+    h.otaStatus='Public OTA references checked '+new Date(payload.checkedAt).toLocaleString('en-IN')+
+     '. Rates refresh on a new search; final room and tax terms may differ.';
+   }else{
+    h.publicOta=null;
+    h.otaStatus=payload.status==='PILOT_HOURLY_LIMIT'?'Price lookup limit reached. Try again later.':
+      payload.status==='PAGE_DATES_OR_PROPERTY_NOT_VERIFIED'?'Exact property or stay could not be verified.':
+      payload.status==='PROPERTY_NOT_MAPPED'?'Public listing not verified for this hotel.':
+      payload.status==='OCCUPANCY_NOT_SUPPORTED'?'Only 2 adults / 1 room supported in this pilot.':
+      'No verified live OTA price available for the selected stay.';
+   }
+  }catch{
+   if(stayKey===currentStayKey())h.otaStatus='Live OTA lookup unavailable. DBest contracted reference remains visible.';
+  }finally{
+   if(stayKey===currentStayKey())render();
+  }
+ })();
+ autoInFlight.set(key,job);
+ render();
+ try{await job}finally{autoInFlight.delete(key)}
+}
 function render(){
  const search=$('hotelSearch').value.trim().toLowerCase();
  const destination=state.destination.toLocaleLowerCase();
- const out=hotels.filter(h=>{
-  const locality=[h.city,h.area].join(' ').toLocaleLowerCase();
-  const hotel=[h.name,h.city,h.area].join(' ').toLocaleLowerCase();
-  return (!destination||locality.includes(destination)||h.name.toLocaleLowerCase().includes(destination)) && (!search||hotel.includes(search));
- });
+ const out=hotels.filter(searchableHotel);
  $('results').innerHTML=out.slice(0,visibleCount).map(card).join('')||'<p>No contracted hotels match this destination yet. Try a nearby city or another spelling.</p>';
  $('loadMore').hidden=out.length<=visibleCount;
- $('searchSummary').textContent=out.length+' properties · supplier quotation received where indicated · licensed photos when available';
+ $('searchSummary').textContent=out.length+' hotel matches · DBest received rates shown upfront · automatic OTA prices for verified listings';
+ scheduleVisibleAutoRateLookups();
 }
 function currentStayKey(){return [state.checkIn,state.checkOut,state.adults,state.rooms].join('|')}
 function syncStayWithoutSearch(){
@@ -265,7 +342,10 @@ $('searchForm').addEventListener('submit',e=>{
  const checkIn=$('checkIn').value,checkOut=$('checkOut').value;
  if(!checkIn||!checkOut||checkOut<=checkIn){alert('Please select a valid check-in and check-out.');return}
  const [adults,rooms]=$('guests').value.split(':').map(Number);
- state={destination:$('destination').value.trim(),checkIn,checkOut,adults,rooms};hotels.forEach(h=>{h.publicOta=null;h.otaStatus='';});visibleCount=30;render();
+ const previousStay=currentStayKey();
+ state={destination:$('destination').value.trim(),checkIn,checkOut,adults,rooms};
+ if(previousStay!==currentStayKey())hotels.forEach(h=>{h.publicOta=null;h.otaStatus=''});
+ visibleCount=30;render();
 });
 $('destination').addEventListener('input',()=>{state.destination=$('destination').value.trim();visibleCount=30;showDestinations();render()});
 $('loadMore').addEventListener('click',()=>{visibleCount+=30;render()});
@@ -274,45 +354,9 @@ function moneyINR(amount){return '₹'+Number(amount).toLocaleString('en-IN',{ma
 $('results').addEventListener('click',async e=>{
  const otaButton=e.target.closest('button[data-ota]');
  if(otaButton){
-  const h=hotels.find(x=>x.id===otaButton.dataset.ota);if(!h)return;
-  if(!state.checkIn||!state.checkOut||state.checkOut<=state.checkIn){
-   h.otaStatus='Select valid check-in and check-out dates first.';render();return;
-  }
-  if(state.rooms!==1){h.otaStatus='Public OTA lookup currently supports one room per comparison.';render();return}
-  const requestStayKey=currentStayKey();
-  h.otaStatus='Checking Google Hotels public B2C offers for selected stay…';render();
-  try{
-   const args=new URLSearchParams({hotelId:h.id,checkIn:state.checkIn,checkOut:state.checkOut,
-    adults:String(state.adults),rooms:String(state.rooms)});
-   // The isolated server verifies approved mapping before launching any browser.
-   const resp=await fetch('/api/hotel-google-b2c?'+args.toString(),{credentials:'same-origin',cache:'no-store'});
-   const payload=await resp.json();
-   if(requestStayKey!==currentStayKey())return; // discard a late response after the user changed dates or occupancy
-   if(!resp.ok)throw Error('Provider temporarily unavailable');
-   if(payload.live&&Array.isArray(payload.providers)){
-    h.publicOta=payload;
-    h.otaStatus='Public OTA prices from Google Hotels checked '+new Date(payload.checkedAt).toLocaleString('en-IN')+
-     '. Prices expire after 15 minutes; room, taxes and availability must be checked at checkout.';
-   }else{
-    h.publicOta=null;
-    h.otaStatus=payload.status==='BROWSER_PILOT_DISABLED'?'Public browser comparison has not been activated for this pilot deployment.':
-     payload.status==='GOOGLE_PUBLIC_BROWSER_UNAVAILABLE'?'Google Hotels browser could not verify prices. No rate substituted.':
-     payload.status==='PAGE_DATES_OR_PROPERTY_NOT_VERIFIED'?'Google Hotels did not confirm the exact property and stay dates.':
-     payload.status==='PROPERTY_NOT_MAPPED'?'Public Google Hotels listing has not yet been verified for this hotel. No rate shown.':
-     payload.status==='OCCUPANCY_NOT_SUPPORTED'?'This public-rate pilot currently supports 2 adults, 1 room only.':
-     payload.status==='PILOT_HOURLY_LIMIT'?'Browser rate-lookup pilot limit reached. Please try another time.':
-     payload.status==='NO_VERIFIED_PUBLIC_GOOGLE_B2C_OFFERS'?'No publicly verified OTA prices found for these dates.':
-     payload.status==='NO_VERIFIED_PUBLIC_PAGE_OFFERS'? 'Free public-page trial checked MakeMyTrip and Goibibo; no verified date-specific rates returned.':
-     payload.status==='PUBLIC_PAGE_PILOT_NOT_MAPPED'?'No direct public OTA page verified yet for this hotel.':
-     payload.status==='PAID_LOOKUPS_DISABLED'?'Automatic B2C comparison not connected for this property; free page pilot is limited to verified listings.':
-     payload.status==='PROVIDER_CREDENTIALS_MISSING'?'OTA API account credentials are not connected.':
-     payload.status==='PUBLIC_DISPLAY_PERMISSION_NOT_CONFIRMED'?'Commercial price-display authorization is not configured.':
-     payload.status==='SPENDING_LIMIT_NOT_CONFIRMED'?'Provider account spending limit must be enabled.':
-     payload.status==='PROPERTY_NOT_EXACTLY_MATCHED'?'Hotel listing not matched with sufficient confidence. No price shown.':
-     'No verified public OTA prices returned for this stay.';
-   }
-  }catch{if(requestStayKey===currentStayKey())h.otaStatus='Public OTA rates unavailable. No prices were substituted.'}
-  render();return;
+  const h=hotels.find(x=>x.id===otaButton.dataset.ota);
+  if(h)await loadPublicOtaRates(h,true);
+  return;
  }
  const open=e.target.closest('button[data-offers]');
  if(open){
@@ -378,7 +422,7 @@ fetch('/api/hotel-ota-b2c?view=status',{credentials:'same-origin',cache:'no-stor
  .then(data=>{
   $('otaReadiness').textContent=data.liveConnected?
    'Public B2C OTA lookup ready · choose hotel and dates, then check prices':
-   'No paid OTA price API · Google Hotels browser comparison on mapped properties · choose dates and click Check';
+   'Type a destination/property: DBest references appear upfront and verified live OTA prices load automatically (3 pilot hotels).';
  })
  .catch(()=>{$('otaReadiness').textContent='Live B2C OTA feed status unavailable';});
 fetch('/api/hotel-catalog',{cache:'no-store',credentials:'same-origin'})
