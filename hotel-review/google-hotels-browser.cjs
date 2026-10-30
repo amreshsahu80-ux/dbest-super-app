@@ -22,13 +22,23 @@ const SOURCES=Object.freeze({
   hotel:'Royal Orchid Beach Resort & Spa Goa',city:'Salcete',
   query:'Royal Orchid Beach Resort & Spa Goa Salcete',
   pageName:'Royal Orchid Beach Resort & Spa',area:'Goa'
+ }),
+ 'DBEST-REPL-20261026-691':Object.freeze({
+  hotel:'Polo Hotel Agartala',city:'Agartala',
+  query:'Polo Hotel Agartala',
+  pageName:'Polo Hotel, Agartala',area:'Agartala'
+ }),
+ 'DBEST-REPL-20261026-632':Object.freeze({
+  hotel:'Spree Resort Sariska',city:'Alwar',
+  query:'Spree Resort Sariska Alwar',
+  pageName:'Spree Resort Sariska',area:'Alwar'
  })
 });
 const PROVIDERS=Object.freeze([
  'MakeMyTrip.com','Goibibo.com','Booking.com','Agoda',
  'Yatra.com','Cleartrip.com','Skyscanner','EaseMyTrip.com',
  'Expedia.co.in','Expedia.com','Hotels.com','Trip.com',
- 'Tripadvisor.in','Bluepillow.in'
+ 'Tripadvisor.in','Bluepillow.in','Traveloka.com','Etrip.net','Traveluro'
 ]);
 function token(date){
  const [y,m,d]=date.split('-').map(Number);
