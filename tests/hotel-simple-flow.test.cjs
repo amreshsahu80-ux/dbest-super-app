@@ -80,7 +80,7 @@ test('new guest screen uses licensed property images and no fictional OTA rates'
  const page=fs.readFileSync('hotel-simple-flow.html','utf8');
  assert.match(page,/Actual property photograph/);
  assert.match(page,/commons\.wikimedia\.org/);
- assert.match(page,/No verified comparison yet/);
+ assert.match(page,/Potential DBest price difference/);
  assert.match(page,/B2C price pending/);
  assert.match(page,/on-demand lookup|On-demand lookup/);
  assert.match(page,/Request direct booking/);
