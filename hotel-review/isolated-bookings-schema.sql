@@ -49,6 +49,34 @@ create table if not exists public.hotel_booking_requests (
  constraint hotel_voucher_gate check (
   status not in ('VOUCHER_ISSUED','COMPLETED') or voucher_reference is not null)
 );
+-- DBest internally manages room availability. The allocation is bound to an
+-- individual booking and cannot be supplied directly by the customer.
+-- The Owner must authenticate on the server before approving or releasing it.
+create table if not exists public.hotel_booking_internal_allocations (
+ id uuid primary key default gen_random_uuid(),
+ booking_id uuid not null unique references public.hotel_booking_requests(id),
+ owner_user_id uuid not null,
+ owner_verification_reference text not null unique,
+ hotel_id text not null,
+ room_confirmed text not null,
+ check_in date not null,
+ check_out date not null,
+ adults integer not null check (adults between 1 and 24),
+ rooms integer not null check (rooms between 1 and 8),
+ owner_approved boolean not null default false,
+ allocation_expires_at timestamptz not null,
+ created_at timestamptz not null default now(),
+ constraint allocation_valid_stay check(check_out>check_in)
+);
+create index if not exists hotel_internal_allocations_hotel_stay_idx
+ on public.hotel_booking_internal_allocations(hotel_id,check_in,check_out);
+alter table public.hotel_booking_internal_allocations enable row level security;
+revoke all on public.hotel_booking_internal_allocations from anon,authenticated,public;
+grant select,insert,update on public.hotel_booking_internal_allocations to service_role;
+-- The server must atomically reserve inventory and verify owner approval,
+-- matching booking/room/guest/stay, valid expiry and tax-inclusive total
+-- BEFORE creating any merchant payment order. Browser claims never suffice.
+
 create table if not exists public.hotel_booking_audit_events (
  id uuid primary key default gen_random_uuid(),
  booking_id uuid not null references public.hotel_booking_requests(id),
