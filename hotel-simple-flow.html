@@ -204,7 +204,7 @@ function card(h){
   '<div class="upfront-price"><small>Public OTA from · selected stay</small><strong>'+(cheapest?moneyINR(cheapest.pricePerNight):h.otaStatus&&h.otaStatus.startsWith('Checking')?'Checking…':'Awaiting live rate')+'</strong></div>'+
   '</div>';
  const advantageSummary=gap!==null&&gap>0?
-  '<div class="upfront-advantage"><strong>Potential DBest price difference '+moneyINR(gap)+'</strong><span> · '+gapPercent+'% vs cheapest listed OTA reference; <b>not verified savings</b></span></div>':
+  '<div class="upfront-advantage"><strong>Potential DBest savings* '+moneyINR(gap)+'</strong><span>'+gapPercent+'% compared with lowest listed OTA reference · <b>estimate only, not verified savings</b></span></div>':
   gap!==null&&gap<=0?
    '<div class="upfront-advantage neutral"><strong>Public OTA currently displays a lower reference</strong><span> · Check room details before choosing</span></div>':
    '<div class="upfront-advantage neutral"><strong>DBest Advantage · comparison '+(h.otaStatus&&h.otaStatus.startsWith('Checking')?'loading':'pending')+'</strong></div>';
