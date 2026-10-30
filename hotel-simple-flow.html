@@ -214,9 +214,6 @@ function render(){
  $('results').innerHTML=out.slice(0,visibleCount).map(card).join('')||'<p>No contracted hotels match this destination yet. Try a nearby city or another spelling.</p>';
  $('loadMore').hidden=out.length<=visibleCount;
  $('searchSummary').textContent=out.length+' properties · supplier quotation received where indicated · licensed photos when available';
- $('results').querySelectorAll('img[data-property-image]').forEach(img=>img.addEventListener('error',()=>{
-  img.style.display='none';const no=document.createElement('div');no.className='noimg';no.textContent='Property image currently unavailable';img.parentNode.appendChild(no);
- },{once:true}));
 }
 $('searchForm').addEventListener('submit',e=>{
  e.preventDefault();
