@@ -156,7 +156,7 @@ const today=new Date(),tomorrow=new Date(today);tomorrow.setDate(today.getDate()
 $('checkIn').min=iso(today);$('checkIn').value=iso(tomorrow);$('checkOut').min=iso(tomorrow);$('checkOut').value=iso(dayAfter);
 let visibleCount=30;
 let state={destination:'',checkIn:$('checkIn').value,checkOut:$('checkOut').value,adults:2,rooms:1};
-const autoMappedHotels=new Set(['HOTEL-NANDAN-GHY','HIST-016','DBEST-REPL-20261026-697','DBEST-REPL-20261024-138']);
+const autoMappedHotels=new Set(['HOTEL-NANDAN-GHY','HIST-016','DBEST-REPL-20261026-697','DBEST-REPL-20261024-138','DBEST-REPL-20261026-691','DBEST-REPL-20261026-632']);
 const autoInFlight=new Map();
 const guestRateCache=new Map(), guestRateInFlight=new Set();
 let guestRateTimer=null;
