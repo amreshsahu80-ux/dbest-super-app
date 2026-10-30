@@ -17,7 +17,12 @@ const SOURCES=Object.freeze({
   entity:'ChkImq6GmM_XyKKZARoML2cvMXE2YjZ6cnBwEAE'
  }),
  'HIST-016':Object.freeze({hotel:'Vivanta Guwahati',city:'Guwahati',entity:'CgsIr-bv8efM1eyfARAB'}),
- 'DBEST-REPL-20261026-697':Object.freeze({hotel:'Ginger Agartala',city:'Agartala',entity:'CgoI05W_ufDezpBjEAE'})
+ 'DBEST-REPL-20261026-697':Object.freeze({hotel:'Ginger Agartala',city:'Agartala',entity:'CgoI05W_ufDezpBjEAE'}),
+ 'DBEST-REPL-20261024-138':Object.freeze({
+  hotel:'Royal Orchid Beach Resort & Spa Goa',city:'Salcete',
+  query:'Royal Orchid Beach Resort & Spa Goa Salcete',
+  pageName:'Royal Orchid Beach Resort & Spa',area:'Goa'
+ })
 });
 const PROVIDERS=Object.freeze([
  'MakeMyTrip.com','Goibibo.com','Booking.com','Agoda',
@@ -47,6 +52,13 @@ function overviewUrl(entity,stay){
  u.searchParams.set('hl','en');
  u.searchParams.set('gl','in');
  u.searchParams.set('curr','INR');
+ return u.href;
+}
+function searchUrl(query,stay){
+ const u=new URL('https://www.google.com/travel/search');
+ u.searchParams.set('q',query);
+ u.searchParams.set('ts',encodeStay(stay));
+ u.searchParams.set('hl','en');u.searchParams.set('gl','in');u.searchParams.set('curr','INR');
  return u.href;
 }
 function displayedStayMatches(text,stay){
@@ -93,7 +105,7 @@ async function getPublicGoogleRates(hotel,stay,{puppeteer,chromium}={}){
   return {status:'PROPERTY_NOT_MAPPED',providers:[],live:false};
  if(stay.rooms!==1||stay.adults!==2)
   return {status:'OCCUPANCY_NOT_SUPPORTED',providers:[],live:false};
- const url=overviewUrl(mapped.entity,stay);
+ const url=mapped.query?searchUrl(mapped.query,stay):overviewUrl(mapped.entity,stay);
  const p=puppeteer||(await import('puppeteer-core')).default;
  const c=chromium||(await import('@sparticuz/chromium')).default;
  let browser;
@@ -111,10 +123,14 @@ async function getPublicGoogleRates(hotel,stay,{puppeteer,chromium}={}){
   await new Promise(resolve=>setTimeout(resolve,1100));
   const title=await page.title();
   const overview=await page.evaluate(()=>document.body?.innerText||'');
-  if(!title.includes(mapped.hotel)||!displayedStayMatches(overview,stay))
+  if(!title.includes(mapped.pageName||mapped.hotel)||
+     (mapped.area&&!overview.slice(0,1000).includes(mapped.area))||
+     !displayedStayMatches(overview,stay))
    return {status:'PAGE_DATES_OR_PROPERTY_NOT_VERIFIED',providers:[],live:false};
   if(!/\nCheck-out\n2\n/.test(overview))
    return {status:'PAGE_GUEST_COUNT_NOT_VERIFIED',providers:[],live:false};
+  let body=overview;
+  if(!mapped.query){
   const clicked=await page.evaluate(()=>{
    const btn=[...document.querySelectorAll('button')]
     .find(el=>String(el.innerText||'').startsWith('View more options'));
@@ -131,7 +147,8 @@ async function getPublicGoogleRates(hotel,stay,{puppeteer,chromium}={}){
    await page.goto(u.href,{waitUntil:'domcontentloaded',timeout:23000});
   }
   await new Promise(resolve=>setTimeout(resolve,1100));
-  const body=await page.evaluate(()=>document.body?.innerText||'');
+  body=await page.evaluate(()=>document.body?.innerText||'');
+  }
   if(!/\nCheck-out\n2\n/.test(body))
    return {status:'PRICE_PAGE_GUEST_COUNT_NOT_VERIFIED',providers:[],live:false};
   const providers=parsePrices(body);
@@ -149,4 +166,4 @@ async function getPublicGoogleRates(hotel,stay,{puppeteer,chromium}={}){
   if(browser)await browser.close();
  }
 }
-module.exports={SOURCES,PROVIDERS,encodeStay,overviewUrl,displayedStayMatches,parsePrices,getPublicGoogleRates};
+module.exports={SOURCES,PROVIDERS,encodeStay,overviewUrl,searchUrl,displayedStayMatches,parsePrices,getPublicGoogleRates};
