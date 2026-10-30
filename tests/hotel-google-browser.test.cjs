@@ -45,6 +45,14 @@ test('real browser lookup shape uses confirmed dates and never claims savings',a
  assert.equal(r.providers.find(x=>x.provider==='MakeMyTrip.com').pricePerNight,5707);
  assert.equal(closed,true);
 });
+test('Royal Orchid Goa query is limited to a known property and exact selected dates',()=>{
+ const mapping=google.SOURCES['DBEST-REPL-20261024-138'];
+ assert.equal(mapping.hotel,'Royal Orchid Beach Resort & Spa Goa');
+ assert.equal(mapping.city,'Salcete');
+ assert.match(google.searchUrl(mapping.query,stay),/q=Royal\+Orchid\+Beach\+Resort/);
+ assert.match(google.searchUrl(mapping.query,stay),/curr=INR/);
+ assert.equal(google.displayedStayMatches('Royal Orchid Beach Resort & Spa\nNov 15 – 16\nCheck-in\nCheck-out\n2',stay),true);
+});
 test('unmapped properties do not launch Chrome',async()=>{
  const r=await google.getPublicGoogleRates({id:'OTHER',hotel:'Hotel Nandan',city:'Guwahati'},stay);
  assert.equal(r.status,'PROPERTY_NOT_MAPPED');
