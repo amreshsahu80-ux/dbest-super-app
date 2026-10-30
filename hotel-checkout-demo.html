@@ -23,10 +23,27 @@ label{display:block;font-size:11px;color:#566d84;font-weight:850;margin-bottom:7
 #paymentDemoStage[hidden],#demoVoucherStage[hidden],#guestContactForm[hidden]{display:none!important}
 #requestModal{max-width:min(600px,94vw);max-height:90vh;overflow:auto}
 @media print{body>*:not(#requestModal){display:none!important}#requestModal{position:static;border:0;box-shadow:none;width:100%;max-width:100%;max-height:none}#requestModal>*:not(.d-body){display:none!important}#requestModal .demo-alert,#requestModal #demoSelectedStay,#requestModal #guestContactForm,#requestModal #paymentDemoStage,#requestModal .d-actions{display:none!important}}
+
+.ota-spotlight{display:flex;align-items:center;gap:16px;justify-content:space-between;border:1px solid #9bbfe0;background:#e9f4ff;border-radius:16px;padding:17px 20px;margin:18px 0}
+.ota-spotlight strong{font-size:18px;color:#134c83}.ota-spotlight p{margin:5px 0;color:#3c6282;font-size:13px;max-width:660px}
+.ota-spotlight button{flex-shrink:0}
+.comparison-headline{background:#fff;border:2px solid #b8d5ea;border-radius:14px;padding:18px 20px;margin:14px 0 20px;color:#173c64}
+.comparison-headline>p{margin:9px 0 0;color:#55718b;font-size:12px;line-height:1.6}
+.comparison-intro{font-size:15px;margin-bottom:12px;color:#244b69}
+.comparison-tiles{display:grid;grid-template-columns:1fr 1fr 1.4fr;gap:10px}
+.comparison-tiles>div{padding:13px;border-radius:10px;background:#eef6fc;border:1px solid #d4e5f0;min-width:0}
+.comparison-tiles small{display:block;color:#57768b;font-weight:800;font-size:11px}
+.comparison-tiles strong{display:block;color:#144d80;font-size:21px;line-height:1.3;margin-top:5px;overflow-wrap:anywhere}
+.comparison-tiles .advantage-tile{background:#e7f6ec;border-color:#a5dac0}.comparison-tiles .advantage-tile strong{color:#11613b;font-size:17px}
+.example-inline{background:transparent;padding:0;border:0;text-decoration:underline;color:#115fa5;font-weight:800}
+@media(max-width:750px){.ota-spotlight{flex-direction:column;align-items:stretch}.ota-spotlight button{width:100%}.comparison-tiles{grid-template-columns:1fr}.comparison-tiles strong{font-size:20px}}
 </style><script src="/hotel-review/simple-flow-policy.js"></script></head><body>
 <div class="top"><div class="wrap nav"><div class="logo">DBest Stays <small>Direct hotel booking · Price comparison</small></div><a href="/hotel-owner-rate-review.html">Owner tariff controls</a></div></div>
 <header class="hero"><div class="wrap"><div class="eyebrow">DBest Hotel Marketplace · pilot</div><h1>Compare hotels. Save when a real price match is available.</h1><p>Direct contracted hotel tariffs from our outreach network, paired with authorized live OTA rates where available. Compare contracted DBest rates with available public OTA prices first. Then test Book & Pay DBest, a simulated payment and a sample voucher.</p></div></header>
-<main><form class="search" id="searchForm">
+<main><section class="ota-spotlight" aria-label="DBest and public OTA comparison">
+<div><strong>Compare DBest hotel prices with public OTA rates</strong><p>Example search: <b>Hotel Nandan, Guwahati · 2 adults · 1 room · selected example dates</b>. Public prices load automatically if the rate source can verify the stay. Select your own hotel or dates below.</p></div>
+<button type="button" class="btn" id="exampleCompare">Show Hotel Nandan price comparison</button>
+</section><form class="search" id="searchForm">
 <div class="dest-wrap"><label for="destination">Destination or property name</label><input id="destination" class="field" type="search" placeholder="Enter city, destination or hotel name…" autocomplete="off" maxlength="100" role="combobox" aria-autocomplete="list" aria-haspopup="listbox" aria-expanded="false" aria-controls="destinationSuggestions" aria-describedby="destinationHelp"><div id="destinationSuggestions" class="dest-suggestions" role="listbox" hidden></div><span id="destinationHelp" class="fine">Type freely, or choose a matching city, state or hotel below</span></div>
 <div><label for="checkIn">Check-in</label><input id="checkIn" class="field" type="date" required></div>
 <div><label for="checkOut">Check-out</label><input id="checkOut" class="field" type="date" required></div>
@@ -36,9 +53,10 @@ label{display:block;font-size:11px;color:#566d84;font-weight:850;margin-bottom:7
 <div class="notice"><b>Important:</b> This is a design-and-booking-request preview, not connected live inventory. Hotel photos are independently licensed where shown; prices, discounts and availability are intentionally <b>not invented</b>. An automatically received hotel quote can enter the DBest catalogue, but the hotel must confirm the requested dates and final payable amount before a reservation is confirmed.</div>
 <div class="sectionhead"><div><h2>Hotels & upfront DBest price comparison</h2><div class="muted" id="searchSummary">Actual property photography where licensed</div></div><div class="muted" id="otaReadiness" role="status">Type a destination or property to see DBest rates and compare available public OTA prices automatically.</div></div>
 <div style="max-width:450px;margin:0 0 15px"><label for="hotelSearch">Search property name or city</label><input class="field" id="hotelSearch" type="search" placeholder="Type a property name to compare rates instantly…" autocomplete="off"></div>
+<section class="comparison-headline" id="comparisonHeadline" aria-live="polite" role="status"><strong>Checking DBest contracted and OTA reference rates…</strong></section>
 <section class="grid" id="results" aria-live="polite"></section>
 <div style="text-align:center;margin:20px"><button id="loadMore" type="button" class="btn secondary" hidden>Show 30 more hotels</button></div>
-<section class="simple-guide"><h2 style="margin:0 0 15px">How DBest booking will work</h2><div class="steps"><div class="step"><b>1. Supplier rate automatically received</b><p>Hotel outreach responses enter the DBest catalogue. Owner controls selling markup privately.</p></div><div class="step"><b>2. Compare matching live prices</b><p>Display actual OTA rates and savings only for identical dates, room, occupancy, meals, cancellation terms and tax-inclusive totals.</p></div><div class="step"><b>3. Request a direct booking</b><p>Send the requested stay details to DBest. Confirmation and payment follow only after hotel inventory and the final amount are verified.</p></div></div></section>
+<section class="simple-guide"><h2 style="margin:0 0 15px">How DBest booking will work</h2><div class="steps"><div class="step"><b>1. Supplier rate automatically received</b><p>Hotel outreach responses enter the DBest catalogue. Owner controls selling markup privately.</p></div><div class="step"><b>2. Compare matching live prices</b><p>Display actual OTA rates and savings only for identical dates, room, occupancy, meals, cancellation terms and tax-inclusive totals.</p></div><div class="step"><b>3. Book &amp; Pay DBest</b><p>Select a hotel after comparing prices. This preview simulates checkout and voucher issuance with ₹0 charged. Real checkout will use DBest-controlled room allocations.</p></div></div></section>
 </main>
 <dialog class="dialog" id="requestModal">
 <div class="d-head"><h2>Book &amp; Pay DBest <span class="pilot-chip">TEST MODE</span></h2>
@@ -184,7 +202,11 @@ $('destination').addEventListener('blur',()=>setTimeout(closeDestinations,160));
 document.addEventListener('click',event=>{if(!event.target.closest('.dest-wrap'))closeDestinations()});
 function iso(d){const p=n=>String(n).padStart(2,'0');return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())}
 const today=new Date(),tomorrow=new Date(today);tomorrow.setDate(today.getDate()+1);const dayAfter=new Date(tomorrow);dayAfter.setDate(tomorrow.getDate()+1);
-$('checkIn').min=iso(today);$('checkIn').value=iso(tomorrow);$('checkOut').min=iso(tomorrow);$('checkOut').value=iso(dayAfter);
+$('checkIn').min=iso(today);
+const sampleCheckIn=new Date('2026-11-15T12:00:00');
+const demoIn=sampleCheckIn>today?sampleCheckIn:new Date(today.getTime()+14*86400000);
+const demoOut=new Date(demoIn.getTime()+86400000);
+$('checkIn').value=iso(demoIn);$('checkOut').min=iso(tomorrow);$('checkOut').value=iso(demoOut);
 let visibleCount=30;
 let state={destination:'',checkIn:$('checkIn').value,checkOut:$('checkOut').value,adults:2,rooms:1};
 const autoMappedHotels=new Set(['HOTEL-NANDAN-GHY','HIST-016','DBEST-REPL-20261026-697','DBEST-REPL-20261024-138','DBEST-REPL-20261026-691','DBEST-REPL-20261026-632']);
@@ -307,7 +329,13 @@ function searchableHotel(h){
 }
 function autoRateCandidates(){
  const query=(state.destination+' '+$('hotelSearch').value).trim().toLocaleLowerCase();
- if(query.length<3||!validPublicRateStay())return [];
+ if(!validPublicRateStay())return [];
+ // The isolated demo must show a real example comparison at first launch.
+ // Only one exact identity-verified hotel is looked up until the visitor searches.
+ if(query.length<3){
+  const example=hotels.find(h=>h.id==='HOTEL-NANDAN-GHY'&&autoMappedHotels.has(h.id));
+  return example?[example]:[];
+ }
  return hotels.filter(h=>autoMappedHotels.has(h.id)&&searchableHotel(h))
   .sort((a,b)=>{
    const rank=h=>h.name.toLocaleLowerCase()===query?0:h.name.toLocaleLowerCase().startsWith(query)?1:2;
@@ -424,11 +452,53 @@ function scheduleVisibleGuestRates(){
   }
  },350);
 }
+function renderComparisonHeadline(matches){
+ const selected=matches.filter(h=>autoMappedHotels.has(h.id));
+ const loaded=selected.filter(h=>h.publicOta?.live&&h.publicOta?.stay&&
+  h.publicOta.stay.checkIn===state.checkIn&&h.publicOta.stay.checkOut===state.checkOut&&
+  h.publicOta.stay.adults===state.adults&&h.publicOta.stay.rooms===state.rooms&&
+  Array.isArray(h.publicOta.providers)&&Date.now()-Date.parse(h.publicOta.checkedAt)<AUTO_RATE_FRESH_MS);
+ const withRoom=loaded.map(h=>({h,price:h.guestRate?.status==='RECEIVED_GUEST_OCCUPANCY_SELLING_REFERENCE'&&
+  h.guestRate.adults===state.adults&&h.guestRate.rooms===state.rooms?h.guestRate.pricePerNight:null}))
+  .filter(x=>Number.isFinite(x.price)&&x.price>0);
+ const best=withRoom.find(x=>x.h.id==='HOTEL-NANDAN-GHY')||withRoom[0];
+ const box=$('comparisonHeadline');
+ if(best){
+  const offers=best.h.publicOta.providers.filter(p=>p.currency==='INR'&&Number.isFinite(p.pricePerNight)&&p.pricePerNight>0);
+  const cheapest=offers.reduce((a,p)=>!a||p.pricePerNight<a.pricePerNight?p:a,null);
+  const dearer=offers.filter(p=>p.pricePerNight>best.price);
+  const preferred=dearer.find(p=>/makemytrip/i.test(p.provider))||dearer.sort((a,b)=>a.pricePerNight-b.pricePerNight)[0];
+  const gap=preferred?Math.round((preferred.pricePerNight-best.price)*100)/100:null;
+  box.innerHTML='<div class="comparison-intro"><b>'+html(best.h.name)+'</b> · '+html(state.checkIn)+' to '+html(state.checkOut)+' · received supplier selling reference vs public B2C</div>'+
+   '<div class="comparison-tiles"><div><small>DBest Special Rate / night</small><strong>'+moneyINR(best.price)+'</strong></div>'+
+   '<div><small>Lowest observed public OTA / night</small><strong>'+(cheapest?moneyINR(cheapest.pricePerNight):'Not available')+'</strong></div>'+
+   '<div class="advantage-tile"><small>DBest Advantage · indicative price difference</small><strong>'+
+     (gap!==null?moneyINR(gap)+' vs '+html(preferred.provider):'No cheaper DBest price confirmed')+'</strong></div></div>'+
+   '<p>These are headline reference differences, <b>not guaranteed savings</b>. Room, breakfast, tax, occupancy and cancellation terms may differ.'+
+   (cheapest&&cheapest.pricePerNight<best.price?' Another OTA has a lower displayed headline price.':'')+'</p>';
+  return;
+ }
+ const loading=selected.some(h=>h.otaStatus?.startsWith('Checking'))||!matches.length===false&&selected.some(h=>h.guestRateLoading);
+ const onlyNoMapping=selected.length===0&&matches.length>0;
+ const blocked=selected.some(h=>/limit reached|unavailable|could not be verified|No verified live/i.test(h.otaStatus||''));
+ box.innerHTML='<strong>'+ (onlyNoMapping?'Public OTA price comparison not yet connected for these hotels':
+   loading?'Loading DBest and public OTA comparison for the selected stay…':
+   blocked?'Public OTA rate lookup currently unavailable for this search':
+   selected.length?'Select a mapped hotel to compare available OTA prices':'Search a destination or hotel to see DBest prices and OTA comparisons')+'</strong>'+
+   '<p>DBest contracted selling rates remain visible on hotel cards. No OTA price or savings amount is invented when a live public rate is unavailable. '+
+   'Try <button type="button" class="example-inline" id="exampleCompareInline">Hotel Nandan, Guwahati</button> for the mapped sample.</p>';
+}
 function render(){
  const search=$('hotelSearch').value.trim().toLowerCase();
  const destination=state.destination.toLocaleLowerCase();
  const out=hotels.filter(searchableHotel);
- $('results').innerHTML=out.slice(0,visibleCount).map(card).join('')||'<p>No contracted hotels match this destination yet. Try a nearby city or another spelling.</p>';
+ const hasSearch=Boolean(state.destination.trim()||$('hotelSearch').value.trim());
+ const display=hasSearch?out:[...out].sort((a,b)=>{
+  const rank=h=>h.id==='HOTEL-NANDAN-GHY'?0:autoMappedHotels.has(h.id)?1:2;
+  return rank(a)-rank(b)||a.name.localeCompare(b.name);
+ });
+ $('results').innerHTML=display.slice(0,visibleCount).map(card).join('')||'<p>No contracted hotels match this destination yet. Try a nearby city or another spelling.</p>';
+ renderComparisonHeadline(out);
  $('loadMore').hidden=out.length<=visibleCount;
  $('searchSummary').textContent=out.length+' hotel matches · DBest rates upfront · '+autoMappedHotels.size+' verified OTA hotel crosswalks';
  scheduleVisibleAutoRateLookups();
@@ -456,6 +526,13 @@ $('searchForm').addEventListener('submit',e=>{
 $('destination').addEventListener('input',()=>{state.destination=$('destination').value.trim();visibleCount=30;showDestinations();render()});
 $('loadMore').addEventListener('click',()=>{visibleCount+=30;render()});
 $('hotelSearch').addEventListener('input',()=>{visibleCount=30;render()});
+function openExampleComparison(){
+ $('destination').value='Guwahati';$('hotelSearch').value='Hotel Nandan';
+ state.destination='Guwahati';visibleCount=30;render();
+ $('comparisonHeadline').scrollIntoView({behavior:'smooth',block:'start'});
+}
+$('exampleCompare').addEventListener('click',openExampleComparison);
+$('comparisonHeadline').addEventListener('click',e=>{if(e.target.closest('#exampleCompareInline'))openExampleComparison()});
 function moneyINR(amount){return '₹'+Number(amount).toLocaleString('en-IN',{maximumFractionDigits:2})}
 $('results').addEventListener('click',async e=>{
  const otaButton=e.target.closest('button[data-ota]');
