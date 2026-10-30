@@ -526,7 +526,7 @@ $('guestContactForm').addEventListener('submit',event=>{
  event.preventDefault();
  if(!bookingSelection||!$('guestContactForm').reportValidity())return;
  const name=$('guestFullName').value.trim(),email=$('guestEmail').value.trim(),phone=$('guestPhone').value.trim();
- if(name.length<2||!/^\\+?[0-9() .-]{7,25}$/.test(phone)){
+ if(name.length<2||!/^\+?[0-9() .-]{7,25}$/.test(phone)){
   $('bookingComposeStatus').textContent='Enter a valid sample name and phone number.';return;
  }
  if(!Number.isFinite(bookingSelection.contractedReference)||bookingSelection.contractedReference<=0){
