@@ -169,7 +169,11 @@ function card(h){
  const dbestReference=(typeof h.contractedSellingReference==='number'&&Number.isFinite(h.contractedSellingReference))?
   '<b>'+moneyINR(h.contractedSellingReference)+'</b><small style="display:block;color:#61788d">Lowest received contracted rate reference · date, room, occupancy and taxes may change the total</small>':
   '<span class="pending">Selling reference unavailable</span>';
- const publicOta=h.publicOta&&h.publicOta.live&&Array.isArray(h.publicOta.providers)?h.publicOta.providers:[];
+ const currentOta=h.publicOta&&h.publicOta.live&&h.publicOta.stay&&
+  h.publicOta.stay.checkIn===state.checkIn&&h.publicOta.stay.checkOut===state.checkOut&&
+  h.publicOta.stay.adults===state.adults&&h.publicOta.stay.rooms===state.rooms&&
+  Date.now()-Date.parse(h.publicOta.checkedAt)<15*60*1000;
+ const publicOta=currentOta&&Array.isArray(h.publicOta.providers)?h.publicOta.providers:[];
  // Canonicalize names only to align actual B2C prices with their OTA rows.
  const siteKey=name=>{
   const v=String(name||'').toLowerCase().replace(/[^a-z0-9]/g,'');
@@ -178,7 +182,7 @@ function card(h){
  const findProvider=name=>publicOta.find(p=>siteKey(p.provider)===siteKey(name));
  function otaRow(name,offer,url){
   const price=offer?'<b>'+moneyINR(offer.pricePerNight)+'/night</b>':'<span class="pending">'+
-   (h.publicOta&&h.publicOta.live?'Not listed in feed':'B2C price pending')+'</span>';
+   (currentOta?'Not listed in feed':'B2C price pending')+'</span>';
   const link=offer&&offer.url?offer.url:url;
   return '<div class="price-row"><strong>'+html(name)+' · Public B2C</strong><span style="text-align:right">'+price+
    '<small style="display:block"><a target="_blank" rel="noopener noreferrer" href="'+html(link)+'">'+
@@ -224,6 +228,14 @@ function render(){
  $('loadMore').hidden=out.length<=visibleCount;
  $('searchSummary').textContent=out.length+' properties · supplier quotation received where indicated · licensed photos when available';
 }
+function currentStayKey(){return [state.checkIn,state.checkOut,state.adults,state.rooms].join('|')}
+function syncStayWithoutSearch(){
+ const oldKey=currentStayKey();
+ const [adults,rooms]=$('guests').value.split(':').map(Number);
+ state={...state,checkIn:$('checkIn').value,checkOut:$('checkOut').value,adults,rooms};
+ if(currentStayKey()!==oldKey){hotels.forEach(h=>{h.publicOta=null;h.otaStatus='Dates or guests changed. Check live OTA prices again.'});render()}
+}
+for(const id of ['checkIn','checkOut','guests'])$(id).addEventListener('change',syncStayWithoutSearch);
 $('searchForm').addEventListener('submit',e=>{
  e.preventDefault();
  if(state.checkOut<=state.checkIn)return;
@@ -240,7 +252,11 @@ $('results').addEventListener('click',async e=>{
  const otaButton=e.target.closest('button[data-ota]');
  if(otaButton){
   const h=hotels.find(x=>x.id===otaButton.dataset.ota);if(!h)return;
+  if(!state.checkIn||!state.checkOut||state.checkOut<=state.checkIn){
+   h.otaStatus='Select valid check-in and check-out dates first.';render();return;
+  }
   if(state.rooms!==1){h.otaStatus='Public OTA lookup currently supports one room per comparison.';render();return}
+  const requestStayKey=currentStayKey();
   h.otaStatus='Checking Google Hotels public B2C offers for selected stay…';render();
   try{
    const args=new URLSearchParams({hotelId:h.id,checkIn:state.checkIn,checkOut:state.checkOut,
@@ -248,11 +264,12 @@ $('results').addEventListener('click',async e=>{
    // The isolated server verifies approved mapping before launching any browser.
    const resp=await fetch('/api/hotel-google-b2c?'+args.toString(),{credentials:'same-origin',cache:'no-store'});
    const payload=await resp.json();
+   if(requestStayKey!==currentStayKey())return; // discard a late response after the user changed dates or occupancy
    if(!resp.ok)throw Error('Provider temporarily unavailable');
    if(payload.live&&Array.isArray(payload.providers)){
     h.publicOta=payload;
     h.otaStatus='Public OTA prices from Google Hotels checked '+new Date(payload.checkedAt).toLocaleString('en-IN')+
-     '. Prices per night; room, taxes and availability must be checked at checkout.';
+     '. Prices expire after 15 minutes; room, taxes and availability must be checked at checkout.';
    }else{
     h.publicOta=null;
     h.otaStatus=payload.status==='BROWSER_PILOT_DISABLED'?'Public browser comparison has not been activated for this pilot deployment.':
@@ -271,7 +288,7 @@ $('results').addEventListener('click',async e=>{
      payload.status==='PROPERTY_NOT_EXACTLY_MATCHED'?'Hotel listing not matched with sufficient confidence. No price shown.':
      'No verified public OTA prices returned for this stay.';
    }
-  }catch{h.otaStatus='Public OTA rates unavailable. No prices were substituted.'}
+  }catch{if(requestStayKey===currentStayKey())h.otaStatus='Public OTA rates unavailable. No prices were substituted.'}
   render();return;
  }
  const open=e.target.closest('button[data-offers]');
