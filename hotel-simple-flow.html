@@ -291,7 +291,7 @@ async function loadPublicOtaRates(h,force=false){
   adults:String(state.adults),rooms:String(state.rooms)});
  const job=(async()=>{
   try{
-   const resp=await fetch('/api/hotel-google-b2c?'+args.toString(),{credentials:'same-origin',cache:'no-store'});
+   const resp=await fetch('/api/hotel-public-google?'+args.toString(),{credentials:'same-origin',cache:'no-store'});
    const payload=await resp.json();
    if(stayKey!==currentStayKey())return;
    if(!resp.ok)throw Error('Provider temporarily unavailable');
@@ -381,7 +381,7 @@ $('results').addEventListener('click',async e=>{
      '</small><small>Contracted tariff · hotel availability check required before booking</small></div>').join('')+
      (data.total>data.offers.length?'<small>Showing first '+data.offers.length+' of '+data.total+' contracted rate lines.</small>':'');
    }
-  }catch(error){panel.textContent='Rates temporarily unavailable. Try again.'}
+  }catch(error){panel.textContent='DBest special-rate service unavailable. Please retry.'}
   return;
  }
  const b=e.target.closest('button[data-book]');if(!b)return;
@@ -425,7 +425,7 @@ fetch('/api/hotel-ota-b2c?view=status',{credentials:'same-origin',cache:'no-stor
    'Type a destination/property: DBest references appear upfront and verified live OTA prices load automatically (3 pilot hotels).';
  })
  .catch(()=>{$('otaReadiness').textContent='Live B2C OTA feed status unavailable';});
-fetch('/api/hotel-catalog',{cache:'no-store',credentials:'same-origin'})
+fetch('/api/hotel-public-catalog',{cache:'no-store',credentials:'same-origin'})
 .then(async response=>{if(!response.ok)throw Error('Catalog unavailable');return response.json()})
 .then(async data=>{
  if(!Array.isArray(data.hotels)||!data.hotels.length)return;
@@ -455,6 +455,6 @@ fetch('/api/hotel-catalog',{cache:'no-store',credentials:'same-origin'})
  }catch(error){ /* Customer search and booking requests remain available. */ }
  buildDestinationIndex();if(document.activeElement===$('destination'))showDestinations();render();
  $('searchSummary').textContent=hotels.length+' hotel partners with outreach quotations · '+(data.snapshotGeneratedAt?'snapshot '+new Date(data.snapshotGeneratedAt).toLocaleString('en-IN')+' · ':'')+'supplier contracted tariffs accepted; availability before booking';
-}).catch(()=>{$('searchSummary').textContent='Featured licensed sample hotels · connected catalogue temporarily unavailable';});
+}).catch(()=>{$('searchSummary').textContent='Hotel catalogue could not load. Prices unavailable — retry or report this link.';});
 })();
 </script></body></html>
