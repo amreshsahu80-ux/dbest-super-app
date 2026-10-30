@@ -9,9 +9,9 @@ const fakeCatalog=(req,res)=>{
  {room:'Extra person',occupancy:'Per person',price:1312.5,currency:'INR'}];
  res.end(JSON.stringify({status:'CONTRACTED_SUPPLIER_RATES_WITH_OWNER_MARKUP',offers}))
 };
-const exports={};
-vm.runInNewContext(src,{module:{exports},exports,require:(name)=>{assert.equal(name,'./hotel-catalog.js');return fakeCatalog},URL,Promise,Number,String,Set,Array,Object,RegExp,JSON,encodeURIComponent}, {filename:'hotel-guest-rate-api.template.cjs'});
-const api=exports;
+const moduleRef={exports:{}};
+vm.runInNewContext(src,{module:moduleRef,exports:moduleRef.exports,require:(name)=>{assert.equal(name,'./hotel-catalog.js');return fakeCatalog},URL,Promise,Number,String,Set,Array,Object,RegExp,JSON,encodeURIComponent}, {filename:'hotel-guest-rate-api.template.cjs'});
+const api=moduleRef.exports;
 function req(url,host='dbest-hotel-review-preview.vercel.app'){return{method:'GET',headers:{host},url}}
 async function run(r){let code=200,output;const res={set statusCode(v){code=v},get statusCode(){return code},setHeader(){},end(x){output=JSON.parse(x)}};await api(r,res);return{code,output}}
 test('double occupancy uses exact 2-adult marked-up rate, never cheaper Single price',async()=>{
