@@ -396,7 +396,7 @@ function render(){
  const out=hotels.filter(searchableHotel);
  $('results').innerHTML=out.slice(0,visibleCount).map(card).join('')||'<p>No contracted hotels match this destination yet. Try a nearby city or another spelling.</p>';
  $('loadMore').hidden=out.length<=visibleCount;
- $('searchSummary').textContent=out.length+' hotel matches · DBest received rates shown upfront · automatic OTA prices for verified listings';
+ $('searchSummary').textContent=out.length+' hotel matches · DBest rates upfront · '+autoMappedHotels.size+' verified OTA hotel crosswalks';
  scheduleVisibleAutoRateLookups();
  scheduleVisibleGuestRates();
 }
@@ -530,6 +530,21 @@ fetch('/api/hotel-catalog',{cache:'no-store',credentials:'same-origin'})
   }
  }catch(error){ /* Customer search and booking requests remain available. */ }
  buildDestinationIndex();if(document.activeElement===$('destination'))showDestinations();render();
+ // Sync verified public OTA hotel identity crosswalk from the server.
+ // Exact catalogue IDs/names/cities only. No browser lookup is launched here.
+ fetch('/api/hotel-coverage',{credentials:'same-origin',cache:'no-store'})
+  .then(r=>{if(!r.ok)throw Error('coverage unavailable');return r.json()})
+  .then(data=>{
+   if(data.status!=='DBEST_PUBLIC_OTA_CROSSWALK'||!Array.isArray(data.mapped))return;
+   const byId=new Map(hotels.map(h=>[h.id,h]));
+   const verified=data.mapped.filter(row=>{
+    const h=byId.get(row.id);
+    return h&&h.name===row.hotel&&h.city===row.city;
+   }).map(row=>row.id);
+   if(!verified.length)return;
+   autoMappedHotels.clear();for(const id of verified)autoMappedHotels.add(id);
+   render();
+  }).catch(()=>{/* Keep the explicitly reviewed local crosswalk if the API is offline. */});
  $('searchSummary').textContent=hotels.length+' hotel partners with outreach quotations · '+(data.snapshotGeneratedAt?'snapshot '+new Date(data.snapshotGeneratedAt).toLocaleString('en-IN')+' · ':'')+'supplier contracted tariffs accepted; availability before booking';
 }).catch(()=>{$('searchSummary').textContent='Hotel catalogue could not load. Prices unavailable — retry or report this link.';});
 })();
