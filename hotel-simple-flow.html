@@ -158,6 +158,8 @@ let visibleCount=30;
 let state={destination:'',checkIn:$('checkIn').value,checkOut:$('checkOut').value,adults:2,rooms:1};
 const autoMappedHotels=new Set(['HOTEL-NANDAN-GHY','HIST-016','DBEST-REPL-20261026-697','DBEST-REPL-20261024-138']);
 const autoInFlight=new Map();
+const guestRateCache=new Map(), guestRateInFlight=new Set();
+let guestRateTimer=null;
 let autoCheckTimer=null;
 const AUTO_RATE_FRESH_MS=15*60*1000;
 const AUTO_ERROR_COOLDOWN_MS=3*60*1000;
@@ -180,9 +182,15 @@ function card(h){
  fallback+'<img loading="lazy" decoding="async" src="'+html(h.photo.url)+'" alt="Actual property photograph of '+html(h.name)+'" data-property-image="1">'+
  '<div class="credit" data-photo-credit="1">Photo: '+html(h.photo.credit)+' · <a href="'+html(h.photo.source)+'" target="_blank" rel="noopener noreferrer">Source</a> · <a href="'+html(h.photo.licenseUrl)+'" target="_blank" rel="noopener noreferrer">'+html(h.photo.license)+'</a></div>':
  fallback;
- const dbestNumeric=typeof h.contractedSellingReference==='number'&&Number.isFinite(h.contractedSellingReference)&&h.contractedSellingReference>0?h.contractedSellingReference:null;
+ const guestRate=h.guestRate?.adults===state.adults&&h.guestRate?.rooms===state.rooms?h.guestRate:null;
+ const dbestNumeric=guestRate?.status==='RECEIVED_GUEST_OCCUPANCY_SELLING_REFERENCE'&&
+  Number.isFinite(guestRate.pricePerNight)&&guestRate.pricePerNight>0?guestRate.pricePerNight:null;
+ const from=typeof h.contractedSellingReference==='number'&&Number.isFinite(h.contractedSellingReference)&&h.contractedSellingReference>0?h.contractedSellingReference:null;
  const dbestReference=dbestNumeric!==null?
-  '<b>'+moneyINR(dbestNumeric)+'</b><small style="display:block;color:#61788d">Received contracted rate reference · dates, room/occupancy and final taxes unconfirmed</small>':
+  '<b>'+moneyINR(dbestNumeric)+'</b><small style="display:block;color:#61788d">'+
+  html(guestRate.room+' · '+guestRate.occupancy+' · '+(guestRate.meal||'Meal to confirm'))+
+  ' · taxes/availability to reconfirm for selected dates</small>':
+  from!==null?'<b>From '+moneyINR(from)+'</b><small style="display:block;color:#61788d">Starting supplier selling reference; may be for different occupancy. Exact '+state.adults+'-adult rate '+(h.guestRateLoading?'loading':'to confirm')+'.</small>':
   '<span class="pending">DBest selling reference unavailable</span>';
  const currentOta=h.publicOta&&h.publicOta.live&&h.publicOta.stay&&
   h.publicOta.stay.checkIn===state.checkIn&&h.publicOta.stay.checkOut===state.checkOut&&
@@ -208,15 +216,23 @@ function card(h){
  const gap=cheapest&&dbestNumeric!==null?cheapest.pricePerNight-dbestNumeric:null;
  const gapPercent=gap>0&&cheapest?Math.round(gap/cheapest.pricePerNight*100):0;
  const upfrontPrices='<div class="upfront-prices" aria-label="Visible DBest and public OTA reference rates">'+
-  '<div class="upfront-price"><small>DBest contracted reference</small><strong>'+(dbestNumeric!==null?moneyINR(dbestNumeric):'Request a quote')+'</strong></div>'+
+  '<div class="upfront-price"><small>DBest reference · '+state.adults+' adult'+(state.adults===1?'':'s')+'</small><strong>'+
+  (dbestNumeric!==null?moneyINR(dbestNumeric):from!==null?'From '+moneyINR(from):'Request a quote')+
+  '</strong></div>'+
   '<div class="upfront-price"><small>Public OTA from · selected stay</small><strong>'+(cheapest?moneyINR(cheapest.pricePerNight):h.otaStatus&&h.otaStatus.startsWith('Checking')?'Checking…':'Awaiting live rate')+'</strong></div>'+
   '</div>';
- const advantageSummary=gap!==null&&gap>0?
-  '<div class="upfront-advantage"><strong>Potential DBest savings* '+moneyINR(gap)+'</strong><span>'+gapPercent+'% compared with lowest listed OTA reference · <b>estimate only, not verified savings</b></span></div>':
+ const favorable=publicOta.filter(p=>dbestNumeric!==null&&p.pricePerNight>dbestNumeric);
+ const mmtFavorable=favorable.find(p=>siteKey(p.provider)==='makemytrip');
+ const featuredFavorable=mmtFavorable||favorable.sort((a,b)=>a.pricePerNight-b.pricePerNight)[0];
+ const featuredGap=featuredFavorable?Math.round((featuredFavorable.pricePerNight-dbestNumeric)*100)/100:null;
+ const advantageSummary=featuredGap!==null?
+  '<div class="upfront-advantage"><strong>Indicative DBest price gap vs '+html(featuredFavorable.provider)+' · '+moneyINR(featuredGap)+'</strong>'+
+  '<span>Comparison of displayed reference prices only · <b>not verified savings</b>'+
+  (gap!==null&&gap<0?'<br>Another public OTA currently lists a lower headline price.':'')+'</span></div>':
   gap!==null&&gap<=0?
-   '<div class="upfront-advantage neutral"><strong>Public OTA currently displays a lower reference</strong><span> · Check room details before choosing</span></div>':
-   '<div class="upfront-advantage neutral"><strong>DBest Advantage · comparison '+(h.otaStatus&&h.otaStatus.startsWith('Checking')?'loading':'pending')+'</strong></div>';
- const upfrontNote='<small class="upfront-note">Indicative only: DBest is a received supplier selling reference, not a confirmed quote for these dates; OTA price may be for another room, occupancy, meal or tax basis. Final savings can only be confirmed on matching total payable terms.</small>';
+   '<div class="upfront-advantage neutral"><strong>Cheapest listed public OTA reference is lower</strong><span> · DBest is not currently cheaper on the observed headline references.</span></div>':
+   '<div class="upfront-advantage neutral"><strong>DBest Advantage · '+(h.guestRateLoading?'matching guest pricing':h.otaStatus&&h.otaStatus.startsWith('Checking')?'comparison loading':'comparison pending')+'</strong></div>';
+ const upfrontNote='<small class="upfront-note">Indicative only: DBest is an occupancy-matched received supplier selling reference when shown, not a confirmed quote for these dates; OTA price may be for another room, meal or tax basis. Final savings can only be confirmed on matching total payable terms.</small>';
  const listed=new Set(consumerHotelSearch.map(s=>siteKey(s.name)));
  const rows='<div class="price-row"><strong>DBest Special Rate</strong><span style="text-align:right">'+dbestReference+'</span></div>'+
   consumerHotelSearch.map(site=>otaRow(site.name,findProvider(site.name),site.url)).join('')+
@@ -327,6 +343,53 @@ async function loadPublicOtaRates(h,force=false){
  render();
  try{await job}finally{autoInFlight.delete(key)}
 }
+function currentGuestRateKey(h){
+ return h.id+'|'+state.adults+'|'+state.rooms;
+}
+function scheduleVisibleGuestRates(){
+ if(guestRateTimer!==null)clearTimeout(guestRateTimer);
+ if(![1,2].includes(state.adults)||state.rooms!==1)return;
+ const guests=state.adults,rooms=state.rooms;
+ const matches=hotels.filter(searchableHotel).slice(0,12);
+ const ids=matches.filter(h=>{
+  const key=currentGuestRateKey(h), cached=guestRateCache.get(key);
+  if(cached&&Date.now()-cached.checkedAt<15*60*1000){h.guestRate=cached.value;return false}
+  return !guestRateInFlight.has(key)&&(!cached||Date.now()-cached.checkedAt>=15*60*1000);
+ }).map(h=>h.id);
+ if(!ids.length)return;
+ guestRateTimer=setTimeout(async()=>{
+  guestRateTimer=null;
+  const keyTag=guests+'|'+rooms;
+  for(const id of ids)guestRateInFlight.add(id+'|'+keyTag);
+  for(const id of ids){const h=hotels.find(x=>x.id===id);if(h)h.guestRateLoading=true}
+  try{
+   const args=new URLSearchParams({hotelIds:ids.join(','),adults:String(guests),rooms:String(rooms)});
+   const r=await fetch('/api/hotel-guest-rate?'+args.toString(),{credentials:'same-origin',cache:'no-store'});
+   if(!r.ok)throw Error('occupancy_reference_unavailable');
+   const data=await r.json();
+   if(data.status!=='DBEST_OCCUPANCY_REFERENCES')throw Error('guest_rate_status');
+   for(const offer of data.hotels||[]){
+    const key=offer.id+'|'+keyTag;
+    const value={...offer,adults:guests,rooms};
+    guestRateCache.set(key,{value,checkedAt:Date.now()});
+    if(state.adults===guests&&state.rooms===rooms){
+     const h=hotels.find(x=>x.id===offer.id);
+     if(h)h.guestRate=value;
+    }
+   }
+  }catch{
+   // Do not mislabel a Single rate as a Double rate when the exact selling
+   // reference fails to load; display the starting price separately.
+   for(const id of ids)guestRateCache.set(id+'|'+keyTag,{
+    value:{id,status:'GUEST_RATE_TEMPORARILY_UNAVAILABLE',adults:guests,rooms},
+    checkedAt:Date.now()-12*60*1000
+   });
+  }finally{
+   for(const id of ids){guestRateInFlight.delete(id+'|'+keyTag);const h=hotels.find(x=>x.id===id);if(h)h.guestRateLoading=false}
+   if(state.adults===guests&&state.rooms===rooms)render();
+  }
+ },350);
+}
 function render(){
  const search=$('hotelSearch').value.trim().toLowerCase();
  const destination=state.destination.toLocaleLowerCase();
@@ -335,13 +398,14 @@ function render(){
  $('loadMore').hidden=out.length<=visibleCount;
  $('searchSummary').textContent=out.length+' hotel matches · DBest received rates shown upfront · automatic OTA prices for verified listings';
  scheduleVisibleAutoRateLookups();
+ scheduleVisibleGuestRates();
 }
 function currentStayKey(){return [state.checkIn,state.checkOut,state.adults,state.rooms].join('|')}
 function syncStayWithoutSearch(){
  const oldKey=currentStayKey();
  const [adults,rooms]=$('guests').value.split(':').map(Number);
  state={...state,checkIn:$('checkIn').value,checkOut:$('checkOut').value,adults,rooms};
- if(currentStayKey()!==oldKey){hotels.forEach(h=>{h.publicOta=null;h.otaStatus='Dates or guests changed. Check live OTA prices again.'});render()}
+ if(currentStayKey()!==oldKey){hotels.forEach(h=>{h.publicOta=null;h.guestRate=null;h.otaStatus='Dates or guests changed. Check live OTA prices again.'});render()}
 }
 for(const id of ['checkIn','checkOut','guests'])$(id).addEventListener('change',syncStayWithoutSearch);
 $('searchForm').addEventListener('submit',e=>{
@@ -352,7 +416,7 @@ $('searchForm').addEventListener('submit',e=>{
  const [adults,rooms]=$('guests').value.split(':').map(Number);
  const previousStay=currentStayKey();
  state={destination:$('destination').value.trim(),checkIn,checkOut,adults,rooms};
- if(previousStay!==currentStayKey())hotels.forEach(h=>{h.publicOta=null;h.otaStatus=''});
+ if(previousStay!==currentStayKey())hotels.forEach(h=>{h.publicOta=null;h.guestRate=null;h.otaStatus=''});
  visibleCount=30;render();
 });
 $('destination').addEventListener('input',()=>{state.destination=$('destination').value.trim();visibleCount=30;showDestinations();render()});
