@@ -2,7 +2,7 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow,noarchive">
 <meta name="referrer" content="no-referrer"><meta name="theme-color" content="#102e54">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src https://commons.wikimedia.org https://thumb.wikimedia.org https://upload.wikimedia.org data:; style-src 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'; form-action 'none'; base-uri 'none'">
-<title>DBest Stays · Live OTA Comparison & Direct Checkout DEMO</title>
+<title>DBest Hotels · Live OTA Comparison + Book & Pay DEMO</title>
 <style>
 :root{font-family:Inter,system-ui,sans-serif;color:#1c3047;background:#f4f7fb;font-size:14px}*{box-sizing:border-box}body{margin:0}input,select,button{font:inherit}button{cursor:pointer}a{color:#146cb3}a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #f0a52b;outline-offset:2px}
 .top{background:#fff;border-bottom:1px solid #e6ebf2}.wrap{max-width:1180px;margin:auto;padding:0 18px}.nav{display:flex;justify-content:space-between;align-items:center;min-height:70px;gap:15px}.logo{font-size:21px;font-weight:900;color:#123c63;letter-spacing:-.6px}.logo small{display:block;font-weight:600;color:#66829c;font-size:10px;letter-spacing:0}.nav a{font-weight:700;text-decoration:none;font-size:12px}
@@ -13,13 +13,19 @@ label{display:block;font-size:11px;color:#566d84;font-weight:850;margin-bottom:7
 .dest-wrap{position:relative;min-width:0}.dest-suggestions{position:absolute;top:calc(100% - 3px);left:0;right:0;z-index:30;max-height:min(320px,45vh);overflow-y:auto;overscroll-behavior:contain;background:#fff;border:1px solid #c8d9e8;border-radius:12px;box-shadow:0 16px 35px #153a5b29;padding:5px}.dest-suggestions[hidden]{display:none}.dest-option{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;background:#fff;border:0;border-radius:8px;text-align:left;color:#183b5e;padding:11px 12px;cursor:pointer;white-space:normal}.dest-option small{color:#617c95;font-size:11px}.dest-option:hover,.dest-option.active,.dest-option:focus-visible{background:#eaf4ff;outline:2px solid #b5d9f5;outline-offset:-2px}.dest-empty{padding:12px;color:#60778f;font-size:12px}
 @media(max-width:970px){.grid{grid-template-columns:1fr}.search{grid-template-columns:1fr 1fr 1fr}.search .btn{width:100%}}@media(max-width:610px){.search{grid-template-columns:1fr 1fr}.search>div:first-child{grid-column:span 2}.grid{grid-template-columns:1fr}.hotel{display:block}.media{width:100%;min-height:180px;height:190px}.media img{height:100%}.content{padding:16px}.steps{grid-template-columns:1fr}.hero{padding-bottom:88px}.sectionhead h2{font-size:22px}}
 .guest-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:12px 0}.guest-form-grid>div:last-child{grid-column:1/-1}#guestContactForm .btn{margin-bottom:12px}#requestText[hidden]{display:none}@media(max-width:540px){.guest-form-grid{grid-template-columns:1fr}.guest-form-grid>div:last-child{grid-column:auto}}
-.upfront-prices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:12px 0 8px}.upfront-price{border:1px solid #d6e5ef;border-radius:11px;background:#f1f8fb;padding:10px;min-width:0}.upfront-price small{display:block;font-weight:750;font-size:10px;color:#496b83}.upfront-price strong{display:block;font-size:20px;color:#143f5c;margin-top:3px;line-height:1.2}.upfront-advantage{background:#e9f7f1;border:1px solid #acdcc6;color:#14553c;border-radius:11px;padding:10px;line-height:1.5}.upfront-advantage strong{font-size:15px}.upfront-advantage span{display:block;font-size:11px}.upfront-advantage.neutral{background:#f5f7f9;border-color:#d7dce2;color:#46596c}.upfront-note{display:block;color:#5b6878;font-size:10px;line-height:1.45;margin:8px 0 12px}@media(max-width:400px){.upfront-price strong{font-size:17px}}.checkout-demo-banner{margin:14px auto;padding:12px 16px;max-width:1180px;border:1px solid #deb875;border-radius:11px;background:#fff4da;color:#70491f;font-weight:700;font-size:13px}
-.checkout-demo-banner strong{color:#753c18}.demo-checkout-table{border:1px solid #d8e8f1;background:#f6fafd;border-radius:12px;padding:14px;margin:12px 0}.demo-checkout-table dl{display:grid;grid-template-columns:1fr auto;gap:7px;margin:0}.demo-checkout-table dd{font-weight:750;margin:0;text-align:right}.demo-checkout-table dt{color:#59748e}.demo-checkout-total{font-size:19px;color:#115287}.demo-note{background:#fff3dc;border:1px solid #e5bd83;border-radius:10px;padding:11px;margin:11px 0;color:#69431b}.demo-screen[hidden]{display:none!important}.demo-voucher{border:2px solid #d3dfe8;padding:14px;border-radius:12px;position:relative}.demo-voucher::after{content:'DEMO · NOT VALID FOR CHECK-IN';position:absolute;top:48%;left:3%;font-size:clamp(17px,3vw,27px);font-weight:900;color:#b33b3b30;transform:rotate(-12deg);pointer-events:none}.demo-inline-btn{margin:9px 5px 0 0}.demo-error{color:#9c3e35;font-weight:750}
-@media print{body>*:not(dialog){display:none!important}dialog#requestModal{display:block!important;position:static!important;width:100%!important;max-width:100%!important;border:none!important;box-shadow:none!important}.d-actions,.demo-inline-btn,#demoGuestStep,#demoPayStep{display:none!important}}
+.upfront-prices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:12px 0 8px}.upfront-price{border:1px solid #d6e5ef;border-radius:11px;background:#f1f8fb;padding:10px;min-width:0}.upfront-price small{display:block;font-weight:750;font-size:10px;color:#496b83}.upfront-price strong{display:block;font-size:20px;color:#143f5c;margin-top:3px;line-height:1.2}.upfront-advantage{background:#e9f7f1;border:1px solid #acdcc6;color:#14553c;border-radius:11px;padding:10px;line-height:1.5}.upfront-advantage strong{font-size:15px}.upfront-advantage span{display:block;font-size:11px}.upfront-advantage.neutral{background:#f5f7f9;border-color:#d7dce2;color:#46596c}.upfront-note{display:block;color:#5b6878;font-size:10px;line-height:1.45;margin:8px 0 12px}@media(max-width:400px){.upfront-price strong{font-size:17px}}\n/* Isolated booking demo changes only; original rate comparison is retained. */
+.pilot-chip{display:inline-block;padding:4px 9px;margin-left:6px;border-radius:8px;background:#fff2ce;color:#805112;font-size:12px;vertical-align:middle}
+.demo-alert{margin:10px 0;padding:12px;border:1px solid #e3c48b;border-radius:10px;background:#fff9e9;color:#785022;font-size:13px;line-height:1.5}
+.demo-recap{margin:12px 0;padding:13px;border-radius:10px;background:#f0f7fd;border:1px solid #d2e2f0;line-height:1.7;overflow-wrap:anywhere}
+.demo-pay-tag{background:#ffeed0;border:2px dashed #e0ba6d;text-align:center;color:#704609;padding:12px;font-weight:900;border-radius:10px;margin:14px 0}
+.demo-voucher{border:2px dashed #d2a6a0;background:#fff9f9;padding:16px;border-radius:12px;line-height:2.1;position:relative}
+.demo-voucher strong:last-child{display:block;color:#aa2e27;margin-top:12px;font-weight:900}
+#paymentDemoStage[hidden],#demoVoucherStage[hidden],#guestContactForm[hidden]{display:none!important}
+#requestModal{max-width:min(600px,94vw);max-height:90vh;overflow:auto}
+@media print{body>*:not(#requestModal){display:none!important}#requestModal{position:static;border:0;box-shadow:none;width:100%;max-width:100%;max-height:none}#requestModal>*:not(.d-body){display:none!important}#requestModal .demo-alert,#requestModal #demoSelectedStay,#requestModal #guestContactForm,#requestModal #paymentDemoStage,#requestModal .d-actions{display:none!important}}
 </style><script src="/hotel-review/simple-flow-policy.js"></script></head><body>
 <div class="top"><div class="wrap nav"><div class="logo">DBest Stays <small>Direct hotel booking · Price comparison</small></div><a href="/hotel-owner-rate-review.html">Owner tariff controls</a></div></div>
-<header class="hero"><div class="wrap"><div class="eyebrow">DBest Hotel Marketplace · pilot</div><h1>Compare hotels. Save when a real price match is available.</h1><p>Direct contracted hotel tariffs from our outreach network, paired with authorized live OTA rates where available. Compare public OTA prices upfront, see DBest price differences where available, then test the DBest direct-payment journey without a real charge.</p></div></header>
-<div class="checkout-demo-banner"><strong>INTEGRATED TEST MODE · NO REAL PAYMENT.</strong> Original DBest hotel catalogue, public OTA prices and DBest Advantage comparisons remain visible. Book &amp; Pay below is a simulated checkout and invalid sample voucher only.</div>
+<header class="hero"><div class="wrap"><div class="eyebrow">DBest Hotel Marketplace · pilot</div><h1>Compare hotels. Save when a real price match is available.</h1><p>Direct contracted hotel tariffs from our outreach network, paired with authorized live OTA rates where available. Compare contracted DBest rates with available public OTA prices first. Then test Book & Pay DBest, a simulated payment and a sample voucher.</p></div></header>
 <main><form class="search" id="searchForm">
 <div class="dest-wrap"><label for="destination">Destination or property name</label><input id="destination" class="field" type="search" placeholder="Enter city, destination or hotel name…" autocomplete="off" maxlength="100" role="combobox" aria-autocomplete="list" aria-haspopup="listbox" aria-expanded="false" aria-controls="destinationSuggestions" aria-describedby="destinationHelp"><div id="destinationSuggestions" class="dest-suggestions" role="listbox" hidden></div><span id="destinationHelp" class="fine">Type freely, or choose a matching city, state or hotel below</span></div>
 <div><label for="checkIn">Check-in</label><input id="checkIn" class="field" type="date" required></div>
@@ -27,7 +33,7 @@ label{display:block;font-size:11px;color:#566d84;font-weight:850;margin-bottom:7
 <div><label for="guests">Guests · rooms</label><select id="guests" class="field"><option value="2:1">2 adults · 1 room</option><option value="1:1">1 adult · 1 room</option><option value="3:1">3 adults · 1 room</option><option value="4:2">4 adults · 2 rooms</option><option value="6:3">6 adults · 3 rooms</option></select></div>
 <button class="btn" type="submit">Find hotels</button>
 </form>
-<div class="notice"><b>Important:</b> This is a hotel comparison and direct-checkout TEST preview, not connected live inventory or payment. Hotel photos are independently licensed where shown; prices, discounts and availability are intentionally <b>not invented</b>. An automatically received hotel quote can enter the DBest catalogue, but the hotel must confirm the requested dates and final payable amount before a reservation is confirmed.</div>
+<div class="notice"><b>Important:</b> This is a design-and-booking-request preview, not connected live inventory. Hotel photos are independently licensed where shown; prices, discounts and availability are intentionally <b>not invented</b>. An automatically received hotel quote can enter the DBest catalogue, but the hotel must confirm the requested dates and final payable amount before a reservation is confirmed.</div>
 <div class="sectionhead"><div><h2>Hotels & upfront DBest price comparison</h2><div class="muted" id="searchSummary">Actual property photography where licensed</div></div><div class="muted" id="otaReadiness" role="status">Type a destination or property to see DBest rates and compare available public OTA prices automatically.</div></div>
 <div style="max-width:450px;margin:0 0 15px"><label for="hotelSearch">Search property name or city</label><input class="field" id="hotelSearch" type="search" placeholder="Type a property name to compare rates instantly…" autocomplete="off"></div>
 <section class="grid" id="results" aria-live="polite"></section>
@@ -35,37 +41,36 @@ label{display:block;font-size:11px;color:#566d84;font-weight:850;margin-bottom:7
 <section class="simple-guide"><h2 style="margin:0 0 15px">How DBest booking will work</h2><div class="steps"><div class="step"><b>1. Supplier rate automatically received</b><p>Hotel outreach responses enter the DBest catalogue. Owner controls selling markup privately.</p></div><div class="step"><b>2. Compare matching live prices</b><p>Display actual OTA rates and savings only for identical dates, room, occupancy, meals, cancellation terms and tax-inclusive totals.</p></div><div class="step"><b>3. Request a direct booking</b><p>Send the requested stay details to DBest. Confirmation and payment follow only after hotel inventory and the final amount are verified.</p></div></div></section>
 </main>
 <dialog class="dialog" id="requestModal">
-<div class="d-head"><h2>Book &amp; Pay DBest · Interactive Test</h2><div class="muted">The original OTA comparison stays behind this modal. Payment and availability are simulated; no money or booking is created.</div></div>
+<div class="d-head"><h2>Book &amp; Pay DBest <span class="pilot-chip">TEST MODE</span></h2>
+<div class="muted">You've compared live public OTA references and DBest contracted rates. Continue through a simulated DBest checkout without paying.</div></div>
 <div class="d-body">
-<div class="demo-note"><strong>DEMO ONLY:</strong> DBest's internal room availability approval is simulated. The received rate is a reference, not a final all-tax price. The real booking gateway remains disabled.</div>
-<div class="demo-checkout-table" id="demoBookingSummary" aria-live="polite"></div>
-<section class="demo-screen" id="demoGuestStep">
-<h3>1 · Guest details</h3><p class="fine">Use sample details. Nothing is stored or submitted to DBest.</p>
+<div class="demo-alert"><strong>Interactive checkout simulation.</strong> DBest availability is internally managed. The contracted price shown is a reference, not a tax-inclusive confirmed quotation. No money is charged, no room held and no real voucher is issued.</div>
+<div id="demoSelectedStay" class="demo-recap" aria-live="polite"></div>
 <form id="guestContactForm" autocomplete="off"><div class="guest-form-grid">
-<div><label for="guestFullName">Guest name (sample)</label><input class="field" id="guestFullName" type="text" value="Demo Guest" required minlength="2" maxlength="110"></div>
-<div><label for="guestEmail">Email (sample)</label><input class="field" id="guestEmail" type="email" value="demo@example.com" required maxlength="150"></div>
-<div><label for="guestPhone">Phone (sample)</label><input class="field" id="guestPhone" type="tel" value="0000000000" required minlength="7" maxlength="25"></div>
-</div><button type="submit" class="btn">Continue to DBest payment test</button></form>
+<div><label for="guestFullName">Lead guest name · sample only</label><input class="field" id="guestFullName" value="Demo Guest" type="text" required minlength="2" maxlength="110"></div>
+<div><label for="guestEmail">Email · sample only</label><input class="field" id="guestEmail" value="demo@example.com" type="email" required maxlength="150"></div>
+<div><label for="guestPhone">Mobile · sample only</label><input class="field" id="guestPhone" value="9999999999" type="tel" required minlength="7" maxlength="25"></div>
+</div>
+<button type="submit" class="btn" id="prepareRequest">Continue to DBest payment simulation</button>
+<p class="fine">Sample details remain in this browser session. The demo sends no customer records.</p></form>
+<section id="paymentDemoStage" hidden aria-label="DBest simulated payment">
+<h3>Pay DBest directly · DEMO ONLY</h3>
+<div id="demoPriceInfo" class="demo-recap"></div>
+<div class="demo-pay-tag">TEST GATEWAY · REAL CHARGE ₹0.00</div>
+<div class="booking-row">
+<button class="btn" id="demoPaymentSuccess" type="button">Simulate successful payment</button>
+<button class="btn secondary" id="demoPaymentDecline" type="button">Simulate payment failure</button>
+</div></section>
+<section id="demoVoucherStage" hidden aria-label="Sample voucher">
+<h3>DBest Booking Voucher · Sample</h3>
+<div id="demoVoucher" class="demo-voucher"></div>
+<div class="booking-row"><button id="demoPrint" type="button" class="btn secondary">Print sample voucher</button></div>
 </section>
-<section class="demo-screen" id="demoPayStep" hidden>
-<h3>2 · Direct payment to DBest (simulated)</h3>
-<p class="demo-note">DBest merchant checkout would open here after internal availability approval and a final tax-inclusive quote. <strong>No Razorpay order is created on this page.</strong></p>
-<div class="demo-checkout-table"><dl><dt>Merchant</dt><dd>DBest (demo)</dd><dt>Real money payable</dt><dd class="demo-checkout-total">₹0.00</dd><dt>Test transaction</dt><dd>No payment gateway invoked</dd></dl></div>
-<button id="demoPaySuccess" type="button" class="btn demo-inline-btn">Simulate successful payment</button>
-<button id="demoPayFail" type="button" class="btn secondary demo-inline-btn">Simulate failed payment</button>
-<button id="demoPayBack" type="button" class="btn secondary demo-inline-btn">Back</button>
-<div class="demo-error" id="demoPayError" role="status" aria-live="polite"></div>
-</section>
-<section class="demo-screen" id="demoVoucherStep" hidden>
-<h3>3 · Booking voucher (test only)</h3><div class="demo-voucher" id="demoVoucher"></div>
-<p class="fine">Not valid for hotel check-in; no room has been held and no payment received.</p>
-<button id="demoPrintVoucher" type="button" class="btn secondary demo-inline-btn">Print test voucher</button>
-<button id="demoRestart" type="button" class="btn secondary demo-inline-btn">Start new test booking</button>
-</section>
-<div id="bookingComposeStatus" class="muted" role="status" aria-live="polite"></div>
-</div><div class="d-actions"><button class="btn secondary" id="close" type="button">Close / Continue comparing OTA prices</button></div>
+<div role="status" aria-live="polite" id="bookingComposeStatus" class="muted">Select a room to test booking and payment.</div>
+</div>
+<div class="d-actions"><button type="button" id="close" class="btn secondary">Close checkout demo</button></div>
 </dialog>
-<footer>DBest Hotels · Real supplier rate references and verified public OTA B2C comparisons · TEST checkout only, no real charge, reservation or valid voucher · Main DBest platform unchanged</footer>
+<footer>DBest Hotel Stays · Live public OTA comparisons retained · checkout is a clearly marked ₹0 test simulation · no real reservation.</footer>
 <script>
 (function(){
 'use strict';
@@ -271,7 +276,7 @@ function card(h){
  upfrontPrices+advantageSummary+upfrontNote+
  '<div class="direct-panel">'+roomSelect+'<div class="booking-row"><button type="button" class="btn" data-book="'+html(h.id)+'">Book &amp; Pay DBest · Test</button></div>'+
  '<button type="button" class="rate-toggle" data-offers="'+html(h.id)+'">View DBest Special Rates</button><div class="rate-list" data-offers-panel="'+html(h.id)+'" aria-live="polite" hidden></div>'+
- '<small>All genuine supplier quotations are commercially accepted. DBest manages room availability internally. Only a confirmed, all-tax final price can be charged in production; this test does not create reservations.</small></div>'+
+ '<small>All genuine supplier quotations are commercially accepted. Booking requires availability confirmation; additional taxes are identified separately where applicable.</small></div>'+
  '<div class="prices">'+rows+'</div><div class="b2c-fetch">'+
  '<small role="status">'+html(h.otaStatus|| (autoMappedHotels.has(h.id)?'Type a destination or hotel to load public OTA prices automatically.':'Live OTA matching not yet verified for this property.'))+'</small>'+
  '<button type="button" class="rate-toggle" data-ota="'+html(h.id)+'">Refresh available public OTA rates</button></div>'+
@@ -485,111 +490,85 @@ $('results').addEventListener('click',async e=>{
   }catch(error){panel.textContent='DBest special-rate service unavailable. Please retry.'}
   return;
  }
-
  const b=e.target.closest('button[data-book]');if(!b)return;
- const h=hotels.find(x=>x.id===b.dataset.book);if(!h)return;
- const inDate=Date.parse(state.checkIn+'T00:00:00Z'),outDate=Date.parse(state.checkOut+'T00:00:00Z');
- const today=new Date();today.setUTCHours(0,0,0,0);
- const nights=(outDate-inDate)/86400000;
- if(!Number.isInteger(nights)||nights<1||nights>30||inDate<today.getTime()){
-  alert('Select valid future check-in and check-out dates (1 to 30 nights).');return;
- }
- if(state.rooms!==1||![1,2].includes(state.adults)){
-  alert('Direct booking demo currently supports 1 or 2 adults in one room. Other searches can still compare hotel rates.');return;
- }
+ const h=hotels.find(h=>h.id===b.dataset.book);if(!h)return;
  const roomPicker=[...$('results').querySelectorAll('select[data-room]')].find(x=>x.dataset.room===h.id);
- const requestedRoom=roomPicker&&roomPicker.value?roomPicker.value:'';
- let offer=null;
- try{
-  const response=await fetch('/api/hotel-catalog?view=offers&hotelId='+encodeURIComponent(h.id),{credentials:'same-origin',cache:'no-store'});
-  if(response.ok){
-   const data=await response.json();
-   const preferred=(data.offers||[]).filter(x=>{
-    const occ=String(x.occupancy||'').toLowerCase();
-    const compatible=state.adults===2?/\b(?:double|twin|2\s*(?:adults?|persons?|pax))\b/.test(occ):/\b(?:single|1\s*(?:adult|person|pax))\b/.test(occ);
-    return compatible&&Number.isFinite(x.price)&&x.price>0&&
-      (requestedRoom?x.room===requestedRoom:true)&&!/(?:extra|supplement|additional|surcharge)/i.test(x.room||'');
-   }).sort((x,y)=>x.price-y.price);
-   offer=preferred[0]||null;
-  }
- }catch(error){}
- if(!offer){
-  alert('DBest contracted rate for this selected room and occupancy is not available. Please choose another room or hotel; no payment is possible.');return;
- }
- const currentOta=h.publicOta&&h.publicOta.live&&h.publicOta.stay&&
-   h.publicOta.stay.checkIn===state.checkIn&&h.publicOta.stay.checkOut===state.checkOut&&
-   h.publicOta.stay.adults===state.adults&&h.publicOta.stay.rooms===state.rooms&&
-   Date.now()-Date.parse(h.publicOta.checkedAt)<15*60*1000;
- const providers=currentOta&&Array.isArray(h.publicOta.providers)?h.publicOta.providers:[];
- const cheapest=providers.filter(p=>p.currency==='INR'&&Number.isFinite(p.pricePerNight)&&p.pricePerNight>0)
-   .sort((a,b)=>a.pricePerNight-b.pricePerNight)[0]||null;
- bookingSelection={hotelId:h.id,hotel:h.name,room:offer.room,occupancy:offer.occupancy,meal:offer.meal,
-  nightlyReference:offer.price,taxes:offer.taxStatus,checkIn:state.checkIn,checkOut:state.checkOut,
-  nights,adults:state.adults,rooms:state.rooms,cheapest};
+ const requestedRoom=roomPicker&&roomPicker.value?roomPicker.value:'Any available room';
+ const ref=h.guestRate?.status==='RECEIVED_GUEST_OCCUPANCY_SELLING_REFERENCE'&&
+  h.guestRate?.adults===state.adults&&h.guestRate?.rooms===state.rooms&&
+  Number.isFinite(h.guestRate.pricePerNight)?h.guestRate:null;
+ const desiredRoom=requestedRoom==='Any available room'||requestedRoom==='To confirm'?ref?.room:requestedRoom;
+ const roomMatch=Boolean(ref)&&(desiredRoom===ref.room);
+ const publicRates=h.publicOta?.live&&h.publicOta?.stay?.checkIn===state.checkIn&&
+  h.publicOta?.stay?.checkOut===state.checkOut&&
+  h.publicOta?.stay?.adults===state.adults&&h.publicOta?.stay?.rooms===state.rooms?
+  (h.publicOta.providers||[]).filter(x=>x.currency==='INR'&&Number.isFinite(x.pricePerNight)):[];
+ bookingSelection={
+  hotelId:h.id,hotel:h.name,room:roomMatch?ref.room:requestedRoom,
+  checkIn:state.checkIn,checkOut:state.checkOut,adults:state.adults,rooms:state.rooms,
+  contractedReference:roomMatch?ref.pricePerNight:null,
+  meal:roomMatch?ref.meal:'To confirm',publicRates
+ };
+ const refText=Number.isFinite(bookingSelection.contractedReference)?
+  moneyINR(bookingSelection.contractedReference)+' / night · '+html(bookingSelection.room):
+  'No matching occupancy rate for this room · choose a quoted room to test payment';
+ $('demoSelectedStay').innerHTML='<strong>'+html(h.name)+'</strong><div>'+
+  html(state.checkIn)+' to '+html(state.checkOut)+' · '+state.adults+' adults · '+state.rooms+
+  ' room(s)</div><div><b>DBest contracted reference: '+refText+'</b></div>'+
+  '<small>The OTA comparisons remain visible behind this checkout panel. No price or saving has been fabricated.</small>';
  $('guestContactForm').reset();
- $('guestFullName').value='Demo Guest';$('guestEmail').value='demo@example.com';$('guestPhone').value='0000000000';
- $('bookingComposeStatus').textContent='Compare the received DBest rate against available OTA references before testing checkout.';
- showDemoStage('guest');
- const q=bookingSelection,gap=cheapest?cheapest.pricePerNight-offer.price:null;
- const compare=!cheapest?'Public OTA: no verified rate currently available for this selected stay':
-   'Lowest public OTA headline: '+moneyINR(cheapest.pricePerNight)+'/night ('+html(cheapest.provider)+
-   '). '+(gap>0?'Indicative DBest price difference: '+moneyINR(gap)+'/night':gap===0?
-   'Headline prices equal':'A public OTA currently lists a lower headline price')+
-   ' · not confirmed like-for-like savings.';
- $('demoBookingSummary').innerHTML='<dl><dt>Property</dt><dd>'+html(q.hotel)+'</dd>'+
-   '<dt>Room / occupancy</dt><dd>'+html(q.room)+' · '+html(q.occupancy)+'</dd>'+
-   '<dt>Stay</dt><dd>'+html(q.checkIn)+' → '+html(q.checkOut)+'</dd>'+
-   '<dt>DBest contracted selling reference / night</dt><dd>'+moneyINR(q.nightlyReference)+'</dd>'+
-   '<dt>Reference for '+q.nights+' night(s)</dt><dd class="demo-checkout-total">'+moneyINR(q.nightlyReference*q.nights)+'</dd>'+
-   '<dt>Final tax-inclusive price</dt><dd>Not verified · DEMO</dd>'+
-   '</dl><p class="fine">'+compare+'</p>';
+ $('paymentDemoStage').hidden=true;$('demoVoucherStage').hidden=true;$('guestContactForm').hidden=false;
+ $('bookingComposeStatus').textContent='TEST MODE · DBest internally approves inventory. Continue only with a matching contracted room reference.';
  $('requestModal').showModal();
 });
-let bookingSelection=null;
-function showDemoStage(stage){
- $('demoGuestStep').hidden=stage!=='guest';
- $('demoPayStep').hidden=stage!=='pay';
- $('demoVoucherStep').hidden=stage!=='voucher';
- $('demoPayError').textContent='';
-}
+let bookingSelection=null, demoGuestName='';
 $('guestContactForm').addEventListener('submit',event=>{
  event.preventDefault();
  if(!bookingSelection||!$('guestContactForm').reportValidity())return;
- const name=$('guestFullName').value.trim(),phone=$('guestPhone').value.trim();
- if(name.length<2||!/^\+?[0-9() .-]{7,25}$/.test(phone)){
+ const name=$('guestFullName').value.trim(),email=$('guestEmail').value.trim(),phone=$('guestPhone').value.trim();
+ if(name.length<2||!/^\\+?[0-9() .-]{7,25}$/.test(phone)){
   $('bookingComposeStatus').textContent='Enter a valid sample name and phone number.';return;
  }
- $('bookingComposeStatus').textContent='TEST ONLY · No payment order created and no actual room hold.';
- showDemoStage('pay');
+ if(!Number.isFinite(bookingSelection.contractedReference)||bookingSelection.contractedReference<=0){
+  $('bookingComposeStatus').textContent='Matched DBest room rate is unavailable. Close this panel and select a quoted room or a different hotel.';return;
+ }
+ const nights=Math.round((Date.parse(bookingSelection.checkOut)-Date.parse(bookingSelection.checkIn))/86400000);
+ if(!(nights>=1&&nights<=30)){
+  $('bookingComposeStatus').textContent='Please select valid travel dates.';return;
+ }
+ demoGuestName=name;
+ const total=bookingSelection.contractedReference*nights*bookingSelection.rooms;
+ const sorted=[...bookingSelection.publicRates].sort((a,b)=>a.pricePerNight-b.pricePerNight).slice(0,3);
+ const other=sorted.length?'<h4>Public OTA references on your chosen dates</h4>'+
+  sorted.map(p=>'<div>'+html(p.provider)+' · '+moneyINR(p.pricePerNight)+'/night</div>').join(''):
+  '<p>No live OTA rate currently available for the selected hotel and stay.</p>';
+ $('demoPriceInfo').innerHTML='<div><strong>'+html(bookingSelection.hotel)+'</strong> · '+
+  html(bookingSelection.room)+'</div><div>DBest quoted selling reference: <b>'+
+  moneyINR(bookingSelection.contractedReference)+'/night</b></div><div>'+
+  nights+' night(s) · reference subtotal: <b>'+moneyINR(total)+'</b></div>'+other+
+  '<p class="fine">Taxes, cancellation terms and final DBest availability are NOT confirmed. This amount is illustrative and is not submitted to any bank.</p>';
+ $('guestContactForm').hidden=true;$('paymentDemoStage').hidden=false;
+ $('bookingComposeStatus').textContent='DBest payment screen simulated. Actual charge: ₹0.00.';
 });
-$('demoPayBack').addEventListener('click',()=>showDemoStage('guest'));
-$('demoPayFail').addEventListener('click',()=>{
- $('demoPayError').textContent='TEST PAYMENT DECLINED. No charge made; stay is not reserved.';
+$('demoPaymentDecline').addEventListener('click',()=>{
+ $('bookingComposeStatus').textContent='TEST PAYMENT DECLINED · No money was charged. You may simulate success to view the voucher.';
 });
-$('demoPaySuccess').addEventListener('click',()=>{
- if(!bookingSelection)return;
- const q=bookingSelection,reference='DBEST-TEST-'+Date.now().toString(36).toUpperCase();
- $('demoVoucher').innerHTML='<h3>DBest Hotels · SAMPLE VOUCHER</h3>'+
-  '<p class="demo-note"><strong>SIMULATED PAYMENT ONLY · NOT VALID FOR CHECK-IN</strong></p>'+
-  '<dl class="demo-checkout-table" style="display:grid;grid-template-columns:1fr auto;gap:7px">'+
-  '<dt>Demo reference</dt><dd>'+html(reference)+'</dd>'+
-  '<dt>Guest</dt><dd>'+html($('guestFullName').value.trim())+'</dd>'+
-  '<dt>Hotel</dt><dd>'+html(q.hotel)+'</dd>'+
-  '<dt>Room / guests</dt><dd>'+html(q.room)+' · '+q.adults+' adults</dd>'+
-  '<dt>Stay</dt><dd>'+html(q.checkIn)+' to '+html(q.checkOut)+'</dd>'+
-  '<dt>DBest contracted reference for stay</dt><dd>'+moneyINR(q.nightlyReference*q.nights)+'</dd>'+
-  '<dt>Amount charged</dt><dd>₹0.00</dd>'+
-  '<dt>Hotel confirmation</dt><dd>NONE — DEMO</dd></dl>'+
-  '<p class="fine">Actual hotel availability, final taxes, bank transaction and a valid voucher are not created in this test.</p>';
- $('bookingComposeStatus').textContent='TEST completed. Payment success was simulated; bank payment and booking remain disabled.';
- showDemoStage('voucher');
+$('demoPaymentSuccess').addEventListener('click',()=>{
+ if(!bookingSelection||!Number.isFinite(bookingSelection.contractedReference))return;
+ const ref='DBEST-DEMO-'+Date.now().toString(36).toUpperCase();
+ const nights=Math.round((Date.parse(bookingSelection.checkOut)-Date.parse(bookingSelection.checkIn))/86400000);
+ $('demoVoucher').innerHTML='<strong>DBest Hotel Stay · SAMPLE VOUCHER</strong>'+
+  '<div>Demo booking number: <b>'+html(ref)+'</b></div><div>Guest: '+html(demoGuestName)+'</div>'+
+  '<div>Hotel: '+html(bookingSelection.hotel)+'</div><div>Room: '+html(bookingSelection.room)+'</div>'+
+  '<div>Check-in: '+html(bookingSelection.checkIn)+'</div><div>Check-out: '+html(bookingSelection.checkOut)+'</div>'+
+  '<div>Illustrative DBest rate total: '+moneyINR(bookingSelection.contractedReference*nights*bookingSelection.rooms)+'</div>'+
+  '<div><b>Amount actually charged: ₹0.00</b></div>'+
+  '<strong>DEMO ONLY · NOT VALID FOR CHECK-IN · NO HOTEL BOOKING CONFIRMED</strong>';
+ $('paymentDemoStage').hidden=true;$('demoVoucherStage').hidden=false;
+ $('bookingComposeStatus').textContent='SIMULATED PAYMENT SUCCESS · Sample voucher only, no actual booking or charge.';
 });
-$('demoRestart').addEventListener('click',()=>{
- $('requestModal').close();bookingSelection=null;
-});
-$('demoPrintVoucher').addEventListener('click',()=>window.print());
+$('demoPrint').addEventListener('click',()=>window.print());
 $('close').addEventListener('click',()=>$('requestModal').close());
-
 render();
 // Readiness check is free: no dates, hotel identifiers or paid provider requests.
 fetch('/api/hotel-ota-b2c?view=status',{credentials:'same-origin',cache:'no-store'})
@@ -597,7 +576,7 @@ fetch('/api/hotel-ota-b2c?view=status',{credentials:'same-origin',cache:'no-stor
  .then(data=>{
   $('otaReadiness').textContent=data.liveConnected?
    'Public B2C OTA lookup ready · choose hotel and dates, then check prices':
-   'Type a destination/property: DBest references appear upfront and verified live OTA prices load automatically (verified mapped properties).';
+   'Type a destination/property: DBest references appear upfront and verified live OTA prices load automatically (3 pilot hotels).';
  })
  .catch(()=>{$('otaReadiness').textContent='Live B2C OTA feed status unavailable';});
 fetch('/api/hotel-catalog',{cache:'no-store',credentials:'same-origin'})
