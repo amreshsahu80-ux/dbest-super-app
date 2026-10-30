@@ -83,7 +83,8 @@ function sellingSummaries(env){
   note:'Lowest received contracted rate reference, not a selected-date all-in hotel quote. Room, seasonal, tax and occupancy conditions apply.'};
 }
 function validHost(host){
- return /^(?:dbest-hotel-review-preview)(?:-[a-z0-9-]+)?\.vercel\.app$/.test(String(host||''));
+ return String(host||'').toLowerCase()==='dbest-hotel-photo-preview.vercel.app'||
+  /^(?:dbest-hotel-review-preview)(?:-[a-z0-9-]+)?\.vercel\.app$/.test(String(host||'').toLowerCase());
 }
 async function handler(req,res){
  if(!validHost(req.headers?.host))return respond(res,403,{error:'isolated_pilot_only'});
