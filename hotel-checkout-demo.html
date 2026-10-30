@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive"><meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none';script-src 'unsafe-inline';style-src 'unsafe-inline';connect-src 'self';img-src data:;base-uri 'none';form-action 'none'">
+<title>DBest Hotels | Complete Booking Journey DEMO</title>
+<style>
+:root{font:15px/1.5 Inter,system-ui,Arial,sans-serif;color:#20354a;background:#f2f6fb}*{box-sizing:border-box}body{margin:0}button,input,select{font:inherit}button{cursor:pointer}button:disabled{opacity:.5;cursor:not-allowed}.shell{max-width:1120px;padding:0 20px;margin:auto}
+.top{background:#fff;border-bottom:1px solid #e2eaf1}.nav{min-height:74px;display:flex;align-items:center;justify-content:space-between;gap:15px}.brand{font-size:23px;font-weight:900;color:#163d72;letter-spacing:-.6px}.brand small{display:block;font-size:11px;color:#5b7790;letter-spacing:0;font-weight:600}.top a{color:#1c639b;text-decoration:none;font-size:13px;font-weight:750}
+.hero{background:linear-gradient(110deg,#12345c,#15548c);color:#fff;padding:30px 0}.hero h1{font-size:clamp(24px,4vw,35px);margin:8px 0}.hero p{max-width:750px;margin:5px 0 15px;color:#e0edfb}.flag{font-size:12px;font-weight:850;border-radius:99px;background:#ffe0a3;color:#5b3411;padding:7px 12px;display:inline-flex}
+.banner{margin:17px 0 10px;padding:13px 16px;border:1px solid #e1be85;background:#fff8e9;border-radius:11px;color:#654a27;font-size:13px}
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:20px 0}.step{border-radius:10px;border:1px solid #d8e3ed;background:#fff;padding:12px;text-align:center;font-weight:750;font-size:12px;color:#678196}.step.active{background:#e5f1fc;color:#144c86;border-color:#92bce4}.step.done{color:#0e785f;border-color:#9dd3c3}
+.panel{background:#fff;border-radius:17px;border:1px solid #dbe5ed;padding:22px;margin:15px 0;box-shadow:0 8px 30px #1742690b}.panel h2{font-size:21px;margin:0 0 7px;color:#193f65}.sub{color:#657d92;font-size:13px;margin:0 0 18px}
+.controls{display:grid;grid-template-columns:2fr 1fr 1fr;gap:12px}.field label{display:block;font-size:12px;font-weight:800;margin-bottom:6px;color:#33536c}.field input,.field select{width:100%;border:1px solid #b8cede;border-radius:9px;padding:11px 12px;background:#fff;color:#1c3551;min-height:45px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}.hotel{border:1px solid #d9e5ee;border-radius:13px;overflow:hidden;background:#fff;display:flex;flex-direction:column}.hotel .image{background:linear-gradient(145deg,#b9d5ea,#d7ebf2);height:95px;display:flex;justify-content:space-between;align-items:center;padding:18px;color:#3b6684}.hotel .image span{font-size:36px}.hotel .inside{padding:14px 16px;display:flex;flex-direction:column;gap:9px;flex:1}.hotel h3{font-size:17px;margin:0}.loc,.fine{font-size:12px;color:#677e91}.price{font-size:23px;font-weight:900;color:#134c7d}.price small{font-size:11px;display:block;color:#718497;font-weight:600}.pill{background:#eff7f3;color:#22644f;padding:5px 9px;border-radius:99px;font-size:11px;font-weight:800;align-self:flex-start}.btn{background:#145c9a;border:0;border-radius:9px;color:#fff;padding:12px 16px;font-weight:800;min-height:45px}.btn.secondary{background:#ecf3f9;color:#245679}.btn.warn{background:#fff2e8;color:#9a4d25}.btn-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}.summary{border-radius:12px;background:#f2f7fb;border:1px solid #dbe6ef;padding:15px;margin:15px 0}.summary dl{margin:0;display:grid;grid-template-columns:1fr auto;gap:6px 10px}.summary dt{color:#648096}.summary dd{text-align:right;font-weight:750;margin:0}.summary .total{font-size:21px;color:#134e87}
+.error{color:#9b342b;font-weight:750;font-size:13px;min-height:21px;margin-top:8px}.success{color:#0b7356;font-weight:750}.hidden{display:none!important}.checkout{border:2px solid #aed1e5;padding:18px;border-radius:13px;background:#f9fcff}.testpayment{background:#fff3d7;border:2px dashed #e0a655;padding:13px;border-radius:10px;margin:13px 0;font-weight:850;text-align:center}
+.voucher{position:relative;border:2px solid #d6e4ee;background:#fff;padding:23px;margin:12px 0;border-radius:14px;overflow:hidden}.voucher::after{content:"DEMO · NOT VALID FOR CHECK-IN";position:absolute;transform:rotate(-20deg);top:45%;left:7%;font-size:clamp(18px,4vw,43px);font-weight:900;color:#b75b4b24;white-space:nowrap;pointer-events:none}.voucher h3{color:#174d78;margin:0 0 7px}.mono{font-family:ui-monospace,monospace}.footer{font-size:12px;color:#667f95;text-align:center;padding:22px 0 35px}
+@media(max-width:700px){.controls,.grid{grid-template-columns:1fr}.steps{gap:4px}.step{font-size:10px;padding:9px 4px}.panel{padding:16px}.nav{min-height:66px}.brand{font-size:21px}}
+@media print{body{background:#fff}.top,.hero,.banner,.steps,.footer,.panel:not(#voucherPanel),button{display:none!important}#voucherPanel{display:block!important;border:0;box-shadow:none}.voucher{min-height:400px}}
+</style></head><body>
+<header class="top"><div class="shell nav"><div class="brand">DBest Hotels<small>Search · Compare · Book · Pay</small></div><a href="/hotel-simple-flow.html">View live comparison preview</a></div></header>
+<section class="hero"><div class="shell"><span class="flag">INTERACTIVE TEST MODE · NO REAL MONEY</span><h1>Experience the complete DBest hotel booking journey</h1><p>Choose a hotel, use DBest's internally approved demo availability, simulate payment to DBest and see a sample voucher. No bank payment, real inventory hold, customer record or reservation is created.</p></div></section>
+<main class="shell">
+<div class="banner"><strong>Demonstration only:</strong> The prices below are received DBest contracted selling references where the rate API is reachable—not verified all-tax final booking prices. Payment, availability, voucher and confirmation are simulated. Please use sample contact details.</div>
+<div class="steps" id="steps"><div class="step active">1 · Select hotel</div><div class="step">2 · Guest details</div><div class="step">3 · Pay DBest</div><div class="step">4 · Voucher</div></div>
+<section class="panel" id="searchPanel"><h2>Search & choose your hotel</h2><p class="sub">Example hotels from DBest's contracted catalogue; the full hotel catalogue remains in the adjacent live comparison preview.</p>
+<div class="controls"><div class="field"><label for="destination">Destination or property</label><input id="destination" placeholder="Guwahati, Agartala, Hotel Nandan…" autocomplete="off"></div>
+<div class="field"><label for="checkIn">Check-in date</label><input id="checkIn" type="date"></div>
+<div class="field"><label for="checkOut">Check-out date</label><input id="checkOut" type="date"></div></div>
+<p class="fine">Demo configuration: 2 adults · 1 room · contracted selling reference only</p><div class="grid" id="hotelResults" aria-live="polite"></div><p class="error" id="searchError"></p>
+</section>
+<section class="panel hidden" id="guestPanel"><h2>Guest & selected room</h2><p class="sub">Your demo booking will use a simulated DBest Owner-approved room allocation. Enter sample guest details; they remain in this page only.</p>
+<div id="roomSummary" class="summary"></div>
+<div class="grid"><div class="field"><label for="guestName">Lead guest name</label><input id="guestName" value="Demo Guest" minlength="2" maxlength="100" required></div>
+<div class="field"><label for="guestEmail">Contact email (sample only)</label><input id="guestEmail" type="email" value="demo@example.com"></div></div>
+<div class="btn-row"><button type="button" class="btn secondary" id="guestBack">Back to hotels</button><button type="button" class="btn" id="continueToPay">Continue to secure checkout demo</button></div><p class="error" id="guestError"></p>
+</section>
+<section class="panel hidden" id="payPanel"><h2>Pay DBest directly</h2><p class="sub">This preview demonstrates the gateway screens. There is no live Razorpay order or payment transaction.</p>
+<div class="checkout"><div id="paymentSummary" class="summary"></div>
+<div class="pill">DBest internal availability · DEMO APPROVED</div>
+<p class="fine">For real checkout, DBest will approve available rooms and verify the final tax-inclusive rate before the payment order is created. The reference price here is used ONLY to exercise the demo screens.</p>
+<div class="testpayment">TEST GATEWAY · ₹0 WILL BE CHARGED</div>
+<div class="btn-row"><button type="button" class="btn" id="demoPay">Simulate successful payment</button><button type="button" class="btn warn" id="demoFail">Simulate payment failure</button><button type="button" class="btn secondary" id="payBack">Back</button></div>
+<p class="error" id="payError" role="status"></p></div>
+</section>
+<section class="panel hidden" id="voucherPanel"><h2>Sample booking voucher</h2><p class="sub">Payment state: <strong>SIMULATED SUCCESS</strong>. No actual bank charge, hotel reservation, room hold or guest confirmation has occurred.</p>
+<div class="voucher" id="voucher" aria-live="polite"></div>
+<div class="btn-row"><button type="button" class="btn" id="printVoucher">Print sample voucher</button><button type="button" class="btn secondary" id="testAgain">Run another demo booking</button></div></section>
+</main><footer class="shell footer">DBest Hotel direct booking journey · Isolated interactive demo · Not valid for bookings or payments · Main DBest platform unchanged</footer>
+<script>
+(()=>{'use strict';
+const $=id=>document.getElementById(id), rup=n=>'₹'+Number(n).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+const hotels=[
+ {id:'HOTEL-NANDAN-GHY',name:'Hotel Nandan',city:'Guwahati',room:'Deluxe Double',base:4961.25,qty:2},
+ {id:'HIST-016',name:'Vivanta Guwahati',city:'Guwahati',room:'Double room',base:null,qty:1},
+ {id:'DBEST-REPL-20261026-697',name:'Ginger Agartala',city:'Agartala',room:'Double room',base:null,qty:2},
+ {id:'DBEST-REPL-20261026-691',name:'Polo Hotel Agartala',city:'Agartala',room:'Premiere Double',base:6825,qty:1},
+ {id:'DBEST-REPL-20261024-138',name:'Royal Orchid Beach Resort & Spa Goa',city:'Goa',room:'Double room',base:null,qty:1},
+ {id:'DBEST-REPL-20261026-632',name:'Spree Resort Sariska',city:'Alwar',room:'Double room',base:null,qty:1}
+];
+let selected=null,stage=0,ref=null;
+const dateFromNow=days=>{const d=new Date();d.setDate(d.getDate()+days);return d.toISOString().slice(0,10)};
+$('checkIn').value=dateFromNow(14);$('checkOut').value=dateFromNow(15);$('checkIn').min=dateFromNow(1);$('checkOut').min=dateFromNow(2);
+function text(s){return String(s||'').replace(/[&<>"']/g,x=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[x]))}
+function currentNights(){return Math.round((Date.parse($('checkOut').value)-Date.parse($('checkIn').value))/86400000)}
+function validDates(){return $('checkIn').value>dateFromNow(0)&&currentNights()>=1&&currentNights()<=30}
+function showStep(step){stage=step;['searchPanel','guestPanel','payPanel','voucherPanel'].forEach((id,i)=>$(id).classList.toggle('hidden',i!==step));[...$('steps').children].forEach((e,i)=>{e.classList.toggle('active',i===step);e.classList.toggle('done',i<step)});scrollTo({top:0,behavior:'smooth'})}
+function showHotels(){
+ const term=$('destination').value.trim().toLowerCase();
+ const out=hotels.filter(h=>(h.name+' '+h.city).toLowerCase().includes(term));
+ $('hotelResults').innerHTML='';
+ for(const h of out){
+  const el=document.createElement('div');el.className='hotel';
+  const inside=document.createElement('div');inside.className='inside';
+  const img=document.createElement('div');img.className='image';
+  const label=document.createElement('strong');label.textContent='DBest contracted hotel';const ico=document.createElement('span');ico.textContent='🏨';img.append(label,ico);
+  const name=document.createElement('h3');name.textContent=h.name;
+  const city=document.createElement('div');city.className='loc';city.textContent=h.city+' · 2 adults, 1 room';
+  const price=document.createElement('div');price.className='price';price.textContent=h.base===null?'Rate loading…':rup(h.base);const small=document.createElement('small');small.textContent='Received selling rate reference / night · final tax not verified';price.append(small);
+  h.priceEl=price;const chip=document.createElement('span');chip.className='pill';chip.textContent='Internal availability: demo allocation';
+  const btn=document.createElement('button');btn.className='btn';btn.type='button';btn.textContent='Select room & book';btn.disabled=h.base===null;
+  btn.onclick=()=>selectHotel(h);h.button=btn;
+  inside.append(name,city,price,chip,btn);el.append(img,inside);$('hotelResults').append(el);
+ }
+ if(!out.length){$('hotelResults').textContent='No demo hotel matches. Try Guwahati, Agartala, Goa or Alwar.'}
+}
+function selectHotel(h){
+ if(!validDates()){$('searchError').textContent='Select a future check-in and check-out (1–30 nights).';return}
+ if(!Number.isFinite(h.base)||h.base<=0){$('searchError').textContent='Rate unavailable for this hotel. Choose another property.';return}
+ selected={...h,checkIn:$('checkIn').value,checkOut:$('checkOut').value,nights:currentNights()};
+ $('searchError').textContent='';
+ $('roomSummary').innerHTML='<dl><dt>Hotel</dt><dd>'+text(h.name)+'</dd><dt>Room</dt><dd>'+text(h.room)+'</dd><dt>Guests</dt><dd>2 adults · 1 room</dd><dt>Stay</dt><dd>'+text(selected.checkIn)+' to '+text(selected.checkOut)+'</dd><dt>Contracted reference / night</dt><dd>'+rup(h.base)+'</dd><dt>Reference for '+selected.nights+' night(s)</dt><dd>'+rup(h.base*selected.nights)+'</dd></dl><p class="fine">Illustration only · not a final tax-inclusive quote or a live bookable rate.</p>';
+ showStep(1);
+}
+function paymentSummary(){
+ return '<dl><dt>Payee</dt><dd>DBest (simulated merchant)</dd><dt>Property</dt><dd>'+text(selected.name)+'</dd><dt>Room</dt><dd>'+text(selected.room)+'</dd><dt>Stay</dt><dd>'+text(selected.checkIn)+' → '+text(selected.checkOut)+'</dd><dt>Guest</dt><dd>'+text($('guestName').value.trim())+'</dd><dt>Test reference amount</dt><dd class="total">'+rup(selected.nights*selected.base)+'</dd><dt>Real charge</dt><dd class="total">₹0.00</dd></dl>';
+}
+$('destination').addEventListener('input',showHotels);
+$('checkIn').addEventListener('change',()=>{if($('checkOut').value<=$('checkIn').value)$('checkOut').value=dateFromNow(16);showHotels()});
+$('checkOut').addEventListener('change',showHotels);
+$('guestBack').onclick=()=>showStep(0);
+$('payBack').onclick=()=>showStep(1);
+$('continueToPay').onclick=()=>{
+ const name=$('guestName').value.trim(),email=$('guestEmail').value.trim();
+ if(name.length<2||name.length>100||!$('guestEmail').checkValidity()||!email){$('guestError').textContent='Please enter a guest name and valid sample email.';return}
+ $('guestError').textContent='';$('paymentSummary').innerHTML=paymentSummary();$('payError').textContent='';showStep(2);
+};
+$('demoFail').onclick=()=>{$('payError').textContent='TEST PAYMENT DECLINED — no charge made. Try the successful-payment simulation.'};
+$('demoPay').onclick=()=>{
+ if(!selected)return;
+ ref='DBEST-DEMO-'+Date.now().toString(36).toUpperCase();
+ $('voucher').innerHTML='<h3>DBest Hotel Booking · Sample Voucher</h3><p class="pill">TEST PAYMENT SIMULATED · NOT A VALID RESERVATION</p><div class="summary"><dl>'+
+ '<dt>Sample booking reference</dt><dd class="mono">'+ref+'</dd>'+
+ '<dt>Guest</dt><dd>'+text($('guestName').value.trim())+'</dd>'+
+ '<dt>Hotel</dt><dd>'+text(selected.name)+'</dd>'+
+ '<dt>Room</dt><dd>'+text(selected.room)+'</dd>'+
+ '<dt>Check-in</dt><dd>'+text(selected.checkIn)+'</dd>'+
+ '<dt>Check-out</dt><dd>'+text(selected.checkOut)+'</dd>'+
+ '<dt>Adults / rooms</dt><dd>2 adults / 1 room</dd>'+
+ '<dt>Illustrative DBest reference</dt><dd>'+rup(selected.base*selected.nights)+'</dd>'+
+ '<dt>Actual amount paid</dt><dd>₹0.00</dd>'+
+ '<dt>Hotel confirmation</dt><dd>NOT CREATED · DEMO ONLY</dd>'+
+ '</dl></div><p class="fine"><strong>Not valid for check-in:</strong> DBest internal inventory, Razorpay payment, taxes and actual room allocation were simulated. This document cannot be presented to a property.</p>';
+ showStep(3);
+};
+$('printVoucher').onclick=()=>print();
+$('testAgain').onclick=()=>{selected=null;ref=null;showStep(0)};
+async function loadRealReferences(){
+ try{
+  const ids=hotels.map(h=>h.id).join(',');
+  const resp=await fetch('/api/hotel-guest-rate?hotelIds='+encodeURIComponent(ids)+'&adults=2&rooms=1',{cache:'no-store',credentials:'same-origin'});
+  if(!resp.ok)return;
+  const p=await resp.json();if(p.status!=='DBEST_OCCUPANCY_REFERENCES'||!Array.isArray(p.hotels))return;
+  for(const x of p.hotels){
+   const h=hotels.find(h=>h.id===x.id);
+   if(!h||x.status!=='RECEIVED_GUEST_OCCUPANCY_SELLING_REFERENCE'||!Number.isFinite(x.pricePerNight)||x.pricePerNight<=0)continue;
+   h.base=x.pricePerNight;h.room=x.room||h.room;
+  }
+ }catch(e){}finally{showHotels()}
+}
+showHotels();loadRealReferences();
+})();
+</script></body></html>
