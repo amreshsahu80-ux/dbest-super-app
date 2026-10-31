@@ -13,7 +13,7 @@ test('guest hotel search automatically schedules OTA prices without a Check butt
 test('DBest rate, OTA reference and conditional indicative difference are upfront',()=>{
  assert.match(html,/DBest contracted reference/);
  assert.match(html,/Public OTA from · selected stay/);
- assert.match(html,/Potential DBest price difference/);
+ assert.match(html,/DBest Advantage/);
  assert.match(html,/not verified savings/);
  assert.match(html,/preliminary|Indicative only/i);
  assert.match(html,/const dbestNumeric=/);
