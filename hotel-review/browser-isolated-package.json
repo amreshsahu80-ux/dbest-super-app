@@ -1,0 +1,13 @@
+{
+  "name": "dbest-hotel-public-b2c-browser-isolated",
+  "version": "0.1.0",
+  "private": true,
+  "type": "commonjs",
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@sparticuz/chromium": "153.0.0",
+    "puppeteer-core": "25.16.0"
+  }
+}

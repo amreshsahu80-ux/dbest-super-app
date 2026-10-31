@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "functions": {
+    "api/hotel-google-b2c.js": {
+      "maxDuration": 90
+    },
+    "api/hotel-public-google.js": {
+      "maxDuration": 90
+    }
+  }
+}
