@@ -35,11 +35,13 @@ public final class NativePushController {
     private final WebView webView;
     private final Button button;
     private final boolean firebaseReady;
+    private final NativeAccountBinding accountBinding;
 
     public NativePushController(Activity activity, FrameLayout root, WebView webView) {
         this.activity = activity;
         this.webView = webView;
         firebaseReady = initializeFirebase();
+        accountBinding = new NativeAccountBinding(activity, webView);
         button = new Button(activity);
         button.setAllCaps(false);
         button.setTextSize(12);
@@ -79,11 +81,17 @@ public final class NativePushController {
         }
         if (isEnabled()) {
             new AlertDialog.Builder(activity)
-                .setTitle("DBest test notifications")
-                .setMessage("Device-only testing. These are NOT connected to DBest's live notification service.")
-                .setPositiveButton("Copy test device token", (d,w) -> showToken())
-                .setNeutralButton("Turn test alerts OFF", (d,w) -> disable())
-                .setNegativeButton("Cancel", null).show();
+                .setTitle("DBest Firebase pilot")
+                .setMessage("Test delivery is ON. Account registration is separate and still a pilot.")
+                .setItems(new String[]{
+                    "Connect to my signed-in DBest member account (pilot)",
+                    "Copy Firebase test token",
+                    "Turn notifications OFF"
+                }, (dialog, which) -> {
+                    if (which == 0) accountBinding.connectWithConsent();
+                    else if (which == 1) showToken();
+                    else if (which == 2) disable();
+                }).setNegativeButton("Close", null).show();
             return;
         }
         new AlertDialog.Builder(activity)
@@ -148,12 +156,12 @@ public final class NativePushController {
                 .edit().putBoolean("enabled", false).apply();
         updateButton();
         FirebaseMessaging.getInstance().setAutoInitEnabled(false);
-        FirebaseMessaging.getInstance().deleteToken().addOnCompleteListener(task -> {
-            Toast.makeText(activity, task.isSuccessful()
-                    ? "Device test alerts OFF; Firebase test token deleted."
+        accountBinding.revokeAndThen(() -> FirebaseMessaging.getInstance()
+            .deleteToken().addOnCompleteListener(task ->
+                Toast.makeText(activity, task.isSuccessful()
+                    ? "Test alerts OFF; Firebase token deleted."
                     : "Alerts OFF locally. Token deletion requires retry.",
-                    Toast.LENGTH_LONG).show();
-        });
+                    Toast.LENGTH_LONG).show()));
     }
 
     public void refreshVisibility() {
@@ -170,7 +178,10 @@ public final class NativePushController {
         // DBest session tokens. Keep it on home only to avoid covering checkout.
         button.setVisibility(dbestHome ? View.VISIBLE : View.GONE);
         updateButton();
+        if (dbestHome) accountBinding.onTrustedPageLoaded();
     }
+
+    public void shutdown() { accountBinding.shutdown(); }
 
     private boolean initializeFirebase() {
         try {
