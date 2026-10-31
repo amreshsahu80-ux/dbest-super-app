@@ -107,9 +107,10 @@ function displayedStayMatches(text,stay){
 }
 function parsePrices(body){
  const text=String(body||'');
- const start=text.indexOf('All options\n');
- if(start<0)return [];
- let section=text.slice(start+'All options\n'.length, start+8000);
+ const header=/^All options\s*$/m.exec(text);
+ if(!header)return [];
+ const start=header.index+header[0].length;
+ let section=text.slice(start,start+8000);
  const end=section.search(/\n(?:Sponsored·Similar hotels|View more options from|Nearby places|Hotel priority|7 top things)/);
  if(end>=0)section=section.slice(0,end);
  const lines=section.split('\n').map(x=>x.trim()).filter(Boolean);
@@ -121,10 +122,10 @@ function parsePrices(body){
   const rest=lines.slice(i+1,i+7);
   const boundary=rest.indexOf('Visit site');
   if(boundary<0)continue;
-  const candidates=rest.slice(0,boundary).filter(s=>/^₹[\d,]{3,10}$/.test(s));
-  if(candidates.length!==1)continue;
-  const price=Number(candidates[0].slice(1).replace(/,/g,''));
-  if(!Number.isFinite(price)||price<=0||price>1000000)continue;
+  const candidates=rest.slice(0,boundary).filter(s=>/^₹\s*[\d,]{3,10}$/.test(s));
+   if(candidates.length!==1)continue;
+   const price=Number(candidates[0].replace(/[₹,\s]/g,''));
+   if(!Number.isFinite(price)||price<=0||price>1000000)continue;
   used.add(label);
   out.push({provider:label,pricePerNight:price,currency:'INR',
    room:'Room category, taxes, meals and policy to verify with the OTA',
