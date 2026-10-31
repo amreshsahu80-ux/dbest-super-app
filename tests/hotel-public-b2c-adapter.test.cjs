@@ -138,11 +138,11 @@ test('status endpoint reports provider readiness without hotel selection or paid
  assert.equal(billed,0);
  assert.doesNotMatch(JSON.stringify(output.body),/DATAFORSEO_LOGIN|DATAFORSEO_PASSWORD|supplierB2B/);
 });
-test('guest UI never auto-charges on catalogue load; public OTA requests require click',()=>{
+test('guest UI uses guarded free public OTA browser fetches and retains explicit click refresh',()=>{
  const page=fs.readFileSync('hotel-simple-flow.html','utf8');
  assert.match(page,/data-ota=/);
  assert.match(page,/e\.target\.closest\('button\[data-ota\]'\)/);
- assert.match(page,/fetch\('\/api\/hotel-google-b2c\?'/);
+ assert.match(page,/fetch\('\/api\/hotel-public-google\?'/);
  assert.match(page,/room, taxes and stay terms/);
  const inline=[...page.matchAll(/<script>\s*([\s\S]+?)<\/script>/g)];
  for(const part of inline)new vm.Script(part[1]);
