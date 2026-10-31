@@ -317,7 +317,7 @@ async function loadPublicOtaRates(h,force=false){
   const controller=new AbortController();
   const timeout=setTimeout(()=>controller.abort(),45000);
   try{
-   const resp=await fetch('/api/hotel-google-b2c?'+args.toString(),{credentials:'same-origin',cache:'no-store',signal:controller.signal});
+   const resp=await fetch('/api/hotel-public-google?'+args.toString(),{credentials:'same-origin',cache:'no-store',signal:controller.signal});
    const payload=await resp.json();
    if(stayKey!==currentStayKey())return;
    if(!resp.ok)throw Error('Provider temporarily unavailable');
@@ -440,7 +440,7 @@ $('results').addEventListener('click',async e=>{
   if(!panel.hidden){panel.hidden=true;open.textContent='View DBest Special Rates';return}
   panel.hidden=false;panel.textContent='Retrieving contracted selling rates…';open.textContent='Hide DBest Special Rates';
   try{
-   const resp=await fetch('/api/hotel-catalog?view=offers&hotelId='+encodeURIComponent(open.dataset.offers),
+   const resp=await fetch('/api/hotel-public-catalog?view=offers&hotelId='+encodeURIComponent(open.dataset.offers),
     {credentials:'same-origin',cache:'no-store'});
    if(!resp.ok)throw Error('Rate catalogue not available');
    const data=await resp.json();
@@ -500,7 +500,7 @@ fetch('/api/hotel-ota-b2c?view=status',{credentials:'same-origin',cache:'no-stor
    'Type a destination/property: DBest references appear upfront and verified live OTA prices load automatically (3 pilot hotels).';
  })
  .catch(()=>{$('otaReadiness').textContent='Live B2C OTA feed status unavailable';});
-fetch('/api/hotel-catalog',{cache:'no-store',credentials:'same-origin'})
+fetch('/api/hotel-public-catalog',{cache:'no-store',credentials:'same-origin'})
 .then(async response=>{if(!response.ok)throw Error('Catalog unavailable');return response.json()})
 .then(async data=>{
  if(!Array.isArray(data.hotels)||!data.hotels.length)return;
@@ -516,7 +516,7 @@ fetch('/api/hotel-catalog',{cache:'no-store',credentials:'same-origin'})
  });
  // The server sends only a marked-up reference, never the confidential net tariff.
  try {
-  const refResponse=await fetch('/api/hotel-catalog?view=offers-summary',
+  const refResponse=await fetch('/api/hotel-public-catalog?view=offers-summary',
     {cache:'no-store',credentials:'same-origin'});
   if(refResponse.ok){
    const refPayload=await refResponse.json();
