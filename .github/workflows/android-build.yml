@@ -29,9 +29,14 @@ jobs:
           gradle-version: '8.13'
       - name: Build release AAB
         run: gradle :app:bundleRelease
+      - name: Explain missing Firebase side-by-side test registration
+        if: ${{ hashFiles('android-app/app/src/debug/google-services.json') == '' }}
+        run: echo 'Register com.dbest4u.app.test in the existing Firebase project and place its google-services.json in android-app/app/src/debug/ before building the side-by-side debug APK.' >> "$GITHUB_STEP_SUMMARY"
       - name: Build installable Firebase test APK
+        if: ${{ hashFiles('android-app/app/src/debug/google-services.json') != '' }}
         run: gradle :app:assembleDebug
       - name: Upload Firebase test APK
+        if: ${{ hashFiles('android-app/app/src/debug/google-services.json') != '' }}
         uses: actions/upload-artifact@v4
         with:
           name: dbest-firebase-notification-test-apk
