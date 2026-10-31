@@ -146,6 +146,11 @@ public class MainActivity extends ComponentActivity {
 
     @Override public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] results) {
         super.onRequestPermissionsResult(requestCode, permissions, results);
+        if (requestCode == NativePushController.PERMISSION_REQUEST && nativePush != null) {
+            boolean granted=results.length>0 && results[0]==PackageManager.PERMISSION_GRANTED;
+            nativePush.onPermissionResult(granted);
+            return;
+        }
         if (requestCode == LOCATION_REQUEST && geoCallback != null) {
             boolean granted = results.length > 0 && results[0] == PackageManager.PERMISSION_GRANTED;
             geoCallback.invoke(geoOrigin, granted, false);
