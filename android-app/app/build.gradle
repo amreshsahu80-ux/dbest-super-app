@@ -22,6 +22,12 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Separate install beside Play-signed DBest; Firebase needs a matching
+            // com.dbest4u.app.test registration/config in app/src/debug/.
+            applicationIdSuffix '.test'
+            versionNameSuffix '-test'
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
