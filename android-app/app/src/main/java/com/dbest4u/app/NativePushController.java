@@ -157,18 +157,19 @@ public final class NativePushController {
     }
 
     public void refreshVisibility() {
-        if (webView == null || webView.getUrl()==null || !webView.getUrl().startsWith("https://dbest4u.com/")) {
-            button.setVisibility(View.GONE);
-            return;
-        }
-        String js="(function(){try{var t=localStorage.getItem('dbest_member_live_token');"+
-                "var open=document.body.classList.contains('sectionOpen')||"+
-                "!!document.getElementById('m')?.querySelector('.sectionOverlay,.overlay');"+
-                "return !!t&&!open&&location.pathname==='/';}catch(e){return false}})()";
-        webView.evaluateJavascript(js, result -> {
-            button.setVisibility("true".equals(result) ? View.VISIBLE : View.GONE);
-            updateButton();
-        });
+        String url = webView == null ? null : webView.getUrl();
+        boolean dbestHome=false;
+        try {
+            android.net.Uri uri=android.net.Uri.parse(url==null?"":url);
+            dbestHome="https".equalsIgnoreCase(uri.getScheme()) &&
+                    ("dbest4u.com".equalsIgnoreCase(uri.getHost()) ||
+                     "www.dbest4u.com".equalsIgnoreCase(uri.getHost())) &&
+                    (uri.getPath()==null || "/".equals(uri.getPath()));
+        }catch(Exception ignored){}
+        // Test mode is independent of login; it never registers production
+        // DBest session tokens. Keep it on home only to avoid covering checkout.
+        button.setVisibility(dbestHome ? View.VISIBLE : View.GONE);
+        updateButton();
     }
 
     private boolean initializeFirebase() {
