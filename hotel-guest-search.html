@@ -180,20 +180,33 @@ for(const q of data.hotels||[]){if(ids.includes(q.id)&&q.adults===state.adults&&
 }catch(e){$('update').textContent='Some DBest room prices require reconfirmation';}
 finally{for(const id of ids)guestLoading.delete(id+'|'+key);if(token===searchToken)render()}
 }
-async function loadOTA(h,token){
-if(state.adults!==2||state.rooms!==1)return;
+async function loadOTA(h,token,force=false){
+if(state.adults!==2||state.rooms!==1){otaStatus.set(otaKey(h),'Automatic public OTA lookup currently supports 2 adults and 1 room.');if(token===searchToken)render();return}
 const key=otaKey(h);const previous=recentWindow.get(key);
-if(inflight.has(key)||previous&&Date.now()-previous<180000)return;
+if(inflight.has(key)||(!force&&previous&&Date.now()-previous<180000))return;
 const cached=otas.get(key);if(cached&&Date.now()-Date.parse(cached.checkedAt)<15*60000)return;
-recentWindow.set(key,Date.now());inflight.add(key);
+recentWindow.set(key,Date.now());inflight.add(key);otaStatus.set(key,'Checking public OTA prices for the selected dates…');if(token===searchToken)render();
 try{const args=new URLSearchParams({hotelId:h.id,checkIn:state.checkIn,checkOut:state.checkOut,adults:'2',rooms:'1'});
 const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),45000);
 let r;try{r=await fetch('/api/hotel-public-google?'+args,{credentials:'same-origin',cache:'no-store',signal:controller.signal})}finally{clearTimeout(timer)}
-if(!r.ok)throw Error('OTA request failed');
 const result=await r.json();
-if(result.live&&result.stay&&result.stay.checkIn===state.checkIn&&result.stay.checkOut===state.checkOut&&result.stay.adults===2&&result.stay.rooms===1&&Array.isArray(result.providers)){otas.set(key,result);if(token===searchToken)render()}
-}catch(e){$('update').textContent='Public OTA data not available for every property';}
-finally{inflight.delete(key)}
+if(r.ok&&result.live&&result.stay&&result.stay.checkIn===state.checkIn&&result.stay.checkOut===state.checkOut&&result.stay.adults===2&&result.stay.rooms===1&&Array.isArray(result.providers)&&result.providers.some(p=>p.currency==='INR'&&Number.isFinite(p.pricePerNight)&&p.pricePerNight>0)){
+ otas.set(key,result);otaStatus.set(key,'Public OTA rates checked for these dates. Match room, taxes and meal before booking.');
+}else{
+ const reasons={
+  PILOT_HOURLY_LIMIT:'Public-rate request limit reached. Open the OTA links to check.',
+  PAGE_DATES_OR_PROPERTY_NOT_VERIFIED:'Google Hotels could not confirm this hotel and stay dates.',
+  PAGE_GUEST_COUNT_NOT_VERIFIED:'Public listing did not confirm 2 adults.',
+  PRICE_PAGE_GUEST_COUNT_NOT_VERIFIED:'Public price listing did not confirm 2 adults.',
+  NO_VERIFIED_PUBLIC_GOOGLE_B2C_OFFERS:'No date-verified public OTA rates were returned.',
+  GOOGLE_PUBLIC_BROWSER_UNAVAILABLE:'Public OTA rate source is temporarily unavailable.',
+  BROWSER_PILOT_DISABLED:'Automatic public OTA lookup is disabled in this preview.',
+  PROPERTY_NOT_MAPPED:'Exact OTA property listing is not mapped.'
+ };
+ otaStatus.set(key,reasons[result.status]||'Could not verify public OTA prices. Open each OTA to check.');
+}
+}catch(e){otaStatus.set(key,'Public OTA request failed. Open OTA links for current prices.');}
+finally{inflight.delete(key);if(token===searchToken)render()}
 }
 function suggestions(){
 const q=$('destination').value.trim().toLocaleLowerCase();const box=$('suggestions');box.innerHTML='';
@@ -215,6 +228,8 @@ $('results').addEventListener('change',e=>{
  if(!el)return;roomSelections.set(el.dataset.room,el.value);render();
 });
 $('results').addEventListener('click',e=>{
+const refresh=e.target.closest('button[data-refresh-ota]');
+if(refresh){const hotel=hotels.find(h=>h.id===refresh.dataset.refreshOta);if(hotel)void loadOTA(hotel,searchToken,true);return}
 const b=e.target.closest('button[data-book]');if(!b)return;const h=hotels.find(h=>h.id===b.dataset.book);if(!h)return;
 const opt=document.querySelector('select[data-room="'+CSS.escape(h.id)+'"]');
 const q=rate(h);
