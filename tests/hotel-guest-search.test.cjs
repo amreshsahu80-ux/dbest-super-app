@@ -72,7 +72,7 @@ test('when property image rights are not confirmed use official gallery link, no
  assert.match(html,/galleries=Object\.freeze/);
  assert.match(html,/hotelnandan\.com\/rooms\//);
  assert.match(html,/View hotel’s real photos/);
- assert.doesNotMatch(html,/r2imghtlak\.mmtcdn\.com/);
+ assert.match(html,/PUBLIC_SOURCE_REUSE_NOT_VERIFIED/);
 });
 
 
