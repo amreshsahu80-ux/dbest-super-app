@@ -16,7 +16,7 @@ jobs:
       - name: Verify guest page and real public quote API respond without Vercel login
         run: |
           node - <<'NODE'
-          const origin='https://dbest-hotel-guest-public-preview-ncgbvucbb-db-est.vercel.app';
+          const origin='https://dbest-hotel-guest-public-preview.vercel.app';
           (async()=>{
            const page=await fetch(origin+'/',{signal:AbortSignal.timeout(12000)});
            const html=await page.text();
@@ -66,7 +66,7 @@ jobs:
             await page.setViewport({width:390,height:844,isMobile:true});
             const failed=[];
             page.on('pageerror',err=>failed.push(String(err.message).slice(0,140)));
-            const u='https://dbest-hotel-guest-public-preview-ncgbvucbb-db-est.vercel.app/';
+            const u='https://dbest-hotel-guest-public-preview.vercel.app/';
             const res=await page.goto(u,{waitUntil:'domcontentloaded',timeout:23000});
             if(!res||res.status()!==200)throw Error('GUEST_PAGE_NOT_200');
             await page.evaluate(()=>{
@@ -79,8 +79,9 @@ jobs:
             try{
               await page.waitForFunction(()=>{
                 const v=document.querySelector('#results')?.innerText||'';
-                return v.includes('Hotel Nandan')&&v.includes('US$')&&
-                  (v.includes('OTA lower')||v.includes('DBest lower')||v.includes('Same displayed nightly'));
+                return v.includes('Hotel Nandan')&&
+                  v.includes('Some verified OTA prices are lower than DBest')&&
+                  v.includes('View all ')&&v.includes('verified public OTA prices');
               },{timeout:55000,polling:500});
             }catch(e){
               const v=await page.$eval('#results',n=>n.innerText);
@@ -92,18 +93,36 @@ jobs:
             const card=await page.$eval('.hotel',n=>({
               title:n.querySelector('h3')?.innerText,
               photoLoaded:!!n.querySelector('img')?.naturalWidth,
-              details:n.innerText.slice(0,1150)
+              details:n.innerText.slice(0,1150),
+              allDetails:n.querySelector('details.all-ota')?.open,
+              hasFeatured:n.querySelector('.dbest-advantage')!==null,
+              cheaperDisclosure:n.innerText.includes('Some verified OTA prices are lower than DBest')
+            }));
+            await page.$eval('details.all-ota summary',summary=>summary.click());
+            const revealed=await page.$eval('details.all-ota',n=>({
+              open:n.open,text:n.innerText.slice(0,800)
             }));
             console.log('GUEST_MOBILE_CARD_VERIFIED',JSON.stringify({
               title:card.title,photoLoaded:card.photoLoaded,
               containsDBest:card.details.includes('₹4,961.25'),
-              hasRealUSD:card.details.includes('US$'),
-              differenceShown:/OTA lower|DBest lower|Same displayed nightly/.test(card.details),
+              cheaperDisclosure:card.cheaperDisclosure,
+              lowerOffersHiddenByDefault:card.allDetails===false,
+              hasFeaturedHigherRates:card.hasFeatured,
+              allQuotesRevealed:revealed.open&&revealed.text.includes('US
+           }finally{await browser.close()}
+          })().catch(e=>{console.error('GUEST_MOBILE_E2E_FAILED',String(e));process.exitCode=1});
+          NODE
+),
               excerpt:card.details.slice(-800),pageErrors:failed
             }));
             if(card.title!=='Hotel Nandan'||!card.details.includes('₹4,961.25')||
-              !card.details.includes('US$')||
-              !/OTA lower|DBest lower|Same displayed nightly/.test(card.details))throw Error('MOBILE_HOTEL_COMPARISON_FAILED');
+              !card.cheaperDisclosure||card.allDetails!==false||card.hasFeatured||
+              !revealed.open||!revealed.text.includes('US
+           }finally{await browser.close()}
+          })().catch(e=>{console.error('GUEST_MOBILE_E2E_FAILED',String(e));process.exitCode=1});
+          NODE
+)||failed.length)
+              throw Error('MOBILE_HOTEL_COMPARISON_FAILED');
            }finally{await browser.close()}
           })().catch(e=>{console.error('GUEST_MOBILE_E2E_FAILED',String(e));process.exitCode=1});
           NODE
