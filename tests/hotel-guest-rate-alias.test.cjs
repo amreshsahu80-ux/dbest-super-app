@@ -47,9 +47,9 @@ test('catalogue wrapper accepts only the isolated hotel preview alias, not the D
 test('customer page routes to deployed endpoints, with no hard-coded fabricated live OTA values',()=>{
  const html=fs.readFileSync('hotel-simple-flow.html','utf8');
  assert.match(html,/\/api\/hotel-guest-rate\?/);
- assert.match(html,/\/api\/hotel-catalog/);
- assert.match(html,/\/api\/hotel-google-b2c/);
- assert.doesNotMatch(html,/\/api\/hotel-public-catalog|\/api\/hotel-public-google/);
+ assert.match(html,/\/api\/hotel-public-catalog/);
+ assert.match(html,/\/api\/hotel-public-google/);
+ assert.doesNotMatch(html,/\/api\/hotel-catalog|\/api\/hotel-google-b2c/);
  assert.match(html,/const dbestNumeric=guestRate/);
  assert.match(html,/not verified savings/);
 });
