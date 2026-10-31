@@ -1,6 +1,6 @@
 // DBest isolated Android FCM backend (DRAFT; never deploy before review).
 // No live Web Push, Cab, Marketplace, wallet, or payout paths are modified.
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2.57.0";
 
 const APP_MAIN = "com.dbest4u.app";
 const APP_PARTNER = "com.dbest4u.partner";
