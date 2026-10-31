@@ -22,8 +22,9 @@ jobs:
            const html=await page.text();
            console.log('GUEST_PAGE',JSON.stringify({status:page.status,type:page.headers.get('content-type'),
              hasSearch:html.includes('Search hotels'),hasDbest:html.includes('DBest Special Rate')}));
-           const match=/const STATIC_HOTELS=(\\[[^\\n]*\\]);/.exec(html);
-           const hotels=match?JSON.parse(match[1]):[];
+           const left=html.indexOf('const STATIC_HOTELS=');
+           const right=html.indexOf(';\n',left);
+           const hotels=left>=0&&right>left?JSON.parse(html.slice(left+'const STATIC_HOTELS='.length,right)):[];
            const staged=hotels.filter(h=>h.tariffStatus==='RECEIVED_PENDING_VALIDATION');
            console.log('GUEST_CATALOG_31OCT',JSON.stringify({total:hotels.length,staged:staged.length,
              whiteIbis:hotels.some(h=>h.name==='White Ibis Hotel'),
