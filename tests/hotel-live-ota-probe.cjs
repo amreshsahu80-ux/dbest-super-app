@@ -7,6 +7,15 @@
  const stay={checkIn:'2026-11-15',checkOut:'2026-11-16',adults:2,rooms:1};
  const begin=Date.now();
  try{
+   const fx=await fetch('https://api.frankfurter.dev/v1/latest?base=USD&symbols=INR');
+   const data=await fx.json();
+   console.log('DBEST_FX_REFERENCE_PROBE',JSON.stringify({
+    status:fx.status,date:data.date,base:data.base,usdToInr:data.rates?.INR
+   }));
+ }catch(e){
+   console.log('DBEST_FX_REFERENCE_PROBE',JSON.stringify({status:'FETCH_FAILED',error:String(e.message).slice(0,90)}));
+ }
+ try{
   const r=await google.getPublicGoogleRates(hotel,stay);
   console.log('DBEST_GOOGLE_LIVE_DIAGNOSTIC',JSON.stringify({
    status:r.status,elapsedSec:Math.round((Date.now()-begin)/1000),
