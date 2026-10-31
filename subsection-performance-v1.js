@@ -19,6 +19,7 @@ function tuneMedia(root){
 }
 
 let io=null;
+const observedVideos=new WeakSet();
 function observeVideos(){
   if(!('IntersectionObserver' in window))return;
   if(!io)io=new IntersectionObserver(entries=>{
@@ -31,7 +32,9 @@ function observeVideos(){
       }
     });
   },{threshold:[0,.35,.75],rootMargin:'80px 0px'});
-  document.querySelectorAll('.tile video,.tileVisual video').forEach(v=>io.observe(v));
+  document.querySelectorAll('.tile video,.tileVisual video').forEach(v=>{
+    if(!observedVideos.has(v)){observedVideos.add(v);io.observe(v)}
+  });
 }
 
 function installCss(){
@@ -56,13 +59,24 @@ document.addEventListener('pointerdown',e=>{
 },{capture:true,passive:true});
 
 /* The application creates several subsection DOM blocks dynamically. Tune only new nodes. */
+let newNodes=[],scheduled=false;
 const mo=new MutationObserver(list=>{
-  for(const m of list){
-    for(const n of m.addedNodes){
-      if(n&&n.nodeType===1)tuneMedia(n);
-    }
+  for(const m of list)for(const n of m.addedNodes){
+    if(n&&n.nodeType===1)newNodes.push(n);
   }
-  observeVideos();
+  if(scheduled||!newNodes.length)return;
+  scheduled=true;
+  requestAnimationFrame(()=>{
+    scheduled=false;
+    const batch=newNodes;newNodes=[];
+    for(const n of batch){
+      if(!n.isConnected)continue;
+      if(n.matches?.('img')){if(!n.hasAttribute('loading'))n.loading='lazy';if(!n.hasAttribute('decoding'))n.decoding='async'}
+      else if(n.matches?.('video')){n.preload='metadata';n.playsInline=true}
+      tuneMedia(n);
+    }
+    observeVideos();
+  });
 });
 
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{prepare();mo.observe(document.body,{childList:true,subtree:true})},{once:true});
