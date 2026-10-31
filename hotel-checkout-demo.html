@@ -37,6 +37,7 @@ label{display:block;font-size:11px;color:#566d84;font-weight:850;margin-bottom:7
 .comparison-tiles .advantage-tile{background:#e7f6ec;border-color:#a5dac0}.comparison-tiles .advantage-tile strong{color:#11613b;font-size:17px}
 .example-inline{background:transparent;padding:0;border:0;text-decoration:underline;color:#115fa5;font-weight:800}
 @media(max-width:750px){.ota-spotlight{flex-direction:column;align-items:stretch}.ota-spotlight button{width:100%}.comparison-tiles{grid-template-columns:1fr}.comparison-tiles strong{font-size:20px}}
+.gallery-link{display:inline-block;color:#125c94;text-decoration:underline;font-size:11px;line-height:1.5;margin-top:5px}.noimg .gallery-link{max-width:200px}
 </style><script src="/hotel-review/simple-flow-policy.js"></script></head><body>
 <div class="top"><div class="wrap nav"><div class="logo">DBest Stays <small>Direct hotel booking · Price comparison</small></div><a href="/hotel-owner-rate-review.html">Owner tariff controls</a></div></div>
 <header class="hero"><div class="wrap"><div class="eyebrow">DBest Hotel Marketplace · pilot</div><h1>Compare hotels. Save when a real price match is available.</h1><p>Direct contracted hotel tariffs from our outreach network, paired with authorized live OTA rates where available. Compare contracted DBest rates with available public OTA prices first. Then test Book & Pay DBest, a simulated payment and a sample voucher.</p></div></header>
@@ -96,6 +97,8 @@ let hotels=[{"id":"DBEST-REPL-20261024-149","name":"Rambagh Palace","city":"Jaip
 const $=id=>document.getElementById(id);
 const html=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const previewPhotos=Object.fromEntries(hotels.map(h=>[h.name.toLowerCase(),h.photo]));
+// An official hotel gallery is a link, not permission to republish images.
+const officialHotelGalleries=Object.freeze({'HOTEL-NANDAN-GHY':'https://hotelnandan.com/rooms/'});
 
 /* Only identity-matched Wikimedia Commons property photographs with confirmed attribution.
    Never reuse a photo for another hotel, and never label illustration as a hotel photo. */
@@ -223,6 +226,8 @@ const AUTO_RATE_FRESH_MS=15*60*1000;
 const AUTO_ERROR_COOLDOWN_MS=3*60*1000;
 const AUTO_MAX_HOTELS_PER_SEARCH=2;
 const platforms=['MakeMyTrip','Booking.com','Goibibo'];
+const verifiedPublicSearchById=Object.freeze({'HOTEL-NANDAN-GHY':'https://www.google.com/travel/hotels/entity/ChkImq6GmM_XyKKZARoML2cvMXE2YjZ6cnBwEAE','HIST-016':'https://www.google.com/travel/hotels/entity/CgsIr-bv8efM1eyfARAB','DBEST-REPL-20261026-697':'https://www.google.com/travel/hotels/entity/CgoI05W_ufDezpBjEAE'});
+function publicHotelSearchLink(h){return verifiedPublicSearchById[h.id]||'https://www.google.com/travel/search?q='+encodeURIComponent(h.name+', '+h.city)}
 const consumerHotelSearch=[
  {name:'MakeMyTrip',url:'https://www.makemytrip.com/hotels/'},
  {name:'Booking.com',url:'https://www.booking.com/'},
@@ -232,12 +237,12 @@ function propertyPhotoPlaceholder(h){
  return '<div class="noimg fallback" role="img" aria-label="Verified photo not yet available for '+html(h.name)+'">'+
  '<svg viewBox="0 0 64 64" fill="none" aria-hidden="true" focusable="false">'+
  '<path d="M10 55V23l22-13 22 13v32M18 30h8v8h-8zm20 0h8v8h-8zM18 43h8v12h-8zm20 0h8v12h-8zM7 55h50" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/></svg>'+
- '<strong>'+html(h.name)+'</strong><small>Verified hotel photograph pending</small></div>';
+ '<strong>'+html(h.name)+'</strong><small>Verified hotel photograph pending</small>'+ (officialHotelGalleries[h.id]?'<a class="gallery-link" href="'+html(officialHotelGalleries[h.id])+'" target="_blank" rel="noopener noreferrer">View hotel\'s official photo gallery</a>':'')+'</div>';
 }
 function card(h){
  const fallback=propertyPhotoPlaceholder(h);
  const image=h.photo&&h.photo.url?
- fallback+'<img loading="lazy" decoding="async" src="'+html(h.photo.url)+'" alt="Actual property photograph of '+html(h.name)+'" data-property-image="1">'+
+ fallback+'<img loading="lazy" decoding="async" referrerpolicy="no-referrer" src="'+html(h.photo.url)+'" alt="Actual property photograph of '+html(h.name)+'" data-property-image="1">'+
  '<div class="credit" data-photo-credit="1">Photo: '+html(h.photo.credit)+' · <a href="'+html(h.photo.source)+'" target="_blank" rel="noopener noreferrer">Source</a> · <a href="'+html(h.photo.licenseUrl)+'" target="_blank" rel="noopener noreferrer">'+html(h.photo.license)+'</a></div>':
  fallback;
  const guestRate=h.guestRate?.adults===state.adults&&h.guestRate?.rooms===state.rooms?h.guestRate:null;
@@ -306,7 +311,7 @@ function card(h){
  '<small>All genuine supplier quotations are commercially accepted. Booking requires availability confirmation; additional taxes are identified separately where applicable.</small></div>'+
  '<div class="prices">'+rows+'</div><div class="b2c-fetch">'+
  '<small role="status">'+html(h.otaStatus|| (autoMappedHotels.has(h.id)?'Type a destination or hotel to load public OTA prices automatically.':'Live OTA matching not yet verified for this property.'))+'</small>'+
- '<button type="button" class="rate-toggle" data-ota="'+html(h.id)+'">Refresh available public OTA rates</button></div>'+
+ '<button type="button" class="rate-toggle" data-ota="'+html(h.id)+'">Refresh available public OTA rates</button>'+ '<small><a target="_blank" rel="noopener noreferrer" href="'+html(publicHotelSearchLink(h))+'">Check this property on Google Hotels</a> (external public search; prices require date verification)</small></div>'+
  '<div class="advantage"><b>DBest Advantage</b><span>'+html(publicOta.length?
   'Public OTA reference prices shown above. Savings require matching room, taxes and stay terms; headline DBest tariff may cover a different season or room.':
   'DBest contracted selling rate versus public consumer OTA prices. We show actual savings only when stay, room and total charges are comparable.')+'</span></div>'+
@@ -395,7 +400,10 @@ async function loadPublicOtaRates(h,force=false){
     h.publicOta=null;
     h.otaStatus=payload.status==='PILOT_HOURLY_LIMIT'?'Price lookup limit reached. Try again later.':
       payload.status==='PAGE_DATES_OR_PROPERTY_NOT_VERIFIED'?'Exact property or stay could not be verified.':
-      payload.status==='PROPERTY_NOT_MAPPED'?'Public listing not verified for this hotel.':
+      payload.status==='BROWSER_PILOT_DISABLED'?'Public OTA browser is disabled on this preview.':
+       payload.status==='NO_VERIFIED_PUBLIC_GOOGLE_B2C_OFFERS'?'Public search loaded but no verified OTA offers were found for this stay.':
+       payload.status==='PAGE_GUEST_COUNT_NOT_VERIFIED'||payload.status==='PRICE_PAGE_GUEST_COUNT_NOT_VERIFIED'?'Google Hotels did not confirm the selected two-adult stay.':
+       payload.status==='PROPERTY_NOT_MAPPED'?'Public listing not verified for this hotel.':
       payload.status==='OCCUPANCY_NOT_SUPPORTED'?'Only 2 adults / 1 room supported in this pilot.':
       'No verified live OTA price available for the selected stay.';
    }
@@ -521,7 +529,7 @@ function render(){
   }
  renderComparisonHeadline(out);
  $('loadMore').hidden=out.length<=visibleCount;
- $('searchSummary').textContent=out.length+' hotel matches · DBest rates upfront · '+autoMappedHotels.size+' verified OTA hotel crosswalks';
+ $('searchSummary').textContent=out.length+' hotel matches · '+hotels.filter(h=>h.photo?.url).length+' sourced property photos · '+autoMappedHotels.size+' verified OTA hotel crosswalks';
  scheduleVisibleAutoRateLookups();
  scheduleVisibleGuestRates();
 }
