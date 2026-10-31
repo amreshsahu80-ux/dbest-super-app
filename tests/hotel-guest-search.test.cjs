@@ -49,3 +49,28 @@ test('guest HTML JavaScript parses',()=>{
  assert.equal(chunks.length,1);
  for(const match of chunks)new vm.Script(match[1]);
 });
+
+test('Hotel Nandan selling reference respects the selected room and two-adult occupancy',()=>{
+ assert.match(html,/nandanSelling=Object\.freeze/);
+ assert.match(html,/'2:1':\{Deluxe:4961\.25,Executive:5433\.75,Suite:6692\.70\}/);
+ assert.match(html,/'1:1':\{Deluxe:4016\.25,Executive:4488\.75,Suite:6692\.70\}/);
+ assert.match(html,/roomSelections\.get\(h\.id\)/);
+ assert.match(html,/selected&&!String\(q\.room\)/);
+ assert.match(html,/Starting rate; selected occupancy unconfirmed/);
+});
+test('missing OTA prices have real consumer search links, explanatory status and retry',()=>{
+ assert.match(html,/function otaConsumerLink\(h,name\)/);
+ assert.match(html,/Check price/);
+ assert.match(html,/No date-verified public OTA rates were returned/);
+ assert.match(html,/Public OTA rate source is temporarily unavailable/);
+ assert.match(html,/data-refresh-ota/);
+ assert.match(html,/loadOTA\(hotel,searchToken,true\)/);
+ assert.match(html,/result\.stay\.checkIn===state\.checkIn/);
+ assert.match(html,/result\.stay\.checkOut===state\.checkOut/);
+});
+test('when property image rights are not confirmed use official gallery link, not an OTA photo copied into DBest',()=>{
+ assert.match(html,/galleries=Object\.freeze/);
+ assert.match(html,/hotelnandan\.com\/rooms\//);
+ assert.match(html,/View hotel’s real photos/);
+ assert.doesNotMatch(html,/r2imghtlak\.mmtcdn\.com/);
+});
