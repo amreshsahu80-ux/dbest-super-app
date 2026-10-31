@@ -32,3 +32,16 @@ test('guest Javascript is syntactically valid',()=>{
  assert.ok(scripts.length>0);
  for(const [,script] of scripts)new vm.Script(script);
 });
+
+test('an honest official gallery link is shown instead of pretending an unlicensed image is hosted',()=>{
+ for(const p of ['hotel-simple-flow.html','hotel-checkout-demo.html']){
+  const s=fs.readFileSync(p,'utf8');
+  assert.match(s,/officialHotelGalleries=Object\\.freeze/);
+  assert.match(s,/https:\\/\\/hotelnandan\\.com\\/rooms\\//);
+  assert.match(s,/View hotel\\'s official photo gallery/);
+  assert.match(s,/referrerpolicy=\"no-referrer\"/);
+  assert.match(s,/sourced property photos/);
+  assert.match(s,/Check this property on Google Hotels/);
+  assert.match(s,/publicHotelSearchLink\\(h\\)/);
+ }
+});
