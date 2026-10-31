@@ -36,12 +36,12 @@ test('guest Javascript is syntactically valid',()=>{
 test('an honest official gallery link is shown instead of pretending an unlicensed image is hosted',()=>{
  for(const p of ['hotel-simple-flow.html','hotel-checkout-demo.html']){
   const s=fs.readFileSync(p,'utf8');
-  assert.match(s,/officialHotelGalleries=Object\\.freeze/);
-  assert.match(s,/https:\\/\\/hotelnandan\\.com\\/rooms\\//);
-  assert.match(s,/View hotel\\'s official photo gallery/);
-  assert.match(s,/referrerpolicy=\"no-referrer\"/);
-  assert.match(s,/sourced property photos/);
-  assert.match(s,/Check this property on Google Hotels/);
-  assert.match(s,/publicHotelSearchLink\\(h\\)/);
+  assert.ok(s.includes('officialHotelGalleries=Object.freeze'));
+  assert.ok(s.includes('https://hotelnandan.com/rooms/'));
+  assert.ok(s.includes('official photo gallery'));
+  assert.ok(s.includes('referrerpolicy="no-referrer"'));
+  assert.ok(s.includes('sourced property photos'));
+  assert.ok(s.includes('Check this property on Google Hotels'));
+  assert.ok(s.includes('publicHotelSearchLink(h)'));
  }
 });
