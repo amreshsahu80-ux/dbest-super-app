@@ -40,7 +40,7 @@ final class NativeAccountBinding {
     private final Activity activity;
     private final WebView webView;
     private final ExecutorService requests = Executors.newSingleThreadExecutor();
-    private String sessionInMemory;
+    private volatile String sessionInMemory;
 
     NativeAccountBinding(Activity activity, WebView webView) {
         this.activity = activity;
