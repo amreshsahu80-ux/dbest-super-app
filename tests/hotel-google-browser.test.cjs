@@ -60,11 +60,12 @@ test('unmapped properties do not launch Chrome',async()=>{
 });
 
 test('Google Hotels minor spacing variations retain real B2C offers but never guess prices',()=>{
- const spaced='Hotel Nandan\\nAll options  \\nMakeMyTrip.com\\n₹ 5,707\\nVisit site\\nGoibibo.com\\n₹5,302\\nVisit site\\nSponsored·Similar hotels\\nUnrelated\\n₹1,100';
+ const lineBreak=String.fromCharCode(10);
+ const spaced=['Hotel Nandan','All options  ','MakeMyTrip.com','₹ 5,707','Visit site','Goibibo.com','₹5,302','Visit site','Sponsored·Similar hotels','Unrelated','₹1,100'].join(lineBreak);
  const got=google.parsePrices(spaced);
  assert.equal(got.length,2);
  assert.equal(got.find(x=>x.provider==='MakeMyTrip.com').pricePerNight,5707);
  assert.equal(got.find(x=>x.provider==='Goibibo.com').pricePerNight,5302);
- assert.deepEqual(google.parsePrices('Hotel Nandan\\nMakeMyTrip.com\\n₹ 5,707\\nVisit site'),[]);
- assert.deepEqual(google.parsePrices('All options\\nBooking.com\\n₹2,000\\n₹3,000\\nVisit site'),[]);
+ assert.deepEqual(google.parsePrices(['Hotel Nandan','MakeMyTrip.com','₹ 5,707','Visit site'].join(lineBreak)),[]);
+ assert.deepEqual(google.parsePrices(['All options','Booking.com','₹2,000','₹3,000','Visit site'].join(lineBreak)),[]);
 });
