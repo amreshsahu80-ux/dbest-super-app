@@ -51,6 +51,11 @@ const previewPhotos=Object.fromEntries(hotels.map(h=>[h.name.toLowerCase(),h.pho
 /* Only identity-matched Wikimedia Commons property photographs with confirmed attribution.
    Never reuse a photo for another hotel, and never label illustration as a hotel photo. */
 const verifiedPhotoById=Object.freeze({
+  'DBEST-REPL-20261023-082':{
+   url:'https://commons.wikimedia.org/wiki/Special:Redirect/file/Bolgatty_Palace.jpg?width=960',
+   credit:'Renikk',license:'Public domain',licenseUrl:'https://creativecommons.org/publicdomain/mark/1.0/',
+   source:'https://commons.wikimedia.org/wiki/File:Bolgatty_Palace.jpg'
+  },
  'DBEST-REPL-20261024-138':{
   url:'https://commons.wikimedia.org/wiki/Special:Redirect/file/RoyalOrchid_Goa3450.jpg?width=960',
   credit:'ChandruROHL',license:'CC BY-SA 4.0',licenseUrl:'https://creativecommons.org/licenses/by-sa/4.0/',
@@ -156,7 +161,7 @@ const today=new Date(),tomorrow=new Date(today);tomorrow.setDate(today.getDate()
 $('checkIn').min=iso(today);$('checkIn').value=iso(tomorrow);$('checkOut').min=iso(tomorrow);$('checkOut').value=iso(dayAfter);
 let visibleCount=30;
 let state={destination:'',checkIn:$('checkIn').value,checkOut:$('checkOut').value,adults:2,rooms:1};
-const autoMappedHotels=new Set(['HOTEL-NANDAN-GHY','HIST-016','DBEST-REPL-20261026-697','DBEST-REPL-20261024-138','DBEST-REPL-20261026-691','DBEST-REPL-20261026-632']);
+const autoMappedHotels=new Set(['HOTEL-NANDAN-GHY','HIST-016','DBEST-REPL-20261026-697','DBEST-REPL-20261024-138','DBEST-REPL-20261026-691','DBEST-REPL-20261026-632','HIST-015','DBEST-REPL-20261024-149','DBEST-REPL-20261027-240','DBEST-RECOVERY-20261022-008','DBEST-REPL-20261023-082']);
 const autoInFlight=new Map();
 const guestRateCache=new Map(), guestRateInFlight=new Set();
 let guestRateTimer=null;
@@ -240,7 +245,7 @@ function card(h){
    .map(p=>otaRow(p.provider,p,p.url||'https://www.google.com/travel/hotels')).join('');
  const roomOptions=(Array.isArray(h.roomTypes)?h.roomTypes:[]).filter(x=>typeof x==='string'&&x.trim()).slice(0,12);
  const roomSelect=roomOptions.length?'<div class="room-choice"><label for="room-'+html(h.id)+'">Requested room category</label><select class="field" id="room-'+html(h.id)+'" data-room="'+html(h.id)+'"><option value="">Any available room</option>'+roomOptions.map(room=>'<option value="'+html(room)+'">'+html(room)+'</option>').join('')+'</select></div>':'';
- return '<article class="hotel"><div class="media">'+image+'</div><div class="content"><h3 class="name">'+html(h.name)+'</h3><div class="location">⌖ '+html(h.area)+', '+html(h.city)+'</div>'+
+ return '<article class="hotel" data-hotel-id="'+html(h.id)+'"><div class="media">'+image+'</div><div class="content"><h3 class="name">'+html(h.name)+'</h3><div class="location">⌖ '+html(h.area)+', '+html(h.city)+'</div>'+
  '<div class="tags"><span class="tag">Real property</span><span class="tag">'+(h.rateCount?html(h.rateCount+' received supplier quote(s)'):'Room type to confirm')+'</span><span class="tag">Availability on request</span></div>'+
  upfrontPrices+advantageSummary+upfrontNote+
  '<div class="direct-panel">'+roomSelect+'<div class="booking-row"><button type="button" class="btn" data-book="'+html(h.id)+'">Book with DBest</button></div>'+
@@ -397,7 +402,18 @@ function render(){
  const search=$('hotelSearch').value.trim().toLowerCase();
  const destination=state.destination.toLocaleLowerCase();
  const out=hotels.filter(searchableHotel);
- $('results').innerHTML=out.slice(0,visibleCount).map(card).join('')||'<p>No contracted hotels match this destination yet. Try a nearby city or another spelling.</p>';
+  // Keep completed/in-flight property photographs in the DOM during OTA rate updates.
+  const results=$('results');
+  const priorMedia=new Map([...results.querySelectorAll('article.hotel[data-hotel-id]')]
+   .map(node=>[node.getAttribute('data-hotel-id'),node.querySelector('.media')]));
+  results.innerHTML=out.slice(0,visibleCount).map(card).join('')||
+   '<p>No contracted hotels match this destination yet. Try a nearby city or another spelling.</p>';
+  for(const node of results.querySelectorAll('article.hotel[data-hotel-id]')){
+   const previous=priorMedia.get(node.getAttribute('data-hotel-id'));
+   const current=node.querySelector('.media');
+   if(previous&&current&&previous.querySelector('img')?.getAttribute('src')===
+      current.querySelector('img')?.getAttribute('src'))current.replaceWith(previous);
+  }
  $('loadMore').hidden=out.length<=visibleCount;
  $('searchSummary').textContent=out.length+' hotel matches · DBest rates upfront · '+autoMappedHotels.size+' verified OTA hotel crosswalks';
  scheduleVisibleAutoRateLookups();
