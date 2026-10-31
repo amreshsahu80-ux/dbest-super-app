@@ -126,7 +126,12 @@ async function sendFcm(token: string, access: string, project: string, d: Record
     body:JSON.stringify(payload),
   });
   const j = await r.json().catch(() => ({}));
-  return {ok:r.ok,status:r.status,messageId:r.ok?clean(j.name,350):"",invalidToken:[400,404].includes(r.status)};
+  const error = j?.error || {};
+  const details = Array.isArray(error.details) ? error.details : [];
+  const invalid = error.status === "UNREGISTERED" ||
+    details.some((d: Record<string,string>) => d.errorCode === "UNREGISTERED" ||
+      d.errorCode === "INVALID_ARGUMENT" && String(error.message || "").toLowerCase().includes("registration token"));
+  return {ok:r.ok,status:r.status,messageId:r.ok?clean(j.name,350):"",invalidToken:invalid};
 }
 
 Deno.serve(async req => {
@@ -179,6 +184,20 @@ Deno.serve(async req => {
         .eq("id",item.id).eq("state","pending").select("*").maybeSingle();
       if(ce)throw ce;
       if(!claimed)continue;
+      // Re-read the authoritative record before delivery to prevent alerts
+      // going to reassigned Vaahaks or Service Partners.
+      const latest = await fromEvent(db,item.event_type,
+        item.event_key.split(":")[1] || "");
+      if (!latest || latest.event_key !== item.event_key ||
+          latest.recipient_id !== item.recipient_id ||
+          latest.recipient_type !== item.recipient_type) {
+        await db.from("native_fcm_outbox").update({
+          state:"skipped",error_code:"source_changed_since_enqueue",
+          processed_at:new Date().toISOString(),
+        }).eq("id",item.id);
+        skipped++;
+        continue;
+      }
       const {data:devices,error:de}=await db.from("native_fcm_devices").select("*")
         .eq("recipient_type",item.recipient_type).eq("recipient_id",item.recipient_id).eq("enabled",true).limit(10);
       if(de)throw de;
