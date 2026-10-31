@@ -12,6 +12,30 @@
  * are a retail reference, not confirmed room inventory or DBest savings.
  */
 const SOURCES=Object.freeze({
+  // Additional identity-checked public B2C lookup candidates: unknown/mismatched
+  // Google Hotels pages yield no rates, never estimates or substitute properties.
+  'HIST-015':Object.freeze({
+   hotel:'Novotel Guwahati GS Road',city:'Guwahati',
+   query:'Novotel Guwahati GS Road Guwahati',
+   pageName:'Novotel Guwahati GS Road',area:'Guwahati'
+  }),
+  'DBEST-REPL-20261024-149':Object.freeze({
+   hotel:'Rambagh Palace',city:'Jaipur',
+   query:'Rambagh Palace Jaipur',pageName:'Rambagh Palace',area:'Jaipur'
+  }),
+  'DBEST-REPL-20261027-240':Object.freeze({
+   hotel:'Samode Palace',city:'Samode',
+   query:'Samode Palace Jaipur Rajasthan',pageName:'Samode Palace',area:'Jaipur'
+  }),
+  'DBEST-RECOVERY-20261022-008':Object.freeze({
+   hotel:'Shiv Niwas Palace',city:'Udaipur',
+   query:'Shiv Niwas Palace Udaipur',pageName:'Shiv Niwas Palace',area:'Udaipur'
+  }),
+  'DBEST-REPL-20261023-082':Object.freeze({
+   hotel:'Bolgatty Palace and Island Resort',city:'Kochi',
+   query:'Bolgatty Palace and Island Resort Kochi',
+   pageName:'Bolgatty Palace and Island Resort',area:'Kochi'
+  }),
  'HOTEL-NANDAN-GHY':Object.freeze({
   hotel:'Hotel Nandan',city:'Guwahati',
   entity:'ChkImq6GmM_XyKKZARoML2cvMXE2YjZ6cnBwEAE'
