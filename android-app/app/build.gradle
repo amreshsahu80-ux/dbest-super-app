@@ -4,17 +4,27 @@ android {
     namespace 'com.dbest4u.app'
     compileSdk 36
 
+    buildFeatures { buildConfig true }
+
     defaultConfig {
         applicationId 'com.dbest4u.app'
         minSdk 24
         targetSdk 36
-        versionCode 2
-        versionName '1.0.1'
+        versionCode 3
+        versionName '1.0.2-beta'
+        // Non-secret Firebase app IDs from protected CI/build variables.
+        // No configuration => native push is disabled, never shown as ON.
+        ['DBEST_FCM_API_KEY', 'DBEST_FCM_APP_ID', 'DBEST_FCM_PROJECT_ID', 'DBEST_FCM_SENDER_ID'].each { k ->
+            def v = System.getenv(k) ?: ''
+            buildConfigField 'String', k, '"' + v.replace('\\', '\\\\').replace('"', '\\"') + '"'
+        }
     }
 
     dependencies {
         implementation 'androidx.activity:activity:1.11.0'
         implementation 'androidx.core:core:1.17.0'
+        implementation platform('com.google.firebase:firebase-bom:35.1.0')
+        implementation 'com.google.firebase:firebase-messaging'
     }
 
     buildTypes {
