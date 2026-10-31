@@ -90,3 +90,17 @@ test('public-source hotel photos are identity-bound and remote, not described as
  }
  assert.doesNotMatch(html,/data:image\/jpeg;base64/);
 });
+
+
+test('real USD OTA quotes are shown in original currency with only qualified indicative FX differences',()=>{
+ assert.match(html,/p\.currency==='USD'/);
+ assert.match(html,/US\$/);
+ assert.match(html,/api\.frankfurter\.dev\/v1\/latest\?base=USD&symbols=INR/);
+ assert.match(html,/connect-src 'self' https:\/\/api\.frankfurter\.dev/);
+ assert.match(html,/priceInr=p=>/);
+ assert.match(html,/offerPriceLabel\(p\)/);
+ assert.match(html,/indicative FX estimate/);
+ assert.match(html,/No unavailable OTA price is invented/);
+ assert.match(html,/loadDailyFx\(\)/);
+ assert.doesNotMatch(html,/Math\.random\(\)/);
+});
