@@ -37,6 +37,14 @@
     const shortlist=after.split('\n').filter(x=>/MakeMyTrip|Goibibo|Booking\.com|Yatra\.com|Cleartrip|₹|Visit site|All options|View more options/i.test(x));
     console.log('DBEST_PUBLIC_PAGE_STRUCTURE',JSON.stringify({
       path:new URL(page.url()).pathname,
+      requestedCurrency:new URL(page.url()).searchParams.get('curr'),
+      visibleCurrencyControls:await page.evaluate(()=>
+       [...document.querySelectorAll('button,[role="button"],[role="combobox"]')]
+        .map(e=>({label:String(e.getAttribute('aria-label')||'').slice(0,90),
+                   text:String(e.innerText||'').trim().slice(0,90)}))
+        .filter(x=>/USD|INR|currency|dollar|rupee|₹|\$/i.test(x.label+' '+x.text))
+        .slice(0,15)),
+      footerSnippet:after.slice(-650),
       beforeLength:before.length,afterLength:after.length,
       hasAllOptions:index>=0,
       offerSection:index>=0?after.slice(index,index+1500):'',
