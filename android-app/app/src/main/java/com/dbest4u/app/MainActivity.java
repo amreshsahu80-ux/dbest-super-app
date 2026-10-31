@@ -181,6 +181,7 @@ public class MainActivity extends ComponentActivity {
     }
 
     @Override protected void onDestroy() {
+        if (nativePush != null) nativePush.shutdown();
         if (webView != null) webView.destroy();
         super.onDestroy();
     }
