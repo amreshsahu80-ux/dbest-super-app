@@ -58,3 +58,13 @@ test('unmapped properties do not launch Chrome',async()=>{
  assert.equal(r.status,'PROPERTY_NOT_MAPPED');
  assert.deepEqual(r.providers,[]);
 });
+
+test('Google Hotels minor spacing variations retain real B2C offers but never guess prices',()=>{
+ const spaced='Hotel Nandan\\nAll options  \\nMakeMyTrip.com\\n₹ 5,707\\nVisit site\\nGoibibo.com\\n₹5,302\\nVisit site\\nSponsored·Similar hotels\\nUnrelated\\n₹1,100';
+ const got=google.parsePrices(spaced);
+ assert.equal(got.length,2);
+ assert.equal(got.find(x=>x.provider==='MakeMyTrip.com').pricePerNight,5707);
+ assert.equal(got.find(x=>x.provider==='Goibibo.com').pricePerNight,5302);
+ assert.deepEqual(google.parsePrices('Hotel Nandan\\nMakeMyTrip.com\\n₹ 5,707\\nVisit site'),[]);
+ assert.deepEqual(google.parsePrices('All options\\nBooking.com\\n₹2,000\\n₹3,000\\nVisit site'),[]);
+});
