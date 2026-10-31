@@ -219,9 +219,9 @@ const refresh='<button type="button" data-refresh-ota="'+esc(h.id)+'" style="fon
 return '<article class="hotel" data-hotel="'+esc(h.id)+'">'+
 '<div class="photo">'+photo(h)+'</div>'+
 '<div class="hotel-info"><h3>'+esc(h.name)+'</h3><div class="location">'+esc([h.area,h.city].filter(Boolean).join(', '))+'</div>'+
-'<div class="chip">DBest partner rate</div><p>'+esc(h.rateCount||0)+' received contracted rate references</p>'+
+'<div class="chip">'+(h.tariffStatus==='RECEIVED_PENDING_VALIDATION'?'DBest tariff received':'DBest partner rate')+'</div><p>'+esc(h.rateCount||0)+' received contracted rate references</p>'+
 (roomOptions.length?'<div class="roomline"><label for="room-'+esc(h.id)+'">Preferred room (optional)</label><select data-room="'+esc(h.id)+'" id="room-'+esc(h.id)+'"><option value="">Best available room</option>'+roomOptions.map(v=>'<option value="'+esc(v)+'"'+(chosen===v?' selected':'')+'>'+esc(v)+'</option>').join('')+'</select></div>':'')+
-'</div><div class="comparison"><div class="dbest-line"><div class="price-caption">DBest Special Rate · per night</div><div class="dbest-price">'+(db?money(db):base?'From '+money(base):'Check rate')+'</div><small>'+(q?esc(q.room)+' · '+state.adults+' adults':base?'Starting rate; selected occupancy unconfirmed':'No verified selling reference')+'</small></div>'+
+'</div><div class="comparison"><div class="dbest-line"><div class="price-caption">DBest Special Rate · per night</div><div class="dbest-price">'+(db?money(db):base?'From '+money(base):'Check rate')+'</div><small>'+(q?esc(q.room)+' · '+state.adults+' adults':base?'Starting rate; selected occupancy unconfirmed':h.tariffStatus==='RECEIVED_PENDING_VALIDATION'?'Stay-specific price pending validation':'No verified selling reference')+'</small></div>'+
 '<div class="rates-featured">'+comparison+statusLine+refresh+'</div>'+
 '<div class="basis">*Featured differences are indicative only, not guaranteed checkout savings. This is a selectively featured comparison, not a lowest-price claim. Open all verified OTA prices above to see cheaper offers too. Room, tax, meal and regional terms may differ. USD-to-INR estimates use daily reference FX.</div>'+
 '<div class="actions"><button type="button" data-book="'+esc(h.id)+'" class="btn book">Book</button></div></div></article>'}
