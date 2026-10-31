@@ -3,10 +3,12 @@
 This is a **separate Android application** from DBest Super Platform:
 
 - Main user app: `com.dbest4u.app` (untouched)
-- Partner app: `com.dbest4u.partner` (pilot version `0.1.0`, code 1)
+- Partner app: `com.dbest4u.partner` (pilot version `0.2.0`, code 2)
 
 ## What works in this pilot
-- Android-native, mobile-first role chooser with **Vendor**, **Vaahak**, **Service Partner**.
+- Photo-first, mobile-native role chooser with **Vendor**, **Vaahak**, **Service Partner**.
+- Bundled real photographic collages from DBest's existing `/assets/partner-vendor.jpg`, `/assets/partner-vaahak.jpg` and `/assets/partner-service.jpg`. Works offline on the chooser screen and does not rely on stock/emoji image substitution.
+- Uses the original DBest logo from the main website.
 - Separate **Login / Dashboard** and **Join** actions for each role. Uses the **existing** partner portal routes; it does not copy authentication or payment code.
 - Secure HTTPS WebView, DOM storage, file chooser for catalog/KYC uploads, optional location permission for allowed DBest origin, Android back navigation, external browser handoff.
 - Edge-to-edge safe-area padding for Android 15/16 system bars. Native page shell returns to the role chooser.

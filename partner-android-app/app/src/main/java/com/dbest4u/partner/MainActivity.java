@@ -22,6 +22,7 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Button;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -94,107 +95,129 @@ public final class MainActivity extends ComponentActivity {
         ScrollView scroll = new ScrollView(this);
         scroll.setFillViewport(true);
         scroll.setClipToPadding(false);
-        LinearLayout page = new LinearLayout(this);
-        page.setOrientation(LinearLayout.VERTICAL);
-        page.setPadding(dp(18), dp(18), dp(18), dp(25));
+        LinearLayout page = column();
+        page.setPadding(dp(16), dp(11), dp(16), dp(25));
         scroll.addView(page);
 
+        // Genuine DBest logo, bundled locally so the first screen never waits for network images.
         LinearLayout brand = row();
-        TextView mark = txt("D", 23, Color.WHITE, true);
-        mark.setGravity(Gravity.CENTER);
-        mark.setBackground(rounded(BLUE, 16));
-        brand.addView(mark, new LinearLayout.LayoutParams(dp(52), dp(52)));
-        LinearLayout nameBlock = column();
-        nameBlock.setPadding(dp(12), 0, 0, 0);
-        nameBlock.addView(txt("DBest", 24, NAVY, true));
-        nameBlock.addView(txt("PARTNER", 11, BLUE, true));
-        brand.addView(nameBlock);
+        ImageView logo = new ImageView(this);
+        logo.setImageResource(R.drawable.dbest_brand);
+        logo.setAdjustViewBounds(true);
+        logo.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        brand.addView(logo, new LinearLayout.LayoutParams(dp(150), dp(62)));
+        View empty = new View(this);
+        brand.addView(empty, new LinearLayout.LayoutParams(0, 1, 1));
+        TextView partner = txt("PARTNER\nNETWORK", 11, BLUE, true);
+        partner.setGravity(Gravity.RIGHT | Gravity.CENTER_VERTICAL);
+        brand.addView(partner);
         page.addView(brand);
-        space(page, 17);
+        space(page, 12);
 
         LinearLayout hero = column();
-        hero.setPadding(dp(21), dp(22), dp(21), dp(23));
+        hero.setPadding(dp(19), dp(17), dp(19), dp(18));
         GradientDrawable heroShape = new GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
-                new int[]{0xFF0E326C, 0xFF1760FF, 0xFF725BFF});
-        heroShape.setCornerRadius(dp(25));
+                new int[]{0xFF102F68, 0xFF1760FF, 0xFF6D52EF});
+        heroShape.setCornerRadius(dp(22));
         hero.setBackground(heroShape);
-        TextView badge = txt("●  ONE PARTNER NETWORK", 11, 0xFFDCEAFF, true);
-        hero.addView(badge);
-        space(hero, 15);
-        TextView headline = txt("Your work.\nYour growth.", 31, Color.WHITE, true);
-        headline.setLineSpacing(0f, 1.04f);
-        hero.addView(headline);
+        hero.addView(txt("ONE PARTNER NETWORK", 10, 0xFFE6EDFF, true));
         space(hero, 8);
-        TextView sub = txt("Manage your DBest partnership from a single, dedicated app.", 13, 0xFFEAF0FF, false);
-        sub.setLineSpacing(dp(3), 1f);
-        hero.addView(sub);
+        hero.addView(txt("Your work. Your growth.", 25, Color.WHITE, true));
+        space(hero, 6);
+        TextView caption = txt("Orders, trips and service jobs—one dedicated DBest app.", 12, 0xFFF0F3FF, false);
+        caption.setLineSpacing(dp(2), 1);
+        hero.addView(caption);
         page.addView(hero);
-        space(page, 25);
+        space(page, 20);
 
-        page.addView(txt("Choose your workspace", 21, NAVY, true));
-        space(page, 5);
-        page.addView(txt("Sign in to your existing partner account or apply to join.", 13, 0xFF5E6B81, false));
-        space(page, 14);
+        page.addView(txt("Choose your workspace", 22, NAVY, true));
+        space(page, 4);
+        page.addView(txt("Real opportunities. Secure access to your existing partner account.", 12, 0xFF627189, false));
+        space(page, 13);
 
-        page.addView(roleCard("🏪", "Vendor", "Grocery · Restaurant · Pharmacy",
-                "Orders, catalog and store management", 0xFF0F977E,
+        page.addView(roleCard(
+                "Vendor", "GROCERY · RESTAURANT · PHARMACY",
+                "Manage store, orders, catalog and earnings",
+                0xFF0B987F, R.drawable.partner_vendor,
                 "/Vendor", "/partner?type=Vendor"));
-        space(page, 12);
-        page.addView(roleCard("🚖", "Vaahak", "Cab · Delivery · Local transport",
-                "Trips, deliveries and ride earnings", 0xFF356BFF,
+        space(page, 13);
+        page.addView(roleCard(
+                "Vaahak", "CAB · DELIVERY · TRANSPORT",
+                "Manage rides, deliveries and trip earnings",
+                0xFF3465F5, R.drawable.partner_vaahak,
                 "/vaahak", "/partner?type=Vaahak"));
-        space(page, 12);
-        page.addView(roleCard("🧰", "Service Partner", "Home & professional services",
-                "Service requests and job progress", 0xFFBD4E92,
+        space(page, 13);
+        page.addView(roleCard(
+                "Service Partner", "REPAIRS · HOME SERVICES",
+                "Receive service requests and manage jobs",
+                0xFFB84888, R.drawable.partner_service,
                 "/ServicePartnerDashboard", "/partner?type=Service%20Partner"));
-        space(page, 24);
+        space(page, 19);
 
         LinearLayout footer = column();
-        footer.setPadding(dp(16), dp(15), dp(16), dp(15));
-        footer.setBackground(rounded(0xFFEAF0FC, 17));
-        footer.addView(txt("Secure partner access", 14, NAVY, true));
+        footer.setPadding(dp(14), dp(12), dp(14), dp(12));
+        footer.setBackground(rounded(0xFFEAF0FA, 15));
+        footer.addView(txt("Existing DBest partner?", 13, NAVY, true));
         space(footer, 4);
-        footer.addView(txt("Your existing DBest partner credentials and approvals remain in the live partner portal. No separate account is created here.", 12, 0xFF526782, false));
+        footer.addView(txt("Tap Open workspace for your category. Your login and approvals stay with the existing DBest portal.", 12, 0xFF536780, false));
         page.addView(footer);
-        space(page, 20);
-        TextView legal = txt("DBest Partner · Pilot 0.1.0", 11, 0xFF8995AA, false);
+        space(page, 18);
+        TextView legal = txt("DBest Partner • Pilot 0.2.0", 11, 0xFF8B98AB, false);
         legal.setGravity(Gravity.CENTER);
         page.addView(legal);
         return scroll;
     }
 
-    private View roleCard(String icon, String title, String categories, String summary,
-                          int color, String loginPath, String joinPath) {
+    // Full-width real photos sourced from the existing DBest Partner Network artwork.
+    private View roleCard(String title, String category, String summary, int color,
+                          int photoResource, String loginPath, String joinPath) {
         LinearLayout card = column();
-        card.setPadding(dp(16), dp(16), dp(16), dp(17));
-        card.setBackground(bordered(0xFFFFFFFF, 0xFFE1E7F2, 20));
-        card.setElevation(dp(3));
+        card.setPadding(dp(10), dp(10), dp(10), dp(13));
+        card.setBackground(bordered(Color.WHITE, 0xFFE3E8F0, 20));
+        card.setElevation(dp(2));
 
-        LinearLayout top = row();
-        TextView symbol = txt(icon, 26, color, true);
-        symbol.setGravity(Gravity.CENTER);
-        symbol.setBackground(rounded(tint(color), 14));
-        top.addView(symbol, new LinearLayout.LayoutParams(dp(52), dp(52)));
-        LinearLayout info = column();
-        info.setPadding(dp(12), dp(2), 0, 0);
-        info.addView(txt(title, 20, NAVY, true));
-        space(info, 4);
-        info.addView(txt(categories, 12, 0xFF67768B, false));
-        top.addView(info, new LinearLayout.LayoutParams(0, -2, 1f));
-        card.addView(top);
-        space(card, 10);
-        card.addView(txt(summary, 13, 0xFF4D5D74, false));
-        space(card, 14);
+        FrameLayout photoFrame = new FrameLayout(this);
+        photoFrame.setBackground(rounded(0xFFEAF0F8, 15));
+        photoFrame.setClipToOutline(true);
+        ImageView image = new ImageView(this);
+        image.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        image.setImageResource(photoResource);
+        image.setContentDescription(title + " partner services photograph");
+        photoFrame.addView(image, new FrameLayout.LayoutParams(-1, -1));
+        TextView overlay = txt("  " + category + "  ", 10, Color.WHITE, true);
+        overlay.setPadding(dp(7), dp(4), dp(7), dp(4));
+        overlay.setBackground(rounded(0xD3101F3A, 9));
+        FrameLayout.LayoutParams overlayParams = new FrameLayout.LayoutParams(-2, -2, Gravity.TOP | Gravity.LEFT);
+        overlayParams.leftMargin = dp(9);
+        overlayParams.topMargin = dp(9);
+        photoFrame.addView(overlay, overlayParams);
+        card.addView(photoFrame, new LinearLayout.LayoutParams(-1, dp(151)));
+
+        space(card, 11);
+        LinearLayout titleRow = row();
+        titleRow.setPadding(dp(4), 0, dp(4), 0);
+        titleRow.addView(txt(title, 20, NAVY, true));
+        View gap = new View(this);
+        titleRow.addView(gap, new LinearLayout.LayoutParams(0, 1, 1));
+        TextView ready = txt("• DBest Partner", 10, color, true);
+        ready.setGravity(Gravity.RIGHT);
+        titleRow.addView(ready);
+        card.addView(titleRow);
+        space(card, 4);
+        TextView desc = txt(summary, 12, 0xFF657187, false);
+        desc.setPadding(dp(4), 0, dp(4), 0);
+        card.addView(desc);
+        space(card, 12);
 
         LinearLayout actions = row();
-        Button login = button("Open workspace", Color.WHITE, color);
-        login.setOnClickListener(v -> openPortal(title, loginPath));
-        actions.addView(login, new LinearLayout.LayoutParams(0, dp(49), 1.45f));
-        spaceWidth(actions, 9);
+        Button workspace = button("Open workspace", Color.WHITE, color);
+        workspace.setOnClickListener(v -> openPortal(title, loginPath));
+        actions.addView(workspace, new LinearLayout.LayoutParams(0, dp(46), 1.5f));
+        spaceWidth(actions, 8);
         Button join = button("Join", color, tint(color));
         join.setOnClickListener(v -> openPortal(title + " · Join", joinPath));
-        actions.addView(join, new LinearLayout.LayoutParams(0, dp(49), 0.75f));
+        actions.addView(join, new LinearLayout.LayoutParams(0, dp(46), 0.72f));
         card.addView(actions);
         return card;
     }
