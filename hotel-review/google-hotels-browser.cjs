@@ -122,12 +122,13 @@ function parsePrices(body){
   const rest=lines.slice(i+1,i+7);
   const boundary=rest.indexOf('Visit site');
   if(boundary<0)continue;
-  const candidates=rest.slice(0,boundary).filter(s=>/^₹\s*[\d,]{3,10}$/.test(s));
+  const candidates=rest.slice(0,boundary).filter(s=>/^(?:₹\s*[\d,]{3,10}|\$\s*[\d,]{1,10}(?:\.\d{1,2})?)$/.test(s));
    if(candidates.length!==1)continue;
-   const price=Number(candidates[0].replace(/[₹,\s]/g,''));
+   const currency=candidates[0].startsWith('₹')?'INR':'USD';
+   const price=Number(candidates[0].replace(/[₹$,\s]/g,''));
    if(!Number.isFinite(price)||price<=0||price>1000000)continue;
   used.add(label);
-  out.push({provider:label,pricePerNight:price,currency:'INR',
+  out.push({provider:label,pricePerNight:price,currency,
    room:'Room category, taxes, meals and policy to verify with the OTA',
    cancellation:'See OTA booking terms',
    source:'GOOGLE_HOTELS_PUBLIC_B2C_BROWSER'});
@@ -194,7 +195,7 @@ async function getPublicGoogleRates(hotel,stay,{puppeteer,chromium}={}){
    providers:providers.map(x=>({...x,url:sourceUrl,checkedAt})),
    live:providers.length>0,checkedAt,stay,hotelName:hotel.hotel,
    checkedStayUrl:sourceUrl,canClaimSavings:false,
-   priceBasis:'Google Hotels public pre-login nightly totals in INR for verified dates and two adults; room and final terms may differ',
+   priceBasis:'Public pre-login nightly price in the currency actually displayed by Google Hotels; stay dates and two adults verified, but room, taxes and final terms may differ',
    note:'Visible OTA listings on Google Hotels, not guaranteed checkout totals or confirmed DBest inventory.'
   };
  }finally{
