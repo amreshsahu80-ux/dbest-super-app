@@ -52,8 +52,9 @@ jobs:
       - name: Verify hotel card renders actual OTA quote and difference for selected stay
         run: |
           node - <<'NODE'
-          const puppeteer=require('./.hotel-guest-browser-test/node_modules/puppeteer-core');
-          const chromium=require('./.hotel-guest-browser-test/node_modules/@sparticuz/chromium');
+          const localRequire=require('node:module').createRequire(require('node:path').resolve('.hotel-guest-browser-test/package.json'));
+          const puppeteer=localRequire('puppeteer-core');
+          const chromium=localRequire('@sparticuz/chromium');
           (async()=>{
            const browser=await puppeteer.launch({
              executablePath:await chromium.executablePath(),
