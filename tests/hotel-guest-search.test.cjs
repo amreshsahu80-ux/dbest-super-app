@@ -81,7 +81,7 @@ test('public-source hotel photos are identity-bound and remote, not described as
   assert.ok(html.includes("'"+id+"':Object.freeze({"),id);
  }
  assert.match(html,/publicPropertyPhotos=Object\.freeze/);
- assert.match(html,/p\.photo\|\|photoById\.get\(h\.id\)\|\|publicPropertyPhotos\[h\.id\]/);
+ assert.match(html,/h\.photo\|\|photoById\.get\(h\.id\)\|\|publicPropertyPhotos\[h\.id\]/);
  assert.match(html,/PUBLIC_SOURCE_REUSE_NOT_VERIFIED/);
  assert.match(html,/data-backup/);
  assert.match(html,/View official gallery/);
