@@ -54,7 +54,8 @@ jobs:
           node - <<'NODE'
           const localRequire=require('node:module').createRequire(require('node:path').resolve('.hotel-guest-browser-test/package.json'));
           const puppeteer=localRequire('puppeteer-core');
-          const chromium=localRequire('@sparticuz/chromium');
+          const chromiumModule=localRequire('@sparticuz/chromium');
+          const chromium=chromiumModule.default||chromiumModule;
           (async()=>{
            const browser=await puppeteer.launch({
              executablePath:await chromium.executablePath(),
