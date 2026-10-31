@@ -3,11 +3,11 @@ const test=require('node:test'),assert=require('node:assert/strict'),fs=require(
 const page=fs.readFileSync('hotel-simple-flow.html','utf8');
 test('search card contains upfront DBest/OTA rates and clearly qualified potential savings',()=>{
  assert.match(page,/upfront-prices/);
- assert.match(page,/Potential DBest savings\*/);
- assert.match(page,/estimate only, not verified savings/);
+ assert.match(page,/DBest Advantage/);
+ assert.match(page,/not verified savings/);
  assert.match(page,/DBest contracted reference/);
  assert.match(page,/Public OTA from/);
- assert.match(page,/Indicative only: DBest is a received supplier selling reference/);
+ assert.match(page,/Comparison of displayed reference prices only/);
 });
 test('typing a destination or hotel schedules debounced automatic B2C rate checks',()=>{
  assert.match(page,/scheduleVisibleAutoRateLookups\(\);/);
