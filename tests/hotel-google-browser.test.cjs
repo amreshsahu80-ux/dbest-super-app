@@ -69,3 +69,16 @@ test('Google Hotels minor spacing variations retain real B2C offers but never gu
  assert.deepEqual(google.parsePrices(['Hotel Nandan','MakeMyTrip.com','₹ 5,707','Visit site'].join(lineBreak)),[]);
  assert.deepEqual(google.parsePrices(['All options','Booking.com','₹2,000','₹3,000','Visit site'].join(lineBreak)),[]);
 });
+
+
+test('a date-verified USD public offer is retained in USD, never falsely identified as INR',()=>{
+ const usd=['Hotel Nandan','Nov 15 – 16','All options',
+ 'Expedia.com','Free cancellation','\$52','Visit site',
+ 'Hotels.com','\$51','Visit site',
+ 'Sponsored·Similar hotels','Unrelated property','\$5'].join('\n');
+ const prices=google.parsePrices(usd);
+ assert.equal(prices.length,2);
+ assert.deepEqual(prices.map(x=>[x.provider,x.pricePerNight,x.currency]),
+  [['Expedia.com',52,'USD'],['Hotels.com',51,'USD']]);
+ assert.deepEqual(google.parsePrices(['All options','Expedia.com','$52','No booking link'].join('\n')),[]);
+});
