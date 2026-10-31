@@ -10,7 +10,6 @@ import android.widget.FrameLayout;
 import android.widget.Toast;
 import android.webkit.WebView;
 import com.google.firebase.FirebaseApp;
-import com.google.firebase.FirebaseOptions;
 
 public final class NativePushController {
     private final Activity activity;
@@ -58,16 +57,10 @@ public final class NativePushController {
 
     private boolean initializeFirebase() {
         try {
-            if (BuildConfig.DBEST_FCM_API_KEY.isEmpty() || BuildConfig.DBEST_FCM_APP_ID.isEmpty()
-                    || BuildConfig.DBEST_FCM_PROJECT_ID.isEmpty()
-                    || BuildConfig.DBEST_FCM_SENDER_ID.isEmpty()) return false;
+            // The Google Services Gradle plugin reads app/google-services.json
+            // and supplies the correct Firebase client resources at build time.
             if (FirebaseApp.getApps(activity).isEmpty()) {
-                FirebaseOptions options = new FirebaseOptions.Builder()
-                        .setApiKey(BuildConfig.DBEST_FCM_API_KEY)
-                        .setApplicationId(BuildConfig.DBEST_FCM_APP_ID)
-                        .setProjectId(BuildConfig.DBEST_FCM_PROJECT_ID)
-                        .setGcmSenderId(BuildConfig.DBEST_FCM_SENDER_ID).build();
-                FirebaseApp.initializeApp(activity, options);
+                FirebaseApp.initializeApp(activity);
             }
             return !FirebaseApp.getApps(activity).isEmpty();
         } catch (Exception ignored) {
