@@ -29,6 +29,7 @@ public class MainActivity extends ComponentActivity {
     private static final int LOCATION_REQUEST = 1001;
     private static final int FILE_REQUEST = 1002;
     private WebView webView;
+    private NativePushController nativePush;
     private ValueCallback<Uri[]> fileCallback;
     private GeolocationPermissions.Callback geoCallback;
     private String geoOrigin;
@@ -50,6 +51,7 @@ public class MainActivity extends ComponentActivity {
             return windowInsets;
         });
         setContentView(root);
+        nativePush = new NativePushController(this, root, webView);
 
         WebSettings s = webView.getSettings();
         s.setJavaScriptEnabled(true);
@@ -62,6 +64,16 @@ public class MainActivity extends ComponentActivity {
         s.setMediaPlaybackRequiresUserGesture(false);
 
         webView.setWebViewClient(new WebViewClient() {
+            @Override public void onPageFinished(WebView view, String url) {
+                if (nativePush != null && isDbest(Uri.parse(url)))
+                    view.postDelayed(() -> nativePush.refreshVisibility(), 900);
+                if (BuildConfig.DEBUG) view.evaluateJavascript(
+                    "(function(){var t=performance.getEntriesByType('navigation')[0];" +
+                    "return t?JSON.stringify({dom:Math.round(t.domContentLoadedEventEnd)," +
+                    "load:Math.round(t.loadEventEnd),resources:performance.getEntriesByType('resource').length}):'none'})()",
+                    v -> android.util.Log.d("DBestPerf", v));
+            }
+
             @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 return handleUrl(request.getUrl());
             }
@@ -134,6 +146,11 @@ public class MainActivity extends ComponentActivity {
 
     @Override public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] results) {
         super.onRequestPermissionsResult(requestCode, permissions, results);
+        if (requestCode == NativePushController.PERMISSION_REQUEST && nativePush != null) {
+            boolean granted=results.length>0 && results[0]==PackageManager.PERMISSION_GRANTED;
+            nativePush.onPermissionResult(granted);
+            return;
+        }
         if (requestCode == LOCATION_REQUEST && geoCallback != null) {
             boolean granted = results.length > 0 && results[0] == PackageManager.PERMISSION_GRANTED;
             geoCallback.invoke(geoOrigin, granted, false);
@@ -148,6 +165,14 @@ public class MainActivity extends ComponentActivity {
             fileCallback.onReceiveValue(result);
             fileCallback = null;
         }
+    }
+
+    @Override protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        Uri target = intent == null ? null : intent.getData();
+        if (target != null && "https".equalsIgnoreCase(target.getScheme()) && isDbest(target))
+            webView.loadUrl(target.toString());
     }
 
     @Override protected void onSaveInstanceState(@NonNull Bundle outState) {
