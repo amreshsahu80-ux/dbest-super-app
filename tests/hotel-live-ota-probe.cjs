@@ -33,6 +33,24 @@
     await page.goto(target.href,{waitUntil:'domcontentloaded',timeout:23000});
     await new Promise(resolve=>setTimeout(resolve,1800));
     const after=await page.evaluate(()=>document.body?.innerText||'');
+    
+    const currencyOpened=await page.evaluate(()=>{
+      const b=[...document.querySelectorAll('button,[role="button"]')]
+        .find(x=>/Currency\s*USD/i.test(String(x.innerText||'').replace(/\u200b/g,'')));
+      if(b){b.click();return true}return false;
+    });
+    if(currencyOpened){
+      await new Promise(resolve=>setTimeout(resolve,900));
+      const menu=await page.evaluate(()=>{
+       const t=document.body?.innerText||'';
+       const index=t.indexOf('Currency\n');
+       const optionLabels=[...document.querySelectorAll('[role="option"],[role="menuitem"],button,[role="button"]')]
+         .map(x=>String(x.innerText||'').trim()).filter(x=>/INR|Indian Rupee|Currency|USD|US Dollar|Rupee/i.test(x)).slice(0,20);
+       return {index,currencySection:index>=0?t.slice(index,index+650):'',optionLabels};
+      });
+      console.log('DBEST_CURRENCY_MENU',JSON.stringify(menu));
+    }
+
     const index=after.indexOf('All options');
     const shortlist=after.split('\n').filter(x=>/MakeMyTrip|Goibibo|Booking\.com|Yatra\.com|Cleartrip|₹|Visit site|All options|View more options/i.test(x));
     console.log('DBEST_PUBLIC_PAGE_STRUCTURE',JSON.stringify({
