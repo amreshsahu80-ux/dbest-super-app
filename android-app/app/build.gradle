@@ -1,4 +1,4 @@
-plugins { id 'com.android.application' }
+plugins { id 'com.android.application'; id 'com.google.gms.google-services' }
 
 android {
     namespace 'com.dbest4u.app'
@@ -12,12 +12,6 @@ android {
         targetSdk 36
         versionCode 3
         versionName '1.0.2-beta'
-        // Non-secret Firebase app IDs from protected CI/build variables.
-        // No configuration => native push is disabled, never shown as ON.
-        ['DBEST_FCM_API_KEY', 'DBEST_FCM_APP_ID', 'DBEST_FCM_PROJECT_ID', 'DBEST_FCM_SENDER_ID'].each { k ->
-            def v = System.getenv(k) ?: ''
-            buildConfigField 'String', k, '"' + v.replace('\\', '\\\\').replace('"', '\\"') + '"'
-        }
     }
 
     dependencies {
