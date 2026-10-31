@@ -74,3 +74,19 @@ test('when property image rights are not confirmed use official gallery link, no
  assert.match(html,/View hotel’s real photos/);
  assert.doesNotMatch(html,/r2imghtlak\.mmtcdn\.com/);
 });
+
+
+test('public-source hotel photos are identity-bound and remote, not described as public-domain licensed',()=>{
+ for(const id of ['HOTEL-NANDAN-GHY','HIST-016','DBEST-REPL-20261026-691','DBEST-REPL-20261026-697']){
+  assert.ok(html.includes("'"+id+"':Object.freeze({"),id);
+ }
+ assert.match(html,/publicPropertyPhotos=Object\.freeze/);
+ assert.match(html,/p\.photo\|\|photoById\.get\(h\.id\)\|\|publicPropertyPhotos\[h\.id\]/);
+ assert.match(html,/PUBLIC_SOURCE_REUSE_NOT_VERIFIED/);
+ assert.match(html,/data-backup/);
+ assert.match(html,/View official gallery/);
+ for(const host of ['r2imghtlak.mmtcdn.com','cdn.sanity.io','assets.simplotel.com','thevendry.com']){
+  assert.ok(html.includes(host),host);
+ }
+ assert.doesNotMatch(html,/data:image\/jpeg;base64/);
+});
