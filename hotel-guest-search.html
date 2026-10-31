@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex,nofollow,noarchive">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src https://commons.wikimedia.org https://thumb.wikimedia.org https://upload.wikimedia.org data:; style-src 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'; form-action 'none'; base-uri 'none';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src https://commons.wikimedia.org https://thumb.wikimedia.org https://upload.wikimedia.org https://r2imghtlak.mmtcdn.com https://images.trvl-media.com https://cdn.sanity.io https://assets.simplotel.com https://thevendry.com data:; style-src 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'; form-action 'none'; base-uri 'none';">
 <title>DBest Stays — Compare & Book Hotels</title>
 <style>
 :root{font:15px/1.5 system-ui,-apple-system,Segoe UI,Arial,sans-serif;color:#172b46;background:#f6f8fc;--blue:#134f93;--green:#087656;--muted:#61738b}
@@ -69,6 +69,34 @@ const otaStatus=new Map(),roomSelections=new Map();
 const nandanSelling=Object.freeze({'1:1':{Deluxe:4016.25,Executive:4488.75,Suite:6692.70},
  '2:1':{Deluxe:4961.25,Executive:5433.75,Suite:6692.70}});
 const galleries=Object.freeze({'HOTEL-NANDAN-GHY':'https://hotelnandan.com/rooms/'});
+
+// Property-specific public image URLs for staging only. Public visibility is not
+// a public-domain grant: source terms/reuse permissions require review before launch.
+// These are remote image references, never copied into the DBest asset store.
+// Do not label them as Creative Commons or claim rights have been verified.
+const publicPropertyPhotos=Object.freeze({
+ 'HOTEL-NANDAN-GHY':Object.freeze({
+   url:'https://r2imghtlak.mmtcdn.com/r2-mmt-htl-image/htl-imgs/201005201233001535-a04d696860a711eb901c0242ac110003.jpg',
+   fallbackUrl:'https://images.trvl-media.com/lodging/26000000/25790000/25786000/25785934/f189ede2.jpg?h=800&impolicy=fcrop&quality=medium&w=1200',
+   credit:'MakeMyTrip listing',source:'https://www.makemytrip.com/hotels/hotel_nandan-details-guwahati.html',
+   rights:'PUBLIC_SOURCE_REUSE_NOT_VERIFIED'
+ }),
+ 'HIST-016':Object.freeze({
+   url:'https://cdn.sanity.io/images/ocl5w36p/prod5/18744153ef01c269bafeba04ea43febbe7921acb-2048x1536.jpg',
+   credit:'Vivanta official gallery',source:'https://www.vivantahotels.com/en-in/hotels/vivanta-guwahati/gallery',
+   rights:'PUBLIC_SOURCE_REUSE_NOT_VERIFIED'
+ }),
+ 'DBEST-REPL-20261026-691':Object.freeze({
+   url:'https://assets.simplotel.com/simplotel/image/upload/x_0%2Cy_80%2Cw_1536%2Ch_864%2Cr_0%2Cc_crop/q_80%2Cw_900%2Cdpr_1%2Cf_auto%2Cfl_progressive%2Cc_limit/polo-hotel-agartala/facade_5fd701cf.png',
+   credit:'Polo Hotels official gallery',source:'https://www.polohotelsandresorts.com/agartala/',
+   rights:'PUBLIC_SOURCE_REUSE_NOT_VERIFIED'
+ }),
+ 'DBEST-REPL-20261026-697':Object.freeze({
+   url:'https://thevendry.com/cdn-cgi/image/height%3D1920%2Cwidth%3D1920%2Cfit%3Dcontain%2Cmetadata%3Dnone/https%3A/travelport.leonardocontentcloud.com/imageRepo/2/0/187/668/963/_R2A6072_O.jpg',
+   credit:'The Vendry property listing',source:'https://thevendry.com/venue/501634/ginger-agartala-agartala-india',
+   rights:'PUBLIC_SOURCE_REUSE_NOT_VERIFIED'
+ })
+});
 const mapped=new Set(['HOTEL-NANDAN-GHY','HIST-016','DBEST-REPL-20261026-697','DBEST-REPL-20261024-138','DBEST-REPL-20261026-691','DBEST-REPL-20261026-632']);
 const recentWindow=new Map();
 const $=id=>document.getElementById(id);
@@ -98,8 +126,8 @@ function rate(h){
  return q;
 }
 function publicOffers(h){const p=otas.get(otaKey(h));return p&&p.live&&Date.now()-Date.parse(p.checkedAt)<15*60000&&Array.isArray(p.providers)?p.providers.filter(x=>x.currency==='INR'&&Number.isFinite(x.pricePerNight)&&x.pricePerNight>0):[]}
-function photo(h){const p=h.photo||photoById.get(h.id);if(!p||!p.url)return '<div class="photo-empty"><svg viewBox="0 0 64 64" fill="none" aria-hidden="true"><path d="M12 55V23L32 10l20 13v32M20 29h8v8h-8zm16 0h8v8h-8zM20 42h8v13h-8zm16 0h8v13h-8z" stroke="#6287a5" stroke-width="3" stroke-linejoin="round"/></svg><small>Property image coming soon</small>'+(galleries[h.id]?'<a href="'+esc(galleries[h.id])+'" target="_blank" rel="noopener noreferrer" style="display:block;margin-top:12px;font-size:12px;font-weight:800">View hotel’s real photos</a>':'')+'</div>';
-return '<img src="'+esc(p.url)+'" loading="lazy" decoding="async" referrerpolicy="no-referrer" alt="Photograph of '+esc(h.name)+'" data-photo="1"><div class="photo-credit">Photo: '+esc(p.credit)+' · <a href="'+esc(p.source)+'" target="_blank" rel="noopener noreferrer">Source</a></div>'}
+function photo(h){const p=h.photo||photoById.get(h.id)||publicPropertyPhotos[h.id];if(!p||!p.url)return '<div class="photo-empty"><svg viewBox="0 0 64 64" fill="none" aria-hidden="true"><path d="M12 55V23L32 10l20 13v32M20 29h8v8h-8zm16 0h8v8h-8zM20 42h8v13h-8zm16 0h8v13h-8z" stroke="#6287a5" stroke-width="3" stroke-linejoin="round"/></svg><small>Property image coming soon</small>'+(galleries[h.id]?'<a href="'+esc(galleries[h.id])+'" target="_blank" rel="noopener noreferrer" style="display:block;margin-top:12px;font-size:12px;font-weight:800">View hotel’s real photos</a>':'')+'</div>';
+return '<img src="'+esc(p.url)+'" loading="lazy" decoding="async" referrerpolicy="no-referrer" alt="Photograph of '+esc(h.name)+'" data-photo="1" data-backup="'+esc(p.fallbackUrl||'')+'"><div class="photo-credit">Photo: '+esc(p.credit)+' · <a href="'+esc(p.source)+'" target="_blank" rel="noopener noreferrer">Source</a></div>'}
 function otaConsumerLink(h,name){
  const query=new URLSearchParams({checkin:state.checkIn,checkout:state.checkOut,
  group_adults:String(state.adults),no_rooms:String(state.rooms)});
@@ -162,7 +190,11 @@ $('summary').textContent=matched.length+' hotel'+(matched.length===1?'':'s')+' f
 $('results').innerHTML=matched.slice(0,visibleCount).map(card).join('');
 $('more').classList.toggle('hidden',matched.length<=visibleCount);
 }
-$('results').addEventListener('error',e=>{const img=e.target;if(img.tagName!=='IMG'||!img.matches('[data-photo]'))return;const parent=img.closest('.photo');if(parent)parent.innerHTML='<div class="photo-empty">Verified hotel photo currently unavailable</div>'},true);
+$('results').addEventListener('error',e=>{const img=e.target;if(img.tagName!=='IMG'||!img.matches('[data-photo]'))return;const parent=img.closest('.photo');if(!parent)return;const backup=img.dataset.backup;
+ if(backup){img.dataset.backup='';img.src=backup;return}
+ const h=hotels.find(x=>x.id===parent.closest('[data-hotel]')?.dataset.hotel);
+ parent.innerHTML='<div class="photo-empty"><small>Photo temporarily unavailable</small>'+
+ (h&&galleries[h.id]?'<a target="_blank" rel="noopener noreferrer" href="'+esc(galleries[h.id])+'">View official gallery</a>':'')+'</div>'},true);
 function scheduleLookups(){if(lookupTimer!==null)clearTimeout(lookupTimer);lookupTimer=setTimeout(()=>{lookupTimer=null;const token=searchToken;const items=matched.slice(0,8);
 loadGuestRates(items,token);let count=0;for(const h of items){if(mapped.has(h.id)&&count<2){count++;loadOTA(h,token)}}},320)}
 async function loadGuestRates(items,token){
