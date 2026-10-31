@@ -1,0 +1,44 @@
+name: DBest Public Hotel Guest End-to-End Smoke
+on:
+  push:
+    branches:
+      - feat/hotel-rate-compare-isolated-20261027
+    paths:
+      - '.github/workflows/hotel-public-guest-e2e.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  live-public-guest-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify guest page and real public quote API respond without Vercel login
+        run: |
+          node - <<'NODE'
+          const origin='https://dbest-hotel-guest-public-preview-ncgbvucbb-db-est.vercel.app';
+          (async()=>{
+           const page=await fetch(origin+'/',{signal:AbortSignal.timeout(12000)});
+           const html=await page.text();
+           console.log('GUEST_PAGE',JSON.stringify({status:page.status,type:page.headers.get('content-type'),
+             hasSearch:html.includes('Search hotels'),hasDbest:html.includes('DBest Special Rate')}));
+           if(!page.ok||!html.includes('Search hotels'))process.exitCode=1;
+           for(const path of ['/api/hotel-coverage','/api/hotel-fx']){
+            const r=await fetch(origin+path,{signal:AbortSignal.timeout(12000)});
+            const raw=await r.text();let data;
+            try{data=JSON.parse(raw)}catch{data={notJson:true,prefix:raw.slice(0,75)}}
+            console.log('GUEST_API',JSON.stringify({path,http:r.status,type:r.headers.get('content-type'),
+             status:data.status,count:data.count,base:data.base,date:data.date,rate:data.rates?.INR,notJson:data.notJson}));
+            if(!r.ok||!r.headers.get('content-type')?.includes('application/json'))process.exitCode=1;
+           }
+           const url=new URL('/api/hotel-public-google',origin);
+           for(const [k,v] of Object.entries({hotelId:'HOTEL-NANDAN-GHY',checkIn:'2026-11-15',checkOut:'2026-11-16',adults:'2',rooms:'1'}))url.searchParams.set(k,v);
+           const r=await fetch(url,{signal:AbortSignal.timeout(45000)});
+           const raw=await r.text();let data;
+           try{data=JSON.parse(raw)}catch{data={notJson:true,prefix:raw.slice(0,100)}}
+           console.log('GUEST_OTA_E2E',JSON.stringify({http:r.status,type:r.headers.get('content-type'),
+             status:data.status,live:data.live,stay:data.stay,providers:data.providers?.map(p=>({provider:p.provider,
+             price:p.pricePerNight,currency:p.currency})),notJson:data.notJson,preview:data.prefix}));
+           if(!r.ok||!data.live||!Array.isArray(data.providers)||data.providers.length===0)process.exitCode=1;
+          })().catch(e=>{console.error('GUEST_E2E_FAILED',String(e));process.exitCode=1});
+          NODE
