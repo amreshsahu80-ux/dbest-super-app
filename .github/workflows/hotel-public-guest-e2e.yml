@@ -46,7 +46,9 @@ jobs:
       - name: Install browser for real mobile-size UI check
         run: |
           mkdir -p .hotel-guest-browser-test
+          printf '{"name":"dbest-guest-mobile-smoke","private":true,"version":"1.0.0"}\\n' > .hotel-guest-browser-test/package.json
           npm install --prefix .hotel-guest-browser-test --no-save --no-audit --no-fund @sparticuz/chromium@153.0.0 puppeteer-core@25.16.0
+          test -f .hotel-guest-browser-test/node_modules/@sparticuz/chromium/package.json
       - name: Verify hotel card renders actual OTA quote and difference for selected stay
         run: |
           node - <<'NODE'
