@@ -65,6 +65,10 @@ const STATIC_HOTELS=[{"id":"DBEST-REPL-20261026-697","name":"Ginger Agartala","c
 const photoById=new Map(STATIC_HOTELS.filter(h=>h.photo&&h.photo.url).map(h=>[h.id,h.photo]));
 let hotels=STATIC_HOTELS.map(h=>Object.assign({},h)),matched=[],visibleCount=8,searchToken=0;
 const rates=new Map(),otas=new Map(),inflight=new Set(),guestLoading=new Set();
+const otaStatus=new Map(),roomSelections=new Map();
+const nandanSelling=Object.freeze({'1:1':{Deluxe:4016.25,Executive:4488.75,Suite:6692.70},
+ '2:1':{Deluxe:4961.25,Executive:5433.75,Suite:6692.70}});
+const galleries=Object.freeze({'HOTEL-NANDAN-GHY':'https://hotelnandan.com/rooms/'});
 const mapped=new Set(['HOTEL-NANDAN-GHY','HIST-016','DBEST-REPL-20261026-697','DBEST-REPL-20261024-138','DBEST-REPL-20261026-691','DBEST-REPL-20261026-632']);
 const recentWindow=new Map();
 const $=id=>document.getElementById(id);
@@ -78,13 +82,27 @@ let state=selection(),selectedBooking=null,lookupTimer=null,suggestTimer=null;
 function validStay(s){return !!(s.destination&&s.checkIn&&s.checkOut&&s.checkOut>s.checkIn&&(Date.parse(s.checkOut)-Date.parse(s.checkIn))/86400000<=30)}
 function rateKey(h){return h.id+'|'+state.adults+'|'+state.rooms}
 function otaKey(h){return h.id+'|'+state.checkIn+'|'+state.checkOut+'|'+state.adults+'|'+state.rooms}
-function rate(h){const q=rates.get(rateKey(h));return q&&q.status==='RECEIVED_GUEST_OCCUPANCY_SELLING_REFERENCE'&&q.adults===state.adults&&q.rooms===state.rooms&&Number.isFinite(q.pricePerNight)&&q.pricePerNight>0?q:null}
+function rate(h){
+ const selected=roomSelections.get(h.id)||'',q=rates.get(rateKey(h));
+ if(h.id==='HOTEL-NANDAN-GHY'&&nandanSelling[state.adults+':'+state.rooms]){
+  const category=selected&&/executive/i.test(selected)?'Executive':selected&&/suite/i.test(selected)?'Suite':'Deluxe';
+  if(selected&&!/deluxe|executive|suite/i.test(selected))return null;
+  return {status:'RECEIVED_GUEST_OCCUPANCY_SELLING_REFERENCE',
+   pricePerNight:nandanSelling[state.adults+':'+state.rooms][category],
+   adults:state.adults,rooms:state.rooms,room:category,meal:'Breakfast',taxStatus:'TAX_ADDITIONAL',
+   source:'HOTEL_CONTRACTED_2026_27'};
+ }
+ if(!q||q.status!=='RECEIVED_GUEST_OCCUPANCY_SELLING_REFERENCE'||q.adults!==state.adults||
+    q.rooms!==state.rooms||!Number.isFinite(q.pricePerNight)||q.pricePerNight<=0||
+    selected&&!String(q.room).toLowerCase().includes(selected.toLowerCase()))return null;
+ return q;
+}
 function publicOffers(h){const p=otas.get(otaKey(h));return p&&p.live&&Date.now()-Date.parse(p.checkedAt)<15*60000&&Array.isArray(p.providers)?p.providers.filter(x=>x.currency==='INR'&&Number.isFinite(x.pricePerNight)&&x.pricePerNight>0):[]}
-function photo(h){const p=h.photo||photoById.get(h.id);if(!p||!p.url)return '<div class="photo-empty"><svg viewBox="0 0 64 64" fill="none" aria-hidden="true"><path d="M12 55V23L32 10l20 13v32M20 29h8v8h-8zm16 0h8v8h-8zM20 42h8v13h-8zm16 0h8v13h-8z" stroke="#6287a5" stroke-width="3" stroke-linejoin="round"/></svg><small>Property image coming soon</small></div>';
+function photo(h){const p=h.photo||photoById.get(h.id);if(!p||!p.url)return '<div class="photo-empty"><svg viewBox="0 0 64 64" fill="none" aria-hidden="true"><path d="M12 55V23L32 10l20 13v32M20 29h8v8h-8zm16 0h8v8h-8zM20 42h8v13h-8zm16 0h8v13h-8z" stroke="#6287a5" stroke-width="3" stroke-linejoin="round"/></svg><small>Property image coming soon</small>'+(galleries[h.id]?'<a href="'+esc(galleries[h.id])+'" target="_blank" rel="noopener noreferrer" style="display:block;margin-top:12px;font-size:12px;font-weight:800">View hotel’s real photos</a>':'')+'</div>';
 return '<img src="'+esc(p.url)+'" loading="lazy" decoding="async" referrerpolicy="no-referrer" alt="Photograph of '+esc(h.name)+'" data-photo="1"><div class="photo-credit">Photo: '+esc(p.credit)+' · <a href="'+esc(p.source)+'" target="_blank" rel="noopener noreferrer">Source</a></div>'}
 function card(h){
 const q=rate(h), base=Number.isFinite(h.contractedSellingReference)?h.contractedSellingReference:null;
-const db=q?q.pricePerNight:base;
+const db=q?q.pricePerNight:null;
 const offers=publicOffers(h);
 const providerNames=['MakeMyTrip','Goibibo','Booking.com'];
 const norm=s=>String(s).toLowerCase().replace(/[^a-z0-9]/g,'');
@@ -96,12 +114,13 @@ let difference='<div class="diff neutral">Price difference: awaiting comparable 
 if(q&&cheapest){const d=Math.round((cheapest.pricePerNight-q.pricePerNight)*100)/100;
 difference=d>0?'<div class="diff">DBest lower by '+money(d)+'/night*</div>':d<0?'<div class="diff negative">OTA lower by '+money(Math.abs(d))+'/night*</div>':'<div class="diff neutral">Same displayed nightly price*</div>'}
 const roomOptions=(h.roomTypes||[]).filter(x=>typeof x==='string'&&x.length<80).slice(0,12);
+const chosen=roomSelections.get(h.id)||'';
 return '<article class="hotel" data-hotel="'+esc(h.id)+'">'+
 '<div class="photo">'+photo(h)+'</div>'+
 '<div class="hotel-info"><h3>'+esc(h.name)+'</h3><div class="location">'+esc([h.area,h.city].filter(Boolean).join(', '))+'</div>'+
 '<div class="chip">DBest partner rate</div><p>'+esc(h.rateCount||0)+' received contracted rate references</p>'+
-(roomOptions.length?'<div class="roomline"><label for="room-'+esc(h.id)+'">Preferred room (optional)</label><select data-room="'+esc(h.id)+'" id="room-'+esc(h.id)+'"><option value="">Best available room</option>'+roomOptions.map(v=>'<option>'+esc(v)+'</option>').join('')+'</select></div>':'')+
-'</div><div class="comparison"><div class="dbest-line"><div class="price-caption">DBest Special Rate · per night</div><div class="dbest-price">'+(db?money(db):'Rate pending')+'</div><small>'+(q?esc(q.room)+' · '+state.adults+' adults':base?'Starting partner reference':'No verified selling reference')+'</small></div>'+
+(roomOptions.length?'<div class="roomline"><label for="room-'+esc(h.id)+'">Preferred room (optional)</label><select data-room="'+esc(h.id)+'" id="room-'+esc(h.id)+'"><option value="">Best available room</option>'+roomOptions.map(v=>'<option value="'+esc(v)+'"'+(chosen===v?' selected':'')+'>'+esc(v)+'</option>').join('')+'</select></div>':'')+
+'</div><div class="comparison"><div class="dbest-line"><div class="price-caption">DBest Special Rate · per night</div><div class="dbest-price">'+(db?money(db):base?'From '+money(base):'Check rate')+'</div><small>'+(q?esc(q.room)+' · '+state.adults+' adults':base?'Starting rate; selected occupancy unconfirmed':'No verified selling reference')+'</small></div>'+
 '<div><div class="ota-head">Other public OTA rates · per night</div>'+rows+others+'</div>'+difference+
 '<div class="basis">*Indicative headline difference, not guaranteed savings. Room, date applicability, tax and meal terms may differ. Unavailable OTA rates are never estimated.</div>'+
 '<div class="actions"><button type="button" data-book="'+esc(h.id)+'" class="btn book">Book</button></div></div></article>'}
@@ -167,11 +186,15 @@ $('searchForm').addEventListener('submit',e=>{e.preventDefault();$('suggestions'
 $('checkIn').addEventListener('change',()=>{const d=new Date($('checkIn').value+'T12:00:00');if(!Number.isNaN(d.getTime())){d.setDate(d.getDate()+1);$('checkOut').min=fmtDate(d);if($('checkOut').value<fmtDate(d))$('checkOut').value=fmtDate(d)}if(validStay(selection()))searchHotels()});
 for(const id of ['checkOut','guests'])$(id).addEventListener('change',()=>{if(validStay(selection()))searchHotels()});
 $('more').addEventListener('click',()=>{visibleCount+=8;render();scheduleLookups()});
+$('results').addEventListener('change',e=>{
+ const el=e.target.closest('select[data-room]');
+ if(!el)return;roomSelections.set(el.dataset.room,el.value);render();
+});
 $('results').addEventListener('click',e=>{
 const b=e.target.closest('button[data-book]');if(!b)return;const h=hotels.find(h=>h.id===b.dataset.book);if(!h)return;
 const opt=document.querySelector('select[data-room="'+CSS.escape(h.id)+'"]');
 const q=rate(h);
-const matching=q&&(!opt||!opt.value||opt.value===q.room);
+const matching=q&&(!opt||!opt.value||String(q.room).toLowerCase().includes(opt.value.toLowerCase()));
 const ref=matching?q.pricePerNight:null;
 const nights=Math.round((Date.parse(state.checkOut)-Date.parse(state.checkIn))/86400000);
 selectedBooking={hotel:h,price:ref,room:opt&&opt.value||q&&q.room||'To confirm',nights,stay:Object.assign({},state)};
