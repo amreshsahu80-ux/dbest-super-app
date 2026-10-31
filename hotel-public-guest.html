@@ -24,6 +24,7 @@ input:focus-visible,select:focus-visible,button:focus-visible,a:focus-visible{ou
 .photo{position:relative;min-height:272px;background:#dce9f4;display:grid;place-items:center;overflow:hidden}.photo img{width:100%;height:100%;object-fit:cover;position:absolute;inset:0;z-index:1}.photo-empty{text-align:center;color:#587187;padding:26px}.photo-empty svg{display:block;margin:0 auto 12px;width:56px;height:56px}.photo-empty small{display:block;max-width:190px;font-size:12px}.photo-credit{position:absolute;bottom:0;left:0;right:0;background:#122d43dc;color:#fff;z-index:2;font-size:10px;padding:6px 9px}.photo-credit a{color:white}
 .hotel-info{padding:24px 22px;min-width:0}.hotel-info h3{font-size:21px;line-height:1.27;margin:0 0 6px;letter-spacing:-.4px}.location{color:#698098;font-size:13px}.chip{display:inline-block;background:#e8f7f2;color:#0f7358;border-radius:20px;padding:4px 10px;font-size:11px;font-weight:800;margin:14px 0 10px}.hotel-info p{margin:0;font-size:12px;color:#60768b}.roomline{font-size:12px;margin-top:18px;color:#5f7285}.roomline select{margin-top:5px;height:37px;font-size:12px}
 .comparison{background:#f9fbff;border-left:1px solid #e5ebf2;padding:20px;display:flex;flex-direction:column;gap:10px}.price-caption{color:#587089;font-size:11px;font-weight:750}.dbest-price{font-size:29px;color:var(--green);font-weight:900;letter-spacing:-.8px;line-height:1.2}.dbest-line small{font-size:11px;color:#70859a;display:block}.ota-head{font-size:12px;font-weight:900;border-top:1px solid #dae6ef;padding-top:10px}.ota-row{display:flex;align-items:center;justify-content:space-between;font-size:12px;gap:9px;min-height:23px}.ota-row .value{font-weight:800;white-space:nowrap}.pending{color:#8192a5;font-weight:600}
+.all-ota{border:1px solid #d5e1ee;border-radius:10px;margin:9px 0;padding:8px 10px;background:white}.all-ota summary{color:#175b93;font-size:12px;font-weight:800;cursor:pointer}.all-ota[open] .ota-row{padding:4px 0}.dbest-advantage .ota-row{padding:5px 0}.dbest-advantage strong{font-weight:800}.rates-featured{min-width:0}
 .diff{border-radius:9px;padding:9px 10px;background:#e9f7ef;color:#106a49;font-size:12px;font-weight:900}.diff.neutral{background:#edf2f7;color:#567085}.diff.negative{background:#fff2e7;color:#92521b}.basis{font-size:10px;color:#657d91;line-height:1.4}.actions{display:flex;align-items:center;gap:10px;margin-top:auto;padding-top:4px}.actions .btn{flex:1}.text-link{font-size:11px;white-space:nowrap}.more{margin:24px auto 0;display:block}.empty{background:white;border-radius:16px;padding:40px;text-align:center;color:#678098}
 footer{padding:26px 20px;text-align:center;color:#7b8aa0;font-size:11px;border-top:1px solid #e5eaf1}
 dialog{border:0;border-radius:17px;max-width:525px;width:calc(100% - 28px);padding:0;box-shadow:0 25px 85px #19355060}dialog::backdrop{background:#17283c96}.modal-head{padding:22px 25px;background:#f0f7ff}.modal-head h2{margin:0 0 4px}.modal-body{padding:24px 25px}.modal-body p{font-size:13px;color:#5e7289}.notice{background:#fff6e6;border:1px solid #ead4a8;border-radius:11px;padding:11px 13px;color:#79581a;font-size:12px;margin:13px 0}.modal-buttons{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0 0}.modal-buttons button{flex:1}.hidden{display:none!important}#bookingStatus{margin-top:10px;font-size:12px;color:#59758d}
@@ -174,25 +175,42 @@ function card(h){
 const q=rate(h), base=Number.isFinite(h.contractedSellingReference)?h.contractedSellingReference:null;
 const db=q?q.pricePerNight:null;
 const offers=publicOffers(h);
-const providerNames=['MakeMyTrip','Goibibo','Booking.com'];
 const norm=s=>String(s).toLowerCase().replace(/[^a-z0-9]/g,'');
-const lookup=name=>offers.find(p=>norm(p.provider)===norm(name)||norm(p.provider)===norm(name+'com'));
-const rows=providerNames.map(name=>{
- const p=lookup(name),link=p&&p.url?p.url:otaConsumerLink(h,name);
+const providerNames=['MakeMyTrip','Goibibo','Booking.com'];
+const sourceRows=providerNames.map(name=>{
+ const p=offers.find(p=>norm(p.provider)===norm(name)||norm(p.provider)===norm(name+'com'));
+ const link=p&&p.url?p.url:otaConsumerLink(h,name);
  return '<div class="ota-row"><span>'+esc(name)+'</span><span class="value '+(p?'':'pending')+'">'+
- (p?offerPriceLabel(p):'<a href="'+esc(link)+'" target="_blank" rel="noopener noreferrer">Check price</a>')+'</span></div>';
+  (p?offerPriceLabel(p):'<a href="'+esc(link)+'" target="_blank" rel="noopener noreferrer">Check price</a>')+'</span></div>';
 }).join('');
-const others=offers.filter(p=>!providerNames.some(n=>norm(p.provider)===norm(n)||norm(p.provider)===norm(n+'com'))).slice(0,3).map(p=>'<div class="ota-row"><span>'+esc(p.provider)+'</span><span class="value">'+offerPriceLabel(p)+'</span></div>').join('');
+const named=new Set(providerNames.map(norm));
+const otherRows=offers.filter(p=>!named.has(norm(p.provider))).map(p=>
+ '<div class="ota-row"><span>'+esc(p.provider)+'</span><span class="value">'+offerPriceLabel(p)+'</span></div>').join('');
 const comparable=offers.map(p=>({offer:p,inr:priceInr(p)})).filter(x=>Number.isFinite(x.inr)&&x.inr>0);
-const cheapest=comparable.reduce((v,p)=>!v||p.inr<v.inr?p:v,null);
-let difference='<div class="diff neutral">'+(offers.length?'OTA quote shown; INR difference requires a current FX rate.':'Price difference: awaiting comparable OTA rate')+'</div>';
-if(q&&cheapest){
- const d=Math.round((cheapest.inr-q.pricePerNight)*100)/100;
- const extra=cheapest.offer.currency==='USD'?' (indicative FX estimate)':' (indicative)';
- difference=d>0?'<div class="diff">DBest lower by '+money(d)+'/night'+extra+'*</div>':
- d<0?'<div class="diff negative">OTA lower by '+money(Math.abs(d))+'/night'+extra+'*</div>':
- '<div class="diff neutral">Same displayed nightly reference price*</div>';
-}
+const higher=q?comparable.filter(x=>x.inr>q.pricePerNight):[];
+const lower=q?comparable.filter(x=>x.inr<q.pricePerNight):[];
+const hasUnconverted=offers.some(p=>priceInr(p)===null);
+const selectedHigher=higher.slice().sort((a,b)=>b.inr-a.inr).slice(0,3);
+const advantageRows=selectedHigher.map(x=>{
+ const gap=Math.round((x.inr-q.pricePerNight)*100)/100;
+ return '<div class="ota-row"><span>'+esc(x.offer.provider)+'</span><span class="value">'+
+  offerPriceLabel(x.offer)+' <strong style="display:block;color:#087656;font-size:11px">DBest '+money(gap)+' lower/night*</strong></span></div>';
+}).join('');
+const featured=selectedHigher.length?
+ '<div class="dbest-advantage"><div class="ota-head">DBest Advantage · selected higher public OTA rates</div>'+
+ advantageRows+'<div class="basis">Only higher-priced OTA quotes are featured here, not every OTA offer.</div></div>':
+ '<div class="diff neutral">'+(q?(offers.length?'No verified DBest price advantage among comparable offers for this stay.':'No verified OTA price comparison available yet.'):'Final room rate must be verified before comparing.')+'</div>';
+const lowerDisclosure=lower.length?
+ '<div class="basis" style="font-weight:700;color:#9a611f">Some verified OTA prices are lower than DBest. Open all prices for a complete comparison.</div>':'';
+const undisplayedNote=hasUnconverted?
+ '<div class="basis">Some foreign-currency quotes cannot yet be compared in INR without a current reference exchange rate.</div>':'';
+const details=offers.length?
+ '<details class="all-ota" data-all-ota><summary>View all '+offers.length+' verified public OTA prices</summary>'+
+ '<div class="basis">All retrieved quotes, including any lower prices, are visible here. Original currency and estimated INR amounts are shown.</div>'+
+ sourceRows+otherRows+'</details>':
+ '<div class="basis">Public OTA quotes are not available yet. Check each OTA directly: '+
+ providerNames.map(name=>'<a target="_blank" rel="noopener noreferrer" href="'+esc(otaConsumerLink(h,name))+'">'+esc(name)+'</a>').join(' · ')+'</div>';
+const comparison=featured+lowerDisclosure+undisplayedNote+details;
 const roomOptions=(h.roomTypes||[]).filter(x=>typeof x==='string'&&x.length<80).slice(0,12);
 const chosen=roomSelections.get(h.id)||'';
 const status=otaStatus.get(otaKey(h))||(mapped.has(h.id)?'Checking public OTA quotes when available.':'Public OTA price not yet mapped for this hotel.');
@@ -204,8 +222,8 @@ return '<article class="hotel" data-hotel="'+esc(h.id)+'">'+
 '<div class="chip">DBest partner rate</div><p>'+esc(h.rateCount||0)+' received contracted rate references</p>'+
 (roomOptions.length?'<div class="roomline"><label for="room-'+esc(h.id)+'">Preferred room (optional)</label><select data-room="'+esc(h.id)+'" id="room-'+esc(h.id)+'"><option value="">Best available room</option>'+roomOptions.map(v=>'<option value="'+esc(v)+'"'+(chosen===v?' selected':'')+'>'+esc(v)+'</option>').join('')+'</select></div>':'')+
 '</div><div class="comparison"><div class="dbest-line"><div class="price-caption">DBest Special Rate · per night</div><div class="dbest-price">'+(db?money(db):base?'From '+money(base):'Check rate')+'</div><small>'+(q?esc(q.room)+' · '+state.adults+' adults':base?'Starting rate; selected occupancy unconfirmed':'No verified selling reference')+'</small></div>'+
-'<div><div class="ota-head">Other public OTA rates · per night</div>'+rows+others+statusLine+refresh+'</div>'+difference+
-'<div class="basis">*Indicative headline difference, not guaranteed savings. USD quotes stay in source currency; any ₹ equivalent uses a daily USD/INR reference rate, not the OTA checkout conversion. Room, tax, meal and regional price terms may differ. No unavailable OTA price is invented.</div>'+
+'<div class="rates-featured">'+comparison+statusLine+refresh+'</div>'+
+'<div class="basis">*Featured differences are indicative only, not guaranteed checkout savings. This is a selectively featured comparison, not a lowest-price claim. Open all verified OTA prices above to see cheaper offers too. Room, tax, meal and regional terms may differ. USD-to-INR estimates use daily reference FX.</div>'+
 '<div class="actions"><button type="button" data-book="'+esc(h.id)+'" class="btn book">Book</button></div></div></article>'}
 function searchHotels(){
 state=selection();if(!validStay(state))return;
