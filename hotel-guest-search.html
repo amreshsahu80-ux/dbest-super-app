@@ -100,6 +100,23 @@ function rate(h){
 function publicOffers(h){const p=otas.get(otaKey(h));return p&&p.live&&Date.now()-Date.parse(p.checkedAt)<15*60000&&Array.isArray(p.providers)?p.providers.filter(x=>x.currency==='INR'&&Number.isFinite(x.pricePerNight)&&x.pricePerNight>0):[]}
 function photo(h){const p=h.photo||photoById.get(h.id);if(!p||!p.url)return '<div class="photo-empty"><svg viewBox="0 0 64 64" fill="none" aria-hidden="true"><path d="M12 55V23L32 10l20 13v32M20 29h8v8h-8zm16 0h8v8h-8zM20 42h8v13h-8zm16 0h8v13h-8z" stroke="#6287a5" stroke-width="3" stroke-linejoin="round"/></svg><small>Property image coming soon</small>'+(galleries[h.id]?'<a href="'+esc(galleries[h.id])+'" target="_blank" rel="noopener noreferrer" style="display:block;margin-top:12px;font-size:12px;font-weight:800">View hotel’s real photos</a>':'')+'</div>';
 return '<img src="'+esc(p.url)+'" loading="lazy" decoding="async" referrerpolicy="no-referrer" alt="Photograph of '+esc(h.name)+'" data-photo="1"><div class="photo-credit">Photo: '+esc(p.credit)+' · <a href="'+esc(p.source)+'" target="_blank" rel="noopener noreferrer">Source</a></div>'}
+function otaConsumerLink(h,name){
+ const query=new URLSearchParams({checkin:state.checkIn,checkout:state.checkOut,
+ group_adults:String(state.adults),no_rooms:String(state.rooms)});
+ if(name==='MakeMyTrip'&&h.id==='HOTEL-NANDAN-GHY'){
+  const u=new URL('https://www.makemytrip.com/hotels/hotel_nandan-details-guwahati.html');
+  for(const [key,d] of [['checkin',state.checkIn],['checkout',state.checkOut]])u.searchParams.set(key,d.slice(5,7)+d.slice(8)+d.slice(0,4));
+  u.searchParams.set('roomStayQualifier',String(state.adults)+'e0e');return u.href;
+ }
+ if(name==='Goibibo'&&h.id==='HOTEL-NANDAN-GHY'){
+  const u=new URL('https://www.goibibo.com/hotels/nandan-hotel-in-guwahati-4881108944297428537/');
+  u.searchParams.set('checkin',state.checkIn.replace(/-/g,''));
+  u.searchParams.set('checkout',state.checkOut.replace(/-/g,''));return u.href;
+ }
+ if(name==='Booking.com'){query.set('ss',h.name+', '+h.city);return 'https://www.booking.com/searchresults.html?'+query}
+ query.set('q',h.name+', '+h.city);
+ return (name==='Goibibo'?'https://www.goibibo.com/hotels/':'https://www.makemytrip.com/hotels/')+'?'+query;
+}
 function card(h){
 const q=rate(h), base=Number.isFinite(h.contractedSellingReference)?h.contractedSellingReference:null;
 const db=q?q.pricePerNight:null;
@@ -107,7 +124,11 @@ const offers=publicOffers(h);
 const providerNames=['MakeMyTrip','Goibibo','Booking.com'];
 const norm=s=>String(s).toLowerCase().replace(/[^a-z0-9]/g,'');
 const lookup=name=>offers.find(p=>norm(p.provider)===norm(name)||norm(p.provider)===norm(name+'com'));
-const rows=providerNames.map(name=>{const p=lookup(name);return '<div class="ota-row"><span>'+esc(name)+'</span><span class="value '+(p?'':'pending')+'">'+(p?money(p.pricePerNight):'—')+'</span></div>'}).join('');
+const rows=providerNames.map(name=>{
+ const p=lookup(name),link=p&&p.url?p.url:otaConsumerLink(h,name);
+ return '<div class="ota-row"><span>'+esc(name)+'</span><span class="value '+(p?'':'pending')+'">'+
+ (p?money(p.pricePerNight):'<a href="'+esc(link)+'" target="_blank" rel="noopener noreferrer">Check price</a>')+'</span></div>';
+}).join('');
 const others=offers.filter(p=>!providerNames.some(n=>norm(p.provider)===norm(n)||norm(p.provider)===norm(n+'com'))).slice(0,3).map(p=>'<div class="ota-row"><span>'+esc(p.provider)+'</span><span class="value">'+money(p.pricePerNight)+'</span></div>').join('');
 const cheapest=offers.reduce((v,p)=>!v||p.pricePerNight<v.pricePerNight?p:v,null);
 let difference='<div class="diff neutral">Price difference: awaiting comparable OTA rate</div>';
@@ -115,13 +136,16 @@ if(q&&cheapest){const d=Math.round((cheapest.pricePerNight-q.pricePerNight)*100)
 difference=d>0?'<div class="diff">DBest lower by '+money(d)+'/night*</div>':d<0?'<div class="diff negative">OTA lower by '+money(Math.abs(d))+'/night*</div>':'<div class="diff neutral">Same displayed nightly price*</div>'}
 const roomOptions=(h.roomTypes||[]).filter(x=>typeof x==='string'&&x.length<80).slice(0,12);
 const chosen=roomSelections.get(h.id)||'';
+const status=otaStatus.get(otaKey(h))||(mapped.has(h.id)?'Checking public OTA quotes when available.':'Public OTA price not yet mapped for this hotel.');
+const statusLine='<div class="basis" role="status">'+esc(status)+'</div>';
+const refresh='<button type="button" data-refresh-ota="'+esc(h.id)+'" style="font-size:12px;padding:4px 0;background:none;border:0;text-decoration:underline;color:#155b95;cursor:pointer">Refresh OTA prices</button>';
 return '<article class="hotel" data-hotel="'+esc(h.id)+'">'+
 '<div class="photo">'+photo(h)+'</div>'+
 '<div class="hotel-info"><h3>'+esc(h.name)+'</h3><div class="location">'+esc([h.area,h.city].filter(Boolean).join(', '))+'</div>'+
 '<div class="chip">DBest partner rate</div><p>'+esc(h.rateCount||0)+' received contracted rate references</p>'+
 (roomOptions.length?'<div class="roomline"><label for="room-'+esc(h.id)+'">Preferred room (optional)</label><select data-room="'+esc(h.id)+'" id="room-'+esc(h.id)+'"><option value="">Best available room</option>'+roomOptions.map(v=>'<option value="'+esc(v)+'"'+(chosen===v?' selected':'')+'>'+esc(v)+'</option>').join('')+'</select></div>':'')+
 '</div><div class="comparison"><div class="dbest-line"><div class="price-caption">DBest Special Rate · per night</div><div class="dbest-price">'+(db?money(db):base?'From '+money(base):'Check rate')+'</div><small>'+(q?esc(q.room)+' · '+state.adults+' adults':base?'Starting rate; selected occupancy unconfirmed':'No verified selling reference')+'</small></div>'+
-'<div><div class="ota-head">Other public OTA rates · per night</div>'+rows+others+'</div>'+difference+
+'<div><div class="ota-head">Other public OTA rates · per night</div>'+rows+others+statusLine+refresh+'</div>'+difference+
 '<div class="basis">*Indicative headline difference, not guaranteed savings. Room, date applicability, tax and meal terms may differ. Unavailable OTA rates are never estimated.</div>'+
 '<div class="actions"><button type="button" data-book="'+esc(h.id)+'" class="btn book">Book</button></div></div></article>'}
 function searchHotels(){
