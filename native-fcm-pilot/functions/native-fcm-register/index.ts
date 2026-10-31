@@ -71,7 +71,7 @@ Deno.serve(async (req: Request) => {
     if (b.consent !== true || b.permissionStatus !== "granted")
       return json({ error: "notification_consent_required" }, 403);
     const fcmToken = clean(b.fcmToken, 4096);
-    if (fcmToken.length < 40 || fcmToken.length > 4096 || !/^[A-Za-z0-9:_\\.~-]+$/.test(fcmToken))
+    if (fcmToken.length < 40 || fcmToken.length > 4096 || !/^[A-Za-z0-9:_.~-]+$/.test(fcmToken))
       return json({ error: "invalid_fcm_token" }, 400);
     const { count, error: countError } = await db.from("native_fcm_devices")
       .select("id", { count: "exact", head: true }).eq("recipient_type", item.role)
@@ -86,9 +86,10 @@ Deno.serve(async (req: Request) => {
       installation_id: installationId, fcm_token: fcmToken, token_hash: await digest(fcmToken),
       enabled: true, permission_status: "granted", last_seen_at: now, updated_at: now };
     // A token must not remain attached to a previous user after switching accounts.
+    // A registration token can belong to only one device/account at a time,
+    // including when Member and Vendor happen to use the same text identifier.
     const { error: oldError } = await db.from("native_fcm_devices").delete()
-      .eq("token_hash", row.token_hash)
-      .neq("recipient_id", recipientId);
+      .eq("token_hash", row.token_hash);
     if (oldError) throw oldError;
     const { error } = await db.from("native_fcm_devices")
       .upsert(row, { onConflict: "app_id,installation_id" });
