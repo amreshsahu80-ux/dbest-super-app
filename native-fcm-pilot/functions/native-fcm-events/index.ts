@@ -6,14 +6,14 @@ const json = (o: unknown, status = 200) => new Response(JSON.stringify(o), {
 });
 const clean = (x: unknown, n = 180) => String(x ?? "").trim().slice(0, n);
 const enc = new TextEncoder();
-const b64url = (u: Uint8Array) => btoa(String.fromCharCode(...u)).replace(/\\+/g, "-").replace(/\\//g, "_").replace(/=+$/g, "");
+const b64url = (u: Uint8Array) => btoa(String.fromCharCode(...u)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
 const b64text = (x: string) => b64url(enc.encode(x));
 const SAFE_EVENTS = new Set([
   "marketplace_vendor_new_order", "marketplace_customer_status",
   "marketplace_payment_confirmed", "vaahak_ride_offer",
   "vaahak_ride_status", "service_partner_job_assigned", "service_customer_job_status",
 ]);
-const cleanTarget = (x: string) => /^\\/(?!\\/)[A-Za-z0-9_/?=&.%-]{0,300}$/.test(x) ? x : "/";
+const cleanTarget = (x: string) => /^\/(?!\/)[A-Za-z0-9_/?=&.%-]{0,300}$/.test(x) ? x : "/";
 type Notice = { event_key: string; event_type: string; recipient_type: string; recipient_id: string;
   category: string; title: string; body: string; target_url: string; };
 type Service = ReturnType<typeof createClient>;
@@ -99,7 +99,7 @@ async function accessToken(account: Record<string,string>): Promise<string> {
     aud: "https://oauth2.googleapis.com/token", iat: now, exp: now + 3500,
   }));
   const signingInput = header + "." + body;
-  const raw = account.private_key.replace(/-----BEGIN PRIVATE KEY-----|-----END PRIVATE KEY-----|\\s/g, "");
+  const raw = account.private_key.replace(/-----BEGIN PRIVATE KEY-----|-----END PRIVATE KEY-----|\s/g, "");
   const bytes = Uint8Array.from(atob(raw), c => c.charCodeAt(0));
   const key = await crypto.subtle.importKey("pkcs8", bytes, {
     name: "RSASSA-PKCS1-v1_5", hash: "SHA-256",
