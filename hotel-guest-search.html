@@ -133,7 +133,7 @@ const r=await fetch('/api/hotel-guest-rate?'+args,{credentials:'same-origin',cac
 if(!r.ok)throw Error('DBest rate service unavailable');
 const data=await r.json();
 if(data.status!=='DBEST_OCCUPANCY_REFERENCES')throw Error('Incorrect DBest rate response');
-for(const q of data.hotels||[]){if(ids.includes(q.id)&&q.adults===state.adults&&q.rooms===state.rooms)rates.set(q.id+'|'+key,q)}
+for(const q of data.hotels||[]){if(ids.includes(q.id)&&q.adults===state.adults&&q.rooms===state.rooms)rates.set(q.id+'|'+key,Object.assign({},q,{adults:state.adults,rooms:state.rooms}))}
 }catch(e){$('update').textContent='Some DBest room prices require reconfirmation';}
 finally{for(const id of ids)guestLoading.delete(id+'|'+key);if(token===searchToken)render()}
 }
