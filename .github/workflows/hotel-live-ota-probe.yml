@@ -1,0 +1,29 @@
+name: Hotel OTA Live One-Property Diagnostic (isolated)
+on:
+  push:
+    branches:
+      - feat/hotel-rate-compare-isolated-20261027
+    paths:
+      - 'tests/hotel-live-ota-probe.cjs'
+      - 'hotel-review/google-hotels-browser.cjs'
+      - '.github/workflows/hotel-live-ota-probe.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  run-single-source-read:
+    name: One Hotel Nandan date-matched public OTA probe
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+      - name: Install isolated browser dependencies
+        run: |
+          mkdir -p .hotel-ota-probe
+          cp hotel-review/google-hotels-browser.cjs tests/hotel-live-ota-probe.cjs .hotel-ota-probe/
+          npm install --prefix .hotel-ota-probe --no-save --no-audit --no-fund @sparticuz/chromium@153.0.0 puppeteer-core@25.16.0
+      - name: Check one live Nandan stay and log status (no bypass or bulk scan)
+        run: node .hotel-ota-probe/hotel-live-ota-probe.cjs
