@@ -3,7 +3,7 @@
 This is a **separate Android application** from DBest Super Platform:
 
 - Main user app: `com.dbest4u.app` (untouched)
-- Partner app: `com.dbest4u.partner` (pilot version `0.2.0`, code 2)
+- Partner app: `com.dbest4u.partner` (Firebase staging version `0.2.1-beta`, code 3)
 
 ## What works in this pilot
 - Photo-first, mobile-native role chooser with **Vendor**, **Vaahak**, **Service Partner**.
@@ -25,7 +25,8 @@ This is a **separate Android application** from DBest Super Platform:
 **Do not infer partner authentication from the landing UI.** Portal authorization, earnings, jobs, vendor orders and KYC remain server-controlled and require testing with real, nonprivileged test accounts.
 
 ## Explicitly not included yet
-- No push-notification "ON" switch is shown, because standard Web Push is not supported in Android WebView. Native FCM token registration, preference and authorized server delivery must be implemented and verified before representing notifications as available.
+- Firebase SDK and a consent-gated FCM receiver are included on a separate Android test build, using the `dbest-mobile-notifications` project and matching `com.dbest4u.partner` client. FCM auto-registration is OFF.
+- No push-notification "ON" switch is shown yet, because an authenticated FCM token registration/revocation backend, user preference controls, Android 13+ runtime permission request, and real-device delivery tests are still required before advertising active notifications.
 - No cross-role authentication bypass, payment simulation, or admin control.
 - No Play Console application/listing, upload key, signed release, or public deployment.
 - No live DBest website/Supabase changes, no changes to frozen Cab/Marketplace flows.
