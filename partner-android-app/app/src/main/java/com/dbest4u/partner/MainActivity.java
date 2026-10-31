@@ -46,6 +46,7 @@ public final class MainActivity extends ComponentActivity {
     private static final int BG = 0xFFF5F7FC;
 
     private FrameLayout screenHost;
+    private PartnerPushTestController partnerTestPush;
     private View homeScreen;
     private LinearLayout browserShell;
     private WebView webView;
@@ -77,6 +78,7 @@ public final class MainActivity extends ComponentActivity {
         screenHost.addView(homeScreen, new FrameLayout.LayoutParams(-1, -1));
         screenHost.addView(browserShell, new FrameLayout.LayoutParams(-1, -1));
         showHome();
+        partnerTestPush = new PartnerPushTestController(this, screenHost);
 
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override public void handleOnBackPressed() {
@@ -364,6 +366,11 @@ public final class MainActivity extends ComponentActivity {
     @Override public void onRequestPermissionsResult(
             int code, @NonNull String[] perms, @NonNull int[] results) {
         super.onRequestPermissionsResult(code, perms, results);
+        if (code == PartnerPushTestController.PERMISSION_REQUEST && partnerTestPush != null) {
+            boolean granted=results.length>0 && results[0]==PackageManager.PERMISSION_GRANTED;
+            partnerTestPush.onPermissionResult(granted);
+            return;
+        }
         if (code == LOCATION_REQUEST && locationCallback != null) {
             boolean ok = false;
             for (int r : results) if (r == PackageManager.PERMISSION_GRANTED) ok = true;
