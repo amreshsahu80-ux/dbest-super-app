@@ -49,7 +49,7 @@ jobs:
           echo '{"name":"dbest-guest-mobile-smoke","private":true,"version":"1.0.0"}' > .hotel-guest-browser-test/package.json
           npm install --prefix .hotel-guest-browser-test --no-save --no-audit --no-fund @sparticuz/chromium@153.0.0 puppeteer-core@25.16.0
           test -f .hotel-guest-browser-test/node_modules/@sparticuz/chromium/package.json
-      - name: Verify hotel card renders actual OTA quote and difference for selected stay
+      - name: Verify honest DBest Advantage with hidden-by-default lower offers on mobile
         run: |
           node - <<'NODE'
           const localRequire=require('node:module').createRequire(require('node:path').resolve('.hotel-guest-browser-test/package.json'));
@@ -57,72 +57,46 @@ jobs:
           const chromiumModule=localRequire('@sparticuz/chromium');
           const chromium=chromiumModule.default||chromiumModule;
           (async()=>{
-           const browser=await puppeteer.launch({
-             executablePath:await chromium.executablePath(),
-             args:[...chromium.args,'--disable-http2','--disable-dev-shm-usage'],headless:true
-           });
-           try{
-            const page=await browser.newPage();
-            await page.setViewport({width:390,height:844,isMobile:true});
-            const failed=[];
-            page.on('pageerror',err=>failed.push(String(err.message).slice(0,140)));
-            const u='https://dbest-hotel-guest-public-preview.vercel.app/';
-            const res=await page.goto(u,{waitUntil:'domcontentloaded',timeout:23000});
-            if(!res||res.status()!==200)throw Error('GUEST_PAGE_NOT_200');
-            await page.evaluate(()=>{
-              document.querySelector('#destination').value='Hotel Nandan';
-              document.querySelector('#checkIn').value='2026-11-15';
-              document.querySelector('#checkOut').value='2026-11-16';
-              document.querySelector('#guests').value='2:1';
-              document.querySelector('#searchForm').requestSubmit();
+            const browser=await puppeteer.launch({
+              executablePath:await chromium.executablePath(),
+              args:[...chromium.args,'--disable-http2','--disable-dev-shm-usage'],headless:true
             });
             try{
+              const page=await browser.newPage();
+              await page.setViewport({width:390,height:844,isMobile:true});
+              const pageErrors=[];
+              page.on('pageerror',err=>pageErrors.push(String(err.message).slice(0,140)));
+              const r=await page.goto('https://dbest-hotel-guest-public-preview.vercel.app/',{waitUntil:'domcontentloaded',timeout:23000});
+              if(!r||r.status()!==200)throw Error('PAGE_NOT_200');
+              await page.evaluate(()=>{
+                document.querySelector('#destination').value='Hotel Nandan';
+                document.querySelector('#checkIn').value='2026-11-15';
+                document.querySelector('#checkOut').value='2026-11-16';
+                document.querySelector('#guests').value='2:1';
+                document.querySelector('#searchForm').requestSubmit();
+              });
               await page.waitForFunction(()=>{
-                const v=document.querySelector('#results')?.innerText||'';
-                return v.includes('Hotel Nandan')&&
-                  v.includes('Some verified OTA prices are lower than DBest')&&
-                  v.includes('View all ')&&v.includes('verified public OTA prices');
+                const card=document.querySelector('.hotel');
+                return !!card&&card.innerText.includes('Some verified OTA prices are lower than DBest')&&
+                  !!card.querySelector('.all-ota');
               },{timeout:55000,polling:500});
-            }catch(e){
-              const v=await page.$eval('#results',n=>n.innerText);
-              console.error('GUEST_MOBILE_CARD_UNVERIFIED',JSON.stringify({
-                snippet:v.slice(0,1350),pageErrors:failed
+              const card=await page.$eval('.hotel',node=>({
+                photoLoaded:!!node.querySelector('img')?.naturalWidth,
+                title:node.querySelector('h3')?.innerText,
+                details:node.innerText.slice(0,1200),
+                allOpen:node.querySelector('details.all-ota')?.open,
+                higherFeature:node.querySelector('.dbest-advantage')!==null
               }));
-              throw e;
-            }
-            const card=await page.$eval('.hotel',n=>({
-              title:n.querySelector('h3')?.innerText,
-              photoLoaded:!!n.querySelector('img')?.naturalWidth,
-              details:n.innerText.slice(0,1150),
-              allDetails:n.querySelector('details.all-ota')?.open,
-              hasFeatured:n.querySelector('.dbest-advantage')!==null,
-              cheaperDisclosure:n.innerText.includes('Some verified OTA prices are lower than DBest')
-            }));
-            await page.$eval('details.all-ota summary',summary=>summary.click());
-            const revealed=await page.$eval('details.all-ota',n=>({
-              open:n.open,text:n.innerText.slice(0,800)
-            }));
-            console.log('GUEST_MOBILE_CARD_VERIFIED',JSON.stringify({
-              title:card.title,photoLoaded:card.photoLoaded,
-              containsDBest:card.details.includes('₹4,961.25'),
-              cheaperDisclosure:card.cheaperDisclosure,
-              lowerOffersHiddenByDefault:card.allDetails===false,
-              hasFeaturedHigherRates:card.hasFeatured,
-              allQuotesRevealed:revealed.open&&revealed.text.includes('US
-           }finally{await browser.close()}
-          })().catch(e=>{console.error('GUEST_MOBILE_E2E_FAILED',String(e));process.exitCode=1});
-          NODE
-),
-              excerpt:card.details.slice(-800),pageErrors:failed
-            }));
-            if(card.title!=='Hotel Nandan'||!card.details.includes('₹4,961.25')||
-              !card.cheaperDisclosure||card.allDetails!==false||card.hasFeatured||
-              !revealed.open||!revealed.text.includes('US
-           }finally{await browser.close()}
-          })().catch(e=>{console.error('GUEST_MOBILE_E2E_FAILED',String(e));process.exitCode=1});
-          NODE
-)||failed.length)
-              throw Error('MOBILE_HOTEL_COMPARISON_FAILED');
-           }finally{await browser.close()}
+              await page.$eval('details.all-ota summary',summary=>summary.click());
+              const revealed=await page.$eval('details.all-ota',node=>({open:node.open,details:node.innerText.slice(0,1200)}));
+              const good=card.photoLoaded&&card.title==='Hotel Nandan'&&card.details.includes('₹4,961.25')&&
+                card.allOpen===false&&!card.higherFeature&&revealed.open&&revealed.details.includes('US$')&&
+                pageErrors.length===0;
+              console.log('GUEST_MOBILE_ADVANTAGE_VERIFIED',JSON.stringify({
+                good,photo:card.photoLoaded,card:card.details.slice(-650),allRevealed:revealed.open,
+                verifiedQuotesInReveal:revealed.details.includes('US$'),pageErrors
+              }));
+              if(!good)throw Error('MISLEADING_COMPARISON_OR_MOBILE_RENDER_FAILED');
+            }finally{await browser.close()}
           })().catch(e=>{console.error('GUEST_MOBILE_E2E_FAILED',String(e));process.exitCode=1});
           NODE
