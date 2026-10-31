@@ -42,6 +42,9 @@ public final class PartnerPushTestController {
         control.setOnClickListener(v->tap());
         refresh();
     }
+    public void setHomeVisible(boolean show) {
+        control.setVisibility(show ? View.VISIBLE : View.GONE);
+    }
     private int dp(int n){return Math.round(n*activity.getResources().getDisplayMetrics().density);}
     private boolean init(){
         try{
