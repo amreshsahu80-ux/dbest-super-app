@@ -354,6 +354,7 @@ public final class MainActivity extends ComponentActivity {
         showingBrowser = true;
         homeScreen.setVisibility(View.GONE);
         browserShell.setVisibility(View.VISIBLE);
+        if (partnerTestPush != null) partnerTestPush.setHomeVisible(false);
         webView.loadUrl(ORIGIN + route);
     }
 
@@ -361,6 +362,7 @@ public final class MainActivity extends ComponentActivity {
         showingBrowser = false;
         homeScreen.setVisibility(View.VISIBLE);
         browserShell.setVisibility(View.GONE);
+        if (partnerTestPush != null) partnerTestPush.setHomeVisible(true);
     }
 
     @Override public void onRequestPermissionsResult(
