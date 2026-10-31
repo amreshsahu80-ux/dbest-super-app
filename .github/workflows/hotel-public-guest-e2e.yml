@@ -22,7 +22,15 @@ jobs:
            const html=await page.text();
            console.log('GUEST_PAGE',JSON.stringify({status:page.status,type:page.headers.get('content-type'),
              hasSearch:html.includes('Search hotels'),hasDbest:html.includes('DBest Special Rate')}));
-           if(!page.ok||!html.includes('Search hotels'))process.exitCode=1;
+           const match=/const STATIC_HOTELS=(\\[[^\\n]*\\]);/.exec(html);
+           const hotels=match?JSON.parse(match[1]):[];
+           const staged=hotels.filter(h=>h.tariffStatus==='RECEIVED_PENDING_VALIDATION');
+           console.log('GUEST_CATALOG_31OCT',JSON.stringify({total:hotels.length,staged:staged.length,
+             whiteIbis:hotels.some(h=>h.name==='White Ibis Hotel'),
+             blueberry:hotels.some(h=>h.name==='Blueberry Inn Shillong'),
+             priceSafety:staged.every(h=>h.contractedSellingReference===null)}));
+           if(!page.ok||!html.includes('Search hotels')||hotels.length!==299||
+             staged.length!==41||!staged.every(h=>h.contractedSellingReference===null))process.exitCode=1;
            for(const path of ['/api/hotel-coverage','/api/hotel-fx']){
             const r=await fetch(origin+path,{signal:AbortSignal.timeout(12000)});
             const raw=await r.text();let data;
@@ -97,6 +105,25 @@ jobs:
                 verifiedQuotesInReveal:revealed.details.includes('US$'),pageErrors
               }));
               if(!good)throw Error('MISLEADING_COMPARISON_OR_MOBILE_RENDER_FAILED');
+              await page.evaluate(()=>{
+                document.querySelector('#destination').value='White Ibis Hotel';
+                document.querySelector('#searchForm').requestSubmit();
+              });
+              await page.waitForFunction(()=>{
+                const card=document.querySelector('.hotel');
+                return !!card&&card.querySelector('h3')?.innerText==='White Ibis Hotel';
+              },{timeout:15000});
+              const newHotel=await page.$eval('.hotel',node=>({
+                name:node.querySelector('h3')?.innerText,
+                text:node.innerText.slice(0,800)
+              }));
+              console.log('GUEST_STAGED_HOTEL_SEARCH',JSON.stringify({
+                property:newHotel.name,received:newHotel.text.includes('DBest tariff received'),
+                pricePending:newHotel.text.includes('Stay-specific price pending validation')
+              }));
+              if(!newHotel.text.includes('DBest tariff received')||
+                 !newHotel.text.includes('Stay-specific price pending validation'))
+                throw Error('STAGED_PROPERTY_MISLABELLED');
             }finally{await browser.close()}
           })().catch(e=>{console.error('GUEST_MOBILE_E2E_FAILED',String(e));process.exitCode=1});
           NODE
