@@ -42,7 +42,7 @@ test('catalogue endpoint remains a template in GitHub, not a public source file'
  assert.doesNotMatch(source,/get_dbest_secret|service_role|gmail\.com/);
  assert.match(source,/liveOTAConnected:false/);
  const page=fs.readFileSync('hotel-simple-flow.html','utf8');
- assert.match(page,/fetch\('\/api\/hotel-catalog'/);
+ assert.match(page,/fetch\('\/api\/hotel-public-catalog'/);
  assert.match(page,/connect-src 'self'/);
  const inline=[...page.matchAll(/<script>\s*([\s\S]+?)<\/script>/g)];
  inline.forEach(m=>new vm.Script(m[1]));
@@ -58,7 +58,7 @@ test('authenticated Owner workbench loads only the private catalog and never exp
  const scripts=[...owner.matchAll(/<script>\s*([\s\S]+?)<\/script>/g)];
  scripts.forEach(m=>new vm.Script(m[1]));
  const guest=fs.readFileSync('hotel-simple-flow.html','utf8');
- assert.match(guest,/fetch\('\/api\/hotel-catalog'/);
+ assert.match(guest,/fetch\('\/api\/hotel-public-catalog'/);
  assert.doesNotMatch(guest,/view=owner/);
 });
 
@@ -172,7 +172,7 @@ test('B2C comparison and DBest selling price preview are explicit and do not inf
  assert.match(page,/Open consumer hotel search/);
  assert.match(page,/https:\/\/www\.makemytrip\.com\/hotels\//);
  assert.match(page,/https:\/\/www\.goibibo\.com\/hotels\//);
- assert.match(page,/No verified comparison yet/);
+ assert.match(page,/not verified savings/);
  assert.match(page,/Book with DBest/);
  assert.doesNotMatch(page,/ota:\s*\[\d+/);
 });
