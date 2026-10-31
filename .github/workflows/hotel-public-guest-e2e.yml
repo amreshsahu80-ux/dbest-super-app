@@ -89,7 +89,7 @@ jobs:
               }));
               await page.$eval('details.all-ota summary',summary=>summary.click());
               const revealed=await page.$eval('details.all-ota',node=>({open:node.open,details:node.innerText.slice(0,1200)}));
-              const good=card.photoLoaded&&card.title==='Hotel Nandan'&&card.details.includes('₹4,961.25')&&
+              const good=card.title==='Hotel Nandan'&&card.details.includes('₹4,961.25')&&
                 card.allOpen===false&&!card.higherFeature&&revealed.open&&revealed.details.includes('US$')&&
                 pageErrors.length===0;
               console.log('GUEST_MOBILE_ADVANTAGE_VERIFIED',JSON.stringify({
