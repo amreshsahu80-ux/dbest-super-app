@@ -20,19 +20,25 @@ Deno.serve(async req=>{
     const input=await req.json().catch(()=>({}));
     const action=String(input.action||"");
     if(action!=="preview"&&action!=="enqueue")return reply({error:"invalid_action"},400);
+    const jobId=String(input.jobId||"").trim();
+    if(jobId && !/^VJ[A-Za-z0-9_-]{1,64}$/.test(jobId)) return reply({error:"invalid_job_id"},400);
+    // Write path accepts exactly one dispatch-issued job ID, never bulk scans.
+    if(action==="enqueue"&&!jobId)return reply({error:"job_id_required"},400);
     // Neither flag is enabled by this function, nor can callers override it.
     const intakeEnabled=Deno.env.get("DBEST_FCM_RIDE_INTAKE_ENABLED")==="true";
     const businessEnabled=Deno.env.get("DBEST_FCM_SEND_ENABLED")==="true";
     if(action==="enqueue"&&(!intakeEnabled||!businessEnabled))
       return reply({ok:true,queued:0,reason:"intake_or_sender_off"});
     const now=Date.now();
-    const {data:rows,error}=await db.from("vaahak_jobs_live")
+    let query=db.from("vaahak_jobs_live")
       .select("id,kind,status,offered_partner_id,assigned_partner_id,offer_attempt,offer_expires_at,dispatch_last_at")
       .eq("kind","ride").eq("status","Open")
       .not("offered_partner_id","is",null)
       .gt("offer_expires_at",new Date(now+60_000).toISOString())
-      .gte("dispatch_last_at",new Date(now-330_000).toISOString())
-      .order("dispatch_last_at",{ascending:false}).limit(100);
+      .gte("dispatch_last_at",new Date(now-330_000).toISOString());
+    if(jobId) query=query.eq("id",jobId);
+    const {data:rows,error}=await query.order("dispatch_last_at",{ascending:false})
+      .limit(action==="enqueue"?1:100);
     if(error)throw error;
     let valid=0,approved=0,registered=0,queued=0,duplicates=0;
     for(const record of rows||[]){
