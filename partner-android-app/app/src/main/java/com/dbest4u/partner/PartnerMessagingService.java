@@ -50,7 +50,18 @@ public final class PartnerMessagingService extends FirebaseMessagingService {
 
         Intent intent = new Intent(this, MainActivity.class)
             .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-        PendingIntent pending = PendingIntent.getActivity(this, 0, intent,
+        String event = message.getData().get("eventType");
+        String requestedTarget = message.getData().get("targetUrl");
+        if (PartnerNotificationRoute.isAllowedVaahak(event, requestedTarget)) {
+            intent.putExtra(PartnerNotificationRoute.INTENT_EVENT, event);
+            // The target is always a trusted app constant, never the payload URL.
+            intent.putExtra(PartnerNotificationRoute.INTENT_TARGET,
+                PartnerNotificationRoute.VAAHAK_PATH);
+        }
+        // Unique request code prevents newer notifications from overwriting
+        // PendingIntents for older notifications.
+        int notificationId = (int)(System.nanoTime() & 0x7fffffff);
+        PendingIntent pending = PendingIntent.getActivity(this, notificationId, intent,
             PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         Notification.Builder notification = Build.VERSION.SDK_INT >= 26 ?
             new Notification.Builder(this, CHANNEL) : new Notification.Builder(this);
@@ -58,6 +69,6 @@ public final class PartnerMessagingService extends FirebaseMessagingService {
             .setContentTitle(title).setContentText(body)
             .setStyle(new Notification.BigTextStyle().bigText(body))
             .setContentIntent(pending).setAutoCancel(true);
-        manager.notify((int)(System.currentTimeMillis() & 0x7fffffff), notification.build());
+        manager.notify(notificationId, notification.build());
     }
 }
