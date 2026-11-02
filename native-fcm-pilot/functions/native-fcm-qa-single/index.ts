@@ -81,7 +81,7 @@ Deno.serve(async (request: Request) => {
     if (deviceError) return json({error:"device_lookup_unavailable"},503);
     // A new controlled tap-routing QA session may run only when the private
     // QA switch is explicitly enabled. The general sender remains OFF.
-    const qaEnabled = Deno.env.get("DBEST_FCM_QA_SEND_ENABLED") === "true";
+    const qaEnabled = false; // Locked after successful Android notification tap QA.
     const senderConfigured = !!Deno.env.get("DBEST_FCM_SERVICE_ACCOUNT_JSON");
 
     if (action === "status") return json({
