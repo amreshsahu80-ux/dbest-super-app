@@ -229,23 +229,24 @@ Deno.serve(async req => {
         await db.from("native_fcm_outbox").update({state:"skipped",error_code:!allowed(pref,item.category)?"opted_out":"no_registered_device",processed_at:new Date().toISOString()}).eq("id",item.id);
         skipped++;continue;
       }
+      // Skip expired offers before iterating over recipient devices.
+      const ttlSeconds = latest.event_type === "vaahak_ride_offer"
+        ? Math.floor((Date.parse(latest.expires_at||"")-Date.now()-15_000)/1000) : 300;
+      if (latest.event_type === "vaahak_ride_offer" &&
+          (!Number.isFinite(ttlSeconds) || ttlSeconds < 10)) {
+        await db.from("native_fcm_outbox").update({
+          state:"skipped",error_code:"ride_offer_expired_before_send",
+          processed_at:new Date().toISOString(),
+        }).eq("id",item.id);
+        skipped++;
+        continue;
+      }
       let hasFailure=false;
       for(const d of devices||[]){
         const {data:done}=await db.from("native_fcm_deliveries").select("state")
           .eq("outbox_id",item.id).eq("device_id",d.id).maybeSingle();
         if(done?.state==="sent")continue;
         let outcome:{ok:boolean;status:number;messageId:string;invalidToken:boolean};
-        // Short TTL ensures a delayed Android delivery does not revive an expired offer.
-        const ttlSeconds = latest.event_type === "vaahak_ride_offer"
-          ? Math.floor((Date.parse(latest.expires_at||"")-Date.now()-15_000)/1000) : 300;
-        if (latest.event_type === "vaahak_ride_offer" && (!Number.isFinite(ttlSeconds) || ttlSeconds < 10)) {
-          await db.from("native_fcm_outbox").update({
-            state:"skipped",error_code:"ride_offer_expired_before_send",processed_at:new Date().toISOString(),
-          }).eq("id",item.id);
-          skipped++;
-          hasFailure = false;
-          break;
-        }
         try{outcome=await sendFcm(d.fcm_token,access,account.project_id,
           {...item,offer_ttl_seconds:String(ttlSeconds)},d)}
         catch{outcome={ok:false,status:503,messageId:"",invalidToken:false}}
