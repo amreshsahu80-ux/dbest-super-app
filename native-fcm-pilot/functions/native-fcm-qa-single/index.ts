@@ -79,7 +79,9 @@ Deno.serve(async (request: Request) => {
       .eq("app_id","com.dbest4u.partner").eq("installation_id",installationId)
       .eq("enabled",true).eq("permission_status","granted").maybeSingle();
     if (deviceError) return json({error:"device_lookup_unavailable"},503);
-    const qaEnabled = Deno.env.get("DBEST_FCM_QA_SEND_ENABLED") === "true";
+    // One-device QA completed on 2026-11-02. Server-side sending locked OFF.
+    // Keep this lock until a separately approved new QA session.
+    const qaEnabled = false;
     const senderConfigured = !!Deno.env.get("DBEST_FCM_SERVICE_ACCOUNT_JSON");
 
     if (action === "status") return json({
