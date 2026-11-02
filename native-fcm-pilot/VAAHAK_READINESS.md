@@ -2,12 +2,12 @@
 
 **Status (2026-11-02): PREVIEW-READY, NOT LIVE AUTOMATIC SENDING.**
 
-The live Supabase project has a new *separate* Edge Function `native-fcm-vaahak-intake`. Its source lives in this isolated branch. No live Cab/Marketplace source file, ride job, job status, or partner assignment was modified.
+The live Supabase project has a new *separate* Edge Function `native-fcm-vaahak-intake`. Its source lives in this isolated branch. No live Cab/Marketplace source file, ride job, job status, or partner assignment was modified. A minimal hook for the existing `vaahak-dispatch-live` offer-creation branch is stored under `staged-dispatch-reference/` for comparison; it was **not deployed**.
 
 ## Operation
 - `POST /functions/v1/native-fcm-vaahak-intake` with `apikey` equal to the **server-side service-role key**. Public or member/partner client credentials cannot call it.
 - JSON `{"action":"preview"}` performs a read-only eligibility check.
-- JSON `{"action":"enqueue"}` is **disabled by default**. It requires **both** private environment flags `DBEST_FCM_RIDE_INTAKE_ENABLED=true` and `DBEST_FCM_SEND_ENABLED=true`. Neither was set or changed in this work. A caller cannot override these flags.
+- JSON `{"action":"enqueue","jobId":"VJ..."}` targets exactly ONE dispatch-issued job and is **disabled by default**. It requires **both** private environment flags `DBEST_FCM_RIDE_INTAKE_ENABLED=true` and `DBEST_FCM_SEND_ENABLED=true`. Neither was set or changed in this work. A caller cannot override these flags.
 - Does not create rides, update jobs, change assignments, or call the existing dispatch/ride APIs.
 - A prospective live offer must have `kind=ride`, `status=Open`, a real `offered_partner_id`, no accepted `assigned_partner_id`, positive `offer_attempt`, unexpired `offer_expires_at`, and recent `dispatch_last_at`. Requires at least **60 seconds of offer time remaining**.
 - Recipient must be an **approved, available, not-on-hold Vaahak**, with rides not opted out and an enabled, permission-granted Partner app device recently seen.
