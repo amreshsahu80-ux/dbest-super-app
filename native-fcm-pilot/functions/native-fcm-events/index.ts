@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js@2/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.95.0";
+import { fcmPayload } from "./fcm-payload.ts";
 
 const json = (o: unknown, status = 200) => new Response(JSON.stringify(o), {
   status, headers: { "content-type": "application/json", "cache-control": "no-store" },
@@ -15,7 +16,22 @@ const SAFE_EVENTS = new Set([
 ]);
 const cleanTarget = (x: string) => /^\/(?!\/)[A-Za-z0-9_/?=&.%-]{0,300}$/.test(x) ? x : "/";
 type Notice = { event_key: string; event_type: string; recipient_type: string; recipient_id: string;
-  category: string; title: string; body: string; target_url: string; };
+  category: string; title: string; body: string; target_url: string; expires_at?: string; };
+const OUTBOX_KEYS = ["event_key","event_type","recipient_type","recipient_id","category","title","body","target_url"] as const;
+function outboxFields(n: Notice) {
+  return Object.fromEntries(OUTBOX_KEYS.map(k => [k,n[k]]));
+}
+function validOffer(r: Record<string,unknown>, now = Date.now()) {
+  if (String(r.kind).toLowerCase() !== "ride" || String(r.status) !== "Open" ||
+      !r.offered_partner_id || !!r.assigned_partner_id ||
+      !Number.isInteger(Number(r.offer_attempt)) || Number(r.offer_attempt) <= 0) return false;
+  const expires = Date.parse(String(r.offer_expires_at||""));
+  const dispatched = Date.parse(String(r.dispatch_last_at||""));
+  // Never alert for expired, stale, not-yet-issued or implausibly long offers.
+  return Number.isFinite(expires) && Number.isFinite(dispatched) &&
+    expires > now + 20_000 && expires <= now + 5*60_000 + 30_000 &&
+    dispatched <= now + 15_000 && dispatched >= now - 5*60_000 - 30_000;
+}
 type Service = ReturnType<typeof createClient>;
 async function fromEvent(db: Service, type: string, recordId: string): Promise<Notice | null> {
   if (!SAFE_EVENTS.has(type) || !recordId) return null;
@@ -48,17 +64,19 @@ async function fromEvent(db: Service, type: string, recordId: string): Promise<N
   }
   if (type.startsWith("vaahak_")) {
     const { data: r, error } = await db.from("vaahak_jobs_live")
-      .select("id,kind,status,offered_partner_id,assigned_partner_id,customer_member_id")
+      .select("id,kind,status,offered_partner_id,assigned_partner_id,customer_member_id,offer_attempt,offer_expires_at,dispatch_last_at")
       .eq("id", recordId).maybeSingle();
     if (error) throw error;
     if (!r) return null;
     if (type === "vaahak_ride_offer") {
-      const target = r.offered_partner_id || r.assigned_partner_id;
-      if (!target || ["Completed","Cancelled"].includes(clean(r.status))) return null;
-      return { event_key: type + ":" + r.id + ":" + clean(target),
+      if (!validOffer(r)) return null;
+      const target = clean(r.offered_partner_id,120);
+      const attempt = Number(r.offer_attempt);
+      return { event_key: type + ":" + r.id + ":" + attempt + ":" + target,
         event_type: type, recipient_type: "Vaahak", recipient_id: target,
-        category: "ride", title: r.kind === "Delivery" ? "New DBest delivery" : "New DBest ride request",
-        body: "A new request is available. Open your Vaahak workspace to respond.", target_url: "/vaahak" };
+        category: "ride", title: "New DBest ride request",
+        body: "A nearby ride is available. Open your Vaahak workspace before the offer expires.",
+        target_url: "/vaahak", expires_at: r.offer_expires_at };
     }
     if (!r.customer_member_id) return null;
     return { event_key: type + ":" + r.id + ":" + clean(r.status, 80),
@@ -115,12 +133,11 @@ async function accessToken(account: Record<string,string>): Promise<string> {
   return String(result.access_token);
 }
 async function sendFcm(token: string, access: string, project: string, d: Record<string,string>, device: Record<string,string>) {
-  const channel = device.app_id === "com.dbest4u.partner" ? "dbest_partner_updates" : "dbest_updates";
-  const payload = { message:{
-    token, notification:{title:d.title,body:d.body},
-    data:{targetUrl:cleanTarget(d.target_url),eventType:d.event_type,eventKey:d.event_key},
-    android:{ priority:"HIGH",ttl:"300s",notification:{channel_id:channel} },
-  } };
+  const payload = fcmPayload(token,{
+    title:d.title,body:d.body,
+    target_url:d.target_url,event_type:d.event_type,event_key:d.event_key,
+    offer_ttl_seconds:d.offer_ttl_seconds,
+  },device.app_id,cleanTarget);
   const r = await fetch("https://fcm.googleapis.com/v1/projects/"+encodeURIComponent(project)+"/messages:send",{
     method:"POST",headers:{Authorization:"Bearer "+access,"content-type":"application/json"},
     body:JSON.stringify(payload),
@@ -159,7 +176,7 @@ Deno.serve(async req => {
       if(!notice)return json({ok:true,skipped:true,reason:"source_record_unavailable_or_ineligible"});
       if(action==="preview")return json({ok:true,preview:{eventType:type,recipientType:notice.recipient_type,
         category:notice.category,targetUrl:notice.target_url,sourceVerified:true}});
-      const {data,error}=await db.from("native_fcm_outbox").upsert(notice,{onConflict:"event_key",ignoreDuplicates:true})
+      const {data,error}=await db.from("native_fcm_outbox").upsert(outboxFields(notice),{onConflict:"event_key",ignoreDuplicates:true})
         .select("id,event_key,state").maybeSingle();
       if(error)throw error;
       return json({ok:true,queued:!!data,duplicate:!data,eventKey:notice.event_key});
@@ -198,8 +215,31 @@ Deno.serve(async req => {
         skipped++;
         continue;
       }
-      const {data:devices,error:de}=await db.from("native_fcm_devices").select("*")
-        .eq("recipient_type",item.recipient_type).eq("recipient_id",item.recipient_id).eq("enabled",true).limit(10);
+      if (item.event_type === "vaahak_ride_offer") {
+        const {data:driver,error:driverError}=await db.from("vaahak_partners_live")
+          .select("owner_approval,available,operational_hold")
+          .eq("id",item.recipient_id).maybeSingle();
+        if(driverError)throw driverError;
+        if(!driver || driver.owner_approval !== "Approved" ||
+           driver.available !== true || driver.operational_hold === true) {
+          await db.from("native_fcm_outbox").update({
+            state:"skipped",error_code:"vaahak_not_eligible",
+            processed_at:new Date().toISOString(),
+          }).eq("id",item.id);
+          skipped++;continue;
+        }
+      }
+      let devicesQuery=db.from("native_fcm_devices").select("*")
+        .eq("recipient_type",item.recipient_type).eq("recipient_id",item.recipient_id).eq("enabled",true)
+        .eq("permission_status","granted")
+        .gte("last_seen_at",new Date(Date.now()-30*24*3600_000).toISOString());
+      if(item.recipient_type==="Vaahak") devicesQuery=devicesQuery.eq("app_id","com.dbest4u.partner");
+      // QA phase: only the latest active Vaahak installation. Prevent duplicate
+      // ride alerts while historical reinstalls remain in the device registry.
+      if(item.event_type==="vaahak_ride_offer")
+        devicesQuery=devicesQuery.order("last_seen_at",{ascending:false}).limit(1);
+      else devicesQuery=devicesQuery.limit(10);
+      const {data:devices,error:de}=await devicesQuery;
       if(de)throw de;
       const {data:pref}=await db.from("push_notification_preferences").select("*")
         .eq("recipient_type",item.recipient_type).eq("recipient_id",item.recipient_id).maybeSingle();
@@ -207,13 +247,26 @@ Deno.serve(async req => {
         await db.from("native_fcm_outbox").update({state:"skipped",error_code:!allowed(pref,item.category)?"opted_out":"no_registered_device",processed_at:new Date().toISOString()}).eq("id",item.id);
         skipped++;continue;
       }
+      // Skip expired offers before iterating over recipient devices.
+      const ttlSeconds = latest.event_type === "vaahak_ride_offer"
+        ? Math.floor((Date.parse(latest.expires_at||"")-Date.now()-15_000)/1000) : 300;
+      if (latest.event_type === "vaahak_ride_offer" &&
+          (!Number.isFinite(ttlSeconds) || ttlSeconds < 10)) {
+        await db.from("native_fcm_outbox").update({
+          state:"skipped",error_code:"ride_offer_expired_before_send",
+          processed_at:new Date().toISOString(),
+        }).eq("id",item.id);
+        skipped++;
+        continue;
+      }
       let hasFailure=false;
       for(const d of devices||[]){
         const {data:done}=await db.from("native_fcm_deliveries").select("state")
           .eq("outbox_id",item.id).eq("device_id",d.id).maybeSingle();
         if(done?.state==="sent")continue;
         let outcome:{ok:boolean;status:number;messageId:string;invalidToken:boolean};
-        try{outcome=await sendFcm(d.fcm_token,access,account.project_id,item,d)}
+        try{outcome=await sendFcm(d.fcm_token,access,account.project_id,
+          {...item,offer_ttl_seconds:String(ttlSeconds)},d)}
         catch{outcome={ok:false,status:503,messageId:"",invalidToken:false}}
         await db.from("native_fcm_deliveries").upsert({
           outbox_id:item.id,device_id:d.id,state:outcome.ok?"sent":outcome.invalidToken?"invalid":"failed",
