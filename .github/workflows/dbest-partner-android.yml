@@ -7,6 +7,7 @@ on:
       - 'feat/dbest-partner-android-pilot-20261029'
       - 'feat/dbest-partner-fcm-account-binding-20261102'
       - 'feat/dbest-partner-fcm-one-device-qa-20261102'
+      - 'feat/dbest-partner-vaahak-alert-tap-20261102'
     paths:
       - 'partner-android-app/**'
       - '.github/workflows/dbest-partner-android.yml'
