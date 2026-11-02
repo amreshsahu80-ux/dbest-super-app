@@ -229,15 +229,30 @@ Deno.serve(async req => {
           skipped++;continue;
         }
       }
+      // Vaahak ride notifications are single-device during the controlled pilot.
+      // Explicit authenticated registration chooses the active installation.
+      // Revocation deactivates it; we MUST NOT fall back to older stale rows.
+      let boundInstall:string|null=null;
+      if(item.event_type==="vaahak_ride_offer"){
+        const {data:binding,error:be}=await db.from("native_fcm_vaahak_active_installations")
+          .select("installation_id,enabled").eq("recipient_id",item.recipient_id)
+          .eq("app_id","com.dbest4u.partner").maybeSingle();
+        if(be)throw be;
+        if(!binding?.enabled||!binding.installation_id){
+          await db.from("native_fcm_outbox").update({
+            state:"skipped",error_code:"active_vaahak_device_not_bound",
+            processed_at:new Date().toISOString(),
+          }).eq("id",item.id);
+          skipped++;continue;
+        }
+        boundInstall=String(binding.installation_id);
+      }
       let devicesQuery=db.from("native_fcm_devices").select("*")
-        .eq("recipient_type",item.recipient_type).eq("recipient_id",item.recipient_id).eq("enabled",true)
-        .eq("permission_status","granted")
+        .eq("recipient_type",item.recipient_type).eq("recipient_id",item.recipient_id)
+        .eq("enabled",true).eq("permission_status","granted")
         .gte("last_seen_at",new Date(Date.now()-30*24*3600_000).toISOString());
       if(item.recipient_type==="Vaahak") devicesQuery=devicesQuery.eq("app_id","com.dbest4u.partner");
-      // QA phase: only the latest active Vaahak installation. Prevent duplicate
-      // ride alerts while historical reinstalls remain in the device registry.
-      if(item.event_type==="vaahak_ride_offer")
-        devicesQuery=devicesQuery.order("last_seen_at",{ascending:false}).limit(1);
+      if(boundInstall)devicesQuery=devicesQuery.eq("installation_id",boundInstall).limit(1);
       else devicesQuery=devicesQuery.limit(10);
       const {data:devices,error:de}=await devicesQuery;
       if(de)throw de;
@@ -275,9 +290,20 @@ Deno.serve(async req => {
         },{onConflict:"outbox_id,device_id"});
         if(outcome.ok)sent++;
         else {failed++;if(!outcome.invalidToken)hasFailure=true;}
-        if(outcome.invalidToken)await db.from("native_fcm_devices").update({
-          enabled:false,permission_status:"expired",updated_at:new Date().toISOString(),
-        }).eq("id",d.id);
+        if(outcome.invalidToken){
+          await db.from("native_fcm_devices").update({
+            enabled:false,permission_status:"expired",updated_at:new Date().toISOString(),
+          }).eq("id",d.id);
+          // Retain a fail-closed pointer record so old installations cannot
+          // silently become eligible again when the newest FCM token expires.
+          if(item.event_type==="vaahak_ride_offer"){
+            const {error:unbindError}=await db.from("native_fcm_vaahak_active_installations")
+              .update({enabled:false,updated_at:new Date().toISOString()})
+              .eq("recipient_id",item.recipient_id)
+              .eq("installation_id",d.installation_id);
+            if(unbindError)throw unbindError;
+          }
+        }
       }
       const finalState=hasFailure&&claimed.attempts<5?"pending":hasFailure?"dead":"sent";
       const backoff= Math.min(3600,60*Math.pow(2,Math.max(0,claimed.attempts-1)));
