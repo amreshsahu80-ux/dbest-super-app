@@ -1,0 +1,21 @@
+name: Vaahak FCM Offer Rules QA
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'feat/native-fcm-vaahak-offer-intake-20261102'
+    paths:
+      - 'native-fcm-pilot/**'
+      - '.github/workflows/vaahak-fcm-offer-rules.yml'
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate ride-offer eligibility and deduplication
+        run: node --experimental-strip-types --test native-fcm-pilot/tests/vaahak-offer-eligibility.test.mjs
