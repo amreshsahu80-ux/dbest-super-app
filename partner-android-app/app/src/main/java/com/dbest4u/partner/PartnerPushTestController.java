@@ -14,6 +14,8 @@ import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
 import android.widget.FrameLayout;
+import android.webkit.WebView;
+import java.util.function.Supplier;
 import android.widget.Toast;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -27,9 +29,11 @@ public final class PartnerPushTestController {
     private final Activity activity;
     private final Button control;
     private final boolean firebaseReady;
+    private final PartnerAccountBinding accountBinding;
 
-    public PartnerPushTestController(Activity activity, FrameLayout root) {
+    public PartnerPushTestController(Activity activity, FrameLayout root, WebView portal, Supplier<String> roleProvider) {
         this.activity=activity;
+        accountBinding = new PartnerAccountBinding(activity, portal, roleProvider);
         firebaseReady=init();
         control=new Button(activity);
         control.setAllCaps(false);
@@ -116,12 +120,32 @@ public final class PartnerPushTestController {
         cb.setPrimaryClip(ClipData.newPlainText("Partner FCM test token",token));
         Toast.makeText(activity,"Partner test token copied. Paste only into Firebase Console.",Toast.LENGTH_LONG).show();
     }
+    public void connectAccount() {
+        if (!on() || !permission()) {
+            Toast.makeText(activity,"Enable Partner test alerts on the Partner home first.",Toast.LENGTH_LONG).show();
+            return;
+        }
+        accountBinding.connectWithConsent();
+    }
+    public void onWorkspaceSelected(String role) {
+        if (accountBinding.isBoundToDifferentRole(role)) {
+            Toast.makeText(activity,"Switching partner workspace: revoking previous alert registration.",Toast.LENGTH_LONG).show();
+            disable();
+        }
+    }
+    public void onPortalPageLoaded() {
+        accountBinding.onPortalPageLoaded(this::disable);
+    }
+    public void shutdown() { accountBinding.shutdown(); }
     private void disable(){
         activity.getSharedPreferences(PREFS,Context.MODE_PRIVATE).edit().putBoolean("enabled",false).apply();
         refresh();
         FirebaseMessaging.getInstance().setAutoInitEnabled(false);
-        FirebaseMessaging.getInstance().deleteToken().addOnCompleteListener(t->
-            Toast.makeText(activity,t.isSuccessful()?"Device test alerts OFF.":"Device OFF; token cleanup needs retry.",
-                    Toast.LENGTH_LONG).show());
+        accountBinding.revokeAndThen(() -> FirebaseMessaging.getInstance().deleteToken()
+            .addOnCompleteListener(t ->
+                Toast.makeText(activity,t.isSuccessful()
+                    ? "Partner test alerts OFF; Firebase token deleted."
+                    : "Device OFF; Firebase token cleanup needs retry.",
+                    Toast.LENGTH_LONG).show()));
     }
 }
