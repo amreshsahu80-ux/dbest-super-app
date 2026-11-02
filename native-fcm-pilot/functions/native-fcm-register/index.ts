@@ -61,6 +61,16 @@ Deno.serve(async (req: Request) => {
     if (!appAllowed(item.role, appId) || !uuid.test(installationId))
       return json({ error: "invalid_app_or_installation" }, 400);
     if (action === "unregister") {
+      // Fail closed for the single-device Vaahak pilot: revoke ONLY a binding
+      // which still refers to this exact installation. An older phone cannot
+      // revoke a newer phone's binding during a delayed logout.
+      if (item.role === "Vaahak") {
+        const { error: bindingError } = await db.from("native_fcm_vaahak_active_installations")
+          .update({ enabled: false, updated_at: new Date().toISOString() })
+          .eq("recipient_id",recipientId).eq("app_id",appId)
+          .eq("installation_id",installationId);
+        if (bindingError) throw bindingError;
+      }
       const { error } = await db.from("native_fcm_devices").delete()
         .eq("recipient_type", item.role).eq("recipient_id", recipientId)
         .eq("app_id", appId).eq("installation_id", installationId);
@@ -94,6 +104,15 @@ Deno.serve(async (req: Request) => {
     const { error } = await db.from("native_fcm_devices")
       .upsert(row, { onConflict: "app_id,installation_id" });
     if (error) throw error;
+    if (item.role === "Vaahak") {
+      // The latest explicit, authenticated "Connect this device" action
+      // becomes the sole active Vaahak ride-alert destination for this account.
+      // Other stored installations are preserved but NEVER selected for rides.
+      const { error: bindingError } = await db.from("native_fcm_vaahak_active_installations")
+        .upsert({recipient_id:recipientId,app_id:appId,installation_id:installationId,
+          enabled:true,updated_at:now},{onConflict:"recipient_id"});
+      if (bindingError) throw bindingError;
+    }
     return json({ ok: true, registered: true, role: item.role, appId });
   } catch (e) {
     console.error("native_fcm_registration_failed", String((e as Error)?.message ?? "unknown"));
