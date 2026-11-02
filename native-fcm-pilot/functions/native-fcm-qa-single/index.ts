@@ -79,9 +79,9 @@ Deno.serve(async (request: Request) => {
       .eq("app_id","com.dbest4u.partner").eq("installation_id",installationId)
       .eq("enabled",true).eq("permission_status","granted").maybeSingle();
     if (deviceError) return json({error:"device_lookup_unavailable"},503);
-    // One-device QA completed on 2026-11-02. Server-side sending locked OFF.
-    // Keep this lock until a separately approved new QA session.
-    const qaEnabled = false;
+    // A new controlled tap-routing QA session may run only when the private
+    // QA switch is explicitly enabled. The general sender remains OFF.
+    const qaEnabled = false; // Locked after successful Android notification tap QA.
     const senderConfigured = !!Deno.env.get("DBEST_FCM_SERVICE_ACCOUNT_JSON");
 
     if (action === "status") return json({
@@ -93,6 +93,7 @@ Deno.serve(async (request: Request) => {
     if (body.consent !== true) return json({error:"explicit_test_consent_required"},403);
     if (!device) return json({error:"active_linked_device_required"},403);
     if (!qaEnabled) return json({error:"qa_sender_disabled"},503);
+    if (Deno.env.get("DBEST_FCM_SEND_ENABLED")==="true") return json({error:"general_sender_must_remain_off"},503);
     if (!senderConfigured) return json({error:"service_account_missing"},503);
 
     const {count:daily,error:countError}=await db.from("native_fcm_qa_attempts")
@@ -124,7 +125,7 @@ Deno.serve(async (request: Request) => {
         data: {
           title:"DBest backend test",
           body:"Secure Vaahak test notification from DBest server. No ride or order was created.",
-          targetUrl:"https://dbest4u.com/vaahak",
+          targetUrl:"/vaahak",
           eventType:"qa_vaahak_one_device",
         },
         android:{priority:"HIGH",ttl:"120s"},
