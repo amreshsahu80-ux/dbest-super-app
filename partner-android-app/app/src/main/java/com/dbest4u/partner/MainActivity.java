@@ -245,7 +245,7 @@ public final class MainActivity extends ComponentActivity {
         // action visible. No WebView-injected login/token is auto-uploaded.
         Button linkAccount = button("🔔 Link", Color.WHITE, BLUE);
         linkAccount.setOnClickListener(v -> {
-            if (partnerTestPush != null) partnerTestPush.connectAccount();
+            if (partnerTestPush != null) partnerTestPush.showPartnerActions();
         });
         bar.addView(linkAccount, new LinearLayout.LayoutParams(dp(88), dp(46)));
         spaceWidth(bar, dp(6));
