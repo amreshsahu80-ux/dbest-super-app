@@ -120,6 +120,25 @@ public final class PartnerPushTestController {
         cb.setPrimaryClip(ClipData.newPlainText("Partner FCM test token",token));
         Toast.makeText(activity,"Partner test token copied. Paste only into Firebase Console.",Toast.LENGTH_LONG).show();
     }
+    public void showPartnerActions() {
+        if (!on() || !permission()) {
+            Toast.makeText(activity,"Enable Partner test alerts on Home first.",Toast.LENGTH_LONG).show();
+            return;
+        }
+        // Important: setItems and setMessage cannot coexist in AlertDialog.
+        new AlertDialog.Builder(activity)
+            .setTitle("DBest Partner notifications")
+            .setItems(new String[]{
+                "Connect to this signed-in Partner account",
+                "Send one Vaahak backend test alert"
+            }, (dialog, index) -> {
+                if (index == 0) connectAccount();
+                else if (index == 1) accountBinding.testBackendNotificationWithConsent();
+            })
+            .setNegativeButton("Close",null)
+            .show();
+    }
+
     public void connectAccount() {
         if (!on() || !permission()) {
             Toast.makeText(activity,"Enable Partner test alerts on the Partner home first.",Toast.LENGTH_LONG).show();
