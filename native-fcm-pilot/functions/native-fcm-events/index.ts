@@ -218,10 +218,31 @@ Deno.serve(async req => {
         skipped++;
         continue;
       }
-      const {data:devices,error:de}=await db.from("native_fcm_devices").select("*")
+      if (item.event_type === "vaahak_ride_offer") {
+        const {data:driver,error:driverError}=await db.from("vaahak_partners_live")
+          .select("owner_approval,available,operational_hold")
+          .eq("id",item.recipient_id).maybeSingle();
+        if(driverError)throw driverError;
+        if(!driver || driver.owner_approval !== "Approved" ||
+           driver.available !== true || driver.operational_hold === true) {
+          await db.from("native_fcm_outbox").update({
+            state:"skipped",error_code:"vaahak_not_eligible",
+            processed_at:new Date().toISOString(),
+          }).eq("id",item.id);
+          skipped++;continue;
+        }
+      }
+      let devicesQuery=db.from("native_fcm_devices").select("*")
         .eq("recipient_type",item.recipient_type).eq("recipient_id",item.recipient_id).eq("enabled",true)
         .eq("permission_status","granted")
-        .gte("last_seen_at",new Date(Date.now()-30*24*3600_000).toISOString()).limit(10);
+        .gte("last_seen_at",new Date(Date.now()-30*24*3600_000).toISOString());
+      if(item.recipient_type==="Vaahak") devicesQuery=devicesQuery.eq("app_id","com.dbest4u.partner");
+      // QA phase: only the latest active Vaahak installation. Prevent duplicate
+      // ride alerts while historical reinstalls remain in the device registry.
+      if(item.event_type==="vaahak_ride_offer")
+        devicesQuery=devicesQuery.order("last_seen_at",{ascending:false}).limit(1);
+      else devicesQuery=devicesQuery.limit(10);
+      const {data:devices,error:de}=await devicesQuery;
       if(de)throw de;
       const {data:pref}=await db.from("push_notification_preferences").select("*")
         .eq("recipient_type",item.recipient_type).eq("recipient_id",item.recipient_id).maybeSingle();
