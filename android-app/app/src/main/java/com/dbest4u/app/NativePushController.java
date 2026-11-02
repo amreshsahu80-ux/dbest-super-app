@@ -81,8 +81,8 @@ public final class NativePushController {
         }
         if (isEnabled()) {
             new AlertDialog.Builder(activity)
-                .setTitle("DBest Firebase pilot")
-                .setMessage("Test delivery is ON. Account registration is separate and still a pilot.")
+                .setTitle("DBest Firebase pilot — test ON")
+                // AlertDialog cannot display both a message and a list; a message hides all action rows.
                 .setItems(new String[]{
                     "Connect to my signed-in DBest member account (pilot)",
                     "Copy Firebase test token",
