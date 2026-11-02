@@ -79,6 +79,7 @@ public final class MainActivity extends ComponentActivity {
         screenHost.addView(browserShell, new FrameLayout.LayoutParams(-1, -1));
         showHome();
         partnerTestPush = new PartnerPushTestController(this, screenHost, webView, () -> currentRole);
+        handleNotificationIntent(getIntent());
 
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override public void handleOnBackPressed() {
@@ -360,6 +361,28 @@ public final class MainActivity extends ComponentActivity {
         } catch (ActivityNotFoundException e) {
             Toast.makeText(this, "No compatible app found.", Toast.LENGTH_SHORT).show();
         }
+    }
+
+    /**
+     * Notification tap opens only our known Vaahak route. All login/session
+     * checks remain the responsibility of the existing DBest portal.
+     */
+    private void handleNotificationIntent(Intent intent) {
+        if (intent == null) return;
+        String event = intent.getStringExtra(PartnerNotificationRoute.INTENT_EVENT);
+        String path = intent.getStringExtra(PartnerNotificationRoute.INTENT_TARGET);
+        if (PartnerNotificationRoute.isAllowedVaahak(event,path)) {
+            openPortal("Vaahak",PartnerNotificationRoute.VAAHAK_PATH);
+        }
+        // Treat each delivered intent once. Avoid reopening on activity restore.
+        intent.removeExtra(PartnerNotificationRoute.INTENT_EVENT);
+        intent.removeExtra(PartnerNotificationRoute.INTENT_TARGET);
+    }
+
+    @Override protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleNotificationIntent(intent);
     }
 
     private void openPortal(String name, String route) {
