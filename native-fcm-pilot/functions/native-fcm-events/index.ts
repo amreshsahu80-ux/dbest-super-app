@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js@2/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.95.0";
+import { fcmPayload } from "./fcm-payload.ts";
 
 const json = (o: unknown, status = 200) => new Response(JSON.stringify(o), {
   status, headers: { "content-type": "application/json", "cache-control": "no-store" },
@@ -132,15 +133,11 @@ async function accessToken(account: Record<string,string>): Promise<string> {
   return String(result.access_token);
 }
 async function sendFcm(token: string, access: string, project: string, d: Record<string,string>, device: Record<string,string>) {
-  const channel = device.app_id === "com.dbest4u.partner" ? "dbest_partner_updates" : "dbest_updates";
-  const payload = { message:{
-    token, notification:{title:d.title,body:d.body},
-    data:{targetUrl:cleanTarget(d.target_url),eventType:d.event_type,eventKey:d.event_key},
-    android:{ priority:"HIGH",
-      ttl: d.event_type === "vaahak_ride_offer" ? 
-        (Number(d.offer_ttl_seconds||0) > 0 ? String(d.offer_ttl_seconds)+"s" : "20s") : "300s",
-      notification:{channel_id:channel} },
-  } };
+  const payload = fcmPayload(token,{
+    title:d.title,body:d.body,
+    target_url:d.target_url,event_type:d.event_type,event_key:d.event_key,
+    offer_ttl_seconds:d.offer_ttl_seconds,
+  },device.app_id,cleanTarget);
   const r = await fetch("https://fcm.googleapis.com/v1/projects/"+encodeURIComponent(project)+"/messages:send",{
     method:"POST",headers:{Authorization:"Bearer "+access,"content-type":"application/json"},
     body:JSON.stringify(payload),
