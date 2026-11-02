@@ -31,6 +31,13 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.13'
+      - name: Test safe Partner notification tap route
+        run: |
+          mkdir -p /tmp/dbest-partner-route-test
+          javac -d /tmp/dbest-partner-route-test \
+            app/src/main/java/com/dbest4u/partner/PartnerNotificationRoute.java \
+            qa/PartnerNotificationRouteTest.java
+          java -cp /tmp/dbest-partner-route-test com.dbest4u.partner.PartnerNotificationRouteTest
       - name: Build partner debug APK and unsigned release AAB
         run: gradle :app:assembleDebug :app:bundleRelease
       - name: Upload installable debug APK
