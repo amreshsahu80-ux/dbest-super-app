@@ -37,6 +37,8 @@ import javax.net.ssl.HttpsURLConnection;
  */
 final class PartnerAccountBinding {
     private static final String PREFS = "dbest_partner_fcm_account";
+    private static final String QA_ENDPOINT =
+        "https://ydedmotbacnllkijzmvp.supabase.co/functions/v1/native-fcm-qa-single";
     private static final String ENDPOINT =
         "https://ydedmotbacnllkijzmvp.supabase.co/functions/v1/native-fcm-register";
 
@@ -224,6 +226,118 @@ final class PartnerAccountBinding {
                 }))
             .setNegativeButton("Cancel", null)
             .show();
+    }
+
+    // Separate QA endpoint. No arbitrary recipient, device token, order ID or
+    // message text can be supplied by the Android app.
+    private JSONObject qaRequest(String action, String session) {
+        HttpsURLConnection connection = null;
+        try {
+            connection = (HttpsURLConnection) new URL(QA_ENDPOINT).openConnection();
+            connection.setConnectTimeout(8000);
+            connection.setReadTimeout(12000);
+            connection.setRequestMethod("POST");
+            connection.setDoOutput(true);
+            connection.setRequestProperty("content-type", "application/json");
+            connection.setRequestProperty("x-vaahak-token", session);
+            connection.setRequestProperty("cache-control", "no-store");
+            JSONObject body = new JSONObject();
+            body.put("action", action);
+            body.put("installationId", installationId());
+            if ("send".equals(action)) body.put("consent", true);
+            try (OutputStream os = connection.getOutputStream()) {
+                os.write(body.toString().getBytes(StandardCharsets.UTF_8));
+            }
+            InputStream stream = connection.getResponseCode() >= 200 &&
+                connection.getResponseCode() < 300 ?
+                connection.getInputStream() : connection.getErrorStream();
+            StringBuilder response = new StringBuilder();
+            if (stream != null) {
+                try (BufferedReader reader = new BufferedReader(
+                     new InputStreamReader(stream, StandardCharsets.UTF_8))) {
+                    String line;
+                    while ((line = reader.readLine()) != null && response.length() < 4096)
+                        response.append(line);
+                }
+            }
+            return new JSONObject(response.toString());
+        } catch (Exception ignored) {
+            JSONObject error = new JSONObject();
+            try { error.put("error", "network_unavailable"); }
+            catch (Exception ignoredAgain) { }
+            return error;
+        } finally {
+            if (connection != null) connection.disconnect();
+        }
+    }
+
+    void testBackendNotificationWithConsent() {
+        if (!"Vaahak".equals(normalizedRole(roleProvider.get())) || !trustedPage()) {
+            message("Open your signed-in Vaahak workspace to test backend alerts.");
+            return;
+        }
+        if (!prefs().getBoolean("bound", false) ||
+            !"Vaahak".equals(prefs().getString("bound_role", ""))) {
+            message("Link this Vaahak account to Firebase before testing.");
+            return;
+        }
+        if (!busy.compareAndSet(false, true)) {
+            message("A Firebase account operation is already running.");
+            return;
+        }
+        readSession("Vaahak", session -> {
+            final String expected = prefs().getString("bound_session_hash", "");
+            if (session.isEmpty() || expected.isEmpty() || !hash(session).equals(expected)) {
+                busy.set(false);
+                message("Vaahak login changed; relink this account before testing.");
+                return;
+            }
+            worker.execute(() -> {
+                JSONObject status = qaRequest("status", session);
+                if (!status.optBoolean("ok", false) ||
+                    !status.optBoolean("registered", false)) {
+                    busy.set(false);
+                    message("Backend QA registration not verified. Relink Vaahak first.");
+                    return;
+                }
+                if (!status.optBoolean("senderConfigured", false)) {
+                    busy.set(false);
+                    message("Firebase sender credential not configured on server.");
+                    return;
+                }
+                if (!status.optBoolean("qaEnabled", false)) {
+                    busy.set(false);
+                    message("Single-device QA sender is OFF in Supabase (safe default).");
+                    return;
+                }
+                if (status.optBoolean("generalSendingEnabled", false)) {
+                    busy.set(false);
+                    message("General sending appears enabled. Stop QA and review settings.");
+                    return;
+                }
+                activity.runOnUiThread(() -> new AlertDialog.Builder(activity)
+                    .setTitle("Send one Vaahak test notification?")
+                    .setMessage("A single test alert will be sent to this linked phone only. No ride or order is created. You can test up to 3 times per day.")
+                    .setPositiveButton("Send one test", (dialog, which) -> worker.execute(() -> {
+                        try {
+                            JSONObject result = qaRequest("send", session);
+                            if (result.optBoolean("providerAccepted", false)) {
+                                activity.runOnUiThread(() ->
+                                    new AlertDialog.Builder(activity)
+                                        .setTitle("Firebase accepted the test")
+                                        .setMessage("Check your phone notifications for 'DBest backend test'. Firebase acceptance does not yet confirm device delivery.")
+                                        .setPositiveButton("OK", null).show());
+                            } else {
+                                String code = result.optString("error", "test_unavailable");
+                                message("Test not sent: " + code);
+                            }
+                        } finally { busy.set(false); }
+                    }))
+                    .setNegativeButton("Cancel", (dialog, which) -> busy.set(false))
+                    .setOnCancelListener(dialog -> busy.set(false))
+                    .show());
+            });
+        });
     }
 
     boolean isBoundToDifferentRole(String selected) {
