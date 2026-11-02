@@ -1,25 +1,13 @@
 import "jsr:@supabase/functions-js@2/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.95.0";
+import { eligible, dedupe, type Ride } from "./offer-rules.ts";
 
 /** Isolated Vaahak ride-offer notification intake. Never changes Cab assignments.
  * By default preview-only. Enqueue requires two independent private switches.
  */
-type Ride = { id:string; kind:string; status:string; offered_partner_id:string|null;
-  assigned_partner_id:string|null; offer_attempt:number|null;
-  offer_expires_at:string|null; dispatch_last_at:string|null };
 const reply=(data:unknown,status=200)=>new Response(JSON.stringify(data),{
   status,headers:{"content-type":"application/json","cache-control":"no-store"}
 });
-const ms=(s:string|null)=>s?Date.parse(s):NaN;
-function eligible(r:Ride,now:number) {
-  const expires=ms(r.offer_expires_at),dispatched=ms(r.dispatch_last_at);
-  return r.kind==="ride" && r.status==="Open" && !!r.offered_partner_id &&
-    !r.assigned_partner_id && Number.isInteger(r.offer_attempt) &&
-    Number(r.offer_attempt)>0 && Number.isFinite(expires) &&
-    Number.isFinite(dispatched) && expires>now+60_000 &&
-    expires<=now+330_000 && dispatched<=now+15_000 && dispatched>=now-330_000;
-}
-const dedupe=(r:Ride)=>"vaahak_ride_offer:"+r.id+":"+r.offer_attempt+":"+r.offered_partner_id;
 
 Deno.serve(async req=>{
   if(req.method!=="POST")return reply({error:"method_not_allowed"},405);
