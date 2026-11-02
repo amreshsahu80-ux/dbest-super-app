@@ -7,6 +7,7 @@ import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.Settings;
+import android.widget.FrameLayout;
 import android.webkit.GeolocationPermissions;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
@@ -19,20 +20,38 @@ import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 
 public class MainActivity extends ComponentActivity {
     private static final String HOME = "https://dbest4u.com/";
     private static final int LOCATION_REQUEST = 1001;
     private static final int FILE_REQUEST = 1002;
     private WebView webView;
+    private NativePushController nativePush;
     private ValueCallback<Uri[]> fileCallback;
     private GeolocationPermissions.Callback geoCallback;
     private String geoOrigin;
 
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        // Android 15+ forces edge-to-edge for target SDK 35+. Keep the web
+        // experience inside the safe area without modifying the live website.
+        FrameLayout root = new FrameLayout(this);
+        root.setBackgroundColor(0xFFFFFFFF);
         webView = new WebView(this);
-        setContentView(webView);
+        root.addView(webView, new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT));
+        ViewCompat.setOnApplyWindowInsetsListener(root, (view, windowInsets) -> {
+            Insets safeArea = windowInsets.getInsets(
+                    WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout());
+            view.setPadding(safeArea.left, safeArea.top, safeArea.right, safeArea.bottom);
+            return windowInsets;
+        });
+        setContentView(root);
+        nativePush = new NativePushController(this, root, webView);
 
         WebSettings s = webView.getSettings();
         s.setJavaScriptEnabled(true);
@@ -45,6 +64,16 @@ public class MainActivity extends ComponentActivity {
         s.setMediaPlaybackRequiresUserGesture(false);
 
         webView.setWebViewClient(new WebViewClient() {
+            @Override public void onPageFinished(WebView view, String url) {
+                if (nativePush != null && isDbest(Uri.parse(url)))
+                    view.postDelayed(() -> nativePush.refreshVisibility(), 900);
+                if (BuildConfig.DEBUG) view.evaluateJavascript(
+                    "(function(){var t=performance.getEntriesByType('navigation')[0];" +
+                    "return t?JSON.stringify({dom:Math.round(t.domContentLoadedEventEnd)," +
+                    "load:Math.round(t.loadEventEnd),resources:performance.getEntriesByType('resource').length}):'none'})()",
+                    v -> android.util.Log.d("DBestPerf", v));
+            }
+
             @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 return handleUrl(request.getUrl());
             }
@@ -117,6 +146,11 @@ public class MainActivity extends ComponentActivity {
 
     @Override public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] results) {
         super.onRequestPermissionsResult(requestCode, permissions, results);
+        if (requestCode == NativePushController.PERMISSION_REQUEST && nativePush != null) {
+            boolean granted=results.length>0 && results[0]==PackageManager.PERMISSION_GRANTED;
+            nativePush.onPermissionResult(granted);
+            return;
+        }
         if (requestCode == LOCATION_REQUEST && geoCallback != null) {
             boolean granted = results.length > 0 && results[0] == PackageManager.PERMISSION_GRANTED;
             geoCallback.invoke(geoOrigin, granted, false);
@@ -133,12 +167,21 @@ public class MainActivity extends ComponentActivity {
         }
     }
 
+    @Override protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        Uri target = intent == null ? null : intent.getData();
+        if (target != null && "https".equalsIgnoreCase(target.getScheme()) && isDbest(target))
+            webView.loadUrl(target.toString());
+    }
+
     @Override protected void onSaveInstanceState(@NonNull Bundle outState) {
         webView.saveState(outState);
         super.onSaveInstanceState(outState);
     }
 
     @Override protected void onDestroy() {
+        if (nativePush != null) nativePush.shutdown();
         if (webView != null) webView.destroy();
         super.onDestroy();
     }
