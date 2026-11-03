@@ -40,9 +40,9 @@ import androidx.core.view.WindowInsetsCompat;
 public final class MainActivity extends ComponentActivity {
     private static final String ORIGIN = "https://dbest4u.com";
     // Exact HTTPS preview allowlist: reviewer login only, never an arbitrary Vercel host.
-    // Keep this preview alias active until the reviewed flow is moved to an approved production route.
+    // Keep this immutable tested preview deployed until a vetted production route replaces it.
     private static final String REVIEW_HOST =
-            "dbest-super-app-git-feat-partner-reviewer-pin-acc-9353e8-db-est.vercel.app";
+            "dbest-super-7jlpo8251-db-est.vercel.app";
     private static final String REVIEW_URL =
             "https://" + REVIEW_HOST + "/service-partner-onboarding-v3.html?review=1";
     private static final int FILE_REQUEST = 1201;
