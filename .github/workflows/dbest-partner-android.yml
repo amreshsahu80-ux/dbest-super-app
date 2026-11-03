@@ -9,6 +9,7 @@ on:
       - 'feat/dbest-partner-fcm-one-device-qa-20261102'
       - 'feat/dbest-partner-vaahak-alert-tap-20261102'
       - 'release/dbest-partner-play-candidate-20261103'
+      - 'release/dbest-partner-reviewer-access-code5-20261103'
     paths:
       - 'partner-android-app/**'
       - '.github/workflows/dbest-partner-android.yml'
