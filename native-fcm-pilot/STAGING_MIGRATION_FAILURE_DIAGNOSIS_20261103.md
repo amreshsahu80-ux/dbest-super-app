@@ -62,6 +62,14 @@
 - Verification was performed in an explicit `BEGIN ... ROLLBACK` transaction on disposable PostgreSQL. No real DBest jobs, marketplace payments, Supabase data, sending flags or paid preview environments were changed.
 - **Scope:** nine successive *original recorded migrations* tested on a synthetic minimal schema, NOT full replay of 207 migrations and NOT a proof of the complete real production data model. Later migration prerequisites and schema drift remain open.
 
+## Vaahak daily platform fee / delivery fee reversal — migration 20260916081907 (2026-11-03)
+
+- CI: https://github.com/amreshsahu80-ux/dbest-super-app/actions/runs/41561228415 — Node rules and disposable PostgreSQL 17 jobs both **SUCCESS**.
+- Saved original migration SQL in `native-fcm-pilot/tests/fixtures/20260916081907_original.sql`. Tested it using `native-fcm-pilot/tests/staging-vaahak-platform-fee-replay.sql` on minimal, synthetic tables. This is a test of the original migration body, **not** a full historical replay.
+- Synthetic checks passed: old Marketplace delivery fee entries reversed with `Reversed` audit status; one positive wallet adjustment per prior fee; already-refunded fees did not credit a wallet twice; rerunning the migration did not duplicate adjustments or modify wallet balances; a completed delivery incurred **no extra platform fee**; a completed Cab ride incurred its configured daily fee; repeated/same-day completed rides did not duplicate the charge; with `noJobNoFee=false`, no new Cab fee was accrued.
+- All synthetic inserts/updates were wrapped in `BEGIN ... ROLLBACK`. No production wallet, Cab, Marketplace, financial record, application function, FCM switch, or billable branch was altered.
+- **Release gate still NO-GO:** the migration body passes on a representative environment only. Full ordered replay of migrations 1–207 with complete schema + security controls, and controlled notification E2E, remain untested.
+
 ## Remaining gates
 
 1. Reproduce the exact failure in a controlled full migration replay and capture logs.
