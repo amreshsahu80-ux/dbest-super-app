@@ -1,12 +1,18 @@
 package com.dbest4u.app;
 
 import android.Manifest;
+import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.Settings;
+import android.graphics.Color;
+import android.view.Gravity;
+import android.widget.Button;
+import android.widget.LinearLayout;
+import android.widget.TextView;
 import android.widget.FrameLayout;
 import android.webkit.GeolocationPermissions;
 import android.webkit.ValueCallback;
@@ -39,10 +45,30 @@ public class MainActivity extends ComponentActivity {
         // experience inside the safe area without modifying the live website.
         FrameLayout root = new FrameLayout(this);
         root.setBackgroundColor(0xFFFFFFFF);
+        // A persistent native privacy action remains available even when
+        // the web profile is unavailable. Do not overlay the live site's content.
+        LinearLayout appLayout = new LinearLayout(this);
+        appLayout.setOrientation(LinearLayout.VERTICAL);
+        appLayout.setBackgroundColor(Color.WHITE);
+        LinearLayout toolbar = new LinearLayout(this);
+        toolbar.setPadding(dp(12), dp(4), dp(12), dp(4));
+        toolbar.setGravity(Gravity.CENTER_VERTICAL);
+        TextView title = new TextView(this);
+        title.setText("DBest");
+        title.setTextColor(0xFF103763);
+        title.setTextSize(18);
+        title.setTypeface(null, android.graphics.Typeface.BOLD);
+        toolbar.addView(title, new LinearLayout.LayoutParams(0, -2, 1));
+        Button deleteAccount = new Button(this);
+        deleteAccount.setText("Request account deletion");
+        deleteAccount.setAllCaps(false);
+        deleteAccount.setTextSize(12);
+        deleteAccount.setOnClickListener(v -> showAccountDeletion());
+        toolbar.addView(deleteAccount, new LinearLayout.LayoutParams(-2, dp(43)));
+        appLayout.addView(toolbar, new LinearLayout.LayoutParams(-1, dp(52)));
         webView = new WebView(this);
-        root.addView(webView, new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT));
+        appLayout.addView(webView, new LinearLayout.LayoutParams(-1, 0, 1));
+        root.addView(appLayout, new FrameLayout.LayoutParams(-1, -1));
         ViewCompat.setOnApplyWindowInsetsListener(root, (view, windowInsets) -> {
             Insets safeArea = windowInsets.getInsets(
                     WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout());
@@ -125,6 +151,30 @@ public class MainActivity extends ComponentActivity {
     private boolean isDbest(Uri uri) {
         String h = uri.getHost();
         return h != null && (h.equalsIgnoreCase("dbest4u.com") || h.equalsIgnoreCase("www.dbest4u.com"));
+    }
+
+    // Request-only: no account or records are deleted without verification.
+    private void showAccountDeletion() {
+        new AlertDialog.Builder(this)
+            .setTitle("Delete your DBest account")
+            .setMessage("You can request deletion of your DBest account and associated personal data. We may verify account ownership, and retain legally required records. Do not email passwords, PINs or OTPs.")
+            .setPositiveButton("Email deletion request", (dialog, which) -> {
+                Uri email = Uri.parse("mailto:director@thebestservices.org.in?subject="
+                        + Uri.encode("DBest Account Deletion Request"));
+                try {
+                    startActivity(new Intent(Intent.ACTION_SENDTO, email));
+                } catch (ActivityNotFoundException e) {
+                    openExternal(Uri.parse("https://dbest4u.com/data-deletion"));
+                }
+            })
+            .setNeutralButton("Deletion instructions", (dialog, which) ->
+                openExternal(Uri.parse("https://dbest4u.com/data-deletion")))
+            .setNegativeButton("Cancel", null)
+            .show();
+    }
+
+    private int dp(int px) {
+        return (int) (px * getResources().getDisplayMetrics().density + 0.5f);
     }
 
     private void openExternal(Uri uri) {
