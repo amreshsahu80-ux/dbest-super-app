@@ -54,6 +54,14 @@
 - SQL tests were transactional `BEGIN/ROLLBACK`. No actual rides, account registrations, FCM sends, production migrations, or paid Supabase branches were involved.
 - **Remaining limitation:** full replay of migrations 1–207, Supabase-specific RLS/runtime differences, full backend function E2E, and phone pilot are not yet verified.
 
+## Ninth historical migration: Marketplace delivery settlement (2026-11-03)
+
+- Disposable PostgreSQL 17 CI: https://github.com/amreshsahu80-ux/dbest-super-app/actions/runs/41560647357 — both Node QA and historical PostgreSQL replay jobs **SUCCESS**.
+- Recorded historical migration `20260916081248 marketplace_vaahak_50_split_and_vendor_margin_v2` was saved as an isolated original SQL fixture and run after the previous eight historical migration fixtures and the staged compatibility patch, using representative synthetic tables.
+- `native-fcm-pilot/tests/staging-next-nine-migrations.sql` checked the **50% Vaahak / 50% DBest** delivery-charge split; vendor-agreed margin application; gross, delivery, margin and net settlement calculations; idempotent settlement upsert; no settlement for unpaid orders; isolation of regular passenger rides; and the margin constraint rejecting values above 100%.
+- Verification was performed in an explicit `BEGIN ... ROLLBACK` transaction on disposable PostgreSQL. No real DBest jobs, marketplace payments, Supabase data, sending flags or paid preview environments were changed.
+- **Scope:** nine successive *original recorded migrations* tested on a synthetic minimal schema, NOT full replay of 207 migrations and NOT a proof of the complete real production data model. Later migration prerequisites and schema drift remain open.
+
 ## Remaining gates
 
 1. Reproduce the exact failure in a controlled full migration replay and capture logs.
