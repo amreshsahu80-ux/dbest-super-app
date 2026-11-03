@@ -127,7 +127,7 @@ function showReviewPanel(result){
   const meta=document.createElement('p');meta.textContent=String(job.status||'Assigned')+' · '+String(job.city||job.pincode||'Service area');el.appendChild(meta);jr.appendChild(el)}
  function tab(name){for(const el of document.querySelectorAll('[data-sp-tab-panel]'))el.classList.toggle('hidden',el.dataset.spTabPanel!==name);
  for(const b of document.querySelectorAll('button[data-sp-open]'))b.classList.toggle('on',b.dataset.spOpen===name);
- window.scrollTo({top:0,behavior:'instant'})}
+ window.scrollTo(0,0)}
  for(const b of document.querySelectorAll('button[data-sp-open]'))b.onclick=()=>tab(b.dataset.spOpen);
  show('reviewPanelCard');tab('home');
  setStatus('Reviewer logged in successfully. Your Service Partner dashboard is ready.','ok');
