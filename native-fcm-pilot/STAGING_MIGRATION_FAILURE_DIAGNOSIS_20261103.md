@@ -45,6 +45,15 @@
 - Each test runs with `BEGIN ... ROLLBACK`. No customer data, real dispatch, Firebase credentials, or paid Supabase staging were involved.
 - **Limit:** these are five genuine historical SQL statements tested against representative synthetic tables, **not** a full replay from migration 1 to 207. More migration dependencies may fail later; do not treat this as production deployment approval.
 
+## Eight-migration PostgreSQL replay and second schema-gap fix (2026-11-03)
+
+- CI run: https://github.com/amreshsahu80-ux/dbest-super-app/actions/runs/41560030399 — both PostgreSQL and Node test jobs **SUCCESS**. First attempt failed because plain PostgreSQL lacks Supabase's default `anon` role; the synthetic test fixture now creates `anon` and `authenticated` as disposable roles. No live configuration changed.
+- Original historical SQL fixtures were replayed sequentially for versions `20260915190058`, `20260915190237`, `20260915191206`, `20260915192326`, `20260915192348`, `20260915192625`, `20260915200257`, `20260915204539`, following the staging-only compatibility patch. These are **eight historical statements in a representative database**, not a full 207-migration recreation.
+- Historical migration `20260915204539` also refers to `vaahak_jobs_live.payment_method`, which is present in the current parent schema as nullable `text` but not introduced in preceding recorded table-alter migrations. Staging-only patch now includes `payment_method text` to support this downstream normalization trigger; it has **not been applied to the parent**.
+- `native-fcm-pilot/tests/staging-next-eight-migrations.sql` validated: dedicated PIN table replaces public order PIN columns; generated pickup/delivery PINs differ; unverified pickup and delivery are rejected; verified progression succeeds; Pay-at-Delivery `Prepaid` is normalized to `Pending` on both order and Vaahak; handover event uniqueness holds; completed payment and Marketplace status sync.
+- SQL tests were transactional `BEGIN/ROLLBACK`. No actual rides, account registrations, FCM sends, production migrations, or paid Supabase branches were involved.
+- **Remaining limitation:** full replay of migrations 1–207, Supabase-specific RLS/runtime differences, full backend function E2E, and phone pilot are not yet verified.
+
 ## Remaining gates
 
 1. Reproduce the exact failure in a controlled full migration replay and capture logs.
