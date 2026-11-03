@@ -37,6 +37,14 @@
 - All synthetic SQL ran in a transaction that was rolled back. No production or real records were touched.
 - This substantially raises confidence in the **first** migration repair, but still does **not** prove replay of all 207 migrations, later migration dependencies, or native FCM-to-Android end-to-end operation.
 
+## Successive recorded migration verification (2026-11-03)
+
+- CI: https://github.com/amreshsahu80-ux/dbest-super-app/actions/runs/41558621371 — PostgreSQL 17 and Node jobs both **SUCCESS**.
+- Replayed **five recorded SQL migrations** in timestamp order on a disposable minimal PostgreSQL schema (20260915190058, 20260915190237, 20260915191206, 20260915192326, 20260915192348), after the proposed 20260915185000 compatibility patch. Historical SQL fixtures are kept under `native-fcm-pilot/tests/fixtures/`.
+- `native-fcm-pilot/tests/staging-next-five-migrations.sql` verifies three Vaahak triggers, dual 4-digit distinct PIN creation, blocking unverified pickup, successful verified pickup, blocking unverified completion, successful verified completion/payment status sync, and no Marketplace contamination by ride jobs.
+- Each test runs with `BEGIN ... ROLLBACK`. No customer data, real dispatch, Firebase credentials, or paid Supabase staging were involved.
+- **Limit:** these are five genuine historical SQL statements tested against representative synthetic tables, **not** a full replay from migration 1 to 207. More migration dependencies may fail later; do not treat this as production deployment approval.
+
 ## Remaining gates
 
 1. Reproduce the exact failure in a controlled full migration replay and capture logs.
