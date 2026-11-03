@@ -1,6 +1,9 @@
 \set ON_ERROR_STOP on
 \echo 'DBest 8-migration sequence with secure delivery-PIN handover and PAD normalization'
 BEGIN;
+-- Supabase defines these database roles; disposable vanilla PostgreSQL does not.
+CREATE ROLE anon NOLOGIN;
+CREATE ROLE authenticated NOLOGIN;
 CREATE TABLE public.vaahak_jobs_live (
  id text PRIMARY KEY, kind text NOT NULL DEFAULT 'ride',
  status text NOT NULL DEFAULT 'Open', assigned_partner_id text,
