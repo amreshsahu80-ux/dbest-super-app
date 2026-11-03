@@ -7,8 +7,8 @@ android {
         applicationId 'com.dbest4u.partner'
         minSdk 24
         targetSdk 36
-        versionCode 3
-        versionName '0.2.1-beta'
+        versionCode 4
+        versionName '1.0.0'
     }
     buildTypes {
         release {
