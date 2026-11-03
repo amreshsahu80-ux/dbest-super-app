@@ -15,6 +15,16 @@
 
 **This file has not been executed on the parent or a live database.** It cannot be tested by creating a standard Supabase branch and *then* applying it, because branch provisioning automatically replays the broken history before the branch is available. To verify, use an isolated, explicitly approved local Postgres/Supabase CLI reset or an isolated preview configured to include the ordered historical migrations, then replay fully and compare schemas. Never rewrite the live `supabase_migrations.schema_migrations` table just to make the status green.
 
+
+## Independent no-cost PostgreSQL 17 reproduction (2026-11-03)
+
+- CI: https://github.com/amreshsahu80-ux/dbest-super-app/actions/runs/41557533893 (both existing Node QA and PostgreSQL job **SUCCESS**).
+- Executed a minimal historical table/trigger boundary reproduction in disposable `postgres:17` inside GitHub Actions; no Supabase preview project or live credentials involved.
+- The pre-patch `CREATE TRIGGER ... AFTER INSERT OR UPDATE OF payment_status,payment_received_at,order_meta` failed with **PostgreSQL SQLSTATE `42703`**. Log: `column "payment_status" of relation "vaahak_jobs_live" does not exist`.
+- Applied the staged compatibility patch **twice**, then successfully created the same trigger and checked `pg_trigger`; all SQL was `ROLLBACK`ed.
+- Test code: `native-fcm-pilot/tests/staging-trigger-boundary-replay.sql`; workflow: `.github/workflows/vaahak-fcm-offer-rules.yml`.
+- **Limit:** this is a structural reproduction of the trigger-column migration boundary using a representative table and a no-op function, NOT the original 207-migration replay or an end-to-end running Cab database.
+
 ## Remaining gates
 
 1. Reproduce the exact failure in a controlled full migration replay and capture logs.
