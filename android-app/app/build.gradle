@@ -24,3 +24,17 @@ android {
         }
     }
 }
+
+ 
+// Package DBest's existing brand asset as the launcher icon without
+// committing a second copy of its binary image to the repository.
+def launcherResDir = file("$buildDir/generated/dbest-launcher-res")
+android.sourceSets.main.res.srcDir(launcherResDir)
+tasks.register("prepareDbestLauncherIcon", Copy) {
+    from rootProject.file("../dbest-logo.png")
+    into file("$buildDir/generated/dbest-launcher-res/drawable-nodpi")
+    rename { "dbest_launcher.png" }
+}
+tasks.named("preBuild").configure {
+    dependsOn tasks.named("prepareDbestLauncherIcon")
+}
