@@ -6,6 +6,7 @@
     <application
         android:allowBackup="false"
         android:label="DBest"
+        android:icon="@drawable/dbest_launcher"
         android:usesCleartextTraffic="false"
         android:theme="@style/Theme.DBest">
         <activity
