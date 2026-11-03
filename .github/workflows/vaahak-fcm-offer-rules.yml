@@ -53,3 +53,4 @@ jobs:
           PGPASSWORD: dbest-isolated-ci-only
         run: |
           psql -v ON_ERROR_STOP=1 -f native-fcm-pilot/tests/staging-trigger-boundary-replay.sql
+          psql -v ON_ERROR_STOP=1 -f native-fcm-pilot/tests/staging-original-trigger-lifecycle.sql
