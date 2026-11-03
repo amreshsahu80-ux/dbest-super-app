@@ -39,6 +39,12 @@ import androidx.core.view.WindowInsetsCompat;
 
 public final class MainActivity extends ComponentActivity {
     private static final String ORIGIN = "https://dbest4u.com";
+    // Exact HTTPS preview allowlist: reviewer login only, never an arbitrary Vercel host.
+    // Keep this preview alias active until the reviewed flow is moved to an approved production route.
+    private static final String REVIEW_HOST =
+            "dbest-super-app-git-feat-partner-reviewer-pin-acc-9353e8-db-est.vercel.app";
+    private static final String REVIEW_URL =
+            "https://" + REVIEW_HOST + "/service-partner-onboarding-v3.html?review=1";
     private static final int FILE_REQUEST = 1201;
     private static final int LOCATION_REQUEST = 1202;
     private static final int NAVY = 0xFF10264B;
@@ -222,6 +228,12 @@ public final class MainActivity extends ComponentActivity {
         join.setOnClickListener(v -> openPortal(title + " · Join", joinPath));
         actions.addView(join, new LinearLayout.LayoutParams(0, dp(46), 0.72f));
         card.addView(actions);
+        if ("Service Partner".equals(title)) {
+            space(card, 9);
+            Button review = button("Google Play reviewer sign-in", BLUE, 0xFFF0F4FF);
+            review.setOnClickListener(v -> openServiceReviewerPortal());
+            card.addView(review, new LinearLayout.LayoutParams(-1, dp(43)));
+        }
         return card;
     }
 
@@ -334,7 +346,7 @@ public final class MainActivity extends ComponentActivity {
         if (url == null) return true;
         String scheme = url.getScheme();
         if ("about".equalsIgnoreCase(scheme)) return false;
-        if (isDbest(url)) return false;
+        if (isDbest(url) || isReviewerHost(url)) return false;
         if (isHttp(url) || "tel".equalsIgnoreCase(scheme)
                 || "mailto".equalsIgnoreCase(scheme) || "geo".equalsIgnoreCase(scheme)
                 || "market".equalsIgnoreCase(scheme)) openExternal(url);
@@ -351,6 +363,25 @@ public final class MainActivity extends ComponentActivity {
         String host = u.getHost();
         return host != null && (host.equalsIgnoreCase("dbest4u.com")
                 || host.equalsIgnoreCase("www.dbest4u.com"));
+    }
+
+    private boolean isReviewerHost(Uri u) {
+        return u != null && "https".equalsIgnoreCase(u.getScheme())
+                && REVIEW_HOST.equalsIgnoreCase(u.getHost());
+    }
+
+    // The Reviewer role is shown only as an explicit entry point. The customer-facing
+    // Service Partner "Open workspace" continues using the unchanged live route.
+    private void openServiceReviewerPortal() {
+        Uri target = Uri.parse(REVIEW_URL);
+        if (!isReviewerHost(target)) return;
+        currentRole = "Service Partner · Review";
+        browserTitle.setText("Service Partner Review");
+        showingBrowser = true;
+        homeScreen.setVisibility(View.GONE);
+        browserShell.setVisibility(View.VISIBLE);
+        if (partnerTestPush != null) partnerTestPush.setHomeVisible(false);
+        webView.loadUrl(REVIEW_URL);
     }
 
     private void openExternal(Uri uri) {
