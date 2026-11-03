@@ -47,3 +47,12 @@ cd partner-android-app
 gradle :app:assembleDebug :app:bundleRelease
 ```
 Artifacts: `app/build/outputs/apk/debug/app-debug.apk` and `app/build/outputs/bundle/release/app-release.aab` (release is **unsigned**).
+
+## Google Play Service Partner reviewer access — code 5 candidate
+
+- Service Partner role retains the live workspace at `https://dbest4u.com/ServicePartnerDashboard`.
+- A separate **Google Play reviewer sign-in** button opens the immutable, on-device-verified HTTPS preview `https://dbest-super-7jlpo8251-db-est.vercel.app/service-partner-onboarding-v3.html?review=1` in the in-app WebView.
+- PIN credentials are not embedded in Android source; no OTP, KYC payment, or agreement acceptance is necessary to view the read-only reviewer dashboard.
+- Reviewer dashboard tabs: Home, Jobs, Services, Earnings, Profile; privileged actions remain unavailable while Owner approval is pending.
+- QA before sharing Play Console access: Android code 5 build succeeds; signed AAB cert matches already accepted upload key; internal testing installed build opens reviewer route *inside app*; each tab works; normal Vendor and Vaahak login routes unaffected.
+- Source: reviewer web PR #89 (unmerged), Android PR #90 (unmerged). Keep the immutable preview deployment accessible until the review route is promoted into a reviewed production release.
