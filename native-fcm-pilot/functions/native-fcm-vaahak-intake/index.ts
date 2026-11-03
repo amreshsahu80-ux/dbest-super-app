@@ -58,10 +58,16 @@ Deno.serve(async req=>{
         .maybeSingle();
       if(pr)throw pr;
       if(pref?.rides===false)continue;
+      const {data:binding,error:be}=await db.from("native_fcm_vaahak_active_installations")
+        .select("installation_id,enabled").eq("recipient_id",recipientId)
+        .eq("app_id","com.dbest4u.partner").maybeSingle();
+      if(be)throw be;
+      if(!binding?.enabled||!binding.installation_id)continue;
       const {count,error:de}=await db.from("native_fcm_devices")
         .select("id",{head:true,count:"exact"})
         .eq("recipient_type","Vaahak").eq("recipient_id",recipientId)
-        .eq("app_id","com.dbest4u.partner").eq("enabled",true)
+        .eq("app_id","com.dbest4u.partner")
+        .eq("installation_id",binding.installation_id).eq("enabled",true)
         .eq("permission_status","granted")
         .gte("last_seen_at",new Date(now-30*86400_000).toISOString());
       if(de)throw de;

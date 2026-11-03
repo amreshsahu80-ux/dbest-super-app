@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - 'feat/native-fcm-vaahak-offer-intake-20261102'
+      - 'feat/native-fcm-vaahak-device-binding-20261103'
     paths:
       - 'native-fcm-pilot/**'
       - '.github/workflows/vaahak-fcm-offer-rules.yml'
@@ -17,5 +18,43 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Validate ride-offer eligibility and deduplication
-        run: node --experimental-strip-types --test native-fcm-pilot/tests/vaahak-offer-eligibility.test.mjs
+      - name: Validate full isolated Vaahak FCM suite
+        run: node --experimental-strip-types --test native-fcm-pilot/tests/*.test.mjs
+
+  postgres-trigger-replay:
+    name: PostgreSQL 17 historical Vaahak migration boundary QA
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: dbest-isolated-ci-only
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client
+      - name: Reproduce missing-column failure and validate staging patch
+        env:
+          PGHOST: localhost
+          PGPORT: "5432"
+          PGDATABASE: postgres
+          PGUSER: postgres
+          PGPASSWORD: dbest-isolated-ci-only
+        run: |
+          psql -v ON_ERROR_STOP=1 -f native-fcm-pilot/tests/staging-trigger-boundary-replay.sql
+          psql -v ON_ERROR_STOP=1 -f native-fcm-pilot/tests/staging-original-trigger-lifecycle.sql
+          psql -v ON_ERROR_STOP=1 -f native-fcm-pilot/tests/staging-next-five-migrations.sql
+          psql -v ON_ERROR_STOP=1 -f native-fcm-pilot/tests/staging-next-eight-migrations.sql
+          psql -v ON_ERROR_STOP=1 -f native-fcm-pilot/tests/staging-next-nine-migrations.sql
+          psql -v ON_ERROR_STOP=1 -f native-fcm-pilot/tests/staging-vaahak-platform-fee-replay.sql
