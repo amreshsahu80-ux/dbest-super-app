@@ -55,3 +55,4 @@ jobs:
           psql -v ON_ERROR_STOP=1 -f native-fcm-pilot/tests/staging-trigger-boundary-replay.sql
           psql -v ON_ERROR_STOP=1 -f native-fcm-pilot/tests/staging-original-trigger-lifecycle.sql
           psql -v ON_ERROR_STOP=1 -f native-fcm-pilot/tests/staging-next-five-migrations.sql
+          psql -v ON_ERROR_STOP=1 -f native-fcm-pilot/tests/staging-next-eight-migrations.sql
