@@ -25,6 +25,18 @@
 - Test code: `native-fcm-pilot/tests/staging-trigger-boundary-replay.sql`; workflow: `.github/workflows/vaahak-fcm-offer-rules.yml`.
 - **Limit:** this is a structural reproduction of the trigger-column migration boundary using a representative table and a no-op function, NOT the original 207-migration replay or an end-to-end running Cab database.
 
+## Original historical trigger body: synthetic delivery replay (2026-11-03)
+
+- CI https://github.com/amreshsahu80-ux/dbest-super-app/actions/runs/41557913039: PostgreSQL 17 job and native FCM Node QA **SUCCESS**.
+- Captured the 2,880-byte recorded SQL source from migration `20260915190058` as an isolated, secret-free fixture: `native-fcm-pilot/tests/fixtures/20260915190058_original_trigger.sql`.
+- Following the compatibility patch in disposable PostgreSQL, the **actual recorded PL/pgSQL trigger function** successfully processed a synthetic Marketplace delivery:
+  - new delivery assigned to Vaahak → vendor order moves to `Vaahak Assigned / Going to Vendor`
+  - `Trip Started` → vendor pickup/out-for-delivery fields update
+  - `Completed` with `Received` payment → vendor order completed/payment fields update
+  - unrelated `ride` event → does not alter Marketplace order
+- All synthetic SQL ran in a transaction that was rolled back. No production or real records were touched.
+- This substantially raises confidence in the **first** migration repair, but still does **not** prove replay of all 207 migrations, later migration dependencies, or native FCM-to-Android end-to-end operation.
+
 ## Remaining gates
 
 1. Reproduce the exact failure in a controlled full migration replay and capture logs.
