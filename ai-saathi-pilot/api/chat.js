@@ -4,6 +4,8 @@
 const roles = new Set(["customer","partner","owner"]);
 function answer(role, raw) {
   const text = raw.toLowerCase();
+  if(/[\u0B00-\u0B7F]/u.test(raw))return "ଏହା DBest AI Saathi ର ସୁରକ୍ଷିତ ପରୀକ୍ଷା ସଂସ୍କରଣ। ଏଠାରେ କୌଣସି ଲାଇଭ୍ ବୁକିଂ, ମୂଲ୍ୟ, ପେମେଣ୍ଟ କିମ୍ବା ଆକାଉଣ୍ଟ ତଥ୍ୟ ଯୋଡ଼ା ହୋଇନାହିଁ। ଆପଣ ଯାତ୍ରା, କ୍ୟାବ୍ ଓ ସେବା ବିଷୟରେ ସାଧାରଣ ପ୍ରଶ୍ନ ପଚାରିପାରିବେ।";
+  if(/[\u0900-\u097F]/u.test(raw))return "यह DBest AI Saathi का सुरक्षित परीक्षण संस्करण है। यहां वास्तविक बुकिंग, भुगतान, ग्राहक डेटा या लाइव दरें उपलब्ध नहीं हैं। आप यात्रा, कैब और सेवाओं के बारे में सामान्य सवाल पूछ सकते हैं।";
   const sensitive = /\b(otp|password|aadhaar|aadhar|pan number|card number|cvv|secret key|api key)\b/i.test(raw);
   if(sensitive) return "For safety, please do not share passwords, OTPs, identity numbers or payment details in this demonstration. No account verification is available here.";
   const action = /\b(refund|pay now|send money|transfer money|approve payout|delete account|make booking|book now|place order|change permissions|deploy|modify live|withdraw)\b/i.test(raw);
