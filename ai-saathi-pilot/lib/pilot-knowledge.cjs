@@ -47,7 +47,7 @@ function intent(role,raw){
   launch:/launch|release|publish|play store|readiness|app approval|लॉन्च|रिलीज|पब्लिश|ପ୍ରକାଶନ|ଲଞ୍ଚ/u,
   operations:/operations|dashboard|analytics|performance|revenue|report|transaction|overview|डैशबोर्ड|रिपोर्ट|आय|ରିପୋର୍ଟ|ଡ୍ୟାସବୋର୍ଡ/u
  };
- const roleOrder=role==="customer"?["hotel","cab","marketplace","insurance","membership"]:
+ const roleOrder=role==="customer"?["cab","hotel","marketplace","insurance","membership"]:
   role==="partner"?["payout","marketplace","jobs","onboarding"]:
   ["outreach","launch","operations"];
  for(const key of roleOrder)if(p[key].test(s))return key;
