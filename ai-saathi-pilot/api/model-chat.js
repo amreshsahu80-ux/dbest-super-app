@@ -1,10 +1,11 @@
 "use strict";
 // Prepared isolated model adapter. No live DBest tools or data connections.
 const crypto=require("node:crypto");
+const pilotPolicy=require("../lib/pilot-knowledge.cjs");
 const roles=new Set(["customer","partner","owner"]);
 function enabled(){return process.env.AI_SAATHI_LLM_ENABLED==="true"&&process.env.AI_SAATHI_COST_GATE_APPROVED==="true"&&process.env.AI_SAATHI_PRIVACY_GATE_APPROVED==="true";}
-function sensitive(s){return /\b(otp|password|aadhaar|aadhar|cvv|upi pin|bank account|secret key|api key)\b/i.test(s)||/[A-Z]{5}[0-9]{4}[A-Z]/i.test(s)||/\b\d{4}[ -]?\d{4}[ -]?\d{4}\b/.test(s)||/\b(?:\d[ -]*?){15,19}\b/.test(s)||/[\w.+-]+@[\w.-]+\.[a-z]{2,}/i.test(s);}
-function action(s){return /\b(refund|pay now|send money|transfer money|approve payout|delete account|book now|place order|withdraw|deploy|change permissions|send email)\b/i.test(s)||/(पैसे भेज|भुगतान कर|रिफंड कर|खाता हटाओ)/u.test(s);}
+function sensitive(s){return pilotPolicy.sensitive(s);}
+function action(s){return pilotPolicy.action(s);}
 function historyOK(h){if(h===undefined)return [];if(!Array.isArray(h)||h.length>6)return null;for(const m of h){if(!m||!["user","assistant"].includes(m.role)||typeof m.content!=="string"||m.content.length>500||sensitive(m.content))return null;}return h.map(m=>({role:m.role,content:m.content}));}
 function system(role){return [
 "You are DBest AI Saathi, an isolated demonstration of "+role+" assistance.",
@@ -45,6 +46,7 @@ module.exports=async function handler(req,res){
  const h=historyOK(body.history);if(h===null)return res.status(400).json({error:"invalid_history"});
  if(sensitive(body.message))return res.status(400).json({error:"sensitive_data_not_accepted"});
  if(action(body.message))return res.status(403).json({error:"actions_disabled"});
+ if(pilotPolicy.privateRequest(body.message))return res.status(403).json({error:"private_data_access_disabled"});
  if(!enabled())return res.status(503).json({mode:"disabled",error:"model_feature_off"});
  if(body.aiConsent!==true)return res.status(412).json({error:"consent_required"});
  if(!process.env.AI_SAATHI_REDIS_REST_URL||!process.env.AI_SAATHI_REDIS_REST_TOKEN||!process.env.AI_SAATHI_RATE_LIMIT_SALT)return res.status(503).json({error:"rate_limit_not_configured"});
