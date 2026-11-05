@@ -1,7 +1,16 @@
 {
-  "name":"dbest-ai-saathi-isolated-pilot",
-  "version":"0.1.0",
-  "private":true,
-  "description":"Mock-only AI Saathi customer/partner/owner pilot; no live DBest integrations",
-  "scripts":{"test":"node --test tests/*.test.cjs"}
+  "name": "dbest-ai-saathi-multilingual-qa",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Isolated multilingual AI Saathi QA; model calls gated OFF by default",
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "ai": "7.0.93"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.cjs",
+    "check": "node --check app.js && node --check api/chat.js && node --check api/model-chat.js && node --check api/assist.js && node --check api/health.js"
+  }
 }
