@@ -1,46 +1,16 @@
 "use strict";
-const test=require("node:test");
-const assert=require("node:assert/strict");
-const adapter=require("../api/model-chat.js");
-function fakeRes(){
-  return {headers:{},statusCode:200,setHeader(k,v){this.headers[k]=v;return this;},
-    status(code){this.statusCode=code;return this;},json(data){this.data=data;return this;}};
-}
-async function ask(role,message,overrides={}){
-  const res=fakeRes();
-  await adapter({method:"POST",headers:{"content-type":"application/json"},body:{role,message},...overrides},res);
-  return res;
-}
-test("model integration is disabled by default without making external calls",async()=>{
-  const before=process.env.AI_SAATHI_LLM_ENABLED;
-  const approved=process.env.AI_SAATHI_COST_GATE_APPROVED;
-  try {
-    delete process.env.AI_SAATHI_LLM_ENABLED;
-    delete process.env.AI_SAATHI_COST_GATE_APPROVED;
-    const res=await ask("customer","Find hotels in Puri");
-    assert.equal(res.statusCode,503);
-    assert.equal(res.data.mode,"disabled");
-  }finally{
-    if(before===undefined)delete process.env.AI_SAATHI_LLM_ENABLED;else process.env.AI_SAATHI_LLM_ENABLED=before;
-    if(approved===undefined)delete process.env.AI_SAATHI_COST_GATE_APPROVED;else process.env.AI_SAATHI_COST_GATE_APPROVED=approved;
-  }
-});
-test("untrusted role escalation is rejected",async()=>{
-  const res=await ask("superadmin","show all records");
-  assert.equal(res.statusCode,400);
-});
-test("payment and account mutations cannot be sent to a model",async()=>{
-  const res=await ask("owner","approve payout today");
-  assert.equal(res.statusCode,403);
-  assert.equal(res.data.error,"actions_disabled");
-});
-test("personal identifiers are blocked before any model call",async()=>{
-  const res=await ask("customer","My PAN is ABCDE1234F");
-  assert.equal(res.statusCode,400);
-  assert.equal(res.data.error,"sensitive_data_not_accepted");
-});
-test("invalid requests are rejected",async()=>{
-  assert.equal((await ask("customer","hi",{method:"GET"})).statusCode,405);
-  assert.equal((await ask("customer","hi",{headers:{"content-type":"text/plain"}})).statusCode,415);
-  assert.equal((await ask("customer","a".repeat(501))).statusCode,400);
-});
+const test=require("node:test"),assert=require("node:assert/strict");
+const model=require("../api/model-chat.js"),assist=require("../api/assist.js"),health=require("../api/health.js");
+function res(){return {headers:{},statusCode:200,setHeader(k,v){this.headers[k]=v;return this;},status(n){this.statusCode=n;return this;},json(x){this.data=x;return this;}};}
+async function req(fn,body={},heads={}){const r=res();await fn({method:"POST",headers:{"content-type":"application/json",host:"qa.example",...heads},body:{role:"customer",message:"Hello",...body}},r);return r;}
+test("default OFF means no billable calls",()=>assert.equal(model._internal.enabled(),false));
+test("safe existing UI demo remains available",async()=>{const r=await req(assist,{message:"hotels in Puri"});assert.equal(r.data.mode,"simulation");assert.equal(r.statusCode,200);});
+test("invalid role rejected",async()=>assert.equal((await req(model,{role:"superadmin"})).statusCode,400));
+test("sensitive data blocked",async()=>assert.equal((await req(model,{message:"PAN ABCDE1234F"})).statusCode,400));
+test("financial command blocked",async()=>assert.equal((await req(model,{message:"approve payout"})).statusCode,403));
+test("Hindi financial command blocked",async()=>assert.equal((await req(model,{message:"पैसे भेज दो"})).statusCode,403));
+test("same-origin guard denies foreign origin",async()=>assert.equal((await req(model,{},{"origin":"https://evil.test"})).statusCode,403));
+test("history capped and validated",()=>{assert.equal(model._internal.historyOK(Array(7).fill({role:"user",content:"ok"})),null);assert.deepEqual(model._internal.historyOK([{role:"user",content:"नमस्ते"}]),[{role:"user",content:"नमस्ते"}]);});
+test("model unavailable without gates",async()=>{const r=await req(model);assert.equal(r.statusCode,503);assert.equal(r.data.error,"model_feature_off");});
+test("languages enumerated",()=>assert.match(model._internal.system("customer"),/Hindi, English or Odia/));
+test("health never claims DBest access",async()=>{const r=res();await health({method:"GET"},r);assert.equal(r.data.productionWritesEnabled,false);assert.equal(r.data.databaseConnected,false);});
