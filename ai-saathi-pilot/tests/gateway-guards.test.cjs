@@ -50,7 +50,7 @@ test("Redis REST response enforces per-minute and daily counters, without paid A
   let seen=0,reply=[1,1];
   globalThis.fetch=async(url,opts)=>{
    seen++;
-   assert.equal(url,"https://redis.test.invalid/");
+   assert.equal(url,"https://redis.test.invalid");
    assert.equal(opts.method,"POST");
    const body=JSON.parse(opts.body);
    assert.equal(body[0],"EVAL");
