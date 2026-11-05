@@ -29,7 +29,7 @@ function action(value){
   || /(पैसे भेज|भुगतान कर|रिफंड कर|खाता हटाओ|बुकिंग कर दो|ବୁକିଂ କର|ଟଙ୍କା ପଠା)/u.test(value);
 }
 function privateRequest(value){
-  return /\b(owner|admin|all customers|all partner accounts|private data|other users|database records|show passwords|access token|customer list)\b/i.test(value)
+  return /\b(all customers|all partner accounts|private data|other users|database records|show passwords|access token|customer list|(?:owner|admin)\s+(?:database|data|password|credentials|access))\b/i.test(value)
   || /(सभी ग्राहक|मालिक का डेटा|ଅନ୍ୟ ଗ୍ରାହକ)/u.test(value);
 }
 function intent(role,raw){
@@ -162,7 +162,7 @@ function demoReply(role,message){
  const locale=detectLanguage(message);
  if(sensitive(message))return {reply:protectedReplies[locale].sensitive,language:locale,intent:"safety"};
  if(action(message))return {reply:protectedReplies[locale].action,language:locale,intent:"blocked_action"};
- if(privateRequest(message)&&role!=="owner")return {reply:protectedReplies[locale].private,language:locale,intent:"private"};
+ if(privateRequest(message))return {reply:protectedReplies[locale].private,language:locale,intent:"private"};
  const topic=intent(role,message);
  const text=(answers[role]?.[topic]||answers[role]?.general)?.[locale]||answers.customer.general.en;
  return {reply:text+"\n\n"+disclaimer[locale],language:locale,intent:topic};
