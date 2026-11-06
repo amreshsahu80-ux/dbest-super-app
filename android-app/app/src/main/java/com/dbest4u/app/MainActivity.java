@@ -40,9 +40,19 @@ public class MainActivity extends ComponentActivity {
             + "resourceCount:performance.getEntriesByType('resource').length,"
             + "serviceTiles:document.querySelectorAll('.tile').length});"
             + "}catch(e){return '{}'}})()";
-    private long navigationStartedMs = 0L;
+    // Capture initial launch independently of later page navigations.
+    // WebView's load event precedes DBest's asynchronous content readiness.
+    private long activityStartedMs = -1L;
+    private long initialNavigationMs = -1L;
     private long firstCommittedFrameMs = -1L;
     private long pageFinishedMs = -1L;
+    private long firstServiceTilesMs = -1L;
+    private int pageNavigations = 0;
+    private int tilesProbeAttempts = 0;
+    private static final int MAX_TILES_PROBES = 40;
+    private static final String TILES_READY_JS =
+            "(function(){try{return document.querySelectorAll('.tile').length>=10;}"
+            + "catch(e){return false}})()";
     private WebView webView;
     private ValueCallback<Uri[]> fileCallback;
     private GeolocationPermissions.Callback geoCallback;
@@ -50,6 +60,7 @@ public class MainActivity extends ComponentActivity {
 
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        if (diagnosticsEnabled()) activityStartedMs = SystemClock.elapsedRealtime();
         // Android 15+ forces edge-to-edge for target SDK 35+. Keep the web
         // experience inside the safe area without modifying the live website.
         FrameLayout root = new FrameLayout(this);
@@ -84,17 +95,17 @@ public class MainActivity extends ComponentActivity {
             @Override public void onPageStarted(WebView view, String url, Bitmap favicon) {
                 super.onPageStarted(view, url, favicon);
                 if (diagnosticsEnabled()) {
-                    navigationStartedMs = SystemClock.elapsedRealtime();
-                    firstCommittedFrameMs = -1L;
-                    pageFinishedMs = -1L;
+                    pageNavigations++;
+                    if (initialNavigationMs < 0L) initialNavigationMs = SystemClock.elapsedRealtime();
                 }
             }
 
             @Override public void onPageCommitVisible(WebView view, String url) {
                 super.onPageCommitVisible(view, url);
-                if (diagnosticsEnabled() && navigationStartedMs > 0L) {
-                    firstCommittedFrameMs = SystemClock.elapsedRealtime() - navigationStartedMs;
-                    Log.d(LOG_TAG, "firstCommittedFrameMs=" + firstCommittedFrameMs);
+                if (diagnosticsEnabled() && initialNavigationMs >= 0L
+                        && firstCommittedFrameMs < 0L) {
+                    firstCommittedFrameMs = SystemClock.elapsedRealtime() - activityStartedMs;
+                    Log.d(LOG_TAG, "initialFirstFrameFromActivityMs=" + firstCommittedFrameMs);
                 }
             }
 
@@ -109,10 +120,11 @@ public class MainActivity extends ComponentActivity {
                     view.postDelayed(() -> refreshPrivacyEntry(view), 3500);
                 }
                 if (diagnosticsEnabled()) {
-                    if (navigationStartedMs > 0L) {
-                        pageFinishedMs = SystemClock.elapsedRealtime() - navigationStartedMs;
-                        Log.d(LOG_TAG, "pageFinishedMs=" + pageFinishedMs);
+                    if (initialNavigationMs >= 0L && pageFinishedMs < 0L) {
+                        pageFinishedMs = SystemClock.elapsedRealtime() - activityStartedMs;
+                        Log.d(LOG_TAG, "initialPageFinishedFromActivityMs=" + pageFinishedMs);
                     }
+                    probeServiceTiles(view);
                     view.evaluateJavascript(WEB_TIMING_JS, metrics ->
                             Log.d(LOG_TAG, "webTiming=" + metrics));
                 }
@@ -220,6 +232,22 @@ public class MainActivity extends ComponentActivity {
             .show();
     }
 
+    private void probeServiceTiles(WebView view) {
+        if (!diagnosticsEnabled() || webView != view || firstServiceTilesMs >= 0L
+                || tilesProbeAttempts >= MAX_TILES_PROBES || !view.isAttachedToWindow())
+            return;
+        tilesProbeAttempts++;
+        view.evaluateJavascript(TILES_READY_JS, result -> {
+            if (webView != view || firstServiceTilesMs >= 0L) return;
+            if ("true".equalsIgnoreCase(String.valueOf(result).trim())) {
+                firstServiceTilesMs = SystemClock.elapsedRealtime() - activityStartedMs;
+                Log.d(LOG_TAG, "serviceTilesReadyFromActivityMs=" + firstServiceTilesMs);
+            } else if (tilesProbeAttempts < MAX_TILES_PROBES) {
+                view.postDelayed(() -> probeServiceTiles(view), 300);
+            }
+        });
+    }
+
     private void showPerformanceDiagnostics() {
         if (webView == null || !diagnosticsEnabled()) return;
         webView.evaluateJavascript(WEB_TIMING_JS, raw -> {
@@ -228,10 +256,14 @@ public class MainActivity extends ComponentActivity {
                 Object parsed = new org.json.JSONTokener(browserMetrics).nextValue();
                 if (parsed instanceof String) browserMetrics = (String) parsed;
             } catch (Exception ignored) { }
-            String report = "First committed frame: " + firstCommittedFrameMs + " ms"
-                + "\nPage finished: " + pageFinishedMs + " ms"
+            String report = "Initial launch (from app open)"
+                + "\nFirst visible WebView frame: " + firstCommittedFrameMs + " ms"
+                + "\nFirst page finished: " + pageFinishedMs + " ms"
+                + "\nService tiles ready: " + firstServiceTilesMs + " ms"
+                + "\nPage navigations: " + pageNavigations
                 + "\nBrowser: " + browserMetrics
-                + "\nQA only — compare cold and warm starts on the same network.";
+                + "\nResource entries are not necessarily separate network downloads."
+                + "\nQA only — repeat cold and warm starts on the same network.";
             new AlertDialog.Builder(this)
                 .setTitle("DBest QA performance")
                 .setMessage(report)
