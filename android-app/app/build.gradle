@@ -18,6 +18,11 @@ android {
     }
 
     buildTypes {
+        // Separate QA installation: never replace the Play-signed public app.
+        debug {
+            applicationIdSuffix '.qa'
+            versionNameSuffix '-qa'
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
