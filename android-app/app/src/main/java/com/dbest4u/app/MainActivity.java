@@ -33,7 +33,16 @@ public class MainActivity extends ComponentActivity {
     private static final int LOCATION_REQUEST = 1001;
     private static final int FILE_REQUEST = 1002;
     private static final String LOG_TAG = "DBestPerf";
+    private static final String WEB_TIMING_JS =
+            "(function(){try{var n=performance.getEntriesByType('navigation')[0]||{};"
+            + "return JSON.stringify({domMs:Math.round(n.domContentLoadedEventEnd||0),"
+            + "loadMs:Math.round(n.loadEventEnd||0),"
+            + "resourceCount:performance.getEntriesByType('resource').length,"
+            + "serviceTiles:document.querySelectorAll('.tile').length});"
+            + "}catch(e){return '{}'}})()";
     private long navigationStartedMs = 0L;
+    private long firstCommittedFrameMs = -1L;
+    private long pageFinishedMs = -1L;
     private WebView webView;
     private ValueCallback<Uri[]> fileCallback;
     private GeolocationPermissions.Callback geoCallback;
@@ -74,13 +83,19 @@ public class MainActivity extends ComponentActivity {
         webView.setWebViewClient(new WebViewClient() {
             @Override public void onPageStarted(WebView view, String url, Bitmap favicon) {
                 super.onPageStarted(view, url, favicon);
-                if (diagnosticsEnabled()) navigationStartedMs = SystemClock.elapsedRealtime();
+                if (diagnosticsEnabled()) {
+                    navigationStartedMs = SystemClock.elapsedRealtime();
+                    firstCommittedFrameMs = -1L;
+                    pageFinishedMs = -1L;
+                }
             }
 
             @Override public void onPageCommitVisible(WebView view, String url) {
                 super.onPageCommitVisible(view, url);
-                if (diagnosticsEnabled() && navigationStartedMs > 0L)
-                    Log.d(LOG_TAG, "firstCommittedFrameMs=" + (SystemClock.elapsedRealtime() - navigationStartedMs));
+                if (diagnosticsEnabled() && navigationStartedMs > 0L) {
+                    firstCommittedFrameMs = SystemClock.elapsedRealtime() - navigationStartedMs;
+                    Log.d(LOG_TAG, "firstCommittedFrameMs=" + firstCommittedFrameMs);
+                }
             }
 
             @Override public void onPageFinished(WebView view, String url) {
@@ -94,15 +109,11 @@ public class MainActivity extends ComponentActivity {
                     view.postDelayed(() -> refreshPrivacyEntry(view), 3500);
                 }
                 if (diagnosticsEnabled()) {
-                    if (navigationStartedMs > 0L)
-                        Log.d(LOG_TAG, "pageFinishedMs=" + (SystemClock.elapsedRealtime() - navigationStartedMs));
-                    view.evaluateJavascript(
-                        "(function(){try{var n=performance.getEntriesByType('navigation')[0]||{};"
-                        + "return JSON.stringify({domMs:Math.round(n.domContentLoadedEventEnd||0),"
-                        + "loadMs:Math.round(n.loadEventEnd||0),"
-                        + "resourceCount:performance.getEntriesByType('resource').length,"
-                        + "serviceTiles:document.querySelectorAll('.tile').length});"
-                        + "}catch(e){return '{}'}})()", metrics ->
+                    if (navigationStartedMs > 0L) {
+                        pageFinishedMs = SystemClock.elapsedRealtime() - navigationStartedMs;
+                        Log.d(LOG_TAG, "pageFinishedMs=" + pageFinishedMs);
+                    }
+                    view.evaluateJavascript(WEB_TIMING_JS, metrics ->
                             Log.d(LOG_TAG, "webTiming=" + metrics));
                 }
             }
@@ -195,14 +206,38 @@ public class MainActivity extends ComponentActivity {
     }
 
     private void showAccountSettings() {
+        String[] options = diagnosticsEnabled()
+            ? new String[]{"Request account deletion", "Deletion instructions", "Performance diagnostics (QA)"}
+            : new String[]{"Request account deletion", "Deletion instructions"};
         new AlertDialog.Builder(this)
             .setTitle("Account & Privacy")
-            .setItems(new String[]{"Request account deletion", "Deletion instructions"}, (dialog, which) -> {
+            .setItems(options, (dialog, which) -> {
                 if (which == 0) showAccountDeletion();
-                else openExternal(Uri.parse("https://dbest4u.com/data-deletion"));
+                else if (which == 1) openExternal(Uri.parse("https://dbest4u.com/data-deletion"));
+                else if (diagnosticsEnabled()) showPerformanceDiagnostics();
             })
             .setNegativeButton("Close", null)
             .show();
+    }
+
+    private void showPerformanceDiagnostics() {
+        if (webView == null || !diagnosticsEnabled()) return;
+        webView.evaluateJavascript(WEB_TIMING_JS, raw -> {
+            String browserMetrics = String.valueOf(raw);
+            try {
+                Object parsed = new org.json.JSONTokener(browserMetrics).nextValue();
+                if (parsed instanceof String) browserMetrics = (String) parsed;
+            } catch (Exception ignored) { }
+            String report = "First committed frame: " + firstCommittedFrameMs + " ms"
+                + "\nPage finished: " + pageFinishedMs + " ms"
+                + "\nBrowser: " + browserMetrics
+                + "\nQA only — compare cold and warm starts on the same network.";
+            new AlertDialog.Builder(this)
+                .setTitle("DBest QA performance")
+                .setMessage(report)
+                .setPositiveButton("Close", null)
+                .show();
+        });
     }
 
     // Request-only: no account or records are deleted without verification.
