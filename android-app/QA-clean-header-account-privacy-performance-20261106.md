@@ -36,3 +36,12 @@
 
 ## Status
 UI source is staged on a non-production branch. Build and physical QA pending. No live deployment authorized or performed.
+
+## Physical QA observed, 6 November 2026 (screenshots supplied by owner)
+- QA app installed successfully alongside the Play production app. Branding/header works without the duplicate native label.
+- Android-only **Account & Privacy** menu opens within the signed-in My Account screen and lists account-deletion request, deletion instructions and performance diagnostics.
+- Owner-supplied diagnostic snapshot: initial first committed frame 8 ms, page finished 2 ms, DOMContentLoaded 168 ms, load 170 ms, 250 Resource Timing entries, 15 service tiles.
+- **Those tiny native values are NOT a validated cold-start result.** The original counters were reset for each page start and onPageFinished may precede asynchronous frontend content. Resource Timing entries are not an audited count of cache misses or network transfers.
+- On the isolated QA branch, commit 6a34f820 changes instrumentation to preserve the initial activity-start timing and separately record when at least ten service tiles are present. Fresh on-device measurements and build verification are still required.
+- Source hypothesis for investigation, not a proven diagnosis: `index.html` fetches the large `index-26.html` with `cache:'no-store'`, then injects numerous scripts. Compare network waterfall, caching and long tasks on device before modifying production website delivery.
+- No changes made to public Play release, Vercel, Supabase, Cab, Marketplace, payments or customer data.
