@@ -8,11 +8,9 @@ import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.Settings;
-import android.graphics.Color;
-import android.view.Gravity;
-import android.widget.Button;
-import android.widget.LinearLayout;
-import android.widget.TextView;
+import android.graphics.Bitmap;
+import android.os.SystemClock;
+import android.util.Log;
 import android.widget.FrameLayout;
 import android.webkit.GeolocationPermissions;
 import android.webkit.ValueCallback;
@@ -34,6 +32,8 @@ public class MainActivity extends ComponentActivity {
     private static final String HOME = "https://dbest4u.com/";
     private static final int LOCATION_REQUEST = 1001;
     private static final int FILE_REQUEST = 1002;
+    private static final String LOG_TAG = "DBestPerf";
+    private long navigationStartedMs = 0L;
     private WebView webView;
     private ValueCallback<Uri[]> fileCallback;
     private GeolocationPermissions.Callback geoCallback;
@@ -45,30 +45,14 @@ public class MainActivity extends ComponentActivity {
         // experience inside the safe area without modifying the live website.
         FrameLayout root = new FrameLayout(this);
         root.setBackgroundColor(0xFFFFFFFF);
-        // A persistent native privacy action remains available even when
-        // the web profile is unavailable. Do not overlay the live site's content.
-        LinearLayout appLayout = new LinearLayout(this);
-        appLayout.setOrientation(LinearLayout.VERTICAL);
-        appLayout.setBackgroundColor(Color.WHITE);
-        LinearLayout toolbar = new LinearLayout(this);
-        toolbar.setPadding(dp(12), dp(4), dp(12), dp(4));
-        toolbar.setGravity(Gravity.CENTER_VERTICAL);
-        TextView title = new TextView(this);
-        title.setText("DBest");
-        title.setTextColor(0xFF103763);
-        title.setTextSize(18);
-        title.setTypeface(null, android.graphics.Typeface.BOLD);
-        toolbar.addView(title, new LinearLayout.LayoutParams(0, -2, 1));
-        Button deleteAccount = new Button(this);
-        deleteAccount.setText("Request account deletion");
-        deleteAccount.setAllCaps(false);
-        deleteAccount.setTextSize(12);
-        deleteAccount.setOnClickListener(v -> showAccountDeletion());
-        toolbar.addView(deleteAccount, new LinearLayout.LayoutParams(-2, dp(43)));
-        appLayout.addView(toolbar, new LinearLayout.LayoutParams(-1, dp(52)));
+        // Use a single full-height WebView: no duplicate DBest text or
+        // persistent deletion button above the website's own branded header.
+        // Account deletion remains available in the Android-only
+        // Account & Privacy entry inside My Account / My Profile.
         webView = new WebView(this);
-        appLayout.addView(webView, new LinearLayout.LayoutParams(-1, 0, 1));
-        root.addView(appLayout, new FrameLayout.LayoutParams(-1, -1));
+        root.addView(webView, new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT));
         ViewCompat.setOnApplyWindowInsetsListener(root, (view, windowInsets) -> {
             Insets safeArea = windowInsets.getInsets(
                     WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout());
@@ -88,6 +72,41 @@ public class MainActivity extends ComponentActivity {
         s.setMediaPlaybackRequiresUserGesture(false);
 
         webView.setWebViewClient(new WebViewClient() {
+            @Override public void onPageStarted(WebView view, String url, Bitmap favicon) {
+                super.onPageStarted(view, url, favicon);
+                if (diagnosticsEnabled()) navigationStartedMs = SystemClock.elapsedRealtime();
+            }
+
+            @Override public void onPageCommitVisible(WebView view, String url) {
+                super.onPageCommitVisible(view, url);
+                if (diagnosticsEnabled() && navigationStartedMs > 0L)
+                    Log.d(LOG_TAG, "firstCommittedFrameMs=" + (SystemClock.elapsedRealtime() - navigationStartedMs));
+            }
+
+            @Override public void onPageFinished(WebView view, String url) {
+                super.onPageFinished(view, url);
+                if (url != null && "https".equalsIgnoreCase(Uri.parse(url).getScheme()) && isDbest(Uri.parse(url))) {
+                    DbestAccountSettings.install(view);
+                    // index.html loads its application markup asynchronously.
+                    // Retry only during bootstrap; the scoped observer then
+                    // watches only the account/profile overlay (#m).
+                    view.postDelayed(() -> refreshPrivacyEntry(view), 1200);
+                    view.postDelayed(() -> refreshPrivacyEntry(view), 3500);
+                }
+                if (diagnosticsEnabled()) {
+                    if (navigationStartedMs > 0L)
+                        Log.d(LOG_TAG, "pageFinishedMs=" + (SystemClock.elapsedRealtime() - navigationStartedMs));
+                    view.evaluateJavascript(
+                        "(function(){try{var n=performance.getEntriesByType('navigation')[0]||{};"
+                        + "return JSON.stringify({domMs:Math.round(n.domContentLoadedEventEnd||0),"
+                        + "loadMs:Math.round(n.loadEventEnd||0),"
+                        + "resourceCount:performance.getEntriesByType('resource').length,"
+                        + "serviceTiles:document.querySelectorAll('.tile').length});"
+                        + "}catch(e){return '{}'}})()", metrics ->
+                            Log.d(LOG_TAG, "webTiming=" + metrics));
+                }
+            }
+
             @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 return handleUrl(request.getUrl());
             }
@@ -142,7 +161,16 @@ public class MainActivity extends ComponentActivity {
 
     private boolean handleUrl(Uri uri) {
         if (uri == null) return false;
-        String scheme = uri.getScheme() == null ? "" : uri.getScheme().toLowerCase();
+        String scheme = uri.getScheme() == null ? "" : uri.getScheme().toLowerCase(java.util.Locale.ROOT);
+        if ("dbest-account".equals(scheme)) {
+            if ("settings".equalsIgnoreCase(uri.getHost()) && webView != null) {
+                Uri current = Uri.parse(String.valueOf(webView.getUrl()));
+                if ("https".equalsIgnoreCase(current.getScheme()) && isDbest(current))
+                    showAccountSettings();
+            }
+            // Never dispatch private app actions to Android external intents.
+            return true;
+        }
         if (("http".equals(scheme) || "https".equals(scheme)) && isDbest(uri)) return false;
         openExternal(uri);
         return true;
@@ -151,6 +179,30 @@ public class MainActivity extends ComponentActivity {
     private boolean isDbest(Uri uri) {
         String h = uri.getHost();
         return h != null && (h.equalsIgnoreCase("dbest4u.com") || h.equalsIgnoreCase("www.dbest4u.com"));
+    }
+
+    private boolean diagnosticsEnabled() {
+        return (getApplicationInfo().flags
+                & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0;
+    }
+
+    private void refreshPrivacyEntry(WebView view) {
+        if (webView == view && view.isAttachedToWindow()) {
+            Uri current = Uri.parse(String.valueOf(view.getUrl()));
+            if ("https".equalsIgnoreCase(current.getScheme()) && isDbest(current))
+                DbestAccountSettings.install(view);
+        }
+    }
+
+    private void showAccountSettings() {
+        new AlertDialog.Builder(this)
+            .setTitle("Account & Privacy")
+            .setItems(new String[]{"Request account deletion", "Deletion instructions"}, (dialog, which) -> {
+                if (which == 0) showAccountDeletion();
+                else openExternal(Uri.parse("https://dbest4u.com/data-deletion"));
+            })
+            .setNegativeButton("Close", null)
+            .show();
     }
 
     // Request-only: no account or records are deleted without verification.
@@ -171,10 +223,6 @@ public class MainActivity extends ComponentActivity {
                 openExternal(Uri.parse("https://dbest4u.com/data-deletion")))
             .setNegativeButton("Cancel", null)
             .show();
-    }
-
-    private int dp(int px) {
-        return (int) (px * getResources().getDisplayMetrics().density + 0.5f);
     }
 
     private void openExternal(Uri uri) {
@@ -206,7 +254,10 @@ public class MainActivity extends ComponentActivity {
     }
 
     @Override protected void onDestroy() {
-        if (webView != null) webView.destroy();
+        if (webView != null) {
+            webView.destroy();
+            webView = null;
+        }
         super.onDestroy();
     }
 }
