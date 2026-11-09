@@ -39,3 +39,18 @@ Status: DRAFT; no public release, no live backend changes.
 - [ ] Owner approves a separate signed versionCode > 5 Play release
 
 Nothing here authorizes merging to production or uploading an AAB to Play.
+
+## Logout QA finding and remediation — 9 Nov 2026
+- Tester signed in as an authorized member, successfully linked DBest Push QA to native-fcm-register, then tapped **Logout**. A brief in-app toast `Logged out` appeared.
+- The website's `logout()` changes `d2_session` in localStorage and redraws the UI without a WebView page navigation, so the original Android `onPageFinished`-only continuity check was not run. The member live session token may also remain in localStorage after logout. **Do not claim automatic revocation passed.**
+- Read-only server audit showed recent registered test devices remained enabled after this logout; precise device-to-user attribution requires controlled retest.
+- QA fix: when a device is account-bound, Android now checks the visible member role and original session fingerprint while foregrounded, detects in-page logout/account switches, turns its notification toggle OFF, attempts authenticated unregister using the original bound session, disables FCM auto-init, and deletes the local FCM token.
+- If the unregister request fails, the client keeps a pending bound state rather than falsely claiming success. Automatic retries while the QA process is alive are throttled to at least 15 seconds. A kill/restart or expired original session may leave a stale remote registration; this remains a release blocker pending server-side hardening.
+- Registration must not use a different member's current session to unregister the previous member's device.
+
+### New manual gates
+- [ ] Confirm in-place logout detects the account change and changes the toggle to OFF automatically, without tapping OFF.
+- [ ] Verify the server registration is removed (read-only metadata audit; never reveal account session/device tokens).
+- [ ] Verify the device no longer displays targeted notifications after logout.
+- [ ] Verify changing from account A to account B cannot deliver A's notifications to B.
+- [ ] Verify behavior after app process termination, device restart, network outage and expired sessions, and never claim a completed server unregister when it failed.
