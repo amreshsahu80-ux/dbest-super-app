@@ -54,3 +54,10 @@ Nothing here authorizes merging to production or uploading an AAB to Play.
 - [ ] Verify the device no longer displays targeted notifications after logout.
 - [ ] Verify changing from account A to account B cannot deliver A's notifications to B.
 - [ ] Verify behavior after app process termination, device restart, network outage and expired sessions, and never claim a completed server unregister when it failed.
+
+## Android-only compact floaters — 10 Nov 2026
+- QA user verified header/account-deletion-button removal and redundant company description removal on device.
+- Large native notification chip and website WhatsApp ON chip overlapped the service tiles and D-U-N-S seal.
+- Native notification control in QA is now a 48dp icon-sized bell with an accessibility description, retaining identical permission/token ON/OFF interactions.
+- Inject Android-only CSS to make the WhatsApp control a compact 'WA' icon; retained the original button ID, click handlers, backend behavior and accessibility text. Public website remains unchanged.
+- Required physical QA: notification icon opens options, displays ON/OFF state, WhatsApp icon updates settings, and neither blocks the D-U-N-S seal or primary navigation. Screen reader/contrast check required.
