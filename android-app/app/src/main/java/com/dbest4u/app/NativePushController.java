@@ -10,6 +10,9 @@ import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.SystemClock;
 import android.view.Gravity;
 import android.view.View;
 import android.webkit.WebView;
@@ -36,6 +39,19 @@ public final class NativePushController {
     private final Button button;
     private final boolean firebaseReady;
     private final NativeAccountBinding accountBinding;
+    private final Handler sessionHandler = new Handler(Looper.getMainLooper());
+    private boolean sessionMonitorRunning = false;
+    private boolean autoRevocationRunning = false;
+    private long lastRevocationAttemptMs = -1L;
+    private static final long MIN_REVOCATION_RETRY_MS = 15000L;
+    private final Runnable sessionMonitor = new Runnable() {
+        @Override public void run() {
+            if (!sessionMonitorRunning) return;
+            if (accountBinding != null && accountBinding.hasAccountBinding())
+                accountBinding.checkAccountContinuity(() -> revokeForSessionChange());
+            sessionHandler.postDelayed(this, 1500L);
+        }
+    };
 
     public NativePushController(Activity activity, FrameLayout root, WebView webView) {
         this.activity = activity;
@@ -102,6 +118,10 @@ public final class NativePushController {
     }
 
     private void requestOrEnable() {
+        if (accountBinding.hasAccountBinding() && !isEnabled()) {
+            Toast.makeText(activity, "Prior account notification revocation is pending. Keep this QA app open.", Toast.LENGTH_LONG).show();
+            return;
+        }
         if (!permissionGranted() && Build.VERSION.SDK_INT >= 33) {
             ActivityCompat.requestPermissions(activity,
                     new String[]{Manifest.permission.POST_NOTIFICATIONS}, PERMISSION_REQUEST);
@@ -157,11 +177,14 @@ public final class NativePushController {
         updateButton();
         FirebaseMessaging.getInstance().setAutoInitEnabled(false);
         accountBinding.revokeAndThen(() -> FirebaseMessaging.getInstance()
-            .deleteToken().addOnCompleteListener(task ->
-                Toast.makeText(activity, task.isSuccessful()
-                    ? "Test alerts OFF; Firebase token deleted."
-                    : "Alerts OFF locally. Token deletion requires retry.",
-                    Toast.LENGTH_LONG).show()));
+            .deleteToken().addOnCompleteListener(task -> {
+                String message = !task.isSuccessful()
+                    ? "Alerts OFF locally. Token deletion requires retry."
+                    : accountBinding.hasAccountBinding()
+                        ? "Test alerts OFF locally; server revocation pending."
+                        : "Test alerts OFF; Firebase token deleted.";
+                Toast.makeText(activity, message, Toast.LENGTH_LONG).show();
+            }));
     }
 
     public void refreshVisibility() {
@@ -178,10 +201,51 @@ public final class NativePushController {
         // DBest session tokens. Keep it on home only to avoid covering checkout.
         button.setVisibility(dbestHome ? View.VISIBLE : View.GONE);
         updateButton();
-        if (dbestHome) accountBinding.onTrustedPageLoaded();
+        if (dbestHome) accountBinding.checkAccountContinuity(() -> revokeForSessionChange());
     }
 
-    public void shutdown() { accountBinding.shutdown(); }
+    // The website's logout() changes localStorage without a WebView
+    // page-load event. Monitor the signed-in member state only while the
+    // QA app is in the foreground and an account-bound device exists.
+    public void startSessionMonitor() {
+        if (sessionMonitorRunning) return;
+        sessionMonitorRunning = true;
+        sessionHandler.postDelayed(sessionMonitor, 250L);
+    }
+
+    public void stopSessionMonitor() {
+        sessionMonitorRunning = false;
+        sessionHandler.removeCallbacks(sessionMonitor);
+    }
+
+    private void revokeForSessionChange() {
+        if (!accountBinding.hasAccountBinding() || autoRevocationRunning) return;
+        long now = SystemClock.elapsedRealtime();
+        if (lastRevocationAttemptMs >= 0L
+                && now - lastRevocationAttemptMs < MIN_REVOCATION_RETRY_MS) return;
+        lastRevocationAttemptMs = now;
+        autoRevocationRunning = true;
+        activity.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                .edit().putBoolean("enabled", false).apply();
+        updateButton();
+        FirebaseMessaging.getInstance().setAutoInitEnabled(false);
+        accountBinding.revokeAndThen(() -> {
+            autoRevocationRunning = false;
+            FirebaseMessaging.getInstance().deleteToken().addOnCompleteListener(task -> {
+                String message = !task.isSuccessful()
+                        ? "Account changed: alerts OFF. Firebase token deletion needs retry."
+                        : accountBinding.hasAccountBinding()
+                            ? "Account changed: alerts OFF; server revocation pending."
+                            : "Account changed: alerts OFF and device registration revoked.";
+                Toast.makeText(activity, message, Toast.LENGTH_LONG).show();
+            });
+        });
+    }
+
+    public void shutdown() {
+        stopSessionMonitor();
+        accountBinding.shutdown();
+    }
 
     private boolean initializeFirebase() {
         try {
