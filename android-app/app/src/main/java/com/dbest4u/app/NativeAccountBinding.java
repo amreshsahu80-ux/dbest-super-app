@@ -204,8 +204,15 @@ final class NativeAccountBinding {
             .getBoolean("bound", false);
         if (!bound) { done.run(); return; }
         final String remembered = sessionInMemory;
+        final String boundHash = activity.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getString("session_hash", "");
         java.util.function.Consumer<String> revoke = current -> {
-            final String session = remembered != null && !remembered.isEmpty() ? remembered : current;
+            // Never authorize a prior member's revocation using a different
+            // account's current session after logout, restart or account switch.
+            final String session = remembered != null && !remembered.isEmpty()
+                    && boundHash.equals(fingerprint(remembered)) ? remembered
+                    : current != null && !current.isEmpty()
+                    && boundHash.equals(fingerprint(current)) ? current : "";
             requests.execute(() -> {
                 final boolean revoked = !session.isEmpty() && request("unregister", session, null);
                 // Always delete the FCM token locally (caller). Do not claim
@@ -224,20 +231,6 @@ final class NativeAccountBinding {
         };
         if (remembered != null) revoke.accept(remembered);
         else readSession(revoke);
-    }
-
-    // Detect account switch/logout while this process is open. A full
-    // background logout contract is still a release gate.
-    void onTrustedPageLoaded() {
-        if (sessionInMemory == null || !trustedPage()) return;
-        final String boundSession = sessionInMemory;
-        readSession(current -> {
-            if (sessionInMemory == null || !boundSession.equals(sessionInMemory)) return;
-            if (!boundSession.equals(current)) {
-                revokeAndThen(() -> FirebaseMessaging.getInstance().deleteToken());
-                ui("DBest account changed: notification token revoked on this phone.");
-            }
-        });
     }
 
     void shutdown() { requests.shutdown(); }
