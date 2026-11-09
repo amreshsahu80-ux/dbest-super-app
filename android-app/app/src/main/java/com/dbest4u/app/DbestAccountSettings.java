@@ -3,7 +3,7 @@ package com.dbest4u.app;
 import android.webkit.WebView;
 
 /**
- * Android-only privacy entry in the existing DBest My Account / My Profile panel.
+ * Android-only privacy entry and removal of the redundant legacy footer copy.
  * Does not edit the website, change authentication or expose a JavaScript bridge.
  * The custom URL is handled only by MainActivity while on a trusted DBest origin.
  */
@@ -12,6 +12,12 @@ final class DbestAccountSettings {
 
     private static final String JS =
         "(function(){"
+      // The old website footer is only decorative copy, not the separate
+      // legal/contact footer. Remove it solely in Android WebView.
+      + "var legacy=document.querySelector('body > div.foot');"
+      + "if(legacy){var desc=legacy.querySelector('.w > p');"
+      + "if(desc&&desc.textContent.indexOf('Sarwashresth Services OPC Pvt. Ltd.')!==-1)"
+      + "legacy.style.setProperty('display','none','important');}"
       + "if(window.__dbestAndroidAccountPrivacyInstalled)return;"
       + "var mount=document.getElementById('m');if(!mount)return;"
       + "window.__dbestAndroidAccountPrivacyInstalled=true;"
