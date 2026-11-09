@@ -329,6 +329,16 @@ public class MainActivity extends ComponentActivity {
         super.onSaveInstanceState(outState);
     }
 
+    @Override protected void onResume() {
+        super.onResume();
+        if (nativePush != null) nativePush.startSessionMonitor();
+    }
+
+    @Override protected void onPause() {
+        if (nativePush != null) nativePush.stopSessionMonitor();
+        super.onPause();
+    }
+
     @Override protected void onDestroy() {
         if (nativePush != null) nativePush.shutdown();
         if (webView != null) {
