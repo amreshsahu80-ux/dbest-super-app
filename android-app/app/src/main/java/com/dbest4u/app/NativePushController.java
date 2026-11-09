@@ -60,11 +60,15 @@ public final class NativePushController {
         accountBinding = new NativeAccountBinding(activity, webView);
         button = new Button(activity);
         button.setAllCaps(false);
-        button.setTextSize(12);
+        button.setTextSize(21);
+        // Compact 48dp native toggle preserves service tiles and footer content.
+        button.setMinWidth(dp(48));
+        button.setMinimumWidth(dp(48));
+        button.setPadding(0, 0, 0, 0);
         button.setTextColor(Color.WHITE);
         button.setBackgroundTintList(ColorStateList.valueOf(0xFF526079));
         FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.WRAP_CONTENT, dp(48), Gravity.BOTTOM | Gravity.START);
+                dp(48), dp(48), Gravity.BOTTOM | Gravity.START);
         lp.setMargins(dp(12), 0, dp(12), dp(14));
         root.addView(button, lp);
         // This button is purposefully visible only on DBest's member home.
@@ -86,7 +90,11 @@ public final class NativePushController {
 
     private void updateButton() {
         boolean enabled=isEnabled() && permissionGranted();
-        button.setText(enabled ? "🔔 Test alerts ON" : "🔕 Test alerts OFF");
+        button.setText(enabled ? "🔔" : "🔕");
+        button.setContentDescription(enabled
+                ? "DBest test notifications ON. Double tap for notification options."
+                : "DBest test notifications OFF. Double tap to enable testing.");
+        button.setTooltipText(enabled ? "Notifications ON (QA)" : "Notifications OFF (QA)");
         button.setBackgroundTintList(ColorStateList.valueOf(enabled ? 0xFF18784B : 0xFF465B78));
     }
 
