@@ -37,6 +37,13 @@ final class NativeAccountBinding {
         "https://ydedmotbacnllkijzmvp.supabase.co/functions/v1/native-fcm-register";
     private static final String SESSION_SCRIPT =
         "(function(){try{return localStorage.getItem('dbest_member_live_token')||''}catch(e){return ''}})();";
+    // DBest logout is an SPA action: it changes d2_session without a WebView
+    // navigation, and may leave the member token in localStorage. Checking the
+    // token alone therefore cannot establish whether the user is signed in.
+    private static final String MEMBER_VISIBLE_SCRIPT =
+        "(function(){try{var s=JSON.parse(localStorage.getItem('d2_session')||'{}');"
+        + "return !!(s&&s.id&&['starter','guest','promoter','prime','leader']."
+        + "includes(String(s.role||'').toLowerCase()));}catch(e){return false}})()";
     private final Activity activity;
     private final WebView webView;
     private final ExecutorService requests = Executors.newSingleThreadExecutor();
@@ -167,6 +174,31 @@ final class NativeAccountBinding {
             .show();
     }
 
+    boolean hasAccountBinding() {
+        return activity.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                .getBoolean("bound", false);
+    }
+
+    // Called by the Android foreground monitor, not the DBest website.
+    // It also detects in-page logout and account switching without reloading.
+    void checkAccountContinuity(Runnable onMismatch) {
+        if (!hasAccountBinding() || !trustedPage()) return;
+        webView.evaluateJavascript(MEMBER_VISIBLE_SCRIPT, raw -> {
+            if (!hasAccountBinding()) return;
+            if (!"true".equalsIgnoreCase(String.valueOf(raw).trim())) {
+                onMismatch.run();
+                return;
+            }
+            readSession(current -> {
+                if (!hasAccountBinding()) return;
+                String boundHash = activity.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                        .getString("session_hash", "");
+                if (current.isEmpty() || boundHash.isEmpty()
+                        || !boundHash.equals(fingerprint(current))) onMismatch.run();
+            });
+        });
+    }
+
     void revokeAndThen(Runnable done) {
         final boolean bound = activity.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .getBoolean("bound", false);
@@ -176,13 +208,18 @@ final class NativeAccountBinding {
             final String session = remembered != null && !remembered.isEmpty() ? remembered : current;
             requests.execute(() -> {
                 final boolean revoked = !session.isEmpty() && request("unregister", session, null);
-                // Token deletion by the caller invalidates the FCM token even
-                // if DBest's session has already expired before revocation.
-                sessionInMemory = null;
-                activity.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-                    .edit().putBoolean("bound", false).remove("session_hash").apply();
+                // Always delete the FCM token locally (caller). Do not claim
+                // backend revocation if the unregister request failed.
+                // Retain in-memory authorization and pending binding state so
+                // the QA foreground monitor can retry without false success.
+                if (revoked) {
+                    sessionInMemory = null;
+                    activity.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                        .edit().putBoolean("bound", false).remove("session_hash").apply();
+                } else {
+                    ui("Test alerts OFF locally; server revocation pending. Keep QA app open.");
+                }
                 activity.runOnUiThread(done);
-                if (!revoked) ui("DBest session no longer available; Firebase token deletion protects this phone.");
             });
         };
         if (remembered != null) revoke.accept(remembered);
