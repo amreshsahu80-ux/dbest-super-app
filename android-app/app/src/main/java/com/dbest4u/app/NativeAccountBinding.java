@@ -200,14 +200,24 @@ final class NativeAccountBinding {
 
     // Called by the Android foreground monitor, not the DBest website.
     // It also detects in-page logout and account switching without reloading.
-    void checkAccountContinuity(Runnable onMismatch) {
-        if (!hasAccountBinding() || !trustedPage()) return;
+    // A WebView reload briefly hides localStorage while its document is
+    // starting up. That is not evidence of logout or account switching.
+    // The controller confirms consecutive mismatches on a loaded trusted page.
+    void checkAccountContinuity(Runnable onMismatch, Runnable onMatch) {
+        if (!hasAccountBinding() || !trustedPage() || webView.getProgress() < 100) {
+            onMatch.run(); // Discard incomplete / interrupted observations.
+            return;
+        }
         readActiveSession(current -> {
-            if (!hasAccountBinding()) return;
+            if (!hasAccountBinding() || !trustedPage() || webView.getProgress() < 100) {
+                onMatch.run();
+                return;
+            }
             String boundHash = activity.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
                     .getString("session_hash", "");
             if (current.isEmpty() || boundHash.isEmpty()
                     || !boundHash.equals(fingerprint(current))) onMismatch.run();
+            else onMatch.run();
         });
     }
 
