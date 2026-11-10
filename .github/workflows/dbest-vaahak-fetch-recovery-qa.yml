@@ -1,0 +1,39 @@
+name: Vaahak dashboard fetch recovery QA
+on:
+  push:
+    branches: [fix/vaahak-dashboard-fetch-recovery-qa-20261111]
+    paths:
+      - vaahak-standalone-v2.html
+      - .github/workflows/dbest-vaahak-fetch-recovery-qa.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  safe-recovery:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check JavaScript syntax and read-only retry path
+        run: |
+          node - <<'NODE'
+          const assert=require('node:assert/strict');
+          const fs=require('node:fs');
+          const vm=require('node:vm');
+          const html=fs.readFileSync('vaahak-standalone-v2.html','utf8');
+          const scripts=[...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)]
+            .filter(m=>!/\bsrc\s*=/.test(m[1])).map(m=>m[2]).filter(x=>x.trim());
+          assert(scripts.length>0,'Expected inline Vaahak script');
+          scripts.forEach((s,i)=>new vm.Script(s,{filename:'vaahak-inline-'+i+'.js'}));
+          assert(html.includes('async function loadStatus(force=false)'), 'Dashboard loader missing');
+          assert(html.includes('vaahakDashboardNetworkFailures'), 'Bounded retry counter missing');
+          assert(html.includes('timer=setTimeout(()=>loadStatus(false),delay)'), 'Safe retry missing');
+          assert(html.includes('clearVaahakDashboardNetworkWarning()'), 'Success cleanup missing');
+          assert(html.includes("await comCall('dashboard_status',{},true)"), 'Read-only dashboard request missing');
+          assert(html.includes("await dispatchCall('my_offer',{},true)"), 'Read-only offer lookup missing');
+          assert(html.includes("note('Session expired. Please login again.'"), 'Authentication failure path missing');
+          assert(html.includes("const delay=Math.min(12000"), 'Retry must be capped');
+          console.log('PASS: Vaahak inline JS syntax and bounded read-only retry checks');
+          NODE
