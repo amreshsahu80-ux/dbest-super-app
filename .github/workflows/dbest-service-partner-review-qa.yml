@@ -1,0 +1,45 @@
+name: DBest Service Partner QA review and pending logout
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'qa/service-partner-review-access-and-pending-logout-20261111'
+    paths:
+      - 'service-partner-onboarding-v3.html'
+      - '.github/workflows/dbest-service-partner-review-qa.yml'
+  pull_request:
+    paths:
+      - 'service-partner-onboarding-v3.html'
+permissions:
+  contents: read
+jobs:
+  review-privacy-and-session-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Static route, sign-out and script syntax checks
+        run: |
+          node - <<'NODE'
+          const fs=require('fs'),vm=require('vm'),assert=require('assert');
+          const html=fs.readFileSync('service-partner-onboarding-v3.html','utf8');
+          const has=s=>assert(html.includes(s),'Missing safe QA invariant: '+s);
+          has('id="reviewPinCard"');
+          has("reviewRequested=new URLSearchParams(location.search).get('review')==='1'");
+          has("body:not(.spReviewAccess) #reviewPinHome");
+          has("body:not(.spReviewAccess) #reviewPinBtn");
+          has("document.body.classList.add('spReviewAccess')");
+          has("id=\"successSignOut\"");
+          has("await partnerApi({action:'signout'},true)");
+          has("Sign out of Service Partner account");
+          has("DBest Owner approval and payment reconciliation");
+          has("id=\"reviewLogout\"");
+          has("service-partner-review-login");
+          const scripts=[...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)]
+            .filter(m=>!m[1].includes('src=')).map(m=>m[2].trim()).filter(Boolean);
+          assert(scripts.length>0,'No inline JavaScript to parse');
+          scripts.forEach((code,i)=>new vm.Script(code,{filename:'inline-script-'+i+'.js'}));
+          console.log('PASS: privacy, pending sign-out, reviewer deep link, and inline JavaScript syntax');
+          NODE
