@@ -1,8 +1,10 @@
-plugins { id 'com.android.application' }
+plugins { id 'com.android.application'; id 'com.google.gms.google-services' }
 
 android {
     namespace 'com.dbest4u.app'
     compileSdk 36
+
+    buildFeatures { buildConfig true }
 
     defaultConfig {
         applicationId 'com.dbest4u.app'
@@ -15,13 +17,16 @@ android {
     dependencies {
         implementation 'androidx.activity:activity:1.11.0'
         implementation 'androidx.core:core:1.17.0'
+        implementation platform('com.google.firebase:firebase-bom:35.1.0')
+        implementation 'com.google.firebase:firebase-messaging'
     }
 
     buildTypes {
         // Separate QA installation: never replace the Play-signed public app.
         debug {
-            applicationIdSuffix '.qa'
-            versionNameSuffix '-qa'
+            // Existing Firebase test app registration; never overwrite production.
+            applicationIdSuffix '.test'
+            versionNameSuffix '-push-qa'
         }
         release {
             minifyEnabled false

@@ -54,6 +54,7 @@ public class MainActivity extends ComponentActivity {
             "(function(){try{return document.querySelectorAll('.tile').length>=10;}"
             + "catch(e){return false}})()";
     private WebView webView;
+    private NativePushController nativePush;
     private ValueCallback<Uri[]> fileCallback;
     private GeolocationPermissions.Callback geoCallback;
     private String geoOrigin;
@@ -80,6 +81,8 @@ public class MainActivity extends ComponentActivity {
             return windowInsets;
         });
         setContentView(root);
+        // QA-only FCM consent control; ON indicates device test readiness, not live delivery.
+        nativePush = new NativePushController(this, root, webView);
 
         WebSettings s = webView.getSettings();
         s.setJavaScriptEnabled(true);
@@ -113,6 +116,7 @@ public class MainActivity extends ComponentActivity {
                 super.onPageFinished(view, url);
                 if (url != null && "https".equalsIgnoreCase(Uri.parse(url).getScheme()) && isDbest(Uri.parse(url))) {
                     DbestAccountSettings.install(view);
+                    if (nativePush != null) view.postDelayed(() -> nativePush.refreshVisibility(), 900);
                     // index.html loads its application markup asynchronously.
                     // Retry only during bootstrap; the scoped observer then
                     // watches only the account/profile overlay (#m).
@@ -299,6 +303,11 @@ public class MainActivity extends ComponentActivity {
 
     @Override public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] results) {
         super.onRequestPermissionsResult(requestCode, permissions, results);
+        if (requestCode == NativePushController.PERMISSION_REQUEST && nativePush != null) {
+            boolean granted = results.length > 0 && results[0] == PackageManager.PERMISSION_GRANTED;
+            nativePush.onPermissionResult(granted);
+            return;
+        }
         if (requestCode == LOCATION_REQUEST && geoCallback != null) {
             boolean granted = results.length > 0 && results[0] == PackageManager.PERMISSION_GRANTED;
             geoCallback.invoke(geoOrigin, granted, false);
@@ -320,7 +329,18 @@ public class MainActivity extends ComponentActivity {
         super.onSaveInstanceState(outState);
     }
 
+    @Override protected void onResume() {
+        super.onResume();
+        if (nativePush != null) nativePush.startSessionMonitor();
+    }
+
+    @Override protected void onPause() {
+        if (nativePush != null) nativePush.stopSessionMonitor();
+        super.onPause();
+    }
+
     @Override protected void onDestroy() {
+        if (nativePush != null) nativePush.shutdown();
         if (webView != null) {
             webView.destroy();
             webView = null;

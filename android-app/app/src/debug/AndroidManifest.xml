@@ -1,6 +1,12 @@
-<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
           xmlns:tools="http://schemas.android.com/tools">
-    <application android:label="DBest QA"
-                 tools:replace="android:label" />
+    <application android:label="DBest Push QA" tools:replace="android:label">
+        <!-- Test package must not claim public dbest4u.com app links. -->
+        <activity android:name=".MainActivity" android:exported="true" tools:node="replace">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
 </manifest>
