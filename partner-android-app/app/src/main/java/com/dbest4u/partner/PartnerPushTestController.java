@@ -135,6 +135,15 @@ public final class PartnerPushTestController {
         }
         accountBinding.connectWithConsent();
     }
+    public void testSyntheticBusinessEvent() {
+        if (!on() || !permission()) {
+            Toast.makeText(activity,
+                "Enable Partner QA notifications and link the current account first.",
+                Toast.LENGTH_LONG).show();
+            return;
+        }
+        accountBinding.testSyntheticEventWithConsent();
+    }
     public void onWorkspaceSelected(String role) {
         if (accountBinding.isBoundToDifferentRole(role)) {
             Toast.makeText(activity,"Switching partner workspace: revoking previous alert registration.",Toast.LENGTH_LONG).show();

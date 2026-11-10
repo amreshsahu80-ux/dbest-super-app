@@ -386,11 +386,20 @@ public final class MainActivity extends ComponentActivity {
     private void showAccountSettings() {
         new android.app.AlertDialog.Builder(this)
             .setTitle("Account & Privacy")
-            .setItems(new String[]{"Request account deletion", "Deletion instructions", "Reviewer access (QA only)"},
+            .setItems(showingBrowser && (
+                        "Vendor".equals(currentRole) ||
+                        "Vaahak".equals(currentRole) ||
+                        "Service Partner".equals(currentRole))
+                    ? new String[]{"Request account deletion", "Deletion instructions",
+                        "Reviewer access (QA only)", "Simulated event notification (QA only)"}
+                    : new String[]{"Request account deletion", "Deletion instructions",
+                        "Reviewer access (QA only)"},
                 (dialog, which) -> {
                     if (which == 0) showAccountDeletion();
                     else if (which == 1) openExternal(Uri.parse("https://dbest4u.com/data-deletion"));
-                    else showReviewerQaNotice();
+                    else if (which == 2) showReviewerQaNotice();
+                    else if (which == 3 && partnerTestPush != null)
+                        partnerTestPush.testSyntheticBusinessEvent();
                 })
             .setNegativeButton("Close", null)
             .show();
