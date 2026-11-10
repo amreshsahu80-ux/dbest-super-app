@@ -299,7 +299,8 @@ public final class NativePushController {
         if (home) {
             webView.evaluateJavascript("document.body.classList.add('dbestNativeDock')", null);
             refreshWhatsAppProxy();
-            accountBinding.checkAccountContinuity(() -> revokeForSessionChange());
+            // Foreground session monitor owns continuity checks; do not make a
+            // second immediate check while the WebView is changing visibility.
         } else {
             whatsappProxy.setVisibility(View.INVISIBLE);
         }
