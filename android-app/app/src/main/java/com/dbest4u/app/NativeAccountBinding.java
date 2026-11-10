@@ -176,7 +176,7 @@ final class NativeAccountBinding {
             return new JSONObject(response.toString());
         } catch (Exception ignored) {
             // Deliberately avoid printing session or device tokens.
-            return false;
+            return null;
         } finally {
             if (connection != null) connection.disconnect();
         }
