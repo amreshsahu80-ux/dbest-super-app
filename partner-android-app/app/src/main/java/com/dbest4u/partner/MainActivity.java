@@ -113,6 +113,12 @@ public final class MainActivity extends ComponentActivity {
         TextView partner = txt("PARTNER\nNETWORK", 11, BLUE, true);
         partner.setGravity(Gravity.RIGHT | Gravity.CENTER_VERTICAL);
         brand.addView(partner);
+        spaceWidth(brand, dp(8));
+        Button privacyMenu = button("⋮", NAVY, 0xFFF0F4FB);
+        privacyMenu.setContentDescription("Account & Privacy");
+        privacyMenu.setTextSize(23);
+        privacyMenu.setOnClickListener(v -> showAccountSettings());
+        brand.addView(privacyMenu, new LinearLayout.LayoutParams(dp(44), dp(48)));
         page.addView(brand);
         space(page, 12);
 
@@ -164,10 +170,8 @@ public final class MainActivity extends ComponentActivity {
         space(footer, 4);
         footer.addView(txt("Tap Open workspace for your category. Your login and approvals stay with the existing DBest portal.", 12, 0xFF536780, false));
         page.addView(footer);
-        space(page, 12);
-        Button deleteAccount = button("Request account deletion", BLUE, 0xFFEAF0FF);
-        deleteAccount.setOnClickListener(v -> showAccountDeletion());
-        page.addView(deleteAccount, new LinearLayout.LayoutParams(-1, dp(48)));
+        // Account deletion stays accessible via the Account & Privacy menu,
+        // not as a prominent button on the Partner home screen.
         space(page, 18);
         TextView legal = txt("DBest Partner • Pilot 0.2.0", 11, 0xFF8B98AB, false);
         legal.setGravity(Gravity.CENTER);
@@ -256,14 +260,14 @@ public final class MainActivity extends ComponentActivity {
         Button home = button("Home", BLUE, 0xFFEAF0FF);
         home.setOnClickListener(v -> showHome());
         bar.addView(home, new LinearLayout.LayoutParams(dp(78), dp(46)));
+        // All Partner roles use the same privacy menu; never show
+        // account-deletion copy inside the public-facing workspace header.
+        Button privacy = button("⋮", NAVY, 0xFFF0F4FB);
+        privacy.setTextSize(23);
+        privacy.setContentDescription("Account & Privacy");
+        privacy.setOnClickListener(v -> showAccountSettings());
+        bar.addView(privacy, new LinearLayout.LayoutParams(dp(44), dp(46)));
         shell.addView(bar);
-        // Shared native entry covers Vendor, Vaahak and Service Partner views.
-        TextView accountDeletion = txt("Request account deletion", 12, BLUE, true);
-        accountDeletion.setGravity(Gravity.RIGHT | Gravity.CENTER_VERTICAL);
-        accountDeletion.setPadding(dp(14), dp(4), dp(16), dp(4));
-        accountDeletion.setContentDescription("Request deletion of your DBest Partner account");
-        accountDeletion.setOnClickListener(v -> showAccountDeletion());
-        shell.addView(accountDeletion, new LinearLayout.LayoutParams(-1, dp(45)));
 
         webView = new WebView(this);
         webView.setBackgroundColor(Color.WHITE);
@@ -361,6 +365,20 @@ public final class MainActivity extends ComponentActivity {
         String host = u.getHost();
         return host != null && (host.equalsIgnoreCase("dbest4u.com")
                 || host.equalsIgnoreCase("www.dbest4u.com"));
+    }
+
+    // Keep account removal discoverable, but only in a deliberate menu,
+    // matching DBest Main's Account & Privacy interaction.
+    private void showAccountSettings() {
+        new android.app.AlertDialog.Builder(this)
+            .setTitle("Account & Privacy")
+            .setItems(new String[]{"Request account deletion", "Deletion instructions"},
+                (dialog, which) -> {
+                    if (which == 0) showAccountDeletion();
+                    else openExternal(Uri.parse("https://dbest4u.com/data-deletion"));
+                })
+            .setNegativeButton("Close", null)
+            .show();
     }
 
     // Request-only: never mutate account or delete partner data in the app.
