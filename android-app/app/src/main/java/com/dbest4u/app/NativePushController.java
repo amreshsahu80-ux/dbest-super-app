@@ -18,6 +18,9 @@ import android.view.View;
 import android.webkit.WebView;
 import android.widget.Button;
 import android.widget.FrameLayout;
+import android.widget.LinearLayout;
+import android.widget.Space;
+import android.graphics.drawable.GradientDrawable;
 import android.widget.Toast;
 
 import androidx.core.app.ActivityCompat;
@@ -37,6 +40,8 @@ public final class NativePushController {
     private final Activity activity;
     private final WebView webView;
     private final Button button;
+    private final Button whatsappProxy;
+    private final LinearLayout dock;
     private final boolean firebaseReady;
     private final NativeAccountBinding accountBinding;
     private final Handler sessionHandler = new Handler(Looper.getMainLooper());
@@ -49,6 +54,7 @@ public final class NativePushController {
             if (!sessionMonitorRunning) return;
             if (accountBinding != null && accountBinding.hasAccountBinding())
                 accountBinding.checkAccountContinuity(() -> revokeForSessionChange());
+            if (isTrustedHome()) refreshWhatsAppProxy();
             sessionHandler.postDelayed(this, 1500L);
         }
     };
@@ -58,22 +64,52 @@ public final class NativePushController {
         this.webView = webView;
         firebaseReady = initializeFirebase();
         accountBinding = new NativeAccountBinding(activity, webView);
+        // A dedicated QA control dock reserves space BELOW the WebView.
+        // This avoids covering service tiles, footer links or the D-U-N-S seal.
+        dock = new LinearLayout(activity);
+        dock.setOrientation(LinearLayout.HORIZONTAL);
+        dock.setGravity(Gravity.CENTER_VERTICAL);
+        dock.setPadding(dp(12), 0, dp(12), 0);
+        GradientDrawable dockBg = new GradientDrawable();
+        dockBg.setColor(0xFFF6F8FC);
+        dockBg.setStroke(dp(1), 0xFFE0E7F1);
+        dock.setBackground(dockBg);
+        FrameLayout.LayoutParams dockLp = new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT, dp(64), Gravity.BOTTOM);
+        root.addView(dock, dockLp);
+        dock.setVisibility(View.GONE);
+
         button = new Button(activity);
         button.setAllCaps(false);
         button.setTextSize(21);
-        // Compact 48dp native toggle preserves service tiles and footer content.
         button.setMinWidth(dp(48));
         button.setMinimumWidth(dp(48));
         button.setPadding(0, 0, 0, 0);
         button.setTextColor(Color.WHITE);
         button.setBackgroundTintList(ColorStateList.valueOf(0xFF526079));
-        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(
-                dp(48), dp(48), Gravity.BOTTOM | Gravity.START);
-        lp.setMargins(dp(12), 0, dp(12), dp(14));
-        root.addView(button, lp);
-        // This button is purposefully visible only on DBest's member home.
-        button.setVisibility(View.GONE);
+        dock.addView(button, new LinearLayout.LayoutParams(dp(48), dp(48)));
         button.setOnClickListener(v -> onTap());
+
+        // Native Android-only proxy activates the EXISTING website's
+        // WhatsApp opt-in/opt-out button. No new backend operation or token.
+        Space gap = new Space(activity);
+        dock.addView(gap, new LinearLayout.LayoutParams(0, dp(1), 1.0f));
+        whatsappProxy = new Button(activity);
+        whatsappProxy.setText("WA");
+        whatsappProxy.setAllCaps(false);
+        whatsappProxy.setTextSize(13);
+        whatsappProxy.setTextColor(Color.WHITE);
+        whatsappProxy.setPadding(0, 0, 0, 0);
+        whatsappProxy.setBackgroundTintList(ColorStateList.valueOf(0xFF128C7E));
+        whatsappProxy.setContentDescription("DBest WhatsApp notification preferences");
+        dock.addView(whatsappProxy, new LinearLayout.LayoutParams(dp(48), dp(48)));
+        whatsappProxy.setVisibility(View.INVISIBLE);
+        whatsappProxy.setOnClickListener(v -> {
+            if (!isTrustedHome()) return;
+            webView.evaluateJavascript(
+                "(function(){var w=document.getElementById('dbestWhatsAppEnable');"
+                + "if(w)w.click();})()", null);
+        });
         updateButton();
     }
 
@@ -195,21 +231,53 @@ public final class NativePushController {
             }));
     }
 
-    public void refreshVisibility() {
-        String url = webView == null ? null : webView.getUrl();
-        boolean dbestHome=false;
+    private boolean isTrustedHome() {
         try {
-            android.net.Uri uri=android.net.Uri.parse(url==null?"":url);
-            dbestHome="https".equalsIgnoreCase(uri.getScheme()) &&
-                    ("dbest4u.com".equalsIgnoreCase(uri.getHost()) ||
-                     "www.dbest4u.com".equalsIgnoreCase(uri.getHost())) &&
-                    (uri.getPath()==null || "/".equals(uri.getPath()));
-        }catch(Exception ignored){}
-        // Test mode is independent of login; it never registers production
-        // DBest session tokens. Keep it on home only to avoid covering checkout.
-        button.setVisibility(dbestHome ? View.VISIBLE : View.GONE);
+            android.net.Uri uri = android.net.Uri.parse(String.valueOf(webView.getUrl()));
+            return "https".equalsIgnoreCase(uri.getScheme())
+                    && ("dbest4u.com".equalsIgnoreCase(uri.getHost())
+                        || "www.dbest4u.com".equalsIgnoreCase(uri.getHost()))
+                    && (uri.getPath() == null || "/".equals(uri.getPath()));
+        } catch (Exception ignored) { return false; }
+    }
+
+    private void refreshWhatsAppProxy() {
+        if (!isTrustedHome()) return;
+        webView.evaluateJavascript(
+            "(function(){var b=document.getElementById('dbestWhatsAppEnable');"
+            + "return b ? (String(b.textContent||'').includes('ON')?'on':'off') : 'none';})()",
+            raw -> {
+                if (!isTrustedHome()) return;
+                boolean exists = "\"on\"".equals(raw) || "\"off\"".equals(raw);
+                whatsappProxy.setVisibility(exists ? View.VISIBLE : View.INVISIBLE);
+                if (exists) {
+                    boolean waOn = "\"on\"".equals(raw);
+                    whatsappProxy.setContentDescription(waOn
+                        ? "DBest WhatsApp alerts ON. Open preferences."
+                        : "DBest WhatsApp alerts OFF. Open preferences.");
+                    whatsappProxy.setBackgroundTintList(ColorStateList.valueOf(
+                        waOn ? 0xFF128C7E : 0xFF25D366));
+                }
+            });
+    }
+
+    public void refreshVisibility() {
+        boolean home = isTrustedHome();
+        dock.setVisibility(home ? View.VISIBLE : View.GONE);
+        FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) webView.getLayoutParams();
+        int margin = home ? dp(64) : 0;
+        if (lp.bottomMargin != margin) {
+            lp.bottomMargin = margin;
+            webView.setLayoutParams(lp);
+        }
+        if (home) {
+            webView.evaluateJavascript("document.body.classList.add('dbestNativeDock')", null);
+            refreshWhatsAppProxy();
+            accountBinding.checkAccountContinuity(() -> revokeForSessionChange());
+        } else {
+            whatsappProxy.setVisibility(View.INVISIBLE);
+        }
         updateButton();
-        if (dbestHome) accountBinding.checkAccountContinuity(() -> revokeForSessionChange());
     }
 
     // The website's logout() changes localStorage without a WebView
