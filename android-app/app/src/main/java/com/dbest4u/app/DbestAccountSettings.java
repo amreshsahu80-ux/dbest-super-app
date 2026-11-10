@@ -22,7 +22,7 @@ final class DbestAccountSettings {
       // and accessible label while avoiding the persistent large footer overlay.
       + "if(!document.getElementById('dbestAndroidFloatersStyle')){"
       + "var style=document.createElement('style');style.id='dbestAndroidFloatersStyle';"
-      + "style.textContent='#dbestWhatsAppEnable{width:48px!important;min-width:48px!important;height:48px!important;min-height:48px!important;padding:0!important;font-size:0!important;overflow:hidden!important;}#dbestWhatsAppEnable::after{content:\\'WA\\';font:800 13px system-ui;color:#fff;}';"
+      + "style.textContent='body.dbestNativeDock #dbestWhatsAppEnable{visibility:hidden!important;pointer-events:none!important;}#dbestWhatsAppEnable{width:48px!important;min-width:48px!important;height:48px!important;min-height:48px!important;padding:0!important;font-size:0!important;overflow:hidden!important;}#dbestWhatsAppEnable::after{content:\\'WA\\';font:800 13px system-ui;color:#fff;}';"
       + "(document.head||document.documentElement).appendChild(style);}"
       + "if(window.__dbestAndroidAccountPrivacyInstalled)return;"
       + "var mount=document.getElementById('m');if(!mount)return;"
