@@ -89,3 +89,15 @@ These are observations from user-supplied screenshots and controlled Firebase Co
 - Native dock is shown only on the trusted DBest home URL; it is hidden for other in-app routes so checkout receives full screen space.
 - **Required device QA:** first install, logged-in versus signed-out display, WA consent prompts, ON/OFF, screen rotation, narrow screens, keyboard, scroll to bottom of D-U-N-S seal, checkout, nested account/profile screens, and native notifications after logout.
 - This draft is not approved for production simply because Gradle passes.
+
+## Final account-switch and performance QA review — 10 Nov 2026
+- Reduced Android-only WhatsApp status polling to every 5 seconds while unbound, keeping 1.5-second continuity checks only when member FCM is bound. This is a *polling reduction*, not a verified startup speed improvement.
+- Registration now requires both a current member role in `d2_session` and a member live token in the **same** WebView evaluation. It no longer accepts a cached member token after logout.
+- Connecting another account while an earlier device binding remains active/pending is blocked; existing member must complete revocation before switching registration.
+- Existing Supabase `native-fcm-register` endpoint authenticates hashed app sessions, scopes unregister to recipient/app/installation, and removes duplicate FCM token registrations across recipients when registering. The backend does **not** currently guarantee revocation if the previous session expires, or if the QA app is uninstalled/offline before revocation completes.
+- Read-only DB aggregate on 10 Nov still showed one enabled **older QA registration**, last seen 2 Nov, and no production main-app registrations. Do not interpret this as proof any particular member device is still bound; avoid automatic deletion of unmatched rows without a reviewed cleanup policy.
+- [ ] Physical A→B account-switch check with *two authorized test accounts*: enable+bind as A, logout, verify automatic OFF and backend revoke; sign into B, verify prior A does not receive a targeted notification; re-enable+bind as B only after A unlinked.
+- [ ] Temporarily offline logout, server revoke retry, terminated-app restart, expired session behavior
+- [ ] Cold-start and warm-start performance screenshots: QA menu > Account & Privacy > Performance diagnostics (QA), compare `Service tiles ready`, load times and resource entries; reproduce on similar network. Record time from app launch to usable home, not only initial WebView frame.
+- [ ] Physical footer scroll (About/Contact/Terms, D-U-N-S) and dock remain visible without overlapping checkout.
+- [ ] QA release must not activate production FCM sender or reach a Play Store production release without owner approval.
