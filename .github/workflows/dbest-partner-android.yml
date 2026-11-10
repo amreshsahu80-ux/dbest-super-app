@@ -6,6 +6,7 @@ on:
     branches:
       - 'feat/dbest-partner-android-pilot-20261029'
       - 'feat/dbest-partner-fcm-account-binding-20261102'
+      - 'qa/partner-fcm-deletion-build-candidate-20261110'
     paths:
       - 'partner-android-app/**'
       - '.github/workflows/dbest-partner-android.yml'
