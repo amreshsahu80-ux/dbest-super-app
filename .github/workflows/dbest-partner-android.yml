@@ -9,6 +9,7 @@ on:
       - 'qa/partner-fcm-deletion-build-candidate-20261110'
       - 'qa/partner-side-by-side-ui-isolated-20261110'
       - 'qa/partner-fcm-isolated-config-20261110'
+      - 'qa/partner-android-reviewer-deeplink-20261111'
     paths:
       - 'partner-android-app/**'
       - '.github/workflows/dbest-partner-android.yml'
@@ -60,6 +61,17 @@ jobs:
           assert qa[0]["client_info"]["mobilesdk_app_id"]=="1:905212518251:android:9c20528a318acf11d7b62e"
           print("Isolated Partner Firebase Android client matches user-supplied configuration")
           PY
+      - name: Verify reviewer route hidden from main UI and HTTPS QA host pinned
+        run: |
+          java=app/src/main/java/com/dbest4u/partner/MainActivity.java
+          grep -q 'Reviewer access (QA only)' "$java"
+          grep -q 'private boolean isQaReview' "$java"
+          grep -q 'dbest-super-5ey64ubmn-db-est.vercel.app' "$java"
+          grep -q '"1".equals(url.getQueryParameter("review"))' "$java"
+          if grep -q 'Google Play reviewer sign-in' "$java"; then
+            echo "::error::Customer-facing reviewer button must remain absent"
+            exit 1
+          fi
       - name: Build partner debug APK and unsigned release AAB
         run: gradle :app:assembleDebug :app:bundleRelease
       - name: Upload installable debug APK
