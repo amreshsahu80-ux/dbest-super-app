@@ -238,11 +238,51 @@ async function loadNearbyPlaces(lat,lng){
  const rail=$('cab6NearbyRail');if(!rail)return;
  if(!Number.isFinite(lat)||!Number.isFinite(lng)){rail.textContent='Select a pickup location to see nearby places.';return}
  const requestId=String(Date.now())+'-'+Math.random();rail.dataset.requestId=requestId;
- const render=rows=>{if(!rail.isConnected||rail.dataset.requestId!==requestId)return;
-  const distance=p=>Math.hypot((p.lat-lat)*111.2,(p.lng-lng)*111.2*Math.cos(lat*Math.PI/180));rows=[...rows].sort((a,b)=>cabPlacePriority(a)-cabPlacePriority(b)||distance(a)-distance(b));
-  if(!rows.length){rail.innerHTML='<div style="padding:12px;color:#687386;font-size:12px">Nearby places are unavailable right now. You can enter a destination above.</div>';return}
-  rail.innerHTML=rows.slice(0,8).map(p=>'<button type="button" class="cab6Place" data-place="'+esc(p.name)+'" data-lat="'+p.lat+'" data-lng="'+p.lng+'">'+(p.photo?'<img class="cab6PlacePhoto" alt="" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;border-radius:inherit;z-index:0" onerror="this.style.display=\'none\'" src="'+esc(p.photo)+'">':'')+'<span style="position:absolute;bottom:12px;left:12px;right:8px;z-index:2;color:white;font-weight:700;text-shadow:0 1px 4px #000">'+esc(p.name)+'</span>'+(p.attribution?'<small class="cab6PhotoCredit" style="position:absolute;top:6px;right:6px;left:6px;z-index:2;font-size:9px;color:white;text-align:right;text-shadow:0 1px 4px #000;pointer-events:none">Photo: '+esc(p.attribution)+'</small>':'')+'</button>').join('');
-  qa('.cab6Place',rail).forEach(btn=>btn.onclick=()=>{const d=$('cab6D');if(!d)return;d.value=btn.dataset.place;S.d={label:d.value,lat:Number(btn.dataset.lat),lng:Number(btn.dataset.lng)};$('cab6DS')?.classList.remove('show')});
+ const nearbyCombined=[];
+ const nearbyKey=p=>String(p.name||'').split(',')[0].normalize('NFKC').toLocaleLowerCase('en').replace(/[^\p{L}\p{N}]+/gu,' ').trim();
+ const placeMatches=(a,b)=>nearbyKey(a)===nearbyKey(b)&&cabDistanceKm(a,b)<=0.5;
+ const render=rows=>{
+  if(!rail.isConnected||rail.dataset.requestId!==requestId)return false;
+  const distance=p=>cabDistanceKm({lat,lng},p);
+  for(const p of rows||[]){
+   if(!p||!Number.isFinite(p.lat)||!Number.isFinite(p.lng)||!cabPublicPlace(p.name,p.types||[])||distance(p)>15)continue;
+   const idx=nearbyCombined.findIndex(old=>placeMatches(old,p));
+   if(idx<0)nearbyCombined.push({...p});
+   else{
+    const prior=nearbyCombined[idx];
+    const oldHasPhoto=!!prior.photo,newHasPhoto=!!p.photo;
+    nearbyCombined[idx]={...prior,...p,
+      photo:newHasPhoto?p.photo:prior.photo,
+      attribution:newHasPhoto?String(p.attribution||''):String(prior.attribution||''),
+      types:(p.types?.length?p.types:prior.types)||[]};
+    if(oldHasPhoto&&!newHasPhoto){
+      nearbyCombined[idx].photo=prior.photo;
+      nearbyCombined[idx].attribution=prior.attribution||'';
+    }
+   }
+  }
+  if(!nearbyCombined.length)return false;
+  const ordered=[...nearbyCombined].sort((a,b)=>
+   cabPlacePriority(a)-cabPlacePriority(b)||distance(a)-distance(b)).slice(0,8);
+  rail.innerHTML=ordered.map((p,i)=>{
+   const icon=cabPlacePriority(p)===0?'🏥':cabPlacePriority(p)===1?'🚉':cabPlacePriority(p)===2?'🚌':
+     cabPlacePriority(p)===3?'✈️':cabPlacePriority(p)===4?'🎓':cabPlacePriority(p)===5?'🌳':'📍';
+   const credit=p.photo&&p.attribution?
+     '<small class="cab6PhotoCredit" style="position:absolute;top:6px;right:6px;left:6px;z-index:2;font-size:9px;color:white;text-align:right;text-shadow:0 1px 4px #000;pointer-events:none">Photo: '+esc(p.attribution)+'</small>':'';
+   const img=p.photo?
+     '<img class="cab6PlacePhoto" src="'+esc(p.photo)+'" alt="" loading="'+(i<3?'eager':'lazy')+'" decoding="async" onerror="this.style.display=\'none\';this.parentElement.querySelector(\'.cab6PhotoCredit\')?.remove()" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;border-radius:inherit;z-index:0">':'';
+   return '<button type="button" class="cab6Place" data-place="'+esc(p.name)+
+     '" data-lat="'+p.lat+'" data-lng="'+p.lng+'">'+
+     '<span class="cab6PhotoFallback" aria-hidden="true" style="position:absolute;top:13px;left:13px;z-index:1;font-size:24px">'+icon+'</span>'+
+     img+'<span style="position:absolute;bottom:12px;left:12px;right:8px;z-index:2;color:white;font-weight:700;text-shadow:0 1px 4px #000">'+esc(p.name)+'</span>'+credit+'</button>';
+  }).join('');
+  qa('.cab6Place',rail).forEach(btn=>btn.onclick=()=>{
+   const d=$('cab6D');if(!d)return;
+   d.value=btn.dataset.place;
+   S.d={label:d.value,lat:Number(btn.dataset.lat),lng:Number(btn.dataset.lng)};
+   $('cab6DS')?.classList.remove('show');
+  });
+  return true;
  };
  const browserGoogleNearby=async()=>{
   await initSearchProvider();
