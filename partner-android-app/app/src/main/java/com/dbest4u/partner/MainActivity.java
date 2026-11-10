@@ -39,6 +39,10 @@ import androidx.core.view.WindowInsetsCompat;
 
 public final class MainActivity extends ComponentActivity {
     private static final String ORIGIN = "https://dbest4u.com";
+    // QA-only, immutable preview; NEVER ship this Vercel hostname in Play production.
+    private static final String REVIEW_HOST = "dbest-super-5ey64ubmn-db-est.vercel.app";
+    private static final String REVIEW_URL =
+        "https://" + REVIEW_HOST + "/service-partner-onboarding-v3.html?review=1";
     private static final int FILE_REQUEST = 1201;
     private static final int LOCATION_REQUEST = 1202;
     private static final int NAVY = 0xFF10264B;
@@ -350,7 +354,7 @@ public final class MainActivity extends ComponentActivity {
         if (url == null) return true;
         String scheme = url.getScheme();
         if ("about".equalsIgnoreCase(scheme)) return false;
-        if (isDbest(url)) return false;
+        if (isDbest(url) || isQaReview(url)) return false;
         if (isHttp(url) || "tel".equalsIgnoreCase(scheme)
                 || "mailto".equalsIgnoreCase(scheme) || "geo".equalsIgnoreCase(scheme)
                 || "market".equalsIgnoreCase(scheme)) openExternal(url);
@@ -369,18 +373,45 @@ public final class MainActivity extends ComponentActivity {
                 || host.equalsIgnoreCase("www.dbest4u.com"));
     }
 
+    private boolean isQaReview(Uri url) {
+        return url != null && "https".equalsIgnoreCase(url.getScheme())
+            && url.getPort() == -1
+            && REVIEW_HOST.equalsIgnoreCase(url.getHost())
+            && "/service-partner-onboarding-v3.html".equals(url.getPath())
+            && "1".equals(url.getQueryParameter("review"));
+    }
+
     // Keep account removal discoverable, but only in a deliberate menu,
     // matching DBest Main's Account & Privacy interaction.
     private void showAccountSettings() {
         new android.app.AlertDialog.Builder(this)
             .setTitle("Account & Privacy")
-            .setItems(new String[]{"Request account deletion", "Deletion instructions"},
+            .setItems(new String[]{"Request account deletion", "Deletion instructions", "Reviewer access (QA only)"},
                 (dialog, which) -> {
                     if (which == 0) showAccountDeletion();
-                    else openExternal(Uri.parse("https://dbest4u.com/data-deletion"));
+                    else if (which == 1) openExternal(Uri.parse("https://dbest4u.com/data-deletion"));
+                    else showReviewerQaNotice();
                 })
             .setNegativeButton("Close", null)
             .show();
+    }
+
+    private void showReviewerQaNotice() {
+        new android.app.AlertDialog.Builder(this)
+            .setTitle("Service Partner reviewer QA")
+            .setMessage("This opens the read-only Service Partner reviewer login in a restricted test preview. It does not approve real accounts, bypass payments, or connect Firebase. Turn Partner QA notifications OFF before switching accounts.")
+            .setPositiveButton("Open reviewer QA", (dialog, which) -> {
+                Uri dest = Uri.parse(REVIEW_URL);
+                if (!isQaReview(dest)) return;
+                currentRole = "Service Partner · Review";
+                browserTitle.setText("Service Partner Review QA");
+                showingBrowser = true;
+                homeScreen.setVisibility(View.GONE);
+                browserShell.setVisibility(View.VISIBLE);
+                if (partnerTestPush != null) partnerTestPush.setHomeVisible(false);
+                webView.loadUrl(REVIEW_URL);
+            })
+            .setNegativeButton("Cancel",null).show();
     }
 
     // Request-only: never mutate account or delete partner data in the app.
