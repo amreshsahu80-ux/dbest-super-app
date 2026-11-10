@@ -17,7 +17,7 @@ const VEH=[
  {id:'sedan',name:'Sedan',seats:4,base:70,km:18,min:100},
  {id:'suv',name:'SUV',seats:6,base:105,km:23,min:160}
 ];
-const S={p:null,pickupNote:'',d:null,stops:[],route:null,mode:'ride',tripType:'oneway',nightHalt:false,schedule:'now',scheduledAt:'',rider:'self',riderName:'',riderMobile:'',rentalHours:2,rentalKm:20,selected:'auto',provider:'fallback',map:null,layer:null,entryMap:null,carpoolSeats:1,carpoolVehicle:'Any',carpoolName:'',carpoolMobile:'',carpoolRequestId:''};
+const S={p:null,pickupNote:'',destinationScope:'nearby',d:null,stops:[],route:null,mode:'ride',tripType:'oneway',nightHalt:false,schedule:'now',scheduledAt:'',rider:'self',riderName:'',riderMobile:'',rentalHours:2,rentalKm:20,selected:'auto',provider:'fallback',map:null,layer:null,entryMap:null,carpoolSeats:1,carpoolVehicle:'Any',carpoolName:'',carpoolMobile:'',carpoolRequestId:''};
 // Separate GPS request and manual-input generations stop late async results from
 // overwriting a customer's typed/selected pickup, including on page re-entry.
 let pickupGpsSeq=0,pickupUserRevision=0,pickupGpsPending=false,entryMapSeq=0;
@@ -125,6 +125,13 @@ body:has(.cab6Page) #dbestServicePartnerQuick,body:has(.cab6Page) .floatingServi
 .cab6Search.cab6EntrySheet .cab6Field.pick .cab6PickupNoteRow{margin:5px 0 0}
 .cab6Search.cab6EntrySheet .cab6Field.pick .cab6PickupNoteRow input{width:100%;box-sizing:border-box;min-height:40px;font-size:11px;padding:8px 12px;border:1px solid #d5e8e2;border-left:1px solid #d5e8e2;border-radius:12px;background:#f6fbfa;box-shadow:none;color:#164d43}
 .cab6Search.cab6EntrySheet .cab6Field.pick .cab6PickupNoteRow input:focus{outline:2px solid #a7dccc;outline-offset:1px}
+/* Local-first destination search remains compact under the address field. */
+.cab6DestSearchMode{display:flex;gap:10px;align-items:center;justify-content:space-between;min-height:30px;margin:3px 3px 7px;color:#53627c}
+.cab6DestSearchMode span{font-size:10px;line-height:1.35}
+.cab6DestSearchMode button{flex:0 0 auto;border:0;background:#eef1ff;color:#5144bd;padding:7px 9px;border-radius:999px;font-size:10px;font-weight:800;cursor:pointer}
+.cab6DestSearchMode button:focus-visible{outline:2px solid #6559eb;outline-offset:2px}
+.cab6Suggest .cab6NoNearby{padding:11px 12px;color:#59677c;font-size:11px;line-height:1.4}
+
 `;document.head.appendChild(x)}
 function header(back){return `<div class="cab6Top cab6IconNav cab6HeroNav" role="navigation" aria-label="Cab navigation"><button type="button" aria-label="Back" title="Back" onclick="${back}">Back</button><button type="button" aria-label="Home" title="Home" onclick="backHome()">Home</button></div>`}
 function screen(body,back='backHome()'){css();destroyMap();sectionScreen(`<div class="cab6Page">${header(back)}<div class="cab6Wrap">${body}</div></div>`)}
@@ -138,7 +145,7 @@ function open(){
  S.route=null;
  // Closing/reopening the Cab screen invalidates old GPS callbacks.
  pickupGpsSeq++;
- screen(`<div class="cab6EntryMapWrap"><div id="cab6EntryMap" class="cab6EntryMap"><div class="cab6EntryMapFallback"><div class="cab6EntryMapPin"></div></div></div><div class="cab6EntryMapBadge">Live pickup map</div><button type="button" id="cab6EntryLocate" class="cab6EntryLocate" aria-label="Use current location">◎</button></div><div class="cab6Search cab6EntrySheet"><div class="cab6Spark">✦</div><h1 class="cab6Title">Enter Your Destination</h1><p class="cab6Sub">Choose pickup, destination and ride preference.</p><div class="cab6EntryHandle"></div><div class="cab6EntryHeading"><b>Book Your Ride</b><small>DBest Cab</small></div><div class="cab6Field pick"><input id="cab6P" autocomplete="off" placeholder="My Location / Pickup"><div id="cab6PS" class="cab6Suggest"></div><small id="cab6PickupGpsStatus" role="status" aria-live="polite" style="display:block;padding:6px 4px 0;color:#27664e;font-size:11px">Locating pickup with phone GPS…</small><div class="cab6PickupNoteRow"><input type="text" id="cab6PickupNote" maxlength="160" autocomplete="off" placeholder="Add building, house number or landmark (optional)" aria-label="Additional pickup address details"></div></div><div id="cab6DropWrap" class="cab6Field drop"><input id="cab6D" autocomplete="off" placeholder="Enter destination"><div id="cab6DS" class="cab6Suggest"></div></div><div id="cab6Stops" class="cab6Stops"></div><div class="cab6StopBar"><button type="button" id="cab6AddStop" class="cab6AddStop">＋ Add Stop</button></div><div class="cab6TripType"><button type="button" class="on" data-trip="oneway">One Way</button><button type="button" data-trip="roundtrip">2 Way</button><button type="button" data-trip="carpool">Car Pool</button></div><div id="cab6RoundNote" class="cab6RoundNote"><b>Same vehicle for onward + return</b><br>Sedan ₹15/km • SUV ₹18/km • Tolls extra<br><label><input type="checkbox" id="cab6NightHalt"> Night halt: Sedan ₹1,000 / SUV ₹1,500</label></div><div id="cab6PoolBox" class="cab6PoolBox"><div class="cab6PoolNote"><b>Scheduled shared ride</b><br>Request seats on the same route. Co-passenger mobile numbers stay private.</div><div class="cab6PoolGrid"><div class="cab6Field"><select id="cab6PoolSeats"><option value="1">1 Seat</option><option value="2">2 Seats</option><option value="3">3 Seats</option><option value="4">4 Seats</option><option value="5">5 Seats</option></select></div><div class="cab6Field"><select id="cab6PoolVehicle"><option value="Any">Sedan / SUV</option><option value="Sedan">Sedan</option><option value="SUV">SUV</option></select></div></div><div class="cab6Field"><input id="cab6PoolName" placeholder="Passenger name"></div><div class="cab6Field"><input id="cab6PoolMobile" inputmode="numeric" maxlength="10" placeholder="10-digit mobile"></div></div><div class="cab6Tools"><button type="button" class="gps" id="cab6Gps">◎ Current location</button><button type="button" id="cab6Swap">⇅</button></div><div id="cab6Nearby" class="cab6Nearby"><div class="cab6NearbyHead"><b>Popular near you</b><small>Based on your pickup area</small></div><div id="cab6NearbyRail" class="cab6NearbyRail"><div class="cab6Place loading">Finding nearby places…</div></div></div><div class="cab6Quick"><button type="button" data-q="schedule"><span>🗓</span>Schedule Later</button><button type="button" data-q="other"><span>👥</span>Book for Someone Else</button><button type="button" data-q="rental"><span>⏱</span>Hourly Rental</button></div><div id="cab6Schedule" class="cab6Extra"><div class="cab6Field"><input id="cab6At" type="datetime-local" min="${minLocal()}"></div></div><div id="cab6Other" class="cab6Extra"><div class="cab6Field"><input id="cab6Name" placeholder="Rider name"></div><div class="cab6Field"><input id="cab6Mobile" inputmode="numeric" maxlength="10" placeholder="10-digit mobile"></div></div><div id="cab6Rental" class="cab6Extra"><div class="cab6Field"><select id="cab6RentalPkg"><option value="1|10">1 Hour / 10 km</option><option value="2|20" selected>2 Hours / 20 km</option><option value="4|40">4 Hours / 40 km</option><option value="8|80">8 Hours / 80 km</option><option value="12|120">12 Hours / 120 km</option></select></div></div><button type="button" id="cab6Go" class="cab6Go">Search Cabs</button></div>`);
+ screen(`<div class="cab6EntryMapWrap"><div id="cab6EntryMap" class="cab6EntryMap"><div class="cab6EntryMapFallback"><div class="cab6EntryMapPin"></div></div></div><div class="cab6EntryMapBadge">Live pickup map</div><button type="button" id="cab6EntryLocate" class="cab6EntryLocate" aria-label="Use current location">◎</button></div><div class="cab6Search cab6EntrySheet"><div class="cab6Spark">✦</div><h1 class="cab6Title">Enter Your Destination</h1><p class="cab6Sub">Choose pickup, destination and ride preference.</p><div class="cab6EntryHandle"></div><div class="cab6EntryHeading"><b>Book Your Ride</b><small>DBest Cab</small></div><div class="cab6Field pick"><input id="cab6P" autocomplete="off" placeholder="My Location / Pickup"><div id="cab6PS" class="cab6Suggest"></div><small id="cab6PickupGpsStatus" role="status" aria-live="polite" style="display:block;padding:6px 4px 0;color:#27664e;font-size:11px">Locating pickup with phone GPS…</small><div class="cab6PickupNoteRow"><input type="text" id="cab6PickupNote" maxlength="160" autocomplete="off" placeholder="Add building, house number or landmark (optional)" aria-label="Additional pickup address details"></div></div><div id="cab6DropWrap" class="cab6Field drop"><input id="cab6D" autocomplete="off" placeholder="Enter destination"><div id="cab6DS" class="cab6Suggest"></div><div class="cab6DestSearchMode"><span id="cab6DestScopeLabel">Nearby destinations · within 500 km of pickup</span><button type="button" id="cab6DestScope" aria-label="Change destination search area">Search all India</button></div></div><div id="cab6Stops" class="cab6Stops"></div><div class="cab6StopBar"><button type="button" id="cab6AddStop" class="cab6AddStop">＋ Add Stop</button></div><div class="cab6TripType"><button type="button" class="on" data-trip="oneway">One Way</button><button type="button" data-trip="roundtrip">2 Way</button><button type="button" data-trip="carpool">Car Pool</button></div><div id="cab6RoundNote" class="cab6RoundNote"><b>Same vehicle for onward + return</b><br>Sedan ₹15/km • SUV ₹18/km • Tolls extra<br><label><input type="checkbox" id="cab6NightHalt"> Night halt: Sedan ₹1,000 / SUV ₹1,500</label></div><div id="cab6PoolBox" class="cab6PoolBox"><div class="cab6PoolNote"><b>Scheduled shared ride</b><br>Request seats on the same route. Co-passenger mobile numbers stay private.</div><div class="cab6PoolGrid"><div class="cab6Field"><select id="cab6PoolSeats"><option value="1">1 Seat</option><option value="2">2 Seats</option><option value="3">3 Seats</option><option value="4">4 Seats</option><option value="5">5 Seats</option></select></div><div class="cab6Field"><select id="cab6PoolVehicle"><option value="Any">Sedan / SUV</option><option value="Sedan">Sedan</option><option value="SUV">SUV</option></select></div></div><div class="cab6Field"><input id="cab6PoolName" placeholder="Passenger name"></div><div class="cab6Field"><input id="cab6PoolMobile" inputmode="numeric" maxlength="10" placeholder="10-digit mobile"></div></div><div class="cab6Tools"><button type="button" class="gps" id="cab6Gps">◎ Current location</button><button type="button" id="cab6Swap">⇅</button></div><div id="cab6Nearby" class="cab6Nearby"><div class="cab6NearbyHead"><b>Popular near you</b><small>Based on your pickup area</small></div><div id="cab6NearbyRail" class="cab6NearbyRail"><div class="cab6Place loading">Finding nearby places…</div></div></div><div class="cab6Quick"><button type="button" data-q="schedule"><span>🗓</span>Schedule Later</button><button type="button" data-q="other"><span>👥</span>Book for Someone Else</button><button type="button" data-q="rental"><span>⏱</span>Hourly Rental</button></div><div id="cab6Schedule" class="cab6Extra"><div class="cab6Field"><input id="cab6At" type="datetime-local" min="${minLocal()}"></div></div><div id="cab6Other" class="cab6Extra"><div class="cab6Field"><input id="cab6Name" placeholder="Rider name"></div><div class="cab6Field"><input id="cab6Mobile" inputmode="numeric" maxlength="10" placeholder="10-digit mobile"></div></div><div id="cab6Rental" class="cab6Extra"><div class="cab6Field"><select id="cab6RentalPkg"><option value="1|10">1 Hour / 10 km</option><option value="2|20" selected>2 Hours / 20 km</option><option value="4|40">4 Hours / 40 km</option><option value="8|80">8 Hours / 80 km</option><option value="12|120">12 Hours / 120 km</option></select></div></div><button type="button" id="cab6Go" class="cab6Go">Search Cabs</button></div>`);
  bindSearchPage();
  const noteInput=$('cab6PickupNote');
  if(noteInput){noteInput.value=S.pickupNote||'';noteInput.oninput=()=>{S.pickupNote=noteInput.value.slice(0,160)}}
@@ -147,7 +154,21 @@ function open(){
 function bindSearchPage(){
  renderRecents();const addStop=$('cab6AddStop');if(addStop)addStop.onclick=()=>{const list=$('cab6Stops'),count=list?.querySelectorAll('.cab6StopRow').length||0;if(count>=3)return say('Maximum 3 stops allowed.');const row=document.createElement('div');row.className='cab6StopRow';row.innerHTML='<div class="cab6Field"><input class="cab6StopInput" autocomplete="off" placeholder="Enter stop '+(count+1)+'"></div><button type="button" class="cab6StopRemove" aria-label="Remove stop">✕</button>';row.querySelector('.cab6StopRemove').onclick=()=>row.remove();list.appendChild(row)};qa('[data-trip]').forEach(btn=>btn.onclick=()=>{qa('[data-trip]').forEach(x=>x.classList.toggle('on',x===btn));S.tripType=btn.dataset.trip||'oneway';const round=S.tripType==='roundtrip',pool=S.tripType==='carpool';$('cab6RoundNote')?.classList.toggle('show',round);$('cab6PoolBox')?.classList.toggle('show',pool);if(round)S.selected='sedan';if(pool){S.mode='ride';S.schedule='later';if($('cab6Go'))$('cab6Go').textContent='Find / Create Pool';const sch=q('[data-q="schedule"]');if(sch)sch.classList.add('on');$('cab6Schedule')?.classList.add('show');if($('cab6Stops'))$('cab6Stops').innerHTML='';if($('cab6AddStop'))$('cab6AddStop').parentElement.style.display='none'}else{if($('cab6Go'))$('cab6Go').textContent='Search Cabs';if($('cab6AddStop'))$('cab6AddStop').parentElement.style.display='';}});const nh=$('cab6NightHalt');if(nh)nh.onchange=e=>S.nightHalt=!!e.target.checked;$('cab6Gps').onclick=()=>useGps(true);$('cab6Swap').onclick=()=>{pickupUserRevision++;pickupGpsSeq++;const a=$('cab6P').value;$('cab6P').value=$('cab6D').value;$('cab6D').value=a;const t=S.p;S.p=S.d;S.d=t};
  qa('[data-q]').forEach(b=>b.onclick=()=>{const k=b.dataset.q;if(k==='schedule'){S.schedule=S.schedule==='later'?'now':'later';b.classList.toggle('on',S.schedule==='later');$('cab6Schedule').classList.toggle('show',S.schedule==='later')}else if(k==='other'){S.rider=S.rider==='other'?'self':'other';b.classList.toggle('on',S.rider==='other');$('cab6Other').classList.toggle('show',S.rider==='other')}else{S.mode=S.mode==='rental'?'ride':'rental';b.classList.toggle('on',S.mode==='rental');$('cab6Rental').classList.toggle('show',S.mode==='rental');$('cab6DropWrap').style.display=S.mode==='rental'?'none':'';if($('cab6Stops'))$('cab6Stops').style.display=S.mode==='rental'?'none':'';if($('cab6AddStop'))$('cab6AddStop').parentElement.style.display=S.mode==='rental'?'none':''}});
- $('cab6At').onchange=e=>S.scheduledAt=e.target.value;$('cab6Name').oninput=e=>S.riderName=e.target.value.trim();$('cab6Mobile').oninput=e=>{e.target.value=e.target.value.replace(/\D/g,'').slice(0,10);S.riderMobile=e.target.value};$('cab6RentalPkg').onchange=e=>{const[h,k]=e.target.value.split('|').map(Number);S.rentalHours=h;S.rentalKm=k};$('cab6PoolSeats').onchange=e=>S.carpoolSeats=Number(e.target.value||1);$('cab6PoolVehicle').onchange=e=>S.carpoolVehicle=e.target.value||'Any';$('cab6PoolName').oninput=e=>S.carpoolName=e.target.value.trim();$('cab6PoolMobile').oninput=e=>{e.target.value=e.target.value.replace(/\D/g,'').slice(0,10);S.carpoolMobile=e.target.value};$('cab6Go').onclick=continueRide;bindSearch('cab6P','cab6PS','p');bindSearch('cab6D','cab6DS','d')
+ $('cab6At').onchange=e=>S.scheduledAt=e.target.value;$('cab6Name').oninput=e=>S.riderName=e.target.value.trim();$('cab6Mobile').oninput=e=>{e.target.value=e.target.value.replace(/\D/g,'').slice(0,10);S.riderMobile=e.target.value};$('cab6RentalPkg').onchange=e=>{const[h,k]=e.target.value.split('|').map(Number);S.rentalHours=h;S.rentalKm=k};$('cab6PoolSeats').onchange=e=>S.carpoolSeats=Number(e.target.value||1);$('cab6PoolVehicle').onchange=e=>S.carpoolVehicle=e.target.value||'Any';$('cab6PoolName').oninput=e=>S.carpoolName=e.target.value.trim();$('cab6PoolMobile').oninput=e=>{e.target.value=e.target.value.replace(/\D/g,'').slice(0,10);S.carpoolMobile=e.target.value};$('cab6Go').onclick=continueRide;bindSearch('cab6P','cab6PS','p');bindSearch('cab6D','cab6DS','d');
+ const scopeButton=$('cab6DestScope');
+ if(scopeButton){
+   const updateScope=()=>{
+     const nearby=S.destinationScope!=='allIndia';
+     scopeButton.textContent=nearby?'Search all India':'Search nearby';
+     const hint=$('cab6DestScopeLabel');
+     if(hint)hint.textContent=nearby?'Nearby destinations · within 500 km of pickup':'Outstation search · all India';
+     const d=$('cab6D');
+     if(d?.value.trim().length>=2)d.dispatchEvent(new Event('input',{bubbles:true}));
+     else $('cab6DS')?.classList.remove('show');
+   };
+   scopeButton.onclick=()=>{S.destinationScope=S.destinationScope==='nearby'?'allIndia':'nearby';S.d=null;updateScope()};
+   updateScope();
+ }
 }
 let searchProviderPromise=null,leafletPromise=null;
 function loadScript(src,id){return new Promise((ok,no)=>{const old=$(id);if(old){if(old.dataset.ready==='1')return ok();old.addEventListener('load',ok,{once:true});old.addEventListener('error',no,{once:true});return}const s=document.createElement('script');s.id=id;s.src=src;s.async=true;s.onload=()=>{s.dataset.ready='1';ok()};s.onerror=no;document.head.appendChild(s)})}
@@ -303,6 +324,9 @@ async function useGps(noisy){
         lowAccuracy);
    loadNearbyPlaces(lat,lng).catch(e=>console.warn('Nearby lookup failed',e));
    renderEntryMap();
+   const destInput=$('cab6D');
+   if(S.destinationScope==='nearby'&&destInput?.value.trim().length>=2)
+     destInput.dispatchEvent(new Event('input',{bubbles:true}));
    try{
      // The configured Google Maps API is authoritative when available.
      // Do not race it against a lower-detail provider: Google's address may
@@ -348,17 +372,221 @@ async function renderEntryMap(){
    setTimeout(()=>S.entryMap?.invalidateSize?.(),100);
  }catch(e){console.warn('Entry map failed',e)}
 }
-async function searchLocations(term){
- if(term.length<2)return[];await initSearchProvider();
- const origin=(S.provider==='google'&&window.google?.maps?.LatLng&&S.p&&Number.isFinite(S.p.lat)&&Number.isFinite(S.p.lng))?new google.maps.LatLng(S.p.lat,S.p.lng):null;
- if(S.provider==='google'&&window.google?.maps?.places){return await new Promise(resolve=>{const req={input:term,componentRestrictions:{country:'in'}};if(origin){req.location=origin;req.radius=50000;req.origin=origin}new google.maps.places.AutocompleteService().getPlacePredictions(req,(rows,status)=>{let a=status===google.maps.places.PlacesServiceStatus.OK?(rows||[]):[];a=a.map(x=>({label:x.description,placeId:x.place_id,distanceMeters:Number(x.distance_meters||0)}));if(origin)a.sort((x,y)=>(x.distanceMeters||999999999)-(y.distanceMeters||999999999));resolve(a.slice(0,8))})})}
- const base=String(cfg().supabaseUrl||'').replace(/\/$/,''),key=String(cfg().supabasePublishableKey||cfg().supabaseAnonKey||'');
- if(base){try{const r=await fetch(base+'/functions/v1/location-search-live',{method:'POST',headers:{'content-type':'application/json',apikey:key},body:JSON.stringify({q:term})});const j=await r.json();const a=(j.results||[]).slice(0,8).map(x=>({label:x.label||x.detail,lat:+x.lat,lng:+(x.lon??x.lng)}));if(a.length)return a}catch(e){}}
- try{const r=await fetch('https://nominatim.openstreetmap.org/search?format=json&countrycodes=in&limit=8&q='+encodeURIComponent(term),{headers:{Accept:'application/json'}});const j=await r.json();return (j||[]).map(x=>({label:x.display_name,lat:+x.lat,lng:+x.lon}))}catch(e){return[]}
+
+const CAB_DESTINATION_NEARBY_KM=500;
+let cabDestinationSession=null;
+function cabOrigin(){
+ const p=S.p;
+ return p&&Number.isFinite(+p.lat)&&Number.isFinite(+p.lng)?{lat:+p.lat,lng:+p.lng}:null;
 }
-async function resolvePlace(x){if(x?.lat!=null)return x;if(S.provider==='google'&&x?.placeId){return await new Promise(resolve=>{const svc=new google.maps.places.PlacesService(document.createElement('div'));svc.getDetails({placeId:x.placeId,fields:['geometry','formatted_address','name']},(p,status)=>{if(status===google.maps.places.PlacesServiceStatus.OK&&p.geometry?.location)resolve({label:p.formatted_address||p.name||x.label,lat:p.geometry.location.lat(),lng:p.geometry.location.lng()});else resolve(null)})})}return null}
-async function geocodeText(v){v=String(v||'').trim();if(v.length<3)return null;await initSearchProvider();if(S.provider==='google'&&window.google?.maps?.Geocoder){try{return await new Promise(resolve=>new google.maps.Geocoder().geocode({address:v,componentRestrictions:{country:'IN'}},(rows,status)=>{const r=rows?.[0],l=r?.geometry?.location;resolve(status==='OK'&&l?{label:r.formatted_address||v,lat:l.lat(),lng:l.lng()}:null)}))}catch(e){}}const a=await searchLocations(v);return a[0]?resolvePlace(a[0]):null}
-function bindSearch(i,b,k){const inp=$(i),box=$(b);let timer=0,seq=0;inp.oninput=()=>{if(k==='p'){pickupUserRevision++;pickupGpsSeq++;pickupGpsPending=false;pickupStatus('Manual pickup: choose a suggested location to set your pin.');}clearTimeout(timer);S[k]=null;const term=inp.value.trim(),n=++seq;if(term.length<2){box.classList.remove('show');box.innerHTML='';return}timer=setTimeout(async()=>{const rows=await searchLocations(term);if(n!==seq)return;box.innerHTML=rows.map((x,j)=>`<button type="button" data-i="${j}"><b>${esc(String(x.label||'Location').split(',')[0])}</b><small>${esc(String(x.label||'').split(',').slice(1,3).join(','))}</small></button>`).join('');box.classList.toggle('show',rows.length>0);qa('button',box).forEach(btn=>btn.onclick=async()=>{const p=await resolvePlace(rows[+btn.dataset.i]);if(!p)return say('Could not resolve this location.');if(k==='p'){pickupUserRevision++;pickupGpsSeq++;pickupGpsPending=false;pickupStatus('Manual pickup selected. Tap ◎ to use phone GPS instead.');}S[k]=p;inp.value=p.label;box.classList.remove('show');if(k==='p')renderEntryMap()})},240)};inp.onblur=()=>setTimeout(()=>box.classList.remove('show'),180)}
+function cabDistanceKm(a,b){
+ const rad=Math.PI/180,la=+a.lat*rad,lb=+b.lat*rad,dlat=lb-la,dlng=(+b.lng-+a.lng)*rad;
+ const h=Math.sin(dlat/2)**2+Math.cos(la)*Math.cos(lb)*Math.sin(dlng/2)**2;
+ return 6371*2*Math.atan2(Math.sqrt(Math.max(0,h)),Math.sqrt(Math.max(0,1-h)));
+}
+function cabSearchBounds(p){
+ const dy=CAB_DESTINATION_NEARBY_KM/111.2;
+ const dx=dy/Math.max(.2,Math.cos(p.lat*Math.PI/180));
+ return {north:Math.min(90,p.lat+dy),south:Math.max(-90,p.lat-dy),
+   east:Math.min(180,p.lng+dx),west:Math.max(-180,p.lng-dx)};
+}
+function cabDestinationPermitted(p){
+ if(S.destinationScope==='allIndia')return true;
+ const center=cabOrigin();
+ return !!(center&&p&&Number.isFinite(+p.lat)&&Number.isFinite(+p.lng)&&
+   cabDistanceKm(center,p)<=CAB_DESTINATION_NEARBY_KM);
+}
+function cabFilterLocal(rows,nearby,origin){
+ const valid=(rows||[]).filter(r=>r&&r.label&&Number.isFinite(+r.lat)&&Number.isFinite(+r.lng));
+ return valid.filter(r=>!nearby||cabDestinationPermitted(r))
+   .map(r=>({...r,distanceKm:origin?cabDistanceKm(origin,r):undefined}))
+   .sort((a,b)=>(a.distanceKm??Infinity)-(b.distanceKm??Infinity)).slice(0,8);
+}
+async function cabGoogleSuggestions(query,origin,nearby){
+ const maps=window.google?.maps;
+ if(!maps?.places)return [];
+ try{
+   const places=typeof maps.importLibrary==='function'?await maps.importLibrary('places'):maps.places;
+   if(places.AutocompleteSuggestion?.fetchAutocompleteSuggestions){
+     const request={input:query,includedRegionCodes:['in'],region:'in'};
+     if(origin){
+       request.origin={lat:origin.lat,lng:origin.lng};
+       if(nearby)request.locationRestriction=cabSearchBounds(origin);
+     }
+     if(!cabDestinationSession&&places.AutocompleteSessionToken)
+       cabDestinationSession=new places.AutocompleteSessionToken();
+     if(cabDestinationSession)request.sessionToken=cabDestinationSession;
+     const out=await places.AutocompleteSuggestion.fetchAutocompleteSuggestions(request);
+     return (out.suggestions||[]).map(s=>{
+       const p=s.placePrediction;
+       return p?{label:String(p.text?.text||p.mainText?.text||''),
+         googlePrediction:p,distanceMeters:Number.isFinite(+p.distanceMeters)?+p.distanceMeters:undefined}:null;
+     }).filter(p=>p&&p.label&&(!nearby||p.distanceMeters==null||p.distanceMeters<=CAB_DESTINATION_NEARBY_KM*1000)).slice(0,8);
+   }
+   // Old Google API offers a location *bias*, not a hard boundary.
+   // Suppress predictions lacking trustworthy distance while in local mode.
+   if(typeof maps.places.AutocompleteService==='function'){
+     return await new Promise(resolve=>{
+       const req={input:query,componentRestrictions:{country:'in'}};
+       if(origin){req.origin=new maps.LatLng(origin.lat,origin.lng);req.location=req.origin;req.radius=CAB_DESTINATION_NEARBY_KM*1000}
+       new maps.places.AutocompleteService().getPlacePredictions(req,(preds,status)=>{
+         if(status!==maps.places.PlacesServiceStatus.OK)return resolve([]);
+         const list=(preds||[]).map(p=>({label:p.description,placeId:p.place_id,
+           distanceMeters:Number.isFinite(+p.distance_meters)?+p.distance_meters:undefined}));
+         resolve(list.filter(p=>!nearby||(Number.isFinite(p.distanceMeters)&&p.distanceMeters<=CAB_DESTINATION_NEARBY_KM*1000))
+           .sort((a,b)=>(a.distanceMeters??Infinity)-(b.distanceMeters??Infinity)).slice(0,8));
+       });
+     });
+   }
+ }catch(e){console.warn('Cab local Google suggestions unavailable',e)}
+ return [];
+}
+async function searchLocations(term,kind='p'){
+ term=String(term||'').trim();if(term.length<2)return [];
+ const nearby=kind==='d'&&S.destinationScope!=='allIndia',origin=cabOrigin();
+ if(nearby&&!origin)return [];
+ await initSearchProvider();
+ if(S.provider==='google'&&window.google?.maps?.places){
+   const googleRows=await cabGoogleSuggestions(term,origin,nearby);
+   if(googleRows.length)return googleRows;
+ }
+ const base=String(cfg().supabaseUrl||'').replace(/\/$/,'');
+ const key=String(cfg().supabasePublishableKey||cfg().supabaseAnonKey||'');
+ if(base&&key){
+   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),4500);
+   try{
+     const r=await fetch(base+'/functions/v1/location-search-live',{method:'POST',
+       headers:{'content-type':'application/json',apikey:key},
+       body:JSON.stringify({q:term,nearby,...(origin?{lat:origin.lat,lng:origin.lng,radiusKm:CAB_DESTINATION_NEARBY_KM}:{})}),
+       signal:controller.signal});
+     if(r.ok){
+       const j=await r.json();
+       const rows=cabFilterLocal((j.results||[]).map(x=>({
+         label:String(x.label||x.detail||'').trim(),lat:+x.lat,lng:+(x.lon??x.lng)
+       })),nearby,origin);
+       if(rows.length)return rows;
+     }
+   }catch(e){console.warn('Cab local backend search unavailable',e)}
+   finally{clearTimeout(timer)}
+ }
+ try{
+   const url=new URL('https://nominatim.openstreetmap.org/search');
+   url.searchParams.set('format','json');url.searchParams.set('countrycodes','in');
+   url.searchParams.set('limit','12');url.searchParams.set('q',term);
+   if(nearby){
+     const b=cabSearchBounds(origin);
+     url.searchParams.set('viewbox',[b.west,b.north,b.east,b.south].join(','));
+     url.searchParams.set('bounded','1');
+   }
+   const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),4500);
+   try{
+     const r=await fetch(url.toString(),{headers:{Accept:'application/json'},signal:ctrl.signal});
+     if(!r.ok)return [];
+     const j=await r.json();
+     return cabFilterLocal((Array.isArray(j)?j:[]).map(x=>({
+       label:String(x.display_name||'').trim(),lat:+x.lat,lng:+x.lon
+     })),nearby,origin);
+   }finally{clearTimeout(timer)}
+ }catch(e){return []}
+}
+async function resolvePlace(x){
+ if(x?.googlePrediction){
+   try{
+     const place=x.googlePrediction.toPlace();
+     await place.fetchFields({fields:['formattedAddress','displayName','location']});
+     cabDestinationSession=null;
+     const lat=typeof place.location?.lat==='function'?place.location.lat():place.location?.lat;
+     const lng=typeof place.location?.lng==='function'?place.location.lng():place.location?.lng;
+     if(Number.isFinite(+lat)&&Number.isFinite(+lng))
+       return {label:place.formattedAddress||place.displayName||x.label,lat:+lat,lng:+lng};
+   }catch(e){console.warn('Cab selected Google location failed',e)}
+   return null;
+ }
+ if(x?.lat!=null&&Number.isFinite(+x.lat)&&Number.isFinite(+x.lng))return x;
+ if(S.provider==='google'&&x?.placeId){
+   return await new Promise(resolve=>{
+     const svc=new google.maps.places.PlacesService(document.createElement('div'));
+     svc.getDetails({placeId:x.placeId,fields:['geometry','formatted_address','name']},(p,status)=>{
+       const loc=p?.geometry?.location;
+       resolve(status===google.maps.places.PlacesServiceStatus.OK&&loc?
+         {label:p.formatted_address||p.name||x.label,lat:loc.lat(),lng:loc.lng()}:null);
+     });
+   });
+ }
+ return null;
+}
+async function geocodeText(v,kind='p'){
+ v=String(v||'').trim();if(v.length<3)return null;
+ if(kind==='d'){
+   const candidates=await searchLocations(v,'d');
+   for(const x of candidates.slice(0,4)){
+     const p=await resolvePlace(x);
+     if(p&&cabDestinationPermitted(p))return p;
+   }
+   return null;
+ }
+ await initSearchProvider();
+ if(S.provider==='google'&&window.google?.maps?.Geocoder){
+   try{
+     return await new Promise(resolve=>new google.maps.Geocoder().geocode(
+       {address:v,componentRestrictions:{country:'IN'}},(rows,status)=>{
+         const r=rows?.[0],l=r?.geometry?.location;
+         resolve(status==='OK'&&l?{label:r.formatted_address||v,lat:l.lat(),lng:l.lng()}:null);
+       }));
+   }catch(e){}
+ }
+ const options=await searchLocations(v,'p');
+ return options[0]?resolvePlace(options[0]):null;
+}
+function bindSearch(i,b,k){
+ const inp=$(i),box=$(b);let timer=0,seq=0;
+ inp.oninput=()=>{
+   if(k==='p'){
+     pickupUserRevision++;pickupGpsSeq++;pickupGpsPending=false;
+     pickupStatus('Manual pickup: choose a suggested location to set your pin.');
+   }
+   clearTimeout(timer);S[k]=null;
+   const term=inp.value.trim(),run=++seq;
+   if(term.length<2){box.classList.remove('show');box.innerHTML='';return}
+   timer=setTimeout(async()=>{
+     const rows=await searchLocations(term,k);
+     if(run!==seq||!inp.isConnected)return;
+     if(!rows.length){
+       const noPickup=k==='d'&&S.destinationScope==='nearby'&&!cabOrigin();
+       const isNearby=k==='d'&&S.destinationScope==='nearby';
+       box.innerHTML='<div class="cab6NoNearby">'+(noPickup?
+         'Allow precise GPS or choose pickup to find nearby destinations.':
+         isNearby?'No nearby matches within 500 km. Try another name or Search all India.':
+         'No matching places found. Try a different name.')+'</div>';
+       box.classList.add('show');return;
+     }
+     box.innerHTML=rows.map((x,j)=>'<button type="button" data-i="'+j+'"><b>'+
+       esc(String(x.label||'Location').split(',')[0])+'</b><small>'+
+       esc(String(x.label||'').split(',').slice(1,3).join(','))+
+       (Number.isFinite(x.distanceKm)?' · '+Math.round(x.distanceKm)+' km away':'')+'</small></button>').join('');
+     box.classList.add('show');
+     qa('button',box).forEach(btn=>btn.onclick=async()=>{
+       const p=await resolvePlace(rows[+btn.dataset.i]);
+       if(!p)return say('Could not resolve this location.');
+       if(k==='d'&&!cabDestinationPermitted(p))
+         return say('Destination is outside the nearby search area. Tap Search all India for an outstation ride.');
+       if(k==='p'){
+         pickupUserRevision++;pickupGpsSeq++;pickupGpsPending=false;
+         pickupStatus('Manual pickup selected. Tap ◎ to use phone GPS instead.');
+       }
+       S[k]=p;inp.value=p.label;box.classList.remove('show');
+       if(k==='p'){
+         renderEntryMap();
+         const d=$('cab6D');
+         if(d?.value.trim().length>=2&&S.destinationScope==='nearby')
+           d.dispatchEvent(new Event('input',{bubbles:true}));
+       }
+     });
+   },260);
+ };
+ inp.onblur=()=>setTimeout(()=>box.classList.remove('show'),180);
+}
+
 function realisticRoadMinutes(km,providerMin){
  const k=Math.max(0,Number(km)||0),raw=Math.max(1,Number(providerMin)||1);
  // DBest ETA sanity floor: provider ETA is respected when higher, but never allow
@@ -372,7 +600,7 @@ async function continueRide(){
  if(S.tripType==='carpool'){S.schedule='later';if(!S.scheduledAt)return say('Please select Car Pool date and time.');if(!S.carpoolName||S.carpoolMobile.length!==10)return say('Please enter passenger name and 10-digit mobile.');if(S.carpoolVehicle==='Sedan'&&S.carpoolSeats>3)return say('Sedan Car Pool supports up to 3 passenger seats.');}
  if(S.schedule==='later'&&!S.scheduledAt)return say('Please select schedule date and time.');if(S.rider==='other'&&(!S.riderName||S.riderMobile.length!==10))return say('Please enter rider name and 10-digit mobile.');
  const b=$('cab6Go');if(b){b.disabled=true;b.textContent='Checking route…'}
- try{if(!S.p)S.p=await geocodeText($('cab6P')?.value);if(S.mode!=='rental'&&!S.d)S.d=await geocodeText($('cab6D')?.value);if(S.mode!=='rental'){const stopTexts=qa('.cab6StopInput').map(x=>String(x.value||'').trim()).filter(Boolean).slice(0,3);S.stops=[];for(const t of stopTexts){const p=await geocodeText(t);if(!p)return say('Please enter a valid stop location.');S.stops.push(p)}}if(!S.p||S.mode!=='rental'&&!S.d)return say(S.mode==='rental'?'Please enter a valid pickup location.':'Please enter valid pickup and destination.');if(S.mode==='rental'){S.route={km:S.rentalKm,min:S.rentalHours*60,geo:[]};return vehicles()}S.route=await routeOSRM();saveRecent(S.d?.label||$('cab6D')?.value);if(S.tripType==='carpool')return createCarpoolRequest();vehicles()}catch(e){console.warn('Cab route error',e);say('Unable to calculate the route. Please try again.')}finally{if(b){b.disabled=false;b.textContent=S.tripType==='carpool'?'Find / Create Pool':'Search Cabs'}}
+ try{if(!S.p)S.p=await geocodeText($('cab6P')?.value);if(S.mode!=='rental'&&!S.d)S.d=await geocodeText($('cab6D')?.value,'d');if(S.mode!=='rental'){const stopTexts=qa('.cab6StopInput').map(x=>String(x.value||'').trim()).filter(Boolean).slice(0,3);S.stops=[];for(const t of stopTexts){const p=await geocodeText(t);if(!p)return say('Please enter a valid stop location.');S.stops.push(p)}}if(!S.p||S.mode!=='rental'&&!S.d)return say(S.mode==='rental'?'Please enter a valid pickup location.':'Please enter valid pickup and destination.');if(S.mode==='rental'){S.route={km:S.rentalKm,min:S.rentalHours*60,geo:[]};return vehicles()}S.route=await routeOSRM();saveRecent(S.d?.label||$('cab6D')?.value);if(S.tripType==='carpool')return createCarpoolRequest();vehicles()}catch(e){console.warn('Cab route error',e);say('Unable to calculate the route. Please try again.')}finally{if(b){b.disabled=false;b.textContent=S.tripType==='carpool'?'Find / Create Pool':'Search Cabs'}}
 }
 async function carpoolApi(action,extra={}){
  const base=String(cfg().supabaseUrl||'').replace(/\/$/,'');
