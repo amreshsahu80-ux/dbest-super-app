@@ -33,7 +33,7 @@ jobs:
           has("document.body.classList.add('spReviewAccess')");
           has("id=\"successSignOut\"");
           has("await partnerApi({action:'signout'},true)");
-          has("Account &");
+          has("Sign out of Service Partner account");
           has("DBest Owner approval and payment reconciliation");
           has("id=\"reviewLogout\"");
           has("service-partner-review-login");
