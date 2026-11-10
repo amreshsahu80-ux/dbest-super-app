@@ -35,15 +35,20 @@ final class NativeAccountBinding {
     private static final String PREFS = "dbest_native_fcm_account";
     private static final String ENDPOINT =
         "https://ydedmotbacnllkijzmvp.supabase.co/functions/v1/native-fcm-register";
+    // Used ONLY for revocation of a previously bound device. The prior token
+    // may persist after SPA logout, so this is NOT a valid sign-in check.
     private static final String SESSION_SCRIPT =
         "(function(){try{return localStorage.getItem('dbest_member_live_token')||''}catch(e){return ''}})();";
-    // DBest logout is an SPA action: it changes d2_session without a WebView
-    // navigation, and may leave the member token in localStorage. Checking the
-    // token alone therefore cannot establish whether the user is signed in.
-    private static final String MEMBER_VISIBLE_SCRIPT =
+    // Atomically check that the user is actively signed in before exposing a
+    // session to native registration or cross-account continuity logic.
+    // Combining both reads in one WebView execution avoids an account-switch
+    // race between separate JavaScript evaluations.
+    private static final String ACTIVE_SESSION_SCRIPT =
         "(function(){try{var s=JSON.parse(localStorage.getItem('d2_session')||'{}');"
-        + "return !!(s&&s.id&&['starter','guest','promoter','prime','leader']."
-        + "includes(String(s.role||'').toLowerCase()));}catch(e){return false}})()";
+        + "var active=!!(s&&s.id&&['starter','guest','promoter','prime','leader']."
+        + "includes(String(s.role||'').toLowerCase()));"
+        + "return active?(localStorage.getItem('dbest_member_live_token')||''):'';"
+        + "}catch(e){return ''}})()";
     private final Activity activity;
     private final WebView webView;
     private final ExecutorService requests = Executors.newSingleThreadExecutor();
@@ -69,8 +74,16 @@ final class NativeAccountBinding {
     }
 
     private void readSession(java.util.function.Consumer<String> cb) {
+        readSessionScript(SESSION_SCRIPT, cb);
+    }
+
+    private void readActiveSession(java.util.function.Consumer<String> cb) {
+        readSessionScript(ACTIVE_SESSION_SCRIPT, cb);
+    }
+
+    private void readSessionScript(String script, java.util.function.Consumer<String> cb) {
         if (!trustedPage()) { cb.accept(""); return; }
-        webView.evaluateJavascript(SESSION_SCRIPT, raw -> {
+        webView.evaluateJavascript(script, raw -> {
             try {
                 Object value = new JSONTokener(raw == null ? "null" : raw).nextValue();
                 cb.accept(value instanceof String ? (String) value : "");
@@ -146,7 +159,7 @@ final class NativeAccountBinding {
         new AlertDialog.Builder(activity)
             .setTitle("Connect DBest account notifications?")
             .setMessage("Register this device only to the member account currently signed in. This pilot does not send real orders yet. You can turn alerts OFF to revoke it.")
-            .setPositiveButton("Connect this device", (dialog, which) -> readSession(session -> {
+            .setPositiveButton("Connect this device", (dialog, which) -> readActiveSession(session -> {
                 if (session.isEmpty()) {
                     ui("Please sign in to your DBest member account first.");
                     return;
@@ -183,19 +196,12 @@ final class NativeAccountBinding {
     // It also detects in-page logout and account switching without reloading.
     void checkAccountContinuity(Runnable onMismatch) {
         if (!hasAccountBinding() || !trustedPage()) return;
-        webView.evaluateJavascript(MEMBER_VISIBLE_SCRIPT, raw -> {
+        readActiveSession(current -> {
             if (!hasAccountBinding()) return;
-            if (!"true".equalsIgnoreCase(String.valueOf(raw).trim())) {
-                onMismatch.run();
-                return;
-            }
-            readSession(current -> {
-                if (!hasAccountBinding()) return;
-                String boundHash = activity.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-                        .getString("session_hash", "");
-                if (current.isEmpty() || boundHash.isEmpty()
-                        || !boundHash.equals(fingerprint(current))) onMismatch.run();
-            });
+            String boundHash = activity.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                    .getString("session_hash", "");
+            if (current.isEmpty() || boundHash.isEmpty()
+                    || !boundHash.equals(fingerprint(current))) onMismatch.run();
         });
     }
 
