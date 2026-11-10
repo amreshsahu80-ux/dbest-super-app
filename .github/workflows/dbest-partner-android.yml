@@ -8,6 +8,7 @@ on:
       - 'feat/dbest-partner-fcm-account-binding-20261102'
       - 'qa/partner-fcm-deletion-build-candidate-20261110'
       - 'qa/partner-side-by-side-ui-isolated-20261110'
+      - 'qa/partner-fcm-isolated-config-20261110'
     paths:
       - 'partner-android-app/**'
       - '.github/workflows/dbest-partner-android.yml'
@@ -37,19 +38,28 @@ jobs:
             echo "::error::Customer-facing Play Reviewer entry must not ship in Partner app"
             exit 1
           fi
-      - name: Check isolated Partner QA package and private account settings
+      - name: Check isolated Partner QA package, privacy and Firebase identity
         run: |
           grep -q "applicationId 'com.dbest4u.partner.qa'" app/build.gradle
+          grep -q "id 'com.google.gms.google-services'" app/build.gradle
           grep -q 'android:label="DBest Partner QA"' app/src/main/AndroidManifest.xml
           grep -q 'private void showAccountSettings()' app/src/main/java/com/dbest4u/partner/MainActivity.java
+          grep -q 'new PartnerPushTestController(' app/src/main/java/com/dbest4u/partner/MainActivity.java
+          grep -q 'native-fcm-register-partner-qa' app/src/main/java/com/dbest4u/partner/PartnerAccountBinding.java
+          grep -q 'currentAccountOwnsInstallation' app/src/main/java/com/dbest4u/partner/PartnerAccountBinding.java
           if grep -nE 'Button deleteAccount =|TextView accountDeletion =' app/src/main/java/com/dbest4u/partner/MainActivity.java; then
             echo "::error::Account deletion must remain inside Account & Privacy"
             exit 1
           fi
-          if grep -n 'new PartnerPushTestController(' app/src/main/java/com/dbest4u/partner/MainActivity.java; then
-            echo "::error::Firebase device registration disabled in UI-only QA"
-            exit 1
-          fi
+          python3 - <<'PY'
+          import json
+          with open("app/google-services.json") as f: config=json.load(f)
+          assert config["project_info"]["project_id"] == "dbest-mobile-notifications"
+          qa=[c for c in config["client"] if c["client_info"]["android_client_info"]["package_name"]=="com.dbest4u.partner.qa"]
+          assert len(qa)==1, "One dedicated Firebase Android QA registration required"
+          assert qa[0]["client_info"]["mobilesdk_app_id"]=="1:905212518251:android:9c20528a318acf11d7b62e"
+          print("Isolated Partner Firebase Android client matches user-supplied configuration")
+          PY
       - name: Build partner debug APK and unsigned release AAB
         run: gradle :app:assembleDebug :app:bundleRelease
       - name: Upload installable debug APK
