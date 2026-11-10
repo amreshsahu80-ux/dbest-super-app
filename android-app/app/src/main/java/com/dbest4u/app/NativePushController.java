@@ -165,6 +165,15 @@ public final class NativePushController {
             Toast.makeText(activity, "Firebase test setup unavailable.", Toast.LENGTH_LONG).show();
             return;
         }
+        if (!isEnabled() && accountBinding.hasAccountBinding()) {
+            new AlertDialog.Builder(activity)
+                .setTitle("Previous notification registration pending")
+                .setMessage("This QA device is still linked to an earlier member session. Retry a secure unlink using your existing signed-in account. No other device or account will be changed.")
+                .setPositiveButton("Retry secure unlink", (dialog, which) -> retryPendingUnlink())
+                .setNegativeButton("Cancel", null)
+                .show();
+            return;
+        }
         if (isEnabled()) {
             new AlertDialog.Builder(activity)
                 .setTitle("DBest Firebase pilot — test ON")
@@ -185,6 +194,29 @@ public final class NativePushController {
             .setMessage("Enable Firebase test notifications on this phone? This does not register your device with the live DBest server.")
             .setPositiveButton("Enable test mode", (d,w) -> requestOrEnable())
             .setNegativeButton("Cancel", null).show();
+    }
+
+    private void retryPendingUnlink() {
+        if (!accountBinding.hasAccountBinding() || autoRevocationRunning) return;
+        autoRevocationRunning = true;
+        activity.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit().putBoolean("enabled", false).apply();
+        updateButton();
+        FirebaseMessaging.getInstance().setAutoInitEnabled(false);
+        accountBinding.revokeAndThen(() -> FirebaseMessaging.getInstance()
+            .deleteToken().addOnCompleteListener(task -> {
+                autoRevocationRunning = false;
+                if (accountBinding.hasAccountBinding()) {
+                    Toast.makeText(activity,
+                        "This device could not be safely unlinked yet. Keep QA data intact.",
+                        Toast.LENGTH_LONG).show();
+                } else {
+                    Toast.makeText(activity,
+                        "Old registration removed. You may now enable a new QA test token.",
+                        Toast.LENGTH_LONG).show();
+                }
+                updateButton();
+            }));
     }
 
     private void requestOrEnable() {
