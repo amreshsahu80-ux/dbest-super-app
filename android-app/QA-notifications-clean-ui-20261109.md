@@ -61,3 +61,23 @@ Nothing here authorizes merging to production or uploading an AAB to Play.
 - Native notification control in QA is now a 48dp icon-sized bell with an accessibility description, retaining identical permission/token ON/OFF interactions.
 - Inject Android-only CSS to make the WhatsApp control a compact 'WA' icon; retained the original button ID, click handlers, backend behavior and accessibility text. Public website remains unchanged.
 - Required physical QA: notification icon opens options, displays ON/OFF state, WhatsApp icon updates settings, and neither blocks the D-U-N-S seal or primary navigation. Screen reader/contrast check required.
+
+## Verified physical QA evidence through 10 Nov 2026
+These are observations from user-supplied screenshots and controlled Firebase Console tests, not full production verification.
+
+- [x] On an Android device, native duplicate DBest header and oversized deletion button absent; primary site logo/login and service tiles intact
+- [x] My Account > Account & Privacy opens and offers deletion request and instructions
+- [x] Redundant company-description block absent, separate legal/contact footer and D-U-N-S seal visible
+- [x] FCM test-device ON, direct Firebase Console delivery and background delivery observed
+- [x] Manual OFF followed by a test message not being received observed; token-delete/backend revoke failure modes remain separately unproven
+- [x] Pilot member registration produced explicit success toast
+- [x] In-place logout in patched QA automatically changed control from ON to OFF; read-only backend aggregation subsequently showed no recent QA test registration
+- [ ] Compact bell and WhatsApp 48dp controls: Android build passed, real phone layout/interaction test not yet provided
+- [ ] Member A → member B automatic revoke / isolation
+- [ ] Firebase delivery after logout, process death, expired credentials, offline/reconnect
+- [ ] Real app-opening time to service tiles (cold/warm) and measured bottleneck remediation
+- [ ] Cab, Marketplace, payments, account deletion links, notification tap navigation regression checks
+- [ ] Signed production build with proper release application ID, production Firebase config, and policy review
+- [ ] Production transactional sender/events verified; these remain disabled
+
+**NO-GO for Google Play update** until the remaining privacy/security/performance tests pass. Public main app and Partner app are not altered by this QA branch.
