@@ -81,3 +81,11 @@ These are observations from user-supplied screenshots and controlled Firebase Co
 - [ ] Production transactional sender/events verified; these remain disabled
 
 **NO-GO for Google Play update** until the remaining privacy/security/performance tests pass. Public main app and Partner app are not altered by this QA branch.
+
+## QA-only bottom dock prototype — 10 Nov 2026
+- Owner verified both compact controls open the intended notification and WhatsApp actions on physical Android.
+- Prior 48dp overlays still cover the lower service tiles; the new experimental native dock reserves 64dp below the WebView instead of overlaying content.
+- Native bell retains all prior opt-in, device-token and account-revocation behavior. An Android-only WhatsApp button proxies the existing `#dbestWhatsAppEnable` button click; the original WhatsApp button is visually hidden only while the dock is active. The live web WhatsApp opt-in implementation is unmodified.
+- Native dock is shown only on the trusted DBest home URL; it is hidden for other in-app routes so checkout receives full screen space.
+- **Required device QA:** first install, logged-in versus signed-out display, WA consent prompts, ON/OFF, screen rotation, narrow screens, keyboard, scroll to bottom of D-U-N-S seal, checkout, nested account/profile screens, and native notifications after logout.
+- This draft is not approved for production simply because Gradle passes.
