@@ -38,7 +38,7 @@ import javax.net.ssl.HttpsURLConnection;
 final class PartnerAccountBinding {
     private static final String PREFS = "dbest_partner_fcm_account";
     private static final String ENDPOINT =
-        "https://ydedmotbacnllkijzmvp.supabase.co/functions/v1/native-fcm-register";
+        "https://ydedmotbacnllkijzmvp.supabase.co/functions/v1/native-fcm-register-partner-qa";
 
     private final Activity activity;
     private final WebView portal;
@@ -48,6 +48,8 @@ final class PartnerAccountBinding {
     private volatile String boundSession; // Never stored in preferences or logged.
     private volatile String boundRole;
     private volatile String boundHeader;
+    private int consecutiveSessionMismatches = 0;
+    private static final int REQUIRED_MISMATCH_READS = 2;
 
     PartnerAccountBinding(Activity activity, WebView portal, Supplier<String> roleProvider) {
         this.activity = activity;
@@ -131,7 +133,7 @@ final class PartnerAccountBinding {
         } catch (Exception ignored) { return ""; }
     }
 
-    private boolean request(String action, String role, String session, String fcmToken) {
+    private JSONObject requestJson(String action, String role, String session, String fcmToken) {
         HttpsURLConnection connection = null;
         try {
             connection = (HttpsURLConnection) new URL(ENDPOINT).openConnection();
@@ -167,13 +169,41 @@ final class PartnerAccountBinding {
                         reply.append(line);
                 }
             }
-            return code >= 200 && code < 300 &&
-                new JSONObject(reply.toString()).optBoolean("ok", false);
+            return code >= 200 && code < 300 ? new JSONObject(reply.toString()) : null;
         } catch (Exception ignored) {
-            return false; // Never log session, token or error bodies.
+            return null; // Never log session, token or error bodies.
         } finally {
             if (connection != null) connection.disconnect();
         }
+    }
+
+    private boolean request(String action, String role, String session, String fcmToken) {
+        JSONObject result = requestJson(action, role, session, fcmToken);
+        return result != null && result.optBoolean("ok", false);
+    }
+
+    // A current, freshly authenticated role token must own this EXACT QA
+    // installation before it may replace an expired session for unlinking.
+    private boolean currentAccountOwnsInstallation(String role, String session) {
+        if (session == null || session.isEmpty()) return false;
+        JSONObject response = requestJson("status", role, session, null);
+        if (response == null || !response.optBoolean("ok", false)
+                || !role.equals(response.optString("role"))) return false;
+        org.json.JSONArray devices = response.optJSONArray("devices");
+        if (devices == null) return false;
+        for (int i = 0; i < devices.length(); i++) {
+            JSONObject device = devices.optJSONObject(i);
+            if (device != null
+                    && activity.getPackageName().equals(device.optString("app_id"))
+                    && installationId().equals(device.optString("installation_id"))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    boolean hasAccountBinding() {
+        return prefs().getBoolean("bound", false);
     }
 
     void connectWithConsent() {
@@ -183,9 +213,8 @@ final class PartnerAccountBinding {
             return;
         }
         if (busy.get()) { message("Account registration already in progress."); return; }
-        if (prefs().getBoolean("bound", false) &&
-            !role.equals(prefs().getString("bound_role", ""))) {
-            message("Turn Partner alerts OFF and ON again before linking a different role.");
+        if (hasAccountBinding()) {
+            message("This QA device is already linked or pending secure unlink. Disconnect it before connecting another account.");
             return;
         }
         new AlertDialog.Builder(activity)
@@ -232,37 +261,72 @@ final class PartnerAccountBinding {
             !active.equals(normalizedRole(selected));
     }
 
+    // Never clear a persisted account binding on a failed server unlink.
+    // A different account cannot take over a pending QA device registration.
     void revokeAndThen(Runnable done) {
-        if (!prefs().getBoolean("bound", false)) { activity.runOnUiThread(done); return; }
+        if (!hasAccountBinding()) {
+            activity.runOnUiThread(done);
+            return;
+        }
         String role = prefs().getString("bound_role", "");
         String remembered = boundSession;
-        Consumer<String> revoke = session -> worker.execute(() -> {
-            boolean ok = !session.isEmpty() && request("unregister", role, session, null);
-            boundSession = null;
-            boundRole = null;
-            boundHeader = null;
-            prefs().edit().putBoolean("bound", false)
-                .remove("bound_role").remove("bound_session_hash").apply();
+        readSession(role, active -> worker.execute(() -> {
+            boolean revoked = remembered != null && !remembered.isEmpty()
+                && request("unregister", role, remembered, null);
+            if (!revoked && !active.isEmpty()
+                    && currentAccountOwnsInstallation(role, active)) {
+                revoked = request("unregister", role, active, null);
+            }
+            if (revoked) {
+                boundSession = null;
+                boundRole = null;
+                boundHeader = null;
+                consecutiveSessionMismatches = 0;
+                prefs().edit().putBoolean("bound", false)
+                    .remove("bound_role").remove("bound_session_hash").apply();
+                message("Partner QA server registration revoked.");
+            } else {
+                message("Partner QA server unlink pending. Do not switch accounts; retry secure unlink.");
+            }
             activity.runOnUiThread(done);
-            if (!ok) message("Session may have expired. Firebase token deletion still protects this phone.");
-        });
-        if (remembered != null && !remembered.isEmpty()) revoke.accept(remembered);
-        else readSession(role, revoke);
+        }));
     }
 
-    // Detect logout/account replacement when a trusted portal page finishes
-    // loading. Background token invalidation after app termination requires
-    // further QA before production sender is enabled.
+    // Avoid treating WebView loading gaps or same-account token refreshes
+    // as a different member. Mismatches require two trusted readings.
     void onPortalPageLoaded(Runnable disableOnAccountChanged) {
-        if (!prefs().getBoolean("bound", false) || !trustedPage()) return;
+        if (!hasAccountBinding() || !trustedPage()) return;
         String role = prefs().getString("bound_role", "");
         String expectedHash = prefs().getString("bound_session_hash", "");
         readSession(role, session -> {
-            if (!prefs().getBoolean("bound", false)) return;
-            if (session.isEmpty() || !hash(session).equals(expectedHash)) {
-                message("Partner account changed; disabling this device's test notifications.");
-                disableOnAccountChanged.run();
+            if (!hasAccountBinding()) return;
+            if (!session.isEmpty() && hash(session).equals(expectedHash)) {
+                consecutiveSessionMismatches = 0;
+                return;
             }
+            if (++consecutiveSessionMismatches < REQUIRED_MISMATCH_READS) {
+                portal.postDelayed(() -> onPortalPageLoaded(disableOnAccountChanged), 950);
+                return;
+            }
+            consecutiveSessionMismatches = 0;
+            if (session.isEmpty()) {
+                message("Partner session ended; securely unlinking QA alerts.");
+                disableOnAccountChanged.run();
+                return;
+            }
+            if (!busy.compareAndSet(false, true)) return;
+            worker.execute(() -> {
+                try {
+                    if (currentAccountOwnsInstallation(role, session)) {
+                        boundSession = session; // Same account, refreshed session.
+                        prefs().edit().putString("bound_session_hash", hash(session)).apply();
+                    } else {
+                        activity.runOnUiThread(disableOnAccountChanged);
+                    }
+                } finally {
+                    busy.set(false);
+                }
+            });
         });
     }
 
