@@ -5,7 +5,7 @@ const nearCache=new Map();
 const positiveTtlMs=10*60*1000,negativeTtlMs=75*1000;
 const cacheKey=(lat,lng)=>`${(Math.round(lat*100)/100).toFixed(2)}:${(Math.round(lng*100)/100).toFixed(2)}`;
 async function nearbyHandler(req,res){
- res.setHeader('Cache-Control','public, s-maxage=120, stale-while-revalidate=300');
+ res.setHeader('Cache-Control','no-store');
  const lat=Number(req.query.lat),lng=Number(req.query.lng);
  if(!Number.isFinite(lat)||!Number.isFinite(lng)||Math.abs(lat)>90||Math.abs(lng)>180)return res.status(400).json({error:'Invalid pickup coordinates'});
  const cacheId=cacheKey(lat,lng),entry=nearCache.get(cacheId);
@@ -67,7 +67,9 @@ async function nearbyHandler(req,res){
    catch(e){console.warn('DBest backup Nearby unavailable:',JSON.stringify((e.errors||[]).map(x=>String(x.message||x))))}
   }
   if(result?.places?.length){
-   nearCache.set(cacheId,{places:result.places,source:result.source,expires:Date.now()+positiveTtlMs});
+   // Google Places content must not be cached; only public OSM fallback is cached.
+   if(result.source==='openstreetmap')nearCache.set(cacheId,{places:result.places,source:result.source,expires:Date.now()+positiveTtlMs});
+   if(result.source==='openstreetmap')res.setHeader('Cache-Control','public, s-maxage=120, stale-while-revalidate=300');
    return res.status(200).json(result);
   }
   nearCache.set(cacheId,{places:[],source:'none',expires:Date.now()+negativeTtlMs});
