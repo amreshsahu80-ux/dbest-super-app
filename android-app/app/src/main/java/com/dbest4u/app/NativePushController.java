@@ -46,6 +46,11 @@ public final class NativePushController {
     private final NativeAccountBinding accountBinding;
     private final Handler sessionHandler = new Handler(Looper.getMainLooper());
     private boolean sessionMonitorRunning = false;
+    // Require consistent observations before treating a temporary WebView
+    // loading gap as a real logout/account switch. The server must separately
+    // confirm device deregistration before a different account can bind.
+    private int consecutiveSessionMismatches = 0;
+    private static final int CONFIRMED_SESSION_MISMATCHES = 2;
     private boolean autoRevocationRunning = false;
     private long lastRevocationAttemptMs = -1L;
     private static final long MIN_REVOCATION_RETRY_MS = 15000L;
@@ -55,7 +60,15 @@ public final class NativePushController {
         @Override public void run() {
             if (!sessionMonitorRunning) return;
             boolean bound = accountBinding != null && accountBinding.hasAccountBinding();
-            if (bound) accountBinding.checkAccountContinuity(() -> revokeForSessionChange());
+            if (bound) accountBinding.checkAccountContinuity(
+                () -> {
+                    consecutiveSessionMismatches++;
+                    if (consecutiveSessionMismatches >= CONFIRMED_SESSION_MISMATCHES)
+                        revokeForSessionChange();
+                },
+                () -> consecutiveSessionMismatches = 0
+            );
+            else consecutiveSessionMismatches = 0;
             long now = SystemClock.elapsedRealtime();
             if (isTrustedHome() &&
                 (lastWhatsAppSyncMs < 0L ||
@@ -298,12 +311,14 @@ public final class NativePushController {
     // QA app is in the foreground and an account-bound device exists.
     public void startSessionMonitor() {
         if (sessionMonitorRunning) return;
+        consecutiveSessionMismatches = 0;
         sessionMonitorRunning = true;
         sessionHandler.postDelayed(sessionMonitor, 250L);
     }
 
     public void stopSessionMonitor() {
         sessionMonitorRunning = false;
+        consecutiveSessionMismatches = 0;
         sessionHandler.removeCallbacks(sessionMonitor);
     }
 
