@@ -1,14 +1,15 @@
-plugins { id 'com.android.application'; id 'com.google.gms.google-services' }
+// UI-only isolated QA: do not apply Google Services until this QA package is registered in Firebase.
+plugins { id 'com.android.application' }
 
 android {
     namespace 'com.dbest4u.partner'
     compileSdk 36
     defaultConfig {
-        applicationId 'com.dbest4u.partner'
+        applicationId 'com.dbest4u.partner.qa'
         minSdk 24
         targetSdk 36
         versionCode 6
-        versionName '1.0.2-qa'
+        versionName '1.0.2-qa-ui'
     }
     buildTypes {
         release {

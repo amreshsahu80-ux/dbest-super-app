@@ -6,7 +6,7 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <application
         android:allowBackup="false"
-        android:label="DBest Partner"
+        android:label="DBest Partner QA"
         android:icon="@drawable/partner_launcher"
         android:usesCleartextTraffic="false"
         android:theme="@style/Theme.DBestPartner">

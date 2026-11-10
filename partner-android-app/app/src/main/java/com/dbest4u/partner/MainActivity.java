@@ -78,7 +78,10 @@ public final class MainActivity extends ComponentActivity {
         screenHost.addView(homeScreen, new FrameLayout.LayoutParams(-1, -1));
         screenHost.addView(browserShell, new FrameLayout.LayoutParams(-1, -1));
         showHome();
-        partnerTestPush = new PartnerPushTestController(this, screenHost, webView, () -> currentRole);
+        // UI-only QA has no registered Firebase Android application.
+        // Keep all Firebase binding features disabled rather than mixing
+        // this test package with the public Partner app's FCM identity.
+        partnerTestPush = null;
 
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override public void handleOnBackPressed() {
@@ -249,14 +252,8 @@ public final class MainActivity extends ComponentActivity {
         browserTitle.setGravity(Gravity.CENTER_VERTICAL);
         browserTitle.setPadding(dp(10), 0, 0, 0);
         bar.addView(browserTitle, new LinearLayout.LayoutParams(0, dp(48), 1));
-        // In the signed-in partner portal, keep an explicit account-link
-        // action visible. No WebView-injected login/token is auto-uploaded.
-        Button linkAccount = button("🔔 Link", Color.WHITE, BLUE);
-        linkAccount.setOnClickListener(v -> {
-            if (partnerTestPush != null) partnerTestPush.connectAccount();
-        });
-        bar.addView(linkAccount, new LinearLayout.LayoutParams(dp(88), dp(46)));
-        spaceWidth(bar, dp(6));
+        // This side-by-side UI-only QA build intentionally omits Firebase
+        // controls until com.dbest4u.partner.qa has its own Firebase app.
         Button home = button("Home", BLUE, 0xFFEAF0FF);
         home.setOnClickListener(v -> showHome());
         bar.addView(home, new LinearLayout.LayoutParams(dp(78), dp(46)));

@@ -7,6 +7,7 @@ on:
       - 'feat/dbest-partner-android-pilot-20261029'
       - 'feat/dbest-partner-fcm-account-binding-20261102'
       - 'qa/partner-fcm-deletion-build-candidate-20261110'
+      - 'qa/partner-side-by-side-ui-isolated-20261110'
     paths:
       - 'partner-android-app/**'
       - '.github/workflows/dbest-partner-android.yml'
@@ -34,6 +35,19 @@ jobs:
         run: |
           if grep -R -n -E 'Google Play reviewer sign-in|openServiceReviewerPortal|REVIEW_HOST|REVIEW_URL' app/src/main/java; then
             echo "::error::Customer-facing Play Reviewer entry must not ship in Partner app"
+            exit 1
+          fi
+      - name: Check isolated Partner QA package and private account settings
+        run: |
+          grep -q "applicationId 'com.dbest4u.partner.qa'" app/build.gradle
+          grep -q 'android:label="DBest Partner QA"' app/src/main/AndroidManifest.xml
+          grep -q 'private void showAccountSettings()' app/src/main/java/com/dbest4u/partner/MainActivity.java
+          if grep -nE 'Button deleteAccount =|TextView accountDeletion =' app/src/main/java/com/dbest4u/partner/MainActivity.java; then
+            echo "::error::Account deletion must remain inside Account & Privacy"
+            exit 1
+          fi
+          if grep -n 'new PartnerPushTestController(' app/src/main/java/com/dbest4u/partner/MainActivity.java; then
+            echo "::error::Firebase device registration disabled in UI-only QA"
             exit 1
           fi
       - name: Build partner debug APK and unsigned release AAB
