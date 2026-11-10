@@ -164,6 +164,10 @@ public final class MainActivity extends ComponentActivity {
         space(footer, 4);
         footer.addView(txt("Tap Open workspace for your category. Your login and approvals stay with the existing DBest portal.", 12, 0xFF536780, false));
         page.addView(footer);
+        space(page, 12);
+        Button deleteAccount = button("Request account deletion", BLUE, 0xFFEAF0FF);
+        deleteAccount.setOnClickListener(v -> showAccountDeletion());
+        page.addView(deleteAccount, new LinearLayout.LayoutParams(-1, dp(48)));
         space(page, 18);
         TextView legal = txt("DBest Partner • Pilot 0.2.0", 11, 0xFF8B98AB, false);
         legal.setGravity(Gravity.CENTER);
@@ -253,6 +257,13 @@ public final class MainActivity extends ComponentActivity {
         home.setOnClickListener(v -> showHome());
         bar.addView(home, new LinearLayout.LayoutParams(dp(78), dp(46)));
         shell.addView(bar);
+        // Shared native entry covers Vendor, Vaahak and Service Partner views.
+        TextView accountDeletion = txt("Request account deletion", 12, BLUE, true);
+        accountDeletion.setGravity(Gravity.RIGHT | Gravity.CENTER_VERTICAL);
+        accountDeletion.setPadding(dp(14), dp(4), dp(16), dp(4));
+        accountDeletion.setContentDescription("Request deletion of your DBest Partner account");
+        accountDeletion.setOnClickListener(v -> showAccountDeletion());
+        shell.addView(accountDeletion, new LinearLayout.LayoutParams(-1, dp(45)));
 
         webView = new WebView(this);
         webView.setBackgroundColor(Color.WHITE);
@@ -350,6 +361,27 @@ public final class MainActivity extends ComponentActivity {
         String host = u.getHost();
         return host != null && (host.equalsIgnoreCase("dbest4u.com")
                 || host.equalsIgnoreCase("www.dbest4u.com"));
+    }
+
+    // Request-only: never mutate account or delete partner data in the app.
+    private void showAccountDeletion() {
+        new android.app.AlertDialog.Builder(this)
+            .setTitle("Delete DBest Partner account")
+            .setMessage("Vendors, Vaahaks and Service Partners can request deletion of their DBest Partner account and associated personal data. We may verify account ownership before processing. Some records may be retained where legally required. Never send passwords, PINs or OTPs.")
+            .setPositiveButton("Email deletion request", (dialog, which) -> {
+                Uri email = Uri.parse("mailto:director@thebestservices.org.in?subject="
+                        + Uri.encode("DBest Partner Account Deletion Request"));
+                try {
+                    startActivity(new Intent(Intent.ACTION_SENDTO, email));
+                } catch (ActivityNotFoundException e) {
+                    Toast.makeText(this, "No email app found. Use the deletion instructions link.", Toast.LENGTH_LONG).show();
+                    openExternal(Uri.parse("https://dbest4u.com/data-deletion"));
+                }
+            })
+            .setNeutralButton("Deletion instructions", (dialog, which) ->
+                openExternal(Uri.parse("https://dbest4u.com/data-deletion")))
+            .setNegativeButton("Cancel", null)
+            .show();
     }
 
     private void openExternal(Uri uri) {
