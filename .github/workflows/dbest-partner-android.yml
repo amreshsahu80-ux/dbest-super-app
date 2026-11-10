@@ -11,6 +11,7 @@ on:
       - 'release/dbest-partner-play-candidate-20261103'
       - 'release/dbest-partner-reviewer-access-code5-20261103'
       - 'fix/partner-account-deletion-20261103'
+      - 'fix/partner-remove-play-reviewer-signin-qa-20261110'
     paths:
       - 'partner-android-app/**'
       - '.github/workflows/dbest-partner-android.yml'
