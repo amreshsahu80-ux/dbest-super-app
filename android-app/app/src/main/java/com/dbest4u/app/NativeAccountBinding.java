@@ -156,6 +156,12 @@ final class NativeAccountBinding {
 
     void connectWithConsent() {
         if (!trustedPage()) { ui("Open the DBest website inside this app first."); return; }
+        // A different member must never overwrite a pending prior binding.
+        // Let the logout monitor unregister the original account first.
+        if (hasAccountBinding()) {
+            ui("This device is already linked or pending revocation. Turn test alerts OFF and complete unlinking before connecting another member.");
+            return;
+        }
         new AlertDialog.Builder(activity)
             .setTitle("Connect DBest account notifications?")
             .setMessage("Register this device only to the member account currently signed in. This pilot does not send real orders yet. You can turn alerts OFF to revoke it.")
