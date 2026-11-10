@@ -246,6 +246,18 @@ async function loadNearbyPlaces(lat,lng){
  };
  const browserGoogleNearby=async()=>{
   await initSearchProvider();
+  // The Maps browser configuration can arrive after the first search attempt.
+  if(!window.google?.maps?.importLibrary){
+   const key=await waitGoogleKey(1600);
+   if(key){
+    try{
+     await Promise.race([
+      loadScript('https://maps.googleapis.com/maps/api/js?key='+encodeURIComponent(key)+'&libraries=places&v=weekly','cab6-google'),
+      new Promise((_,reject)=>setTimeout(()=>reject(Error('Google SDK timed out')),4000))
+     ]);
+    }catch(e){console.warn('DBest Maps preview SDK still unavailable',e)}
+   }
+  }
   if(!window.google?.maps?.importLibrary)throw Error('Google Maps JavaScript not loaded');
   const {Place,SearchNearbyRankPreference}=await google.maps.importLibrary('places');
   const seen=new Set(),all=[];
@@ -280,20 +292,34 @@ async function loadNearbyPlaces(lat,lng){
  };
  const timer=setTimeout(()=>{if(rail.isConnected&&rail.dataset.requestId===requestId&&!rail.querySelector('.cab6Place:not(.loading)')){rail.innerHTML='<div style="font-size:12px;color:#687386;padding:12px">Nearby search is taking longer than expected.</div>'}},30000);
  try{
-  let nearbyFailure='';
- const googlePromise=browserGoogleNearby().then(rows=>{if(rows.length){render(rows);return true}nearbyFailure='Google returned no places';return false}).catch(e=>{nearbyFailure=String(e?.message||e||'Google Places error').slice(0,140);console.warn('DBest browser Places failed',e);return false});
+  let googleRendered=false;
+  const googlePromise=browserGoogleNearby().then(rows=>{
+   if(rows.length){googleRendered=true;render(rows);return true}
+   return false;
+  }).catch(e=>{console.warn('DBest browser Places unavailable',e);return false});
   const serverPromise=(async()=>{
-   const controller=new AbortController(),abort=setTimeout(()=>controller.abort(),8500);
+   const controller=new AbortController(),abort=setTimeout(()=>controller.abort(),9500);
    try{
     const response=await fetch('/api/runtime-config?mode=nearby&lat='+encodeURIComponent(lat)+'&lng='+encodeURIComponent(lng),{signal:controller.signal});
-    if(!response.ok)throw Error('Nearby server HTTP '+response.status);
-    const data=await response.json();const rows=(data.places||[]).filter(p=>cabPublicPlace(p.name,p.types||[])&&Number.isFinite(p.lat)&&Number.isFinite(p.lng));
-    if(rows.length){render(rows);return true}return false;
-   }catch(e){console.warn('DBest nearby server failed',e);return false}
+    if(!response.ok)throw Error('Nearby fallback HTTP '+response.status);
+    const data=await response.json();
+    const rows=(data.places||[]).filter(p=>cabPublicPlace(p.name,p.types||[])&&Number.isFinite(p.lat)&&Number.isFinite(p.lng));
+    // Always prefer the richer Google Places cards with native photos and credit.
+    if(rows.length){if(!googleRendered)render(rows);return true}
+    return false;
+   }catch(e){console.warn('DBest nearby fallback unavailable',e);return false}
    finally{clearTimeout(abort)}
   })();
   const outcomes=await Promise.all([googlePromise,serverPromise]);
-  if(!outcomes.some(Boolean)){render([]);if(rail.isConnected&&rail.dataset.requestId===requestId){const diagnostic=document.createElement('div');diagnostic.style.cssText='font-size:11px;color:#64748b;padding:0 12px 12px';diagnostic.textContent='Diagnostic: '+(nearbyFailure||'No nearby results')+' · server unavailable';rail.appendChild(diagnostic)}}
+  if(!outcomes.some(Boolean)&&rail.isConnected&&rail.dataset.requestId===requestId){
+   const hasGoogleKey=!!String(cfg().googleMapsApiKey||'').trim();
+   rail.innerHTML='<div style="padding:10px 8px;color:#617087;font-size:11px;line-height:1.5">' +
+     (hasGoogleKey?'Nearby places are temporarily unavailable.':'Nearby places need the Google Maps connection for this test preview.')+
+     ' You can still enter a destination above.'+
+     '<div style="margin-top:8px"><button type="button" id="cab6NearbyRetry" style="min-height:34px;border:1px solid #cfd8e8;border-radius:10px;background:#fff;color:#354f83;padding:7px 12px;font-size:11px">Try nearby again</button></div></div>';
+   const retry=rail.querySelector('#cab6NearbyRetry');
+   if(retry)retry.onclick=()=>{rail.innerHTML='<div class="cab6Place loading">Finding nearby places…</div>';loadNearbyPlaces(lat,lng).catch(e=>console.warn('Nearby retry failed',e))};
+  }
  }finally{clearTimeout(timer)}
 }
 async function useGps(noisy){
