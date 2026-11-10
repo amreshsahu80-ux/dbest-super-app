@@ -206,6 +206,114 @@ final class PartnerAccountBinding {
         return prefs().getBoolean("bound", false);
     }
 
+    private static final String QA_EVENT_ENDPOINT =
+        "https://ydedmotbacnllkijzmvp.supabase.co/functions/v1/native-fcm-partner-event-qa";
+
+    private String qaEventType(String role) {
+        if ("Vendor".equals(role)) return "marketplace_vendor_new_order";
+        if ("Vaahak".equals(role)) return "vaahak_ride_offer";
+        if ("Service Partner".equals(role)) return "service_partner_job_assigned";
+        return "";
+    }
+
+    // Requests are never made to arbitrary URLs. Only an authenticated,
+    // consented, already-linked Android QA installation can be a recipient.
+    private JSONObject requestQaEvent(String role, String session, String action) {
+        HttpsURLConnection connection = null;
+        try {
+            connection = (HttpsURLConnection) new URL(QA_EVENT_ENDPOINT).openConnection();
+            connection.setConnectTimeout(8000);
+            connection.setReadTimeout(15000);
+            connection.setRequestMethod("POST");
+            connection.setDoOutput(true);
+            connection.setRequestProperty("content-type", "application/json");
+            connection.setRequestProperty(header(role), session);
+            connection.setRequestProperty("cache-control", "no-store");
+            JSONObject body = new JSONObject();
+            body.put("action", action);
+            body.put("appId", activity.getPackageName());
+            body.put("installationId", installationId());
+            body.put("eventType", qaEventType(role));
+            if ("send".equals(action)) body.put("consent", true);
+            try (OutputStream out = connection.getOutputStream()) {
+                out.write(body.toString().getBytes(StandardCharsets.UTF_8));
+            }
+            int code = connection.getResponseCode();
+            InputStream stream = code >= 200 && code < 300
+                ? connection.getInputStream() : connection.getErrorStream();
+            StringBuilder reply = new StringBuilder();
+            if (stream != null) {
+                try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(stream, StandardCharsets.UTF_8))) {
+                    String line;
+                    while ((line = reader.readLine()) != null && reply.length() < 4096)
+                        reply.append(line);
+                }
+            }
+            JSONObject result = new JSONObject(reply.toString());
+            result.put("_http_ok", code >= 200 && code < 300);
+            return result;
+        } catch (Exception ignored) {
+            return null; // No tokens, session headers or response bodies are logged.
+        } finally {
+            if (connection != null) connection.disconnect();
+        }
+    }
+
+    void testSyntheticEventWithConsent() {
+        final String role = normalizedRole(roleProvider.get());
+        if (!trustedPage() || role.isEmpty() || !hasAccountBinding()
+            || !role.equals(prefs().getString("bound_role", ""))) {
+            message("Link an authenticated " + (role.isEmpty() ? "partner" : role)
+                + " QA device before running its event test.");
+            return;
+        }
+        if (busy.get()) { message("A secure QA operation is already running."); return; }
+        new AlertDialog.Builder(activity)
+            .setTitle(role + " simulated alert (QA only)")
+            .setMessage("Send one clearly labelled synthetic " + role
+                + " notification to this linked test device only? "
+                + "This creates no customer orders, rides, jobs or payments. "
+                + "Rate limits prevent repeated sends.")
+            .setPositiveButton("Send one QA alert", (dialog, which) ->
+                readSession(role, session -> {
+                    if (session.isEmpty() || !trustedPage()) {
+                        message("Your " + role + " session is unavailable. Sign in again.");
+                        return;
+                    }
+                    if (!busy.compareAndSet(false, true)) return;
+                    worker.execute(() -> {
+                        try {
+                            JSONObject status = requestQaEvent(role, session, "status");
+                            if (status == null || !status.optBoolean("ok", false)) {
+                                message("Could not verify QA device ownership. No alert was sent.");
+                                return;
+                            }
+                            if (!status.optBoolean("registered", false)) {
+                                message("This device is not linked to the signed-in "
+                                    + role + " account. No alert was sent.");
+                                return;
+                            }
+                            if (!status.optBoolean("senderConfigured", false)
+                                || status.optBoolean("generalSenderEnabled", false)) {
+                                message("QA sender is not ready or live sending is enabled. No alert was sent.");
+                                return;
+                            }
+                            JSONObject result = requestQaEvent(role, session, "send");
+                            if (result != null && result.optBoolean("ok", false)
+                                && result.optBoolean("providerAccepted", false)) {
+                                message(role + " synthetic QA alert accepted by Firebase. Check your phone.");
+                            } else {
+                                String reason = result == null ? "connection_error"
+                                    : result.optString("error", "qa_send_not_accepted");
+                                message("QA alert not sent: " + reason);
+                            }
+                        } finally { busy.set(false); }
+                    });
+                }))
+            .setNegativeButton("Cancel", null).show();
+    }
+
     void connectWithConsent() {
         final String role = normalizedRole(roleProvider.get());
         if (role.isEmpty() || !trustedPage()) {
