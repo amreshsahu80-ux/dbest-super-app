@@ -270,10 +270,10 @@ async function loadNearbyPlaces(lat,lng){
    const credit=p.photo&&p.attribution?
      '<small class="cab6PhotoCredit" style="position:absolute;top:6px;right:6px;left:6px;z-index:2;font-size:9px;color:white;text-align:right;text-shadow:0 1px 4px #000;pointer-events:none">Photo: '+esc(p.attribution)+'</small>':'';
    const img=p.photo?
-     '<img class="cab6PlacePhoto" src="'+esc(p.photo)+'" alt="" loading="'+(i<3?'eager':'lazy')+'" decoding="async" onerror="this.style.display=\'none\';this.parentElement.querySelector(\'.cab6PhotoCredit\')?.remove()" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;border-radius:inherit;z-index:0">':'';
+     '<img class="cab6PlacePhoto" src="'+esc(p.photo)+'" alt="" loading="'+(i<3?'eager':'lazy')+'" decoding="async" onerror="this.style.display=\'none\';this.parentElement.querySelector(\'.cab6PhotoCredit\')?.remove()" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;border-radius:inherit;z-index:1">':'';
    return '<button type="button" class="cab6Place" data-place="'+esc(p.name)+
      '" data-lat="'+p.lat+'" data-lng="'+p.lng+'">'+
-     '<span class="cab6PhotoFallback" aria-hidden="true" style="position:absolute;top:13px;left:13px;z-index:1;font-size:24px">'+icon+'</span>'+
+     '<span class="cab6PhotoFallback" aria-hidden="true" style="position:absolute;top:13px;left:13px;z-index:0;font-size:24px">'+icon+'</span>'+
      img+'<span style="position:absolute;bottom:12px;left:12px;right:8px;z-index:2;color:white;font-weight:700;text-shadow:0 1px 4px #000">'+esc(p.name)+'</span>'+credit+'</button>';
   }).join('');
   qa('.cab6Place',rail).forEach(btn=>btn.onclick=()=>{
@@ -332,9 +332,8 @@ async function loadNearbyPlaces(lat,lng){
  };
  const timer=setTimeout(()=>{if(rail.isConnected&&rail.dataset.requestId===requestId&&!rail.querySelector('.cab6Place:not(.loading)')){rail.innerHTML='<div style="font-size:12px;color:#687386;padding:12px">Nearby search is taking longer than expected.</div>'}},30000);
  try{
-  let googleRendered=false;
   const googlePromise=browserGoogleNearby().then(rows=>{
-   if(rows.length){googleRendered=true;render(rows);return true}
+   if(rows.length){render(rows);return true}
    return false;
   }).catch(e=>{console.warn('DBest browser Places unavailable',e);return false});
   const serverPromise=(async()=>{
@@ -344,8 +343,8 @@ async function loadNearbyPlaces(lat,lng){
     if(!response.ok)throw Error('Nearby fallback HTTP '+response.status);
     const data=await response.json();
     const rows=(data.places||[]).filter(p=>cabPublicPlace(p.name,p.types||[])&&Number.isFinite(p.lat)&&Number.isFinite(p.lng));
-    // Always prefer the richer Google Places cards with native photos and credit.
-    if(rows.length){if(!googleRendered)render(rows);return true}
+    // Merge fallback place names into Google cards while retaining existing photo and credit.
+    if(rows.length){render(rows);return true}
     return false;
    }catch(e){console.warn('DBest nearby fallback unavailable',e);return false}
    finally{clearTimeout(abort)}
