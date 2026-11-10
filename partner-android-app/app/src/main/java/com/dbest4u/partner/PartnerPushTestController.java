@@ -61,11 +61,19 @@ public final class PartnerPushTestController {
         ContextCompat.checkSelfPermission(activity,Manifest.permission.POST_NOTIFICATIONS)==PackageManager.PERMISSION_GRANTED;}
     public void refresh(){
         boolean active=on()&&permission();
-        control.setText(active?"🔔 Partner test ON":"🔕 Partner test OFF");
+        control.setText(active?"🔔 Partner QA ON"
+            : accountBinding.hasAccountBinding() ? "🔕 Unlink pending" : "🔕 Partner QA OFF");
         control.setBackgroundTintList(ColorStateList.valueOf(active?0xFF18784B:0xFF3D5B83));
     }
     private void tap(){
         if(!firebaseReady){Toast.makeText(activity,"Firebase not ready.",Toast.LENGTH_LONG).show();return;}
+        if(accountBinding.hasAccountBinding() && !on()){
+            new AlertDialog.Builder(activity).setTitle("Prior Partner QA account unlink pending")
+                .setMessage("The previous account's registration is still retained on the server. Retry secure unlink before connecting a different partner account.")
+                .setPositiveButton("Retry secure unlink",(d,w)->disable())
+                .setNegativeButton("Cancel",null).show();
+            return;
+        }
         if(on()){
             new AlertDialog.Builder(activity).setTitle("Partner test alerts")
                 .setMessage("Device-only test mode, not connected to live partner orders or jobs.")
@@ -142,10 +150,14 @@ public final class PartnerPushTestController {
         refresh();
         FirebaseMessaging.getInstance().setAutoInitEnabled(false);
         accountBinding.revokeAndThen(() -> FirebaseMessaging.getInstance().deleteToken()
-            .addOnCompleteListener(t ->
-                Toast.makeText(activity,t.isSuccessful()
-                    ? "Partner test alerts OFF; Firebase token deleted."
-                    : "Device OFF; Firebase token cleanup needs retry.",
-                    Toast.LENGTH_LONG).show()));
+            .addOnCompleteListener(t -> {
+                refresh();
+                String report = !t.isSuccessful()
+                    ? "Partner QA alerts OFF; Firebase token deletion needs retry."
+                    : accountBinding.hasAccountBinding()
+                        ? "Partner QA alerts OFF; server unlink pending. Retry secure unlink."
+                        : "Partner QA alerts OFF; device registration revoked.";
+                Toast.makeText(activity,report,Toast.LENGTH_LONG).show();
+            }));
     }
 }
