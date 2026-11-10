@@ -111,6 +111,31 @@ final class NativeAccountBinding {
     }
 
     private boolean request(String action, String session, String fcmToken) {
+        JSONObject result = requestJson(action, session, fcmToken);
+        return result != null && result.optBoolean("ok", false);
+    }
+
+    // Read-only status is authenticated by the CURRENT member token, and
+    // lists ONLY that member's devices. We never clear another member's
+    // registration merely because a token or WebView session changed.
+    private boolean currentAccountOwnsInstallation(String session) {
+        if (session == null || session.isEmpty()) return false;
+        JSONObject result = requestJson("status", session, null);
+        if (result == null || !result.optBoolean("ok", false)) return false;
+        org.json.JSONArray devices = result.optJSONArray("devices");
+        if (devices == null) return false;
+        String app = activity.getPackageName();
+        String installation = installationId();
+        for (int i = 0; i < devices.length(); i++) {
+            JSONObject item = devices.optJSONObject(i);
+            if (item != null && app.equals(item.optString("app_id"))
+                    && installation.equals(item.optString("installation_id")))
+                return true;
+        }
+        return false;
+    }
+
+    private JSONObject requestJson(String action, String session, String fcmToken) {
         HttpsURLConnection connection = null;
         try {
             URL url = new URL(ENDPOINT);
@@ -145,7 +170,8 @@ final class NativeAccountBinding {
                     while ((line = reader.readLine()) != null && response.length() < 4096) response.append(line);
                 }
             }
-            return code >= 200 && code < 300 && new JSONObject(response.toString()).optBoolean("ok");
+            if (code < 200 || code >= 300) return null;
+            return new JSONObject(response.toString());
         } catch (Exception ignored) {
             // Deliberately avoid printing session or device tokens.
             return false;
@@ -221,38 +247,44 @@ final class NativeAccountBinding {
         });
     }
 
+    // Attempt revocation with the originally linked member session first.
+    // If it expired, a newer session may revoke ONLY after the server's
+    // authenticated status confirms this exact app + installation still
+    // belongs to that same member. A different member cannot pass this test.
     void revokeAndThen(Runnable done) {
-        final boolean bound = activity.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .getBoolean("bound", false);
-        if (!bound) { done.run(); return; }
+        if (!hasAccountBinding()) {
+            activity.runOnUiThread(done);
+            return;
+        }
         final String remembered = sessionInMemory;
-        final String boundHash = activity.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .getString("session_hash", "");
-        java.util.function.Consumer<String> revoke = current -> {
-            // Never authorize a prior member's revocation using a different
-            // account's current session after logout, restart or account switch.
-            final String session = remembered != null && !remembered.isEmpty()
-                    && boundHash.equals(fingerprint(remembered)) ? remembered
-                    : current != null && !current.isEmpty()
-                    && boundHash.equals(fingerprint(current)) ? current : "";
-            requests.execute(() -> {
-                final boolean revoked = !session.isEmpty() && request("unregister", session, null);
-                // Always delete the FCM token locally (caller). Do not claim
-                // backend revocation if the unregister request failed.
-                // Retain in-memory authorization and pending binding state so
-                // the QA foreground monitor can retry without false success.
-                if (revoked) {
-                    sessionInMemory = null;
-                    activity.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-                        .edit().putBoolean("bound", false).remove("session_hash").apply();
-                } else {
-                    ui("Test alerts OFF locally; server revocation pending. Keep QA app open.");
-                }
-                activity.runOnUiThread(done);
+        final String originalHash = activity.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                .getString("session_hash", "");
+        readActiveSession(active -> {
+            readSession(raw -> {
+                String original = remembered != null && !remembered.isEmpty()
+                    && originalHash.equals(fingerprint(remembered)) ? remembered
+                    : raw != null && !raw.isEmpty() && originalHash.equals(fingerprint(raw))
+                    ? raw : "";
+                requests.execute(() -> {
+                    boolean revoked = !original.isEmpty() && request("unregister", original, null);
+                    if (!revoked && active != null && !active.isEmpty()
+                            && currentAccountOwnsInstallation(active)) {
+                        // Same installation verified under the currently authenticated
+                        // account. Safe after a normal same-member token rotation.
+                        revoked = request("unregister", active, null);
+                    }
+                    if (revoked) {
+                        sessionInMemory = null;
+                        activity.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                            .edit().putBoolean("bound", false).remove("session_hash").apply();
+                        ui("Previous device notification registration safely removed.");
+                    } else {
+                        ui("Registration still pending. Do not switch QA accounts or reinstall.");
+                    }
+                    activity.runOnUiThread(done);
+                });
             });
-        };
-        if (remembered != null) revoke.accept(remembered);
-        else readSession(revoke);
+        });
     }
 
     void shutdown() { requests.shutdown(); }
