@@ -46,6 +46,11 @@ public final class NativePushController {
     private final NativeAccountBinding accountBinding;
     private final Handler sessionHandler = new Handler(Looper.getMainLooper());
     private boolean sessionMonitorRunning = false;
+    // Require consistent observations before treating a temporary WebView
+    // loading gap as a real logout/account switch. The server must separately
+    // confirm device deregistration before a different account can bind.
+    private int consecutiveSessionMismatches = 0;
+    private static final int CONFIRMED_SESSION_MISMATCHES = 2;
     private boolean autoRevocationRunning = false;
     private long lastRevocationAttemptMs = -1L;
     private static final long MIN_REVOCATION_RETRY_MS = 15000L;
@@ -55,7 +60,15 @@ public final class NativePushController {
         @Override public void run() {
             if (!sessionMonitorRunning) return;
             boolean bound = accountBinding != null && accountBinding.hasAccountBinding();
-            if (bound) accountBinding.checkAccountContinuity(() -> revokeForSessionChange());
+            if (bound) accountBinding.checkAccountContinuity(
+                () -> {
+                    consecutiveSessionMismatches++;
+                    if (consecutiveSessionMismatches >= CONFIRMED_SESSION_MISMATCHES)
+                        revokeForSessionChange();
+                },
+                () -> consecutiveSessionMismatches = 0
+            );
+            else consecutiveSessionMismatches = 0;
             long now = SystemClock.elapsedRealtime();
             if (isTrustedHome() &&
                 (lastWhatsAppSyncMs < 0L ||
@@ -152,6 +165,15 @@ public final class NativePushController {
             Toast.makeText(activity, "Firebase test setup unavailable.", Toast.LENGTH_LONG).show();
             return;
         }
+        if (!isEnabled() && accountBinding.hasAccountBinding()) {
+            new AlertDialog.Builder(activity)
+                .setTitle("Previous notification registration pending")
+                .setMessage("This QA device is still linked to an earlier member session. Retry a secure unlink using your existing signed-in account. No other device or account will be changed.")
+                .setPositiveButton("Retry secure unlink", (dialog, which) -> retryPendingUnlink())
+                .setNegativeButton("Cancel", null)
+                .show();
+            return;
+        }
         if (isEnabled()) {
             new AlertDialog.Builder(activity)
                 .setTitle("DBest Firebase pilot — test ON")
@@ -172,6 +194,29 @@ public final class NativePushController {
             .setMessage("Enable Firebase test notifications on this phone? This does not register your device with the live DBest server.")
             .setPositiveButton("Enable test mode", (d,w) -> requestOrEnable())
             .setNegativeButton("Cancel", null).show();
+    }
+
+    private void retryPendingUnlink() {
+        if (!accountBinding.hasAccountBinding() || autoRevocationRunning) return;
+        autoRevocationRunning = true;
+        activity.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit().putBoolean("enabled", false).apply();
+        updateButton();
+        FirebaseMessaging.getInstance().setAutoInitEnabled(false);
+        accountBinding.revokeAndThen(() -> FirebaseMessaging.getInstance()
+            .deleteToken().addOnCompleteListener(task -> {
+                autoRevocationRunning = false;
+                if (accountBinding.hasAccountBinding()) {
+                    Toast.makeText(activity,
+                        "This device could not be safely unlinked yet. Keep QA data intact.",
+                        Toast.LENGTH_LONG).show();
+                } else {
+                    Toast.makeText(activity,
+                        "Old registration removed. You may now enable a new QA test token.",
+                        Toast.LENGTH_LONG).show();
+                }
+                updateButton();
+            }));
     }
 
     private void requestOrEnable() {
@@ -286,7 +331,8 @@ public final class NativePushController {
         if (home) {
             webView.evaluateJavascript("document.body.classList.add('dbestNativeDock')", null);
             refreshWhatsAppProxy();
-            accountBinding.checkAccountContinuity(() -> revokeForSessionChange());
+            // Foreground session monitor owns continuity checks; do not make a
+            // second immediate check while the WebView is changing visibility.
         } else {
             whatsappProxy.setVisibility(View.INVISIBLE);
         }
@@ -298,12 +344,14 @@ public final class NativePushController {
     // QA app is in the foreground and an account-bound device exists.
     public void startSessionMonitor() {
         if (sessionMonitorRunning) return;
+        consecutiveSessionMismatches = 0;
         sessionMonitorRunning = true;
         sessionHandler.postDelayed(sessionMonitor, 250L);
     }
 
     public void stopSessionMonitor() {
         sessionMonitorRunning = false;
+        consecutiveSessionMismatches = 0;
         sessionHandler.removeCallbacks(sessionMonitor);
     }
 
