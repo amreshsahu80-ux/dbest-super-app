@@ -49,13 +49,22 @@ public final class NativePushController {
     private boolean autoRevocationRunning = false;
     private long lastRevocationAttemptMs = -1L;
     private static final long MIN_REVOCATION_RETRY_MS = 15000L;
+    private static final long WHATSAPP_SYNC_INTERVAL_MS = 5000L;
+    private long lastWhatsAppSyncMs = -1L;
     private final Runnable sessionMonitor = new Runnable() {
         @Override public void run() {
             if (!sessionMonitorRunning) return;
-            if (accountBinding != null && accountBinding.hasAccountBinding())
-                accountBinding.checkAccountContinuity(() -> revokeForSessionChange());
-            if (isTrustedHome()) refreshWhatsAppProxy();
-            sessionHandler.postDelayed(this, 1500L);
+            boolean bound = accountBinding != null && accountBinding.hasAccountBinding();
+            if (bound) accountBinding.checkAccountContinuity(() -> revokeForSessionChange());
+            long now = SystemClock.elapsedRealtime();
+            if (isTrustedHome() &&
+                (lastWhatsAppSyncMs < 0L ||
+                 now - lastWhatsAppSyncMs >= WHATSAPP_SYNC_INTERVAL_MS)) {
+                lastWhatsAppSyncMs = now;
+                refreshWhatsAppProxy();
+            }
+            // Unbound users need no 1.5s account security monitoring.
+            sessionHandler.postDelayed(this, bound ? 1500L : WHATSAPP_SYNC_INTERVAL_MS);
         }
     };
 
@@ -109,6 +118,10 @@ public final class NativePushController {
             webView.evaluateJavascript(
                 "(function(){var w=document.getElementById('dbestWhatsAppEnable');"
                 + "if(w)w.click();})()", null);
+            // The existing website preference dialog updates asynchronously.
+            webView.postDelayed(() -> {
+                if (isTrustedHome()) refreshWhatsAppProxy();
+            }, 1600L);
         });
         updateButton();
     }
