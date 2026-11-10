@@ -20,6 +20,7 @@ import java.security.MessageDigest;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 import javax.net.ssl.HttpsURLConnection;
 
 /**
@@ -53,6 +54,7 @@ final class NativeAccountBinding {
     private final WebView webView;
     private final ExecutorService requests = Executors.newSingleThreadExecutor();
     private volatile String sessionInMemory;
+    private final AtomicBoolean accountCheckInFlight = new AtomicBoolean(false);
 
     NativeAccountBinding(Activity activity, WebView webView) {
         this.activity = activity;
@@ -231,7 +233,7 @@ final class NativeAccountBinding {
     // The controller confirms consecutive mismatches on a loaded trusted page.
     void checkAccountContinuity(Runnable onMismatch, Runnable onMatch) {
         if (!hasAccountBinding() || !trustedPage() || webView.getProgress() < 100) {
-            onMatch.run(); // Discard incomplete / interrupted observations.
+            onMatch.run();
             return;
         }
         readActiveSession(current -> {
@@ -241,9 +243,38 @@ final class NativeAccountBinding {
             }
             String boundHash = activity.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
                     .getString("session_hash", "");
-            if (current.isEmpty() || boundHash.isEmpty()
-                    || !boundHash.equals(fingerprint(current))) onMismatch.run();
-            else onMatch.run();
+            if (current.isEmpty() || boundHash.isEmpty()) {
+                onMismatch.run();
+                return;
+            }
+            if (boundHash.equals(fingerprint(current))) {
+                onMatch.run();
+                return;
+            }
+            // A new session token alone is NOT an account switch. Validate
+            // server-side ownership of the identical installation first.
+            // No network call occurs for an unchanged session.
+            if (!accountCheckInFlight.compareAndSet(false, true)) return;
+            requests.execute(() -> {
+                boolean sameMemberInstallation = currentAccountOwnsInstallation(current);
+                activity.runOnUiThread(() -> {
+                    accountCheckInFlight.set(false);
+                    if (!hasAccountBinding() || !trustedPage() || webView.getProgress() < 100)
+                        return;
+                    // Ignore stale network results if login changed meanwhile.
+                    readActiveSession(latest -> {
+                        if (!current.equals(latest) || !hasAccountBinding()) return;
+                        if (sameMemberInstallation) {
+                            sessionInMemory = current;
+                            activity.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                                .edit().putString("session_hash", fingerprint(current)).apply();
+                            onMatch.run();
+                        } else {
+                            onMismatch.run();
+                        }
+                    });
+                });
+            });
         });
     }
 
