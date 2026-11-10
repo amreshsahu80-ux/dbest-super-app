@@ -145,12 +145,26 @@ async function initLeaflet(){
 }
 async function reverseGoogle(lat,lng){
  try{
-  await Promise.race([initSearchProvider(),new Promise(resolve=>setTimeout(resolve,2500))]);
+  // Google Maps credentials arrive asynchronously from the existing
+  // DBest runtime config. Do not permanently accept an early fallback.
+  await Promise.race([initSearchProvider(),new Promise(resolve=>setTimeout(resolve,2400))]);
+  if(!window.google?.maps?.Geocoder){
+   const key=await waitGoogleKey(3500);
+   if(key){
+    await Promise.race([
+     loadScript('https://maps.googleapis.com/maps/api/js?key='+encodeURIComponent(key)+'&libraries=places&v=weekly','cab6-google').catch(()=>{}),
+     new Promise(resolve=>setTimeout(resolve,3500))
+    ]);
+   }
+  }
   if(!window.google?.maps?.Geocoder)return '';
+  S.provider='google';
   return await new Promise(resolve=>{
-   const timer=setTimeout(()=>resolve(''),6500);
+   let done=false;
+   const finish=v=>{if(done)return;done=true;clearTimeout(timer);resolve(v)};
+   const timer=setTimeout(()=>finish(''),6500);
    new google.maps.Geocoder().geocode({location:{lat,lng}},(rows,status)=>{
-    clearTimeout(timer);resolve(status==='OK'&&rows?.[0]?.formatted_address?rows[0].formatted_address:'');
+    finish(status==='OK'&&rows?.[0]?.formatted_address?rows[0].formatted_address:'');
    });
   });
  }catch(e){console.warn('Pickup Google reverse geocode failed',e);return ''}
