@@ -1,5 +1,5 @@
-// UI-only isolated QA: do not apply Google Services until this QA package is registered in Firebase.
-plugins { id 'com.android.application' }
+// Side-by-side Partner QA: uses the separately registered Firebase Android client.
+plugins { id 'com.android.application'; id 'com.google.gms.google-services' }
 
 android {
     namespace 'com.dbest4u.partner'
@@ -9,7 +9,7 @@ android {
         minSdk 24
         targetSdk 36
         versionCode 6
-        versionName '1.0.2-qa-ui'
+        versionName '1.0.2-qa-fcm'
     }
     buildTypes {
         release {
