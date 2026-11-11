@@ -33,6 +33,22 @@ public final class PartnerMessagingService extends FirebaseMessagingService {
         if (Build.VERSION.SDK_INT >= 33 &&
             ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
                  != PackageManager.PERMISSION_GRANTED) return;
+        android.content.SharedPreferences account =
+            getSharedPreferences("dbest_partner_fcm_account", MODE_PRIVATE);
+        if (!account.getBoolean("bound", false)) return;
+        // Only three reviewed, server-originated business-event kinds are
+        // eligible for the pilot. A token-only test payload cannot route to
+        // a different user's workspace or forge an arbitrary destination.
+        String eventType = message.getData().get("eventType");
+        String expectedRole;
+        if ("marketplace_vendor_new_order".equals(eventType)) expectedRole = "Vendor";
+        else if ("vaahak_ride_offer".equals(eventType)) expectedRole = "Vaahak";
+        else if ("service_partner_job_assigned".equals(eventType)) expectedRole = "Service Partner";
+        else return;
+        if (!expectedRole.equals(account.getString("bound_role", ""))) return;
+        String eventKey = message.getData().get("eventKey");
+        if (eventKey == null || !eventKey.startsWith(eventType + ":")
+            || eventKey.length() > 400) return;
 
         String title = message.getData().get("title");
         String body = message.getData().get("body");
@@ -49,8 +65,10 @@ public final class PartnerMessagingService extends FirebaseMessagingService {
                 CHANNEL, "DBest Partner Updates", NotificationManager.IMPORTANCE_DEFAULT));
 
         Intent intent = new Intent(this, MainActivity.class)
-            .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-        PendingIntent pending = PendingIntent.getActivity(this, 0, intent,
+            .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            .putExtra("dbest.notification.role", expectedRole);
+        PendingIntent pending = PendingIntent.getActivity(this,
+            eventKey.hashCode() & 0x7fffffff, intent,
             PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         Notification.Builder notification = Build.VERSION.SDK_INT >= 26 ?
             new Notification.Builder(this, CHANNEL) : new Notification.Builder(this);
@@ -58,6 +76,6 @@ public final class PartnerMessagingService extends FirebaseMessagingService {
             .setContentTitle(title).setContentText(body)
             .setStyle(new Notification.BigTextStyle().bigText(body))
             .setContentIntent(pending).setAutoCancel(true);
-        manager.notify((int)(System.currentTimeMillis() & 0x7fffffff), notification.build());
+        manager.notify(eventKey.hashCode() & 0x7fffffff, notification.build());
     }
 }

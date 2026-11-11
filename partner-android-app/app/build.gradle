@@ -1,15 +1,15 @@
-// Side-by-side Partner QA: uses the separately registered Firebase Android client.
+// STAGED PRODUCTION-ID CANARY CANDIDATE. UNSIGNED; NOT FOR INSTALLING OVER PLAY.\n// Before any Play upload, verify versionCode with Play Console and use its authorized signing path.
 plugins { id 'com.android.application'; id 'com.google.gms.google-services' }
 
 android {
     namespace 'com.dbest4u.partner'
     compileSdk 36
     defaultConfig {
-        applicationId 'com.dbest4u.partner.qa'
+        applicationId 'com.dbest4u.partner'
         minSdk 24
         targetSdk 36
-        versionCode 6
-        versionName '1.0.2-qa-fcm'
+        versionCode 7
+        versionName '1.0.3-canary-candidate'
     }
     buildTypes {
         release {

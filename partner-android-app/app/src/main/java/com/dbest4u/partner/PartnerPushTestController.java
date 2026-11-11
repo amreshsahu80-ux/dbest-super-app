@@ -3,8 +3,6 @@ package com.dbest4u.partner;
 import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.content.ClipData;
-import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
@@ -61,29 +59,28 @@ public final class PartnerPushTestController {
         ContextCompat.checkSelfPermission(activity,Manifest.permission.POST_NOTIFICATIONS)==PackageManager.PERMISSION_GRANTED;}
     public void refresh(){
         boolean active=on()&&permission();
-        control.setText(active?"🔔 Partner QA ON"
-            : accountBinding.hasAccountBinding() ? "🔕 Unlink pending" : "🔕 Partner QA OFF");
+        control.setText(active?"🔔 Partner alerts ON"
+            : accountBinding.hasAccountBinding() ? "🔕 Unlink pending" : "🔕 Partner alerts OFF");
         control.setBackgroundTintList(ColorStateList.valueOf(active?0xFF18784B:0xFF3D5B83));
     }
     private void tap(){
         if(!firebaseReady){Toast.makeText(activity,"Firebase not ready.",Toast.LENGTH_LONG).show();return;}
         if(accountBinding.hasAccountBinding() && !on()){
-            new AlertDialog.Builder(activity).setTitle("Prior Partner QA account unlink pending")
+            new AlertDialog.Builder(activity).setTitle("Previous Partner account unlink pending")
                 .setMessage("The previous account's registration is still retained on the server. Retry secure unlink before connecting a different partner account.")
                 .setPositiveButton("Retry secure unlink",(d,w)->disable())
                 .setNegativeButton("Cancel",null).show();
             return;
         }
         if(on()){
-            new AlertDialog.Builder(activity).setTitle("Partner test alerts")
-                .setMessage("Device-only test mode, not connected to live partner orders or jobs.")
-                .setPositiveButton("Copy FCM test token",(d,w)->showToken())
-                .setNeutralButton("Turn OFF",(d,w)->disable())
+            new AlertDialog.Builder(activity).setTitle("Partner notification controls")
+                .setMessage("This phone is ready for opt-in notifications. Automatic business-event sending stays disabled until the owner authorizes the restricted server canary.")
+                .setPositiveButton("Turn OFF and unlink",(d,w)->disable())
                 .setNegativeButton("Cancel",null).show();
         }else{
-            new AlertDialog.Builder(activity).setTitle("Enable partner test alerts?")
-                .setMessage("This enables a Firebase device test only, without registering on the DBest live server.")
-                .setPositiveButton("Enable test mode",(d,w)->requestPermission())
+            new AlertDialog.Builder(activity).setTitle("Enable Partner notification pilot?")
+                .setMessage("This enables Firebase locally on this phone. It does not link any account or activate production event sending. You must separately sign in, tap Link, and consent before a device can be registered.")
+                .setPositiveButton("Enable notifications",(d,w)->requestPermission())
                 .setNegativeButton("Cancel",null).show();
         }
     }
@@ -94,7 +91,7 @@ public final class PartnerPushTestController {
     }
     public void onPermissionResult(boolean granted){
         if(granted)enable();else{
-            Toast.makeText(activity,"Permission denied; partner test alerts remain OFF.",Toast.LENGTH_LONG).show();
+            Toast.makeText(activity,"Permission denied; Partner alerts remain OFF.",Toast.LENGTH_LONG).show();
             refresh();
         }
     }
@@ -106,27 +103,15 @@ public final class PartnerPushTestController {
                 activity.getSharedPreferences(PREFS,Context.MODE_PRIVATE).edit().putBoolean("enabled",true).apply();
                 refresh();
                 new AlertDialog.Builder(activity)
-                    .setTitle("Partner test token ready")
-                    .setMessage("Paste this token only into Firebase Console → Send test message. Real partner notifications are not yet connected.")
-                    .setPositiveButton("Copy token",(d,w)->copy(t.getResult()))
-                    .setNegativeButton("Close",null).show();
+                    .setTitle("Device notifications ready")
+                    .setMessage("Open your signed-in Partner workspace and choose Link to register this specific phone with your consent. The DBest notification sender is not enabled by this action.")
+                    .setPositiveButton("Close",null).show();
             }else{
                 FirebaseMessaging.getInstance().setAutoInitEnabled(false);
-                Toast.makeText(activity,"FCM token unavailable. Test alerts remain OFF.",Toast.LENGTH_LONG).show();
+                Toast.makeText(activity,"FCM token unavailable. Partner alerts remain OFF.",Toast.LENGTH_LONG).show();
                 refresh();
             }
         });
-    }
-    private void showToken(){
-        FirebaseMessaging.getInstance().getToken().addOnCompleteListener(t->{
-            if(t.isSuccessful()&&t.getResult()!=null)copy(t.getResult());
-            else Toast.makeText(activity,"Token unavailable.",Toast.LENGTH_LONG).show();
-        });
-    }
-    private void copy(String token){
-        ClipboardManager cb=(ClipboardManager)activity.getSystemService(Context.CLIPBOARD_SERVICE);
-        cb.setPrimaryClip(ClipData.newPlainText("Partner FCM test token",token));
-        Toast.makeText(activity,"Partner test token copied. Paste only into Firebase Console.",Toast.LENGTH_LONG).show();
     }
     public void connectAccount() {
         if (!on() || !permission()) {
@@ -134,15 +119,6 @@ public final class PartnerPushTestController {
             return;
         }
         accountBinding.connectWithConsent();
-    }
-    public void testSyntheticBusinessEvent() {
-        if (!on() || !permission()) {
-            Toast.makeText(activity,
-                "Enable Partner QA notifications and link the current account first.",
-                Toast.LENGTH_LONG).show();
-            return;
-        }
-        accountBinding.testSyntheticEventWithConsent();
     }
     public void onWorkspaceSelected(String role) {
         if (accountBinding.isBoundToDifferentRole(role)) {
@@ -162,10 +138,10 @@ public final class PartnerPushTestController {
             .addOnCompleteListener(t -> {
                 refresh();
                 String report = !t.isSuccessful()
-                    ? "Partner QA alerts OFF; Firebase token deletion needs retry."
+                    ? "Partner alerts OFF; Firebase token deletion needs retry."
                     : accountBinding.hasAccountBinding()
-                        ? "Partner QA alerts OFF; server unlink pending. Retry secure unlink."
-                        : "Partner QA alerts OFF; device registration revoked.";
+                        ? "Partner alerts OFF; server unlink pending. Retry secure unlink."
+                        : "Partner alerts OFF; device registration revoked.";
                 Toast.makeText(activity,report,Toast.LENGTH_LONG).show();
             }));
     }
