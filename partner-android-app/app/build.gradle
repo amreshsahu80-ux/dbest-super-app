@@ -8,8 +8,8 @@ android {
         applicationId 'com.dbest4u.partner'
         minSdk 24
         targetSdk 36
-        versionCode 7
-        versionName '1.0.3-canary-candidate'
+        versionCode 8
+        versionName '1.0.4-qa-canary-candidate'
     }
     buildTypes {
         release {
