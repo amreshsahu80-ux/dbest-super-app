@@ -8,8 +8,8 @@ android {
         applicationId 'com.dbest4u.partner.qa'
         minSdk 24
         targetSdk 36
-        versionCode 6
-        versionName '1.0.2-qa-fcm'
+        versionCode 7
+        versionName '1.0.3-qa-local-notification'
     }
     buildTypes {
         release {

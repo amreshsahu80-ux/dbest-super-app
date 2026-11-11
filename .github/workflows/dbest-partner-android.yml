@@ -9,6 +9,7 @@ on:
       - 'qa/partner-fcm-deletion-build-candidate-20261110'
       - 'qa/partner-side-by-side-ui-isolated-20261110'
       - 'qa/partner-fcm-isolated-config-20261110'
+      - 'qa/partner-local-notification-diagnostic-20261111'
     paths:
       - 'partner-android-app/**'
       - '.github/workflows/dbest-partner-android.yml'

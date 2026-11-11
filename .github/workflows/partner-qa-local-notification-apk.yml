@@ -1,0 +1,67 @@
+name: DBest Partner QA - local notification side-by-side APK
+
+on:
+  push:
+    branches:
+      - qa/partner-local-notification-diagnostic-20261111
+    paths:
+      - partner-android-app/**
+      - .github/workflows/partner-qa-local-notification-apk.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: qa-local-notification-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  compile:
+    if: github.ref == 'refs/heads/qa/partner-local-notification-diagnostic-20261111'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: partner-android-app
+    steps:
+      - name: Checkout dedicated QA branch
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Configure Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Configure Gradle 8.13
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+      - name: Verify independent QA package and local test
+        run: |
+          set -euo pipefail
+          grep -Fq "applicationId 'com.dbest4u.partner.qa'" app/build.gradle
+          grep -Fq "versionCode 7" app/build.gradle
+          grep -Fq 'android:label="DBest Partner QA"' app/src/main/AndroidManifest.xml
+          grep -Fq 'Show local notification' app/src/main/java/com/dbest4u/partner/PartnerPushTestController.java
+          grep -Fq 'manager.notify(716261' app/src/main/java/com/dbest4u/partner/PartnerPushTestController.java
+          if grep -R -n 'DBEST_FCM_SEND_ENABLED=true' app/src/main/java; then
+            echo "::error::Must not enable production FCM"
+            exit 1
+          fi
+          python3 - <<'PY'
+          import json
+          with open('app/google-services.json') as f: cfg=json.load(f)
+          assert cfg['project_info']['project_id']=='dbest-mobile-notifications'
+          assert any(c['client_info']['android_client_info']['package_name']=='com.dbest4u.partner.qa' for c in cfg['client'])
+          print('QA Firebase identity is separate from installed Play Partner app')
+          PY
+      - name: Build side-by-side QA debug APK (no release signing or Play deployment)
+        run: gradle --no-daemon :app:assembleDebug
+      - name: Upload QA APK for device-local notification test
+        uses: actions/upload-artifact@v4
+        with:
+          name: dbest-partner-qa-local-notification-apk
+          path: partner-android-app/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 3
