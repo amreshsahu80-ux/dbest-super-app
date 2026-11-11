@@ -153,24 +153,33 @@ public final class NativePushController {
             return;
         }
         if (isEnabled()) {
-            new AlertDialog.Builder(activity)
-                .setTitle("DBest Firebase pilot — test ON")
-                // AlertDialog cannot display both a message and a list; a message hides all action rows.
-                .setItems(new String[]{
+            final String[] options = BuildConfig.DEBUG
+                ? new String[]{
                     "Connect to my signed-in DBest member account (pilot)",
                     "Copy Firebase test token",
                     "Turn notifications OFF"
-                }, (dialog, which) -> {
+                }
+                : new String[]{
+                    "Connect to my signed-in DBest member account",
+                    "Turn notifications OFF"
+                };
+            new AlertDialog.Builder(activity)
+                .setTitle(BuildConfig.DEBUG ? "DBest Firebase pilot — test ON" : "DBest notifications")
+                .setItems(options, (dialog, which) -> {
                     if (which == 0) accountBinding.connectWithConsent();
-                    else if (which == 1) showToken();
-                    else if (which == 2) disable();
+                    else if (BuildConfig.DEBUG && which == 1) showToken();
+                    else if ((!BuildConfig.DEBUG && which == 1)
+                            || (BuildConfig.DEBUG && which == 2)) disable();
                 }).setNegativeButton("Close", null).show();
             return;
         }
         new AlertDialog.Builder(activity)
-            .setTitle("Enable test notifications?")
-            .setMessage("Enable Firebase test notifications on this phone? This does not register your device with the live DBest server.")
-            .setPositiveButton("Enable test mode", (d,w) -> requestOrEnable())
+            .setTitle(BuildConfig.DEBUG ? "Enable test notifications?" : "Enable DBest notifications?")
+            .setMessage(BuildConfig.DEBUG
+                ? "Enable Firebase test notifications on this phone? This does not register your device with the live DBest server."
+                : "Allow this phone to receive DBest alerts? After enabling, connect your signed-in member account. Actual delivery also depends on server enablement.")
+            .setPositiveButton(BuildConfig.DEBUG ? "Enable test mode" : "Enable notifications",
+                (d,w) -> requestOrEnable())
             .setNegativeButton("Cancel", null).show();
     }
 
@@ -202,11 +211,18 @@ public final class NativePushController {
                 activity.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
                         .edit().putBoolean("enabled", true).apply();
                 updateButton();
-                new AlertDialog.Builder(activity)
-                    .setTitle("Device test ready")
-                    .setMessage("FCM token generated. Copy it into Firebase Console's 'Send test message' dialog to verify this phone. Do NOT share the token publicly.")
-                    .setPositiveButton("Copy token", (d,w) -> copyToken(task.getResult()))
-                    .setNegativeButton("Close", null).show();
+                AlertDialog.Builder ready = new AlertDialog.Builder(activity);
+                if (BuildConfig.DEBUG) {
+                    ready.setTitle("Device test ready")
+                        .setMessage("FCM token generated. Copy it only into Firebase Console for authorised QA.")
+                        .setPositiveButton("Copy token", (d,w) -> copyToken(task.getResult()))
+                        .setNegativeButton("Close", null);
+                } else {
+                    ready.setTitle("Phone notifications enabled")
+                        .setMessage("Connect this phone to your signed-in DBest member account. Actual alerts require server-side activation.")
+                        .setPositiveButton("Close", null);
+                }
+                ready.show();
             } else {
                 FirebaseMessaging.getInstance().setAutoInitEnabled(false);
                 Toast.makeText(activity, "Could not get a Firebase test token. Try again.", Toast.LENGTH_LONG).show();
