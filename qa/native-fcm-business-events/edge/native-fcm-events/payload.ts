@@ -1,5 +1,5 @@
 /** QA-staged FCM payload builder. No network I/O; easy to regression-test. */
-const cleanTarget=(x:string)=>/^\\/(?!\\/)[A-Za-z0-9_/?=&.%-]{0,300}$/.test(x)?x:"/";
+const cleanTarget=(x:string)=>/^\/(?!\/)[A-Za-z0-9_/?=&.%-]{0,300}$/.test(x)?x:"/";
 export function buildFcmPayload(token:string,notice:Record<string,string>,device:Record<string,string>) {
   const isPartner=device.app_id==="com.dbest4u.partner";
   return {message:{
