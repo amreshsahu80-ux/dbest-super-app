@@ -69,7 +69,13 @@ public final class PartnerPushTestController {
         control.setBackgroundTintList(ColorStateList.valueOf(active?0xFF18784B:0xFF3D5B83));
     }
     private void tap(){
-        if(!firebaseReady){Toast.makeText(activity,"Firebase not ready.",Toast.LENGTH_LONG).show();return;}
+        if(!firebaseReady){
+            new AlertDialog.Builder(activity).setTitle("Android notification display test")
+                .setMessage("Test a notification on this phone only. No Firebase or backend call.")
+                .setPositiveButton("Show local notification",(d,w)->showLocalTest())
+                .setNegativeButton("Cancel",null).show();
+            return;
+        }
         if(accountBinding.hasAccountBinding() && !on()){
             new AlertDialog.Builder(activity).setTitle("Prior Partner QA account unlink pending")
                 .setMessage("The previous account's registration is still retained on the server. Retry secure unlink before connecting a different partner account.")
@@ -85,8 +91,9 @@ public final class PartnerPushTestController {
                 .setNegativeButton("Cancel",null).show();
         }else{
             new AlertDialog.Builder(activity).setTitle("Enable partner test alerts?")
-                .setMessage("This enables a Firebase device test only, without registering on the DBest live server.")
-                .setPositiveButton("Enable test mode",(d,w)->requestPermission())
+                .setMessage("You can test Android notification display without connecting Firebase. Enable test mode only for separate Firebase QA.")
+                .setPositiveButton("Show local notification",(d,w)->showLocalTest())
+                .setNeutralButton("Enable Firebase QA",(d,w)->requestPermission())
                 .setNegativeButton("Cancel",null).show();
         }
     }
@@ -95,8 +102,8 @@ public final class PartnerPushTestController {
      * backend session, booking, ride, order or payment.
      */
     private void showLocalTest() {
-        if (!on() || !permission()) {
-            Toast.makeText(activity,"Enable Partner QA notifications first.",Toast.LENGTH_LONG).show();
+        if (!permission()) {
+            Toast.makeText(activity,"Allow notifications for DBest Partner QA in Android Settings first.",Toast.LENGTH_LONG).show();
             return;
         }
         NotificationManager manager = activity.getSystemService(NotificationManager.class);
