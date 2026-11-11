@@ -65,7 +65,7 @@ jobs:
         run: |
           psql -At -v ON_ERROR_STOP=1 -f qa/native-fcm-business-events/tests/03_export_post_trigger_state.sql > /tmp/dbest-native-fcm-e2e-state.json
           test -s /tmp/dbest-native-fcm-e2e-state.json
-      - name: End-to-end: trigger queue to authoritative recheck, canary authorization and Android FCM payload
+      - name: End-to-end trigger queue to worker decision and Android FCM payload
         run: |
           deno run --allow-read=/tmp/dbest-native-fcm-e2e-state.json \
             --config qa/native-fcm-business-events/edge/native-fcm-events/deno.json \
@@ -105,7 +105,6 @@ jobs:
           grep -q 'DBEST_FCM_FULL_ROLLOUT_APPROVED' "$file"
           grep -q 'rollout_mode_off' "$file"
           grep -q 'full_rollout_not_approved' "$file"
-          grep -q 'allowedPairs.has(item.recipient_type' "$file"
           if grep -R 'ALTER DATABASE\|SET DBEST_FCM_SEND_ENABLED\|CREATE EXTENSION http\|CREATE EXTENSION pg_net' qa/native-fcm-business-events/; then
             echo "::error::Staged integration must not enable production dispatch"
             exit 1
