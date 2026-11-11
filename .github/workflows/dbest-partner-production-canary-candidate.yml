@@ -71,3 +71,10 @@ jobs:
         run: |
           test -f app/build/outputs/bundle/release/app-release.aab
           echo "PASS: unsigned QA-only candidate compiled; no Play upload, signed APK or live notification deployment"
+      - name: Retain unsigned bundle privately for local signing verification
+        uses: actions/upload-artifact@v4
+        with:
+          name: dbest-partner-code7-unsigned-private-ci
+          path: partner-android-app/app/build/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
+          retention-days: 1
