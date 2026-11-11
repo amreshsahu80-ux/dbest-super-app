@@ -194,8 +194,7 @@ Deno.serve(async req => {
       const mode=clean(Deno.env.get("DBEST_FCM_ROLLOUT_MODE"),20)||"off";
       return json({ok:true,pending:pending||0,registered:registered||0,
         sendingEnabled:Deno.env.get("DBEST_FCM_SEND_ENABLED")==="true",
-        rolloutMode:["canary","all"].includes(mode)?mode:"off",
-        productionEventHooksEnabled:false // advisory only: database triggers audited separately
+        rolloutMode:["canary","all"].includes(mode)?mode:"off"
       });
     }
     if (action==="enqueue" || action==="preview") {
