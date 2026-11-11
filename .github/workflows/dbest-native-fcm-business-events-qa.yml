@@ -68,12 +68,16 @@ jobs:
           deno-version: v2.x
       - name: Typecheck hardened native FCM worker snapshot
         run: deno check --config qa/native-fcm-business-events/edge/native-fcm-events/deno.json qa/native-fcm-business-events/edge/native-fcm-events/index.ts
+      - name: Test actual worker source revalidation against synthetic business records
+        run: deno test --config qa/native-fcm-business-events/edge/native-fcm-events/deno.json --allow-none qa/native-fcm-business-events/tests/from_event_test.ts
       - name: Verify production is not enabled by this branch
         run: |
           file=qa/native-fcm-business-events/edge/native-fcm-events/index.ts
-          grep -q 'offer_expires_at' "$file"
-          grep -q 'status!=="Assigned"' "$file"
-          grep -q 'New Order' "$file"
+          helper=qa/native-fcm-business-events/edge/native-fcm-events/from-event.ts
+          grep -q 'offer_expires_at' "$helper"
+          grep -q 'status!=="Assigned"' "$helper"
+          grep -q 'New Order' "$helper"
+          grep -q 'from "./from-event.ts"' "$file"
           grep -q 'native_fcm_outbox' "$file"
           grep -q 'DBEST_FCM_SEND_ENABLED' "$file"
           grep -q 'DBEST_FCM_ROLLOUT_MODE' "$file"
