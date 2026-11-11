@@ -69,7 +69,7 @@ jobs:
       - name: Typecheck hardened native FCM worker snapshot
         run: deno check --config qa/native-fcm-business-events/edge/native-fcm-events/deno.json qa/native-fcm-business-events/edge/native-fcm-events/index.ts
       - name: Test actual worker source revalidation against synthetic business records
-        run: deno test --config qa/native-fcm-business-events/edge/native-fcm-events/deno.json --allow-none qa/native-fcm-business-events/tests/from_event_test.ts
+        run: deno test --config qa/native-fcm-business-events/edge/native-fcm-events/deno.json qa/native-fcm-business-events/tests/from_event_test.ts
       - name: Verify production is not enabled by this branch
         run: |
           file=qa/native-fcm-business-events/edge/native-fcm-events/index.ts
