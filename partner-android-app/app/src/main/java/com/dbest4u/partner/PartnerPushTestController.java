@@ -3,6 +3,9 @@ package com.dbest4u.partner;
 import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
@@ -77,7 +80,7 @@ public final class PartnerPushTestController {
         if(on()){
             new AlertDialog.Builder(activity).setTitle("Partner test alerts")
                 .setMessage("Device-only test mode, not connected to live partner orders or jobs.")
-                .setPositiveButton("Copy FCM test token",(d,w)->showToken())
+                .setPositiveButton("Show local notification",(d,w)->showLocalTest())
                 .setNeutralButton("Turn OFF",(d,w)->disable())
                 .setNegativeButton("Cancel",null).show();
         }else{
@@ -87,6 +90,41 @@ public final class PartnerPushTestController {
                 .setNegativeButton("Cancel",null).show();
         }
     }
+    /**
+     * Local-only Android notification diagnostic, without Firebase sender,
+     * backend session, booking, ride, order or payment.
+     */
+    private void showLocalTest() {
+        if (!on() || !permission()) {
+            Toast.makeText(activity,"Enable Partner QA notifications first.",Toast.LENGTH_LONG).show();
+            return;
+        }
+        NotificationManager manager = activity.getSystemService(NotificationManager.class);
+        if (manager == null || !manager.areNotificationsEnabled()) {
+            Toast.makeText(activity,"Android notifications are disabled.",Toast.LENGTH_LONG).show();
+            return;
+        }
+        final String channel = "dbest_partner_updates";
+        if (Build.VERSION.SDK_INT >= 26) {
+            manager.createNotificationChannel(new NotificationChannel(channel,
+                "DBest Partner Updates", NotificationManager.IMPORTANCE_DEFAULT));
+            NotificationChannel existing = manager.getNotificationChannel(channel);
+            if (existing == null ||
+                existing.getImportance() == NotificationManager.IMPORTANCE_NONE) {
+                Toast.makeText(activity,"Enable the Partner Updates notification category.",Toast.LENGTH_LONG).show();
+                return;
+            }
+        }
+        Notification.Builder builder = Build.VERSION.SDK_INT >= 26
+            ? new Notification.Builder(activity,channel) : new Notification.Builder(activity);
+        builder.setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setContentTitle("DBest Partner QA local notification")
+            .setContentText("Android-only display test. No Firebase message was sent.")
+            .setAutoCancel(true);
+        manager.notify(716261,builder.build());
+        Toast.makeText(activity,"Local alert posted; check notification panel.",Toast.LENGTH_LONG).show();
+    }
+
     private void requestPermission(){
         if(!permission()&&Build.VERSION.SDK_INT>=33)
             ActivityCompat.requestPermissions(activity,new String[]{Manifest.permission.POST_NOTIFICATIONS},PERMISSION_REQUEST);
