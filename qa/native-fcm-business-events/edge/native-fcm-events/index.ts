@@ -7,6 +7,7 @@
 import "jsr:@supabase/functions-js@2/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.95.0";
 import { fromEvent } from "./from-event.ts";
+import { buildFcmPayload } from "./payload.ts";
 
 const json = (o: unknown, status = 200) => new Response(JSON.stringify(o), {
   status, headers: { "content-type": "application/json", "cache-control": "no-store" },
@@ -18,7 +19,6 @@ const b64text = (x: string) => b64url(enc.encode(x));
 const SAFE_EVENTS = new Set(["marketplace_vendor_new_order","marketplace_customer_status",
  "marketplace_payment_confirmed","vaahak_ride_offer","vaahak_ride_status",
  "service_partner_job_assigned","service_customer_job_status"]);
-const cleanTarget = (x: string) => /^\/(?!\/)[A-Za-z0-9_/?=&.%-]{0,300}$/.test(x) ? x : "/";
 function allowed(pref: Record<string, boolean> | null, category: string): boolean {
   if (!pref) return true;
   const k = ({ order: "orders", ride: "rides", job: "jobs", payment: "payments" } as Record<string,string>)[category] ?? "transactional";
@@ -48,26 +48,7 @@ async function accessToken(account: Record<string,string>): Promise<string> {
   return String(result.access_token);
 }
 async function sendFcm(token: string, access: string, project: string, d: Record<string,string>, device: Record<string,string>) {
-  const partnerApp=device.app_id==="com.dbest4u.partner";
-  const channel = partnerApp ? "dbest_partner_updates" : "dbest_updates";
-  // Android Partner handles its own verified, role-bound PendingIntent. A
-  // background notification+data payload would bypass onMessageReceived,
-  // losing that routing and potentially showing a misleading old workspace.
-  // Use high-priority DATA-ONLY for Partner. Preserve system notification
-  // behavior for the separate customer/member app.
-  const payload={message:{
-    token,
-    ...(partnerApp?{}:{notification:{title:d.title,body:d.body}}),
-    data:{
-      title:d.title,body:d.body,
-      targetUrl:cleanTarget(d.target_url),
-      eventType:d.event_type,eventKey:d.event_key,
-    },
-    android:{
-      priority:"HIGH",ttl:"300s",
-      ...(partnerApp?{}:{notification:{channel_id:channel}}),
-    },
-  }};
+  const payload=buildFcmPayload(token,d,device);
   const r = await fetch("https://fcm.googleapis.com/v1/projects/"+encodeURIComponent(project)+"/messages:send",{
     method:"POST",headers:{Authorization:"Bearer "+access,"content-type":"application/json"},
     body:JSON.stringify(payload),
