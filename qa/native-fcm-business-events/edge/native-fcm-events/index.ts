@@ -191,7 +191,12 @@ Deno.serve(async req => {
         db.from("native_fcm_outbox").select("id",{count:"exact",head:true}).eq("state","pending"),
         db.from("native_fcm_devices").select("id",{count:"exact",head:true}).eq("enabled",true),
       ]);
-      return json({ok:true,pending:pending||0,registered:registered||0,sendingEnabled:Deno.env.get("DBEST_FCM_SEND_ENABLED")==="true"});
+      const mode=clean(Deno.env.get("DBEST_FCM_ROLLOUT_MODE"),20)||"off";
+      return json({ok:true,pending:pending||0,registered:registered||0,
+        sendingEnabled:Deno.env.get("DBEST_FCM_SEND_ENABLED")==="true",
+        rolloutMode:["canary","all"].includes(mode)?mode:"off",
+        productionEventHooksEnabled:false // advisory only: database triggers audited separately
+      });
     }
     if (action==="enqueue" || action==="preview") {
       const type=clean(b.eventType,80),recordId=clean(b.recordId,180);
@@ -206,20 +211,46 @@ Deno.serve(async req => {
       return json({ok:true,queued:!!data,duplicate:!data,eventKey:notice.event_key});
     }
     if(action!=="process")return json({error:"unknown_action"},400);
+    // Deploying the worker code by itself MUST NOT send a single message.
     if(Deno.env.get("DBEST_FCM_SEND_ENABLED")!=="true")
       return json({ok:true,processing:false,reason:"sending_disabled"});
+    const mode=clean(Deno.env.get("DBEST_FCM_ROLLOUT_MODE"),20)||"off";
+    if(mode!=="canary"&&mode!=="all")
+      return json({ok:true,processing:false,reason:"rollout_mode_off"});
+    if(mode==="all" && Deno.env.get("DBEST_FCM_FULL_ROLLOUT_APPROVED")!=="true")
+      return json({ok:true,processing:false,reason:"full_rollout_not_approved"});
+    const allowedPairs=new Set<string>();
+    const canaryIds:string[]=[];
+    if(mode==="canary"){
+      let canaryConfig:unknown=[];
+      try{canaryConfig=JSON.parse(Deno.env.get("DBEST_FCM_CANARY_RECIPIENTS_JSON")||"[]")}
+      catch{return json({error:"canary_config_invalid"},503)}
+      if(!Array.isArray(canaryConfig)||canaryConfig.length<1||canaryConfig.length>20)
+        return json({error:"canary_config_missing_or_oversized"},503);
+      for(const raw of canaryConfig){
+        const role=clean(raw?.recipientType,30),id=clean(raw?.recipientId,180);
+        if(!["Vendor","Vaahak","Service Partner"].includes(role)||!id)
+          return json({error:"invalid_canary_identity"},503);
+        allowedPairs.add(role+":"+id);
+        canaryIds.push(id);
+      }
+    }
     const accountStr=Deno.env.get("DBEST_FCM_SERVICE_ACCOUNT_JSON")||"";
     if(!accountStr)return json({error:"fcm_sender_not_configured"},503);
     const account=JSON.parse(accountStr) as Record<string,string>;
     if(account.project_id!=="dbest-mobile-notifications"||!account.private_key||!account.client_email)
       return json({error:"fcm_sender_config_invalid"},503);
     const access=await accessToken(account);
-    const {data:queue,error:qe}=await db.from("native_fcm_outbox").select("*")
-      .eq("state","pending").lte("next_attempt_at",new Date().toISOString())
-      .order("created_at",{ascending:true}).limit(10);
+    let queueQuery=db.from("native_fcm_outbox").select("*")
+      .eq("state","pending").lte("next_attempt_at",new Date().toISOString());
+    if(mode==="canary")queueQuery=queueQuery.in("recipient_id",[...new Set(canaryIds)]);
+    const {data:queue,error:qe}=await queueQuery
+      .order("created_at",{ascending:true}).limit(mode==="canary"?100:10);
     if(qe)throw qe;
+    const selected=(queue||[]).filter(item=>
+      mode==="all"||allowedPairs.has(item.recipient_type+":"+item.recipient_id)).slice(0,10);
     let sent=0,failed=0,skipped=0;
-    for(const item of queue||[]){
+    for(const item of selected){
       const {data:claimed,error:ce}=await db.from("native_fcm_outbox")
         .update({state:"processing",attempts:item.attempts+1})
         .eq("id",item.id).eq("state","pending").select("*").maybeSingle();
@@ -275,7 +306,7 @@ Deno.serve(async req => {
         processed_at:finalState==="pending"?null:new Date().toISOString(),
       }).eq("id",item.id);
     }
-    return json({ok:true,processed:(queue||[]).length,sent,failed,skipped});
+    return json({ok:true,processed:selected.length,rolloutMode:mode,sent,failed,skipped});
   }catch(e){
     console.error("native_fcm_worker_failed",String((e as Error)?.message||"unknown"));
     return json({error:"worker_failed"},500);
