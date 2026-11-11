@@ -70,6 +70,8 @@ jobs:
         run: deno check --config qa/native-fcm-business-events/edge/native-fcm-events/deno.json qa/native-fcm-business-events/edge/native-fcm-events/index.ts
       - name: Test actual worker source revalidation against synthetic business records
         run: deno test --config qa/native-fcm-business-events/edge/native-fcm-events/deno.json qa/native-fcm-business-events/tests/from_event_test.ts
+      - name: Test Partner data-only versus Member notification payloads and safe deep links
+        run: deno test --config qa/native-fcm-business-events/edge/native-fcm-events/deno.json qa/native-fcm-business-events/tests/payload_test.ts
       - name: Verify production is not enabled by this branch
         run: |
           file=qa/native-fcm-business-events/edge/native-fcm-events/index.ts
@@ -78,6 +80,7 @@ jobs:
           grep -q 'status!=="Assigned"' "$helper"
           grep -q 'New Order' "$helper"
           grep -q 'from "./from-event.ts"' "$file"
+          grep -q 'from "./payload.ts"' "$file"
           grep -q 'native_fcm_outbox' "$file"
           grep -q 'DBEST_FCM_SEND_ENABLED' "$file"
           grep -q 'DBEST_FCM_ROLLOUT_MODE' "$file"
