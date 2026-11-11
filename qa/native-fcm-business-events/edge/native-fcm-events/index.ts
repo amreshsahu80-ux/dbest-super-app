@@ -8,6 +8,7 @@ import "jsr:@supabase/functions-js@2/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.95.0";
 import { fromEvent } from "./from-event.ts";
 import { buildFcmPayload } from "./payload.ts";
+import { isCurrentRecipient, selectedForCanary, dispatchGate } from "./dispatch-policy.ts";
 
 const json = (o: unknown, status = 200) => new Response(JSON.stringify(o), {
   status, headers: { "content-type": "application/json", "cache-control": "no-store" },
@@ -97,14 +98,14 @@ Deno.serve(async req => {
       return json({ok:true,queued:!!data,duplicate:!data,eventKey:notice.event_key});
     }
     if(action!=="process")return json({error:"unknown_action"},400);
-    // Deploying the worker code by itself MUST NOT send a single message.
-    if(Deno.env.get("DBEST_FCM_SEND_ENABLED")!=="true")
-      return json({ok:true,processing:false,reason:"sending_disabled"});
+    // Deploying worker code alone must NEVER turn on message sending.
     const mode=clean(Deno.env.get("DBEST_FCM_ROLLOUT_MODE"),20)||"off";
-    if(mode!=="canary"&&mode!=="all")
-      return json({ok:true,processing:false,reason:"rollout_mode_off"});
-    if(mode==="all" && Deno.env.get("DBEST_FCM_FULL_ROLLOUT_APPROVED")!=="true")
-      return json({ok:true,processing:false,reason:"full_rollout_not_approved"});
+    const gate=dispatchGate(
+      Deno.env.get("DBEST_FCM_SEND_ENABLED")==="true",
+      mode,
+      Deno.env.get("DBEST_FCM_FULL_ROLLOUT_APPROVED")==="true"
+    );
+    if(gate)return json({ok:true,processing:false,reason:gate});
     const allowedPairs=new Set<string>();
     const canaryIds:string[]=[];
     if(mode==="canary"){
@@ -134,7 +135,7 @@ Deno.serve(async req => {
       .order("created_at",{ascending:true}).limit(mode==="canary"?100:10);
     if(qe)throw qe;
     const selected=(queue||[]).filter(item=>
-      mode==="all"||allowedPairs.has(item.recipient_type+":"+item.recipient_id)).slice(0,10);
+      selectedForCanary(mode,allowedPairs,item.recipient_type,item.recipient_id)).slice(0,10);
     let sent=0,failed=0,skipped=0;
     for(const item of selected){
       const {data:claimed,error:ce}=await db.from("native_fcm_outbox")
@@ -146,9 +147,7 @@ Deno.serve(async req => {
       // going to reassigned Vaahaks or Service Partners.
       const latest = await fromEvent(db,item.event_type,
         item.event_key.split(":")[1] || "");
-      if (!latest || latest.event_key !== item.event_key ||
-          latest.recipient_id !== item.recipient_id ||
-          latest.recipient_type !== item.recipient_type) {
+      if (!isCurrentRecipient(item,latest)) {
         await db.from("native_fcm_outbox").update({
           state:"skipped",error_code:"source_changed_since_enqueue",
           processed_at:new Date().toISOString(),
