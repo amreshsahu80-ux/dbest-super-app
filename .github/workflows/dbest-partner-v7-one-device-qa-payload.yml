@@ -31,7 +31,11 @@ jobs:
         run: |
           set -eu
           src=qa/native-fcm-qa-single-v7/index.ts
-          grep -Fq 'const qaEnabled = false;' "$src"
+          grep -Fq 'DBEST_FCM_QA_SINGLE_ENABLED' "$src"
+          grep -Fq 'DBEST_FCM_QA_SINGLE_INSTALLATION_ID' "$src"
+          grep -Fq 'DBEST_FCM_QA_SINGLE_EXPIRES_AT' "$src"
+          grep -Fq 'approved_offline_vaahak_required' "$src"
+          grep -Fq 'const bucket = "2026-11-11T00:00:00.000Z";' "$src"
           grep -Fq 'if (!qaEnabled)' "$src"
           grep -Fq 'x-vaahak-token' "$src"
           grep -Fq '.eq("installation_id",installationId)' "$src"
@@ -46,4 +50,4 @@ jobs:
             echo "::error::Legacy payload would be dropped by Partner v7"
             exit 1
           fi
-          echo "PASS: QA sending is hard disabled; correct session, single app installation, consent and limits retained"
+          echo "PASS: QA sending defaults OFF; requires private exact installation, expiration and switch; consent and once-only audit retained"
