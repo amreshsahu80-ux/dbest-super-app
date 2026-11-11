@@ -67,7 +67,7 @@ jobs:
         with:
           deno-version: v2.x
       - name: Typecheck hardened native FCM worker snapshot
-        run: deno check qa/native-fcm-business-events/edge/native-fcm-events/index.ts
+        run: deno check --config qa/native-fcm-business-events/edge/native-fcm-events/deno.json qa/native-fcm-business-events/edge/native-fcm-events/index.ts
       - name: Verify production is not enabled by this branch
         run: |
           file=qa/native-fcm-business-events/edge/native-fcm-events/index.ts
