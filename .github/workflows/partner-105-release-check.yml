@@ -1,0 +1,73 @@
+name: DBest Partner v1.0.5 release-candidate validation (no Play publishing)
+
+on:
+  push:
+    branches:
+      - release/partner-android-105-ready-20261111
+    paths:
+      - partner-android-app/**
+      - .github/workflows/partner-105-release-check.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: partner-android-app
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+      - name: Release checks (identity, version and QA isolation)
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq "applicationId 'com.dbest4u.partner'" app/build.gradle
+          grep -Fq "versionCode 9" app/build.gradle
+          grep -Fq "versionName '1.0.5'" app/build.gradle
+          grep -Fq 'if (BuildConfig.DEBUG)' app/src/main/java/com/dbest4u/partner/PartnerPushTestController.java
+          grep -Fq 'BuildConfig.DEBUG && "Vaahak"' app/src/main/java/com/dbest4u/partner/PartnerAccountBinding.java
+          grep -Fq 'android:exported="false"' app/src/main/AndroidManifest.xml
+          if grep -R -n 'DBEST_FCM_SEND_ENABLED=true' app/src/main/java; then
+            echo "::error::Do not enable business-event sender in Android release"
+            exit 1
+          fi
+          python3 - <<'PY'
+          import json
+          with open('app/google-services.json') as f: cfg=json.load(f)
+          prod=[v for v in cfg['client'] if v['client_info']['android_client_info']['package_name']=='com.dbest4u.partner']
+          assert len(prod)==1
+          print('Verified production package Firebase registration (no secrets printed).')
+          PY
+      - name: Compile release AAB (UNSIGNED), debug APK for CI only
+        run: gradle --no-daemon :app:assembleDebug :app:bundleRelease
+      - name: Inspect unsigned AAB and Android manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s app/build/outputs/bundle/release/app-release.aab
+          test -s app/build/outputs/apk/debug/app-debug.apk
+          jarsigner -verify app/build/outputs/bundle/release/app-release.aab > /tmp/dbest-sign-verify.txt 2>&1 && {
+            echo 'Bundle already signed: verify upload certificate before distribution'
+          } || {
+            echo 'Bundle unsigned: do not upload to Play without authorised upload-key signing'
+          }
+      - name: Upload private unsigned candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: partner-v105-unsigned-aab-do-not-upload
+          path: partner-android-app/app/build/outputs/bundle/release/app-release.aab
+          retention-days: 7
+          if-no-files-found: error
