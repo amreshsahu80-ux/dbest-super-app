@@ -39,10 +39,6 @@ import androidx.core.view.WindowInsetsCompat;
 
 public final class MainActivity extends ComponentActivity {
     private static final String ORIGIN = "https://dbest4u.com";
-    // QA-only, immutable preview; NEVER ship this Vercel hostname in Play production.
-    private static final String REVIEW_HOST = "dbest-super-5ey64ubmn-db-est.vercel.app";
-    private static final String REVIEW_URL =
-        "https://" + REVIEW_HOST + "/service-partner-onboarding-v3.html?review=1";
     private static final int FILE_REQUEST = 1201;
     private static final int LOCATION_REQUEST = 1202;
     private static final int NAVY = 0xFF10264B;
@@ -82,9 +78,10 @@ public final class MainActivity extends ComponentActivity {
         screenHost.addView(homeScreen, new FrameLayout.LayoutParams(-1, -1));
         screenHost.addView(browserShell, new FrameLayout.LayoutParams(-1, -1));
         showHome();
-        // Firebase is now registered for the distinct com.dbest4u.partner.qa
-        // Android package. Test alerts require explicit user consent.
+        // Production-identity canary candidate. Explicit consent and login are
+        // required before registration. Sender activation is a separate server release.
         partnerTestPush = new PartnerPushTestController(this, screenHost, webView, () -> currentRole);
+        openTrustedPushTarget(getIntent());
 
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override public void handleOnBackPressed() {
@@ -179,7 +176,7 @@ public final class MainActivity extends ComponentActivity {
         // Account deletion stays accessible via the Account & Privacy menu,
         // not as a prominent button on the Partner home screen.
         space(page, 18);
-        TextView legal = txt("DBest Partner • Pilot 0.2.0", 11, 0xFF8B98AB, false);
+        TextView legal = txt("DBest Partner • Canary candidate", 11, 0xFF8B98AB, false);
         legal.setGravity(Gravity.CENTER);
         page.addView(legal);
         return scroll;
@@ -354,7 +351,7 @@ public final class MainActivity extends ComponentActivity {
         if (url == null) return true;
         String scheme = url.getScheme();
         if ("about".equalsIgnoreCase(scheme)) return false;
-        if (isDbest(url) || isQaReview(url)) return false;
+        if (isDbest(url)) return false;
         if (isHttp(url) || "tel".equalsIgnoreCase(scheme)
                 || "mailto".equalsIgnoreCase(scheme) || "geo".equalsIgnoreCase(scheme)
                 || "market".equalsIgnoreCase(scheme)) openExternal(url);
@@ -373,54 +370,17 @@ public final class MainActivity extends ComponentActivity {
                 || host.equalsIgnoreCase("www.dbest4u.com"));
     }
 
-    private boolean isQaReview(Uri url) {
-        return url != null && "https".equalsIgnoreCase(url.getScheme())
-            && url.getPort() == -1
-            && REVIEW_HOST.equalsIgnoreCase(url.getHost())
-            && "/service-partner-onboarding-v3.html".equals(url.getPath())
-            && "1".equals(url.getQueryParameter("review"));
-    }
-
     // Keep account removal discoverable, but only in a deliberate menu,
     // matching DBest Main's Account & Privacy interaction.
     private void showAccountSettings() {
         new android.app.AlertDialog.Builder(this)
             .setTitle("Account & Privacy")
-            .setItems(showingBrowser && (
-                        "Vendor".equals(currentRole) ||
-                        "Vaahak".equals(currentRole) ||
-                        "Service Partner".equals(currentRole))
-                    ? new String[]{"Request account deletion", "Deletion instructions",
-                        "Reviewer access (QA only)", "Simulated event notification (QA only)"}
-                    : new String[]{"Request account deletion", "Deletion instructions",
-                        "Reviewer access (QA only)"},
+            .setItems(new String[]{"Request account deletion", "Deletion instructions"},
                 (dialog, which) -> {
                     if (which == 0) showAccountDeletion();
                     else if (which == 1) openExternal(Uri.parse("https://dbest4u.com/data-deletion"));
-                    else if (which == 2) showReviewerQaNotice();
-                    else if (which == 3 && partnerTestPush != null)
-                        partnerTestPush.testSyntheticBusinessEvent();
                 })
-            .setNegativeButton("Close", null)
-            .show();
-    }
-
-    private void showReviewerQaNotice() {
-        new android.app.AlertDialog.Builder(this)
-            .setTitle("Service Partner reviewer QA")
-            .setMessage("This opens the read-only Service Partner reviewer login in a restricted test preview. It does not approve real accounts, bypass payments, or connect Firebase. Turn Partner QA notifications OFF before switching accounts.")
-            .setPositiveButton("Open reviewer QA", (dialog, which) -> {
-                Uri dest = Uri.parse(REVIEW_URL);
-                if (!isQaReview(dest)) return;
-                currentRole = "Service Partner · Review";
-                browserTitle.setText("Service Partner Review QA");
-                showingBrowser = true;
-                homeScreen.setVisibility(View.GONE);
-                browserShell.setVisibility(View.VISIBLE);
-                if (partnerTestPush != null) partnerTestPush.setHomeVisible(false);
-                webView.loadUrl(REVIEW_URL);
-            })
-            .setNegativeButton("Cancel",null).show();
+            .setNegativeButton("Close", null).show();
     }
 
     // Request-only: never mutate account or delete partner data in the app.
@@ -471,6 +431,31 @@ public final class MainActivity extends ComponentActivity {
         homeScreen.setVisibility(View.VISIBLE);
         browserShell.setVisibility(View.GONE);
         if (partnerTestPush != null) partnerTestPush.setHomeVisible(true);
+    }
+
+    // The receiver passes only a fixed Partner role, never an arbitrary URL.
+    // Revalidate explicit local consent and bound account before opening a
+    // workspace. Existing WebView authentication still applies.
+    private void openTrustedPushTarget(Intent intent) {
+        if (intent == null) return;
+        final String role = intent.getStringExtra("dbest.notification.role");
+        if (role == null) return;
+        boolean enabled = getSharedPreferences("dbest_partner_native_push", MODE_PRIVATE)
+            .getBoolean("enabled", false);
+        android.content.SharedPreferences account =
+            getSharedPreferences("dbest_partner_fcm_account", MODE_PRIVATE);
+        if (!enabled || !account.getBoolean("bound", false)
+                || !role.equals(account.getString("bound_role", ""))) return;
+        if ("Vendor".equals(role)) openPortal("Vendor", "/Vendor");
+        else if ("Vaahak".equals(role)) openPortal("Vaahak", "/vaahak");
+        else if ("Service Partner".equals(role))
+            openPortal("Service Partner", "/ServicePartnerDashboard");
+    }
+
+    @Override protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        openTrustedPushTarget(intent);
     }
 
     @Override public void onRequestPermissionsResult(
