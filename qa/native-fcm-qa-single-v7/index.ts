@@ -65,10 +65,10 @@ Deno.serve(async (request: Request) => {
       .gt("expires_at",new Date().toISOString()).maybeSingle();
     if (sessionError) return json({error:"session_check_unavailable"},503);
     if (!session?.partner_id) return json({error:"vaahak_login_expired"},401);
-    const {data:partner} = await db.from("vaahak_partners_live").select("owner_approval")
-      .eq("id",session.partner_id).maybeSingle();
-    if (partner?.owner_approval !== "Approved")
-      return json({error:"approved_vaahak_required"},403);
+    const {data:partner} = await db.from("vaahak_partners_live")
+      .select("owner_approval,available").eq("id",session.partner_id).maybeSingle();
+    if (partner?.owner_approval !== "Approved" || partner.available !== false)
+      return json({error:"approved_offline_vaahak_required"},403);
 
     const body = await request.json().catch(() => ({}));
     const action = str(body.action,20).toLowerCase();
@@ -82,7 +82,14 @@ Deno.serve(async (request: Request) => {
     if (deviceError) return json({error:"device_lookup_unavailable"},503);
     // A new controlled tap-routing QA session may run only when the private
     // QA switch is explicitly enabled. The general sender remains OFF.
-    const qaEnabled = false; // Locked after successful Android notification tap QA.
+    // Fail closed: exact installation, expiry and per-canary private flag.
+    const canaryExpiry=Date.parse(Deno.env.get("DBEST_FCM_QA_SINGLE_EXPIRES_AT")||"");
+    const qaEnabled =
+      Deno.env.get("DBEST_FCM_QA_SINGLE_ENABLED")==="true" &&
+      Deno.env.get("DBEST_FCM_QA_SINGLE_INSTALLATION_ID")===installationId &&
+      uuid.test(installationId) &&
+      Number.isFinite(canaryExpiry) &&
+      Date.now() < canaryExpiry;
     const senderConfigured = !!Deno.env.get("DBEST_FCM_SERVICE_ACCOUNT_JSON");
 
     if (action === "status") return json({
@@ -103,8 +110,9 @@ Deno.serve(async (request: Request) => {
     if (countError) return json({error:"rate_check_unavailable"},503);
     if ((daily||0)>=3) return json({error:"daily_test_limit_reached"},429);
 
-    // Unique 15-minute bucket: concurrent or repeated calls cannot send twice.
-    const bucket = new Date(Math.floor(Date.now()/900_000)*900_000).toISOString();
+    // One approved canary across all retries: the unique(device_id,bucket_utc)
+    // index prevents a second FCM send, even if the first send failed.
+    const bucket = "2026-11-11T00:00:00.000Z";
     const {data:attempt,error:insertError}=await db.from("native_fcm_qa_attempts")
       .insert({device_id:device.id,recipient_type:"Vaahak",recipient_id:session.partner_id,
         bucket_utc:bucket,state:"processing"})
