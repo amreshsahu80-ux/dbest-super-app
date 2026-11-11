@@ -58,6 +58,19 @@ jobs:
           echo "PASS: Activation is disabled without explicit owner-reviewed session setting"
       - name: Test synthetic business transitions, targeting, dedupe and rollback
         run: psql -v ON_ERROR_STOP=1 -f qa/native-fcm-business-events/tests/02_test_transitions.sql
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Export actual trigger-generated events and final source state from temporary PostgreSQL
+        run: |
+          psql -At -v ON_ERROR_STOP=1 -f qa/native-fcm-business-events/tests/03_export_post_trigger_state.sql > /tmp/dbest-native-fcm-e2e-state.json
+          test -s /tmp/dbest-native-fcm-e2e-state.json
+      - name: End-to-end: trigger queue to authoritative recheck, canary authorization and Android FCM payload
+        run: |
+          deno run --allow-read=/tmp/dbest-native-fcm-e2e-state.json \
+            --config qa/native-fcm-business-events/edge/native-fcm-events/deno.json \
+            qa/native-fcm-business-events/tests/04_trigger_to_payload_e2e.ts \
+            /tmp/dbest-native-fcm-e2e-state.json
 
   static-edge-check:
     runs-on: ubuntu-latest
@@ -81,6 +94,10 @@ jobs:
           grep -q 'New Order' "$helper"
           grep -q 'from "./from-event.ts"' "$file"
           grep -q 'from "./payload.ts"' "$file"
+          grep -q 'from "./dispatch-policy.ts"' "$file"
+          grep -q 'isCurrentRecipient(item,latest)' "$file"
+          grep -q 'selectedForCanary(mode,allowedPairs' "$file"
+          grep -q 'dispatchGate(' "$file"
           grep -q 'native_fcm_outbox' "$file"
           grep -q 'DBEST_FCM_SEND_ENABLED' "$file"
           grep -q 'DBEST_FCM_ROLLOUT_MODE' "$file"
