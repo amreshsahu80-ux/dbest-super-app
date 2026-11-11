@@ -97,6 +97,44 @@ public final class MainActivity extends ComponentActivity {
                 }
             }
         });
+        openFromFcmIntent(getIntent());
+    }
+
+    @Override protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        openFromFcmIntent(intent);
+    }
+
+    private void openFromFcmIntent(Intent intent) {
+        if (intent == null ||
+            !"com.dbest4u.partner.action.OPEN_FCM_EVENT_QA".equals(intent.getAction()))
+            return;
+
+        // Ignore all unrecognized, externally supplied, or unbound destinations.
+        // NEVER load targetUrl from push data or intent extras.
+        String eventType = intent.getStringExtra("dbest_fcm_event_type");
+        String role, path;
+        if ("marketplace_vendor_new_order".equals(eventType)) {
+            role = "Vendor"; path = "/Vendor";
+        } else if ("vaahak_ride_offer".equals(eventType)) {
+            role = "Vaahak"; path = "/vaahak";
+        } else if ("service_partner_job_assigned".equals(eventType)) {
+            role = "Service Partner"; path = "/ServicePartnerDashboard";
+        } else return;
+
+        android.content.SharedPreferences testPrefs =
+            getSharedPreferences("dbest_partner_native_push", MODE_PRIVATE);
+        android.content.SharedPreferences binding =
+            getSharedPreferences("dbest_partner_fcm_account", MODE_PRIVATE);
+        if (!testPrefs.getBoolean("enabled", false)
+            || !binding.getBoolean("bound", false)
+            || !role.equals(binding.getString("bound_role", ""))) return;
+
+        // Consume this launch event once; no repeated navigation on rotation.
+        intent.removeExtra("dbest_fcm_event_type");
+        intent.setAction(null);
+        openPortal(role, path);
     }
 
     private View makeHome() {
