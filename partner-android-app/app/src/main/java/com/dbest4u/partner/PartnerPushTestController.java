@@ -79,7 +79,8 @@ public final class PartnerPushTestController {
             new AlertDialog.Builder(activity).setTitle("Partner notification controls")
                 .setMessage("This phone is ready for opt-in notifications. Automatic business-event sending stays disabled until the owner authorizes the restricted server canary.")
                 .setPositiveButton("Turn OFF and unlink",(d,w)->disable())
-                .setNeutralButton("Show local test alert",(d,w)->showLocalTest())
+                .setNeutralButton(BuildConfig.DEBUG ? "Show local test alert" : "Settings",
+                    (d,w)->{if (BuildConfig.DEBUG) showLocalTest(); else refresh();})
                 .setNegativeButton("Cancel",null).show();
         }else{
             new AlertDialog.Builder(activity).setTitle("Enable Partner notification pilot?")
