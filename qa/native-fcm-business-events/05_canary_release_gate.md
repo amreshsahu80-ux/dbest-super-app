@@ -4,6 +4,16 @@ Status: **QA PASSED; PRODUCTION NOT ACTIVATED**
 CI: https://github.com/amreshsahu80-ux/dbest-super-app/actions/runs/42987679409  
 Draft PR: https://github.com/amreshsahu80-ux/dbest-super-app/pull/119
 
+## Owner-only phone selection — 11 November 2026
+
+The Owner explicitly selected **their own Android phone as the exclusive intended canary device**. This is consent to **plan the controlled test**, not permission to enable production sending, use historic Partner tokens, approve pending accounts, deploy code, or send real customer alerts.
+
+**Verified current restrictions:** The existing production FCM table contains three old enabled Vaahak app registrations (last observed 2 November 2026), but none is cryptographically verified as the Owner's current phone. The separately installed `com.dbest4u.partner.qa` debug APK is fully unregistered after earlier QA; its device identifiers/registration live in `native_fcm_devices_partner_qa`, **not** the production FCM table. Neither a Vaahak account match nor prior screenshot proves ownership of those three legacy installations. Do not enroll any of them automatically.
+
+The staged worker now **requires exactly one** canary configuration entry containing exact `recipientType`, `recipientId`, and a validated UUID `installationId` in `DBEST_FCM_CANARY_RECIPIENTS_JSON`. In canary mode it selects **only** a registered `com.dbest4u.partner` device with that exact installation ID, correct Partner role/account, `enabled=true` and `permission_status=granted`. It fails closed for missing identity, multiple canaries, or duplicate matching device rows. The Owner's QA debug APK cannot be substituted for a signed production build; production rollout requires separate app verification and approved test enrollment.
+
+Before any production canary, identify the phone using consented authenticated registration in a properly signed production Partner build; verify app package, account/role and installation ID without posting sensitive token or IDs publicly. The existing authorized Vaahak account is currently offline and the previously used Service Partner test profile remains unapproved. Do not change either state merely for notification testing.
+
 ## What was actually tested
 
 1. Temporary PostgreSQL generates legitimate business-event **INSERT/UPDATE** transitions for Vendor orders, Vaahak offers, and Service Partner assignments.
@@ -26,7 +36,7 @@ These counts are observational snapshots, not commitments about future state. Th
 
 ## Do not activate until all conditions are satisfied
 
-- [ ] The intended tester explicitly agrees to receive *real business-event* canary alerts; verify their exact Partner role and account ID and ownership of their device without exposing identifiers in tickets.
+- [ ] Confirm **separate explicit consent to receive real business-event alerts** on the selected phone; the Owner has already named that phone as the intended tester but production sending remains unauthorized. Verify exact Partner role, authenticated account, signed production-app installation UUID and current phone ownership without exposing identifiers in tickets.
 - [ ] Confirm a properly signed, reviewed Partner production app build with the intended data-only notification handler and deep link routing; **QA `com.dbest4u.partner.qa` is not interchangeable with production `com.dbest4u.partner`**.
 - [ ] Verify real partner consent, Android notification permission, account binding, notification preferences, revocation on logout and correct device isolation.
 - [ ] Perform privacy/security review of the three new SQL triggers, the staged worker, role/account eligibility guards and the canary recipient allowlist.
