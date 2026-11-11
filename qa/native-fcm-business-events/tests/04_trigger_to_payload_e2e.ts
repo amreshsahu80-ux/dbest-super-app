@@ -6,7 +6,7 @@
  */
 import { fromEvent } from "../edge/native-fcm-events/from-event.ts";
 import { buildFcmPayload } from "../edge/native-fcm-events/payload.ts";
-import { dispatchGate, isCurrentRecipient, selectedForCanary }
+import { dispatchGate, isCurrentRecipient, selectedForCanary, selectedCanaryDevice }
   from "../edge/native-fcm-events/dispatch-policy.ts";
 
 function check(test:unknown, message:string):asserts test {
@@ -124,6 +124,33 @@ check(!selectedForCanary("canary",allow,"Vendor","vendor-ok"),
   "Non-canary Vendor incorrectly permitted");
 check(!selectedForCanary("off",allow,"Vendor","vendor-two"),
   "Sender incorrectly enabled when rollout is off");
+
+// Single-device canary: same recipient account on a second Android phone
+// must not receive the event, even if it is an active production registration.
+const approvedInstallation="123e4567-e89b-42d3-a456-426614174000";
+const otherInstallation="123e4567-e89b-42d3-a456-426614174001";
+const ownerDevice={
+ recipient_type:"Vaahak",recipient_id:"driver-owner",
+ installation_id:approvedInstallation,app_id:"com.dbest4u.partner"
+};
+const otherDevice={
+ ...ownerDevice,installation_id:otherInstallation
+};
+check(selectedCanaryDevice("canary","Vaahak","driver-owner",approvedInstallation,ownerDevice),
+  "Owner production app installation was incorrectly excluded");
+check(!selectedCanaryDevice("canary","Vaahak","driver-owner",approvedInstallation,otherDevice),
+  "Another phone with same Partner ID was incorrectly included");
+check(!selectedCanaryDevice("canary","Vendor","driver-owner",approvedInstallation,ownerDevice),
+  "Wrong Partner role was allowed to use canary");
+check(!selectedCanaryDevice("canary","Vaahak","other-account",approvedInstallation,ownerDevice),
+  "Wrong Partner account was allowed to use canary");
+check(!selectedCanaryDevice("canary","Vaahak","driver-owner",approvedInstallation,
+  {...ownerDevice,app_id:"com.dbest4u.partner.qa"}),
+  "Separate QA app was incorrectly treated as production installation");
+check(!selectedCanaryDevice("off","Vaahak","driver-owner",approvedInstallation,ownerDevice),
+  "A disabled rollout accepted a canary device");
+check(selectedCanaryDevice("all","Vaahak","driver-owner",approvedInstallation,otherDevice),
+  "Full rollout must remain separately controlled by the full approval gate");
 
 console.log("PASS: actual SQL-triggered outbox -> source recheck -> correct role/deep link -> Partner FCM payload");
 console.log("PASS: 8 queued, 5 still valid, 3 safely skipped (Vendor reassignment + 2 stale Vaahak offers)");
