@@ -89,6 +89,7 @@ jobs:
         run: |
           file=qa/native-fcm-business-events/edge/native-fcm-events/index.ts
           helper=qa/native-fcm-business-events/edge/native-fcm-events/from-event.ts
+          policy=qa/native-fcm-business-events/edge/native-fcm-events/dispatch-policy.ts
           grep -q 'offer_expires_at' "$helper"
           grep -q 'status!=="Assigned"' "$helper"
           grep -q 'New Order' "$helper"
@@ -103,8 +104,8 @@ jobs:
           grep -q 'DBEST_FCM_ROLLOUT_MODE' "$file"
           grep -q 'DBEST_FCM_CANARY_RECIPIENTS_JSON' "$file"
           grep -q 'DBEST_FCM_FULL_ROLLOUT_APPROVED' "$file"
-          grep -q 'rollout_mode_off' "$file"
-          grep -q 'full_rollout_not_approved' "$file"
+          grep -q 'rollout_mode_off' "$policy"
+          grep -q 'full_rollout_not_approved' "$policy"
           if grep -R 'ALTER DATABASE\|SET DBEST_FCM_SEND_ENABLED\|CREATE EXTENSION http\|CREATE EXTENSION pg_net' qa/native-fcm-business-events/; then
             echo "::error::Staged integration must not enable production dispatch"
             exit 1
