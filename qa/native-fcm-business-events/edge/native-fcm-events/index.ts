@@ -8,7 +8,7 @@ import "jsr:@supabase/functions-js@2/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.95.0";
 import { fromEvent } from "./from-event.ts";
 import { buildFcmPayload } from "./payload.ts";
-import { isCurrentRecipient, selectedForCanary, dispatchGate } from "./dispatch-policy.ts";
+import { isCurrentRecipient, selectedForCanary, selectedCanaryDevice, dispatchGate } from "./dispatch-policy.ts";
 
 const json = (o: unknown, status = 200) => new Response(JSON.stringify(o), {
   status, headers: { "content-type": "application/json", "cache-control": "no-store" },
@@ -108,19 +108,29 @@ Deno.serve(async req => {
     if(gate)return json({ok:true,processing:false,reason:gate});
     const allowedPairs=new Set<string>();
     const canaryIds:string[]=[];
+    let canaryInstallation="";
+    let canaryRole="";
+    let canaryRecipient="";
     if(mode==="canary"){
+      // Fail closed: user-authorized canary is exactly ONE installation, never
+      // every device registered under a Partner account.
       let canaryConfig:unknown=[];
       try{canaryConfig=JSON.parse(Deno.env.get("DBEST_FCM_CANARY_RECIPIENTS_JSON")||"[]")}
       catch{return json({error:"canary_config_invalid"},503)}
-      if(!Array.isArray(canaryConfig)||canaryConfig.length<1||canaryConfig.length>20)
-        return json({error:"canary_config_missing_or_oversized"},503);
-      for(const raw of canaryConfig){
-        const role=clean(raw?.recipientType,30),id=clean(raw?.recipientId,180);
-        if(!["Vendor","Vaahak","Service Partner"].includes(role)||!id)
-          return json({error:"invalid_canary_identity"},503);
-        allowedPairs.add(role+":"+id);
-        canaryIds.push(id);
-      }
+      if(!Array.isArray(canaryConfig)||canaryConfig.length!==1)
+        return json({error:"single_canary_device_required"},503);
+      const raw=canaryConfig[0];
+      const role=clean(raw?.recipientType,30);
+      const id=clean(raw?.recipientId,180);
+      const installation=clean(raw?.installationId,60).toLowerCase();
+      if(!["Vendor","Vaahak","Service Partner"].includes(role)||!id||
+         !/^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(installation))
+        return json({error:"exact_canary_identity_and_installation_required"},503);
+      allowedPairs.add(role+":"+id);
+      canaryIds.push(id);
+      canaryRole=role;
+      canaryRecipient=id;
+      canaryInstallation=installation;
     }
     const accountStr=Deno.env.get("DBEST_FCM_SERVICE_ACCOUNT_JSON")||"";
     if(!accountStr)return json({error:"fcm_sender_not_configured"},503);
@@ -155,17 +165,31 @@ Deno.serve(async req => {
         skipped++;
         continue;
       }
-      const {data:devices,error:de}=await db.from("native_fcm_devices").select("*")
-        .eq("recipient_type",item.recipient_type).eq("recipient_id",item.recipient_id).eq("enabled",true).limit(10);
+      let devicesQuery=db.from("native_fcm_devices").select("*")
+        .eq("recipient_type",item.recipient_type).eq("recipient_id",item.recipient_id)
+        .eq("enabled",true).eq("permission_status","granted");
+      if(mode==="canary")devicesQuery=devicesQuery
+        .eq("installation_id",canaryInstallation).eq("app_id","com.dbest4u.partner");
+      const {data:allDevices,error:de}=await devicesQuery.limit(10);
       if(de)throw de;
+      const devices=(allDevices||[]).filter(d=>
+        mode==="all"||selectedCanaryDevice(mode,canaryRole,canaryRecipient,canaryInstallation,d));
+      // No ambiguous multi-token installation may receive a canary alert.
+      if(mode==="canary"&&devices.length>1){
+        await db.from("native_fcm_outbox").update({
+          state:"skipped",error_code:"canary_installation_ambiguous",
+          processed_at:new Date().toISOString()
+        }).eq("id",item.id);
+        skipped++;continue;
+      }
       const {data:pref}=await db.from("push_notification_preferences").select("*")
         .eq("recipient_type",item.recipient_type).eq("recipient_id",item.recipient_id).maybeSingle();
-      if(!allowed(pref,item.category)||(devices||[]).length===0){
+      if(!allowed(pref,item.category)||devices.length===0){
         await db.from("native_fcm_outbox").update({state:"skipped",error_code:!allowed(pref,item.category)?"opted_out":"no_registered_device",processed_at:new Date().toISOString()}).eq("id",item.id);
         skipped++;continue;
       }
       let hasFailure=false;
-      for(const d of devices||[]){
+      for(const d of devices){
         const {data:done}=await db.from("native_fcm_deliveries").select("state")
           .eq("outbox_id",item.id).eq("device_id",d.id).maybeSingle();
         if(done?.state==="sent")continue;
