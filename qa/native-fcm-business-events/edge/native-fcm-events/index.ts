@@ -48,12 +48,26 @@ async function accessToken(account: Record<string,string>): Promise<string> {
   return String(result.access_token);
 }
 async function sendFcm(token: string, access: string, project: string, d: Record<string,string>, device: Record<string,string>) {
-  const channel = device.app_id === "com.dbest4u.partner" ? "dbest_partner_updates" : "dbest_updates";
-  const payload = { message:{
-    token, notification:{title:d.title,body:d.body},
-    data:{targetUrl:cleanTarget(d.target_url),eventType:d.event_type,eventKey:d.event_key},
-    android:{ priority:"HIGH",ttl:"300s",notification:{channel_id:channel} },
-  } };
+  const partnerApp=device.app_id==="com.dbest4u.partner";
+  const channel = partnerApp ? "dbest_partner_updates" : "dbest_updates";
+  // Android Partner handles its own verified, role-bound PendingIntent. A
+  // background notification+data payload would bypass onMessageReceived,
+  // losing that routing and potentially showing a misleading old workspace.
+  // Use high-priority DATA-ONLY for Partner. Preserve system notification
+  // behavior for the separate customer/member app.
+  const payload={message:{
+    token,
+    ...(partnerApp?{}:{notification:{title:d.title,body:d.body}}),
+    data:{
+      title:d.title,body:d.body,
+      targetUrl:cleanTarget(d.target_url),
+      eventType:d.event_type,eventKey:d.event_key,
+    },
+    android:{
+      priority:"HIGH",ttl:"300s",
+      ...(partnerApp?{}:{notification:{channel_id:channel}}),
+    },
+  }};
   const r = await fetch("https://fcm.googleapis.com/v1/projects/"+encodeURIComponent(project)+"/messages:send",{
     method:"POST",headers:{Authorization:"Bearer "+access,"content-type":"application/json"},
     body:JSON.stringify(payload),
