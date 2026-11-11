@@ -39,6 +39,9 @@ final class PartnerAccountBinding {
     private static final String PREFS = "dbest_partner_fcm_account";
     private static final String ENDPOINT =
         "https://ydedmotbacnllkijzmvp.supabase.co/functions/v1/native-fcm-register";
+    // Separate, audit-logged, default-disabled QA sender. No live business events.
+    private static final String QA_ENDPOINT =
+        "https://ydedmotbacnllkijzmvp.supabase.co/functions/v1/native-fcm-qa-single";
 
     private final Activity activity;
     private final WebView portal;
@@ -214,7 +217,21 @@ final class PartnerAccountBinding {
         }
         if (busy.get()) { message("Account registration already in progress."); return; }
         if (hasAccountBinding()) {
-            message("This device is already linked or pending secure unlink. Disconnect it before connecting another account.");
+            // The existing Link control becomes an explicit one-tap synthetic QA
+            // action ONLY for the same authenticated, already-bound Vaahak.
+            if ("Vaahak".equals(role) &&
+                    role.equals(prefs().getString("bound_role", ""))) {
+                new AlertDialog.Builder(activity)
+                    .setTitle("Vaahak device already linked")
+                    .setMessage("Send one QA-only Firebase notification to this phone? " +
+                        "No real ride, order, dispatch or payment is created. " +
+                        "Automatic production notifications remain disabled. " +
+                        "The server may refuse if the restricted canary is not enabled.")
+                    .setPositiveButton("Send one test", (d, w) -> sendOneQaWithConsent())
+                    .setNegativeButton("Cancel", null).show();
+            } else {
+                message("This device is already linked or pending secure unlink. Disconnect it before connecting another account.");
+            }
             return;
         }
         new AlertDialog.Builder(activity)
@@ -253,6 +270,79 @@ final class PartnerAccountBinding {
                 }))
             .setNegativeButton("Cancel", null)
             .show();
+    }
+
+    // User-initiated, authenticated request; never uses a privileged key.
+    // Two independent server checks: registration ownership, then the QA
+    // endpoint's private exact-installation, enablement and idempotency gates.
+    private void sendOneQaWithConsent() {
+        if (!hasAccountBinding() || !"Vaahak".equals(prefs().getString("bound_role", ""))
+                || !trustedPage()) {
+            message("Open the linked Vaahak workspace before requesting a QA alert.");
+            return;
+        }
+        readSession("Vaahak", session -> {
+            if (session.isEmpty()) {
+                message("Please sign in to your linked Vaahak account again.");
+                return;
+            }
+            if (!busy.compareAndSet(false, true)) {
+                message("A device registration or test request is already in progress.");
+                return;
+            }
+            worker.execute(() -> {
+                try {
+                    if (!currentAccountOwnsInstallation("Vaahak", session)) {
+                        message("This login does not own the linked phone. No test sent.");
+                        return;
+                    }
+                    JSONObject response = qaRequest(session);
+                    if (response != null && response.optBoolean("providerAccepted", false)) {
+                        message("Firebase accepted the QA alert. Check this phone's notifications.");
+                    } else {
+                        message("QA test was not sent. Restricted sender is off, expired, or unavailable.");
+                    }
+                } finally {
+                    busy.set(false);
+                }
+            });
+        });
+    }
+
+    private JSONObject qaRequest(String session) {
+        HttpsURLConnection connection = null;
+        try {
+            connection = (HttpsURLConnection) new URL(QA_ENDPOINT).openConnection();
+            connection.setConnectTimeout(8000);
+            connection.setReadTimeout(22000);
+            connection.setRequestMethod("POST");
+            connection.setDoOutput(true);
+            connection.setRequestProperty("content-type", "application/json");
+            connection.setRequestProperty("x-vaahak-token", session);
+            connection.setRequestProperty("cache-control", "no-store");
+            JSONObject payload = new JSONObject();
+            payload.put("action", "send");
+            payload.put("consent", true);
+            payload.put("installationId", installationId());
+            try (OutputStream out = connection.getOutputStream()) {
+                out.write(payload.toString().getBytes(StandardCharsets.UTF_8));
+            }
+            int code = connection.getResponseCode();
+            if (code < 200 || code >= 300) return null;
+            try (InputStream stream = connection.getInputStream();
+                 BufferedReader reader = new BufferedReader(
+                     new InputStreamReader(stream, StandardCharsets.UTF_8))) {
+                StringBuilder b = new StringBuilder();
+                String line;
+                while ((line = reader.readLine()) != null && b.length() < 4096)
+                    b.append(line);
+                return new JSONObject(b.toString());
+            }
+        } catch (Exception ignored) {
+            return null; // Never log authentication headers, tokens or response bodies.
+        } finally {
+            if (connection != null) connection.disconnect();
+        }
     }
 
     boolean isBoundToDifferentRole(String selected) {
