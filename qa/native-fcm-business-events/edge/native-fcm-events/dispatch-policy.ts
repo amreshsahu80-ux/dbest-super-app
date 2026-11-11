@@ -14,6 +14,24 @@ export function selectedForCanary(
   return mode==="all" || (mode==="canary" &&
     permitted.has(recipient_type+":"+recipient_id));
 }
+/** Canary delivery is restricted to one exact registered production installation.
+ * A Partner account may own multiple Android devices; account-only checks
+ * cannot guarantee owner-phone-only delivery.
+ */
+export function selectedCanaryDevice(
+  mode:string,
+  role:string,
+  recipientId:string,
+  installationId:string,
+  device:{recipient_type?:string;recipient_id?:string;installation_id?:string;app_id?:string}
+):boolean {
+  return mode==="all" || (mode==="canary" &&
+    device.app_id==="com.dbest4u.partner" &&
+    device.recipient_type===role &&
+    device.recipient_id===recipientId &&
+    device.installation_id===installationId);
+}
+
 export function dispatchGate(enabled:boolean,mode:string,fullApproved:boolean):string|null {
   if(!enabled)return "sending_disabled";
   if(mode!=="canary"&&mode!=="all")return "rollout_mode_off";
