@@ -11,6 +11,7 @@ on:
       - 'qa/partner-fcm-isolated-config-20261110'
       - 'qa/partner-android-reviewer-deeplink-20261111'
       - 'qa/partner-synthetic-event-fcm-20261111'
+      - 'qa/partner-fcm-event-tap-routing-20261111'
     paths:
       - 'partner-android-app/**'
       - '.github/workflows/dbest-partner-android.yml'
@@ -87,6 +88,24 @@ jobs:
           grep -q 'QA_EVENT_ENDPOINT' "$binder"
           if grep -q 'DBEST_FCM_SEND_ENABLED=true' "$binder"; then
             echo "::error::The Android QA app must not enable production FCM"
+            exit 1
+          fi
+      - name: Verify event notification tap routes are exact and account-bound
+        run: |
+          activity=app/src/main/java/com/dbest4u/partner/MainActivity.java
+          receiver=app/src/main/java/com/dbest4u/partner/PartnerMessagingService.java
+          grep -q 'openFromFcmIntent' "$activity"
+          grep -q 'onNewIntent(Intent intent)' "$activity"
+          grep -q 'dbest_partner_fcm_account' "$activity"
+          grep -q 'binding.getBoolean("bound", false)' "$activity"
+          grep -q 'dbest_fcm_event_type' "$activity"
+          grep -q 'service_partner_job_assigned' "$receiver"
+          grep -q 'roleForEvent' "$receiver"
+          grep -q 'eventRole.equals(bind.getString("bound_role"' "$receiver"
+          grep -q 'intent.setAction("com.dbest4u.partner.action.OPEN_FCM_EVENT_QA")' "$receiver"
+          grep -q 'PendingIntent.FLAG_IMMUTABLE' "$receiver"
+          if grep -q 'intent.putExtra("targetUrl"' "$receiver"; then
+            echo "::error::Do not route to arbitrary FCM target URLs"
             exit 1
           fi
       - name: Build partner debug APK and unsigned release AAB

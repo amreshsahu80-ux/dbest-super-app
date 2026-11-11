@@ -43,6 +43,18 @@ public final class PartnerMessagingService extends FirebaseMessagingService {
         if (title == null || title.isEmpty()) title = "DBest Partner";
         if (body == null) body = "You have a new partner update.";
 
+        // Reject event notifications for a different partner role even if an
+        // upstream sender ever misroutes a token. Generic Firebase smoke tests
+        // have no recognized role event and do not open role-specific pages.
+        String eventType = message.getData().get("eventType");
+        String eventRole = roleForEvent(eventType);
+        if (eventRole != null) {
+            android.content.SharedPreferences bind =
+                getSharedPreferences("dbest_partner_fcm_account", MODE_PRIVATE);
+            if (!bind.getBoolean("bound", false)
+                || !eventRole.equals(bind.getString("bound_role", ""))) return;
+        }
+
         NotificationManager manager = getSystemService(NotificationManager.class);
         if (Build.VERSION.SDK_INT >= 26)
             manager.createNotificationChannel(new NotificationChannel(
@@ -50,7 +62,16 @@ public final class PartnerMessagingService extends FirebaseMessagingService {
 
         Intent intent = new Intent(this, MainActivity.class)
             .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-        PendingIntent pending = PendingIntent.getActivity(this, 0, intent,
+        if (eventRole != null) {
+            intent.setAction("com.dbest4u.partner.action.OPEN_FCM_EVENT_QA");
+            intent.putExtra("dbest_fcm_event_type", eventType);
+        }
+        // Distinct PendingIntents prevent a later offer/order from overwriting
+        // an earlier notification's navigation intent.
+        String key = message.getData().get("eventKey");
+        int requestCode = key == null ? (int)(System.currentTimeMillis() & 0x7fffffff)
+            : (key.hashCode() & 0x7fffffff);
+        PendingIntent pending = PendingIntent.getActivity(this, requestCode, intent,
             PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         Notification.Builder notification = Build.VERSION.SDK_INT >= 26 ?
             new Notification.Builder(this, CHANNEL) : new Notification.Builder(this);
@@ -58,6 +79,13 @@ public final class PartnerMessagingService extends FirebaseMessagingService {
             .setContentTitle(title).setContentText(body)
             .setStyle(new Notification.BigTextStyle().bigText(body))
             .setContentIntent(pending).setAutoCancel(true);
-        manager.notify((int)(System.currentTimeMillis() & 0x7fffffff), notification.build());
+        manager.notify(requestCode, notification.build());
+    }
+
+    private static String roleForEvent(String type) {
+        if ("marketplace_vendor_new_order".equals(type)) return "Vendor";
+        if ("vaahak_ride_offer".equals(type)) return "Vaahak";
+        if ("service_partner_job_assigned".equals(type)) return "Service Partner";
+        return null;
     }
 }
