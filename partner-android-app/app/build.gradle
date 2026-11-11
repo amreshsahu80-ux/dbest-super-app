@@ -1,15 +1,16 @@
-// STAGED PRODUCTION-ID CANARY CANDIDATE. UNSIGNED; NOT FOR INSTALLING OVER PLAY.\n// Before any Play upload, verify versionCode with Play Console and use its authorized signing path.
+// RELEASE CANDIDATE ONLY. Requires Google Play upload signing and on-device QA.\n// Before any Play upload, verify versionCode with Play Console and use its authorized signing path.
 plugins { id 'com.android.application'; id 'com.google.gms.google-services' }
 
 android {
     namespace 'com.dbest4u.partner'
     compileSdk 36
+    buildFeatures { buildConfig true }
     defaultConfig {
         applicationId 'com.dbest4u.partner'
         minSdk 24
         targetSdk 36
         versionCode 9
-        versionName '1.0.5-qa-receiver-diagnostic'
+        versionName '1.0.5'
     }
     buildTypes {
         release {
