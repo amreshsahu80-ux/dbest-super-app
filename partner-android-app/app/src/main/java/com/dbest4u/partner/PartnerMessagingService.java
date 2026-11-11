@@ -40,15 +40,19 @@ public final class PartnerMessagingService extends FirebaseMessagingService {
         // eligible for the pilot. A token-only test payload cannot route to
         // a different user's workspace or forge an arbitrary destination.
         String eventType = message.getData().get("eventType");
+        // The isolated server QA payload is not a business event and deliberately
+        // has no eventKey. Accept it only for an explicitly linked Vaahak account.
+        boolean qaOnly = "qa_vaahak_one_device".equals(eventType);
         String expectedRole;
         if ("marketplace_vendor_new_order".equals(eventType)) expectedRole = "Vendor";
-        else if ("vaahak_ride_offer".equals(eventType)) expectedRole = "Vaahak";
+        else if ("vaahak_ride_offer".equals(eventType) || qaOnly) expectedRole = "Vaahak";
         else if ("service_partner_job_assigned".equals(eventType)) expectedRole = "Service Partner";
         else return;
         if (!expectedRole.equals(account.getString("bound_role", ""))) return;
-        String eventKey = message.getData().get("eventKey");
-        if (eventKey == null || !eventKey.startsWith(eventType + ":")
-            || eventKey.length() > 400) return;
+        String eventKey = qaOnly ? "qa_vaahak_one_device:local_display"
+            : message.getData().get("eventKey");
+        if (!qaOnly && (eventKey == null || !eventKey.startsWith(eventType + ":")
+            || eventKey.length() > 400)) return;
 
         String title = message.getData().get("title");
         String body = message.getData().get("body");
@@ -56,8 +60,14 @@ public final class PartnerMessagingService extends FirebaseMessagingService {
             title = message.getNotification().getTitle();
         if ((body == null || body.isEmpty()) && message.getNotification() != null)
             body = message.getNotification().getBody();
-        if (title == null || title.isEmpty()) title = "DBest Partner";
-        if (body == null) body = "You have a new partner update.";
+        if (qaOnly) {
+            // Fixed wording prevents QA traffic from masquerading as a real job.
+            title = "DBest Partner QA notification";
+            body = "Secure diagnostic only. No booking, ride or payment was created.";
+        } else {
+            if (title == null || title.isEmpty()) title = "DBest Partner";
+            if (body == null) body = "You have a new partner update.";
+        }
 
         NotificationManager manager = getSystemService(NotificationManager.class);
         if (Build.VERSION.SDK_INT >= 26)
