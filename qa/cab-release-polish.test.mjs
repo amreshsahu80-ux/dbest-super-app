@@ -62,7 +62,7 @@ test('manual pickup and stale suggestion callbacks are guarded',()=>{
 test('Google reverse geocode prefers a street address over an administrative locality',async()=>{
  const code=between('async function reverseGoogle(', '\nasync function reverseNominatim(');
  const ctx={
-   console:{warn:()=>{}},
+   console:{warn:()=>{}},setTimeout,clearTimeout,
    S:{provider:'fallback'},
    initSearchProvider:async()=>{},
    waitGoogleKey:async()=> 'QA_KEY',
