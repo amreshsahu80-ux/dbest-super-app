@@ -205,7 +205,10 @@ function cabGoogleStatusMessage(){
   OVER_QUERY_LIMIT:'Google Geocoding quota reached',
   ZERO_RESULTS:'No mapped Google street address',
   UNKNOWN_ERROR:'Google Geocoding unavailable',
-  geocoder_error:'Google Geocoding failed'
+  geocoder_error:'Google Geocoding failed',
+  response_timeout:'Google address lookup timed out',
+  ERROR:'Google address service unreachable',
+  INVALID_REQUEST:'Google address request invalid'
  };
  return messages[cabReverseGoogleStatus]||'Google address lookup: '+cabReverseGoogleStatus;
 }
@@ -229,31 +232,46 @@ async function reverseGoogle(lat,lng){
    return '';
   }
   S.provider='google';
-  return await new Promise(resolve=>{
-   let done=false;
-   const finish=v=>{if(done)return;done=true;clearTimeout(timer);resolve(v)};
-   const timer=setTimeout(()=>finish(''),6500);
-   new google.maps.Geocoder().geocode({location:{lat,lng}},(rows,status)=>{
-    cabReverseGoogleStatus=String(status||'UNKNOWN_ERROR');
-    if(status!=='OK'||!Array.isArray(rows))return finish('');
-    // The first result is not guaranteed to be the most useful street address.
-    // Prefer verified address/premise/street results over locality-only names.
-    const score=r=>{
-     const t=Array.isArray(r?.types)?r.types:[];
-     if(t.includes('street_address'))return 100;
-     if(t.includes('premise')||t.includes('subpremise'))return 95;
-     if(t.includes('intersection'))return 90;
-     if(t.includes('route'))return 85;
-     if(t.includes('plus_code'))return 55;
-     if(t.includes('neighborhood')||t.includes('sublocality'))return 35;
-     if(t.includes('locality'))return 20;
-     return 0;
-    };
-    const best=rows.filter(r=>String(r?.formatted_address||'').trim())
-     .sort((a,b)=>score(b)-score(a))[0];
-    finish(best?.formatted_address||'');
-   });
-  });
+  // Maps JavaScript Geocoder returns a Promise. Earlier callback-based QA
+  // calls sometimes timed out silently, leaving the status at "checking".
+  const outcome=await Promise.race([
+    Promise.resolve().then(()=>new google.maps.Geocoder().geocode({location:{lat,lng},language:'en'}))
+      .then(response=>({response}),error=>({error})),
+    new Promise(resolve=>setTimeout(()=>resolve({timeout:true}),7500))
+  ]);
+  if(outcome.timeout){
+    cabReverseGoogleStatus='response_timeout';
+    return '';
+  }
+  if(outcome.error){
+    const raw=String(outcome.error?.code||outcome.error?.status||outcome.error?.message||outcome.error||'UNKNOWN_ERROR');
+    cabReverseGoogleStatus=['REQUEST_DENIED','OVER_QUERY_LIMIT','ZERO_RESULTS','INVALID_REQUEST','UNKNOWN_ERROR','ERROR']
+      .find(code=>raw.includes(code))||'geocoder_error';
+    console.warn('Google reverse lookup status',cabReverseGoogleStatus);
+    return '';
+  }
+  const rows=outcome.response?.results;
+  if(!Array.isArray(rows)||!rows.length){
+    cabReverseGoogleStatus='ZERO_RESULTS';
+    return '';
+  }
+  cabReverseGoogleStatus='OK';
+  // Prefer mapped road/premise/address over administrative locality.
+  // Retain actual device GPS coordinates for all routing.
+  const score=r=>{
+    const t=Array.isArray(r?.types)?r.types:[];
+    if(t.includes('street_address'))return 100;
+    if(t.includes('premise')||t.includes('subpremise'))return 95;
+    if(t.includes('intersection'))return 90;
+    if(t.includes('route'))return 85;
+    if(t.includes('plus_code'))return 55;
+    if(t.includes('neighborhood')||t.includes('sublocality'))return 35;
+    if(t.includes('locality'))return 20;
+    return 0;
+  };
+  const best=rows.filter(r=>String(r?.formatted_address||'').trim())
+    .sort((a,b)=>score(b)-score(a))[0];
+  return best?.formatted_address||'';
  }catch(e){cabReverseGoogleStatus='geocoder_error';console.warn('Pickup Google reverse geocode failed',e);return ''}
 }
 async function reverseNominatim(lat,lng){
