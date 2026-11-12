@@ -16,10 +16,22 @@ window.DBEST_RUNTIME_CONFIG = Object.freeze({
   };
   const loadRuntimeSecrets=()=>new Promise(resolve=>{
     let finished=false;
-    const finish=()=>{if(finished)return;finished=true;try{applyRuntimeSecrets()}catch(_){}resolve(window.DBEST_RUNTIME_CONFIG)};
+    const finish=()=>{if(finished)return;finished=true;resolve(window.DBEST_RUNTIME_CONFIG)};
+    // Timeout may let the page render, but MUST NOT discard a late Maps key.
+    // Loading the API response always applies its secrets, even after timeout.
+    const apply=()=>{try{applyRuntimeSecrets()}catch(_){}finish()};
     const existing=document.querySelector('script[data-dbest-runtime-secrets]');
-    if(existing){if(existing.dataset.loaded==='1')return finish();existing.addEventListener('load',finish,{once:true});existing.addEventListener('error',finish,{once:true});setTimeout(finish,1200);return}
-    const s=document.createElement('script');s.src='/api/runtime-config?v='+encodeURIComponent(V);s.async=true;s.setAttribute('data-dbest-runtime-secrets','1');s.onload=()=>{s.dataset.loaded='1';finish()};s.onerror=finish;(document.head||document.documentElement).appendChild(s);setTimeout(finish,1600)
+    if(existing){
+      if(existing.dataset.loaded==='1')return apply();
+      existing.addEventListener('load',apply,{once:true});
+      existing.addEventListener('error',finish,{once:true});
+      setTimeout(finish,1600);return;
+    }
+    const s=document.createElement('script');s.src='/api/runtime-config?v='+encodeURIComponent(V);
+    s.async=true;s.setAttribute('data-dbest-runtime-secrets','1');
+    s.onload=()=>{s.dataset.loaded='1';apply()};
+    s.onerror=finish;(document.head||document.documentElement).appendChild(s);
+    setTimeout(finish,1600);
   });
   const googleConfigured=()=>String(window.DBEST_RUNTIME_CONFIG?.googleMapsApiKey||'').trim().length>0;
 
