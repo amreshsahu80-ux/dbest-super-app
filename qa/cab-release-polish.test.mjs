@@ -140,3 +140,38 @@ test('Google reverse geocoder uses timeout fallback without leaving status check
  const data=await vm.runInNewContext(code+'\nreverseGoogle(22.67,85.63).then(v=>({v,status:cabReverseGoogleStatus}))',ctx);
  assert.equal(data.v,'');assert.equal(data.status,'response_timeout');
 });
+
+test('2-way QA routes all the way back to pickup without an assumed double-distance',async()=>{
+ const code=between('async function routeOSRM(', '\nasync function continueRide(');
+ const original={p:{lat:22.56,lng:85.62},d:{lat:22.60,lng:85.65},stops:[],
+   mode:'ride',tripType:'roundtrip'};
+ let u='';
+ const ctx={S:original,fetch:async(url,opts)=>{u=url;return{ok:true,json:async()=>({
+   routes:[{distance:20940,duration:2350,geometry:{coordinates:[[85.62,22.56],[85.65,22.60],[85.62,22.56]]}}]})}},
+   realisticRoadMinutes:(km,providerMin)=>Math.max(1,providerMin)};
+ const q=await vm.runInNewContext(code+'\nrouteOSRM()',ctx);
+ assert.equal(q.km,20.94);assert.equal(q.roundTripRouted,true);
+ assert.match(u,/85\.62,22\.56;85\.65,22\.6;85\.62,22\.56/);
+ assert.equal(q.geo.length,3);
+});
+test('2-way quote must never double the already-returned route, preserve sedan and SUV rates',()=>{
+ const code=between('function roundRules(){','\n// No confirmed online Vaahak position');
+ const ctx={S:{route:{km:20.94,min:40,roundTripRouted:true},mode:'ride',tripType:'roundtrip',nightHalt:false},
+   localStorage:{getItem:()=>null},realisticRoadMinutes:(km,min)=>min};
+ const x=vm.runInNewContext(code+'\n({distance:totalKm(),time:totalMin(),sedan:fare({id:"sedan"}),suv:fare({id:"suv"})})',ctx);
+ assert.equal(x.distance,20.94);assert.equal(x.time,40);
+ assert.equal(x.sedan,314);assert.equal(x.suv,377);
+ ctx.S.nightHalt=true;
+ const night=vm.runInNewContext('({sedan:fare({id:"sedan"}),suv:fare({id:"suv"})})',ctx);
+ assert.equal(night.sedan,1314);assert.equal(night.suv,1877);
+});
+test('one-way routing remains single leg with unchanged fare calculations',async()=>{
+ const code=between('async function routeOSRM(', '\nasync function continueRide(');
+ let requested='';
+ const ctx={S:{p:{lat:22.56,lng:85.62},d:{lat:22.60,lng:85.65},stops:[],mode:'ride',tripType:'oneway'},
+  fetch:async url=>{requested=url;return{ok:true,json:async()=>({routes:[{distance:8100,duration:1000,geometry:{coordinates:[]}}]})}},
+  realisticRoadMinutes:(km,m)=>m};
+ const route=await vm.runInNewContext(code+'\nrouteOSRM()',ctx);
+ assert.equal(route.roundTripRouted,false);assert.equal(route.km,8.1);
+ assert.match(requested,/85\.62,22\.56;85\.65,22\.6\?/);
+});
