@@ -222,3 +222,17 @@ test('one-way routing remains single leg with unchanged fare calculations',async
  assert.equal(route.roundTripRouted,false);assert.equal(route.km,8.1);
  assert.match(requested,/85\.62,22\.56;85\.65,22\.6\?/);
 });
+
+test('Car Pool scheduled dates must be realistic and stop 2090 bookings',()=>{
+ const code=between('function minLocal()', '\nfunction recents()');
+ const NOW=Date.UTC(2026,10,12,18,0);
+ const ctx={Date:class extends Date{constructor(...args){super(...(args.length?args:[NOW]))}static now(){return NOW}},location:{hostname:'dbest-super-app-git-qa-cab-final-release-polish-20261112-db-est.vercel.app'}};
+ const valid=vm.runInNewContext(code+';[validCabSchedule("2090-11-18T03:28"),validCabSchedule("2026-11-14T03:28"),cabQaPreview(),maxLocal().slice(0,4)]',ctx);
+ assert.deepEqual([...valid],[false,true,true,'2027']);
+});
+test('QA Car Pool must not send real create, confirm or payment requests',()=>{
+ assert.match(source,/if\(cabQaPreview\(\)\)return say\('QA PREVIEW ONLY: Car Pool form verified/);
+ assert.match(source,/if\(cabQaPreview\(\)\)return say\('QA PREVIEW ONLY: Car Pool payments are disabled/);
+ assert.match(source,/if\(cabQaPreview\(\)\)return say\('QA PREVIEW ONLY: Confirming Car Pool seats is disabled/);
+ assert.match(source,/max="\$\{maxLocal\(\)\}"/);
+});
