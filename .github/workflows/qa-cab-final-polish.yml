@@ -4,6 +4,7 @@ on:
     branches: [qa/cab-final-release-polish-20261112]
     paths:
       - 'cab-selected-ui-v3.js'
+      - 'runtime-config.js'
       - 'qa/cab-release-polish.test.mjs'
       - '.github/workflows/qa-cab-final-polish.yml'
   workflow_dispatch:
@@ -22,5 +23,7 @@ jobs:
           node-version: '22'
       - name: Cab JS syntax
         run: node --check cab-selected-ui-v3.js
-      - name: Cab 500km, GPS, photo, Vaahak ETA and UI tests
+      - name: Runtime key loader syntax
+        run: node --check runtime-config.js
+      - name: Cab 500km, GPS, address, photo, Vaahak ETA and UI tests
         run: node --test qa/cab-release-polish.test.mjs
