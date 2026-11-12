@@ -735,7 +735,21 @@ function realisticRoadMinutes(km,providerMin){
  const floor=Math.max(2,Math.ceil((k/avgKmph)*60));
  return Math.max(Math.round(raw),floor)
 }
-async function routeOSRM(){const pts=[S.p,...(S.stops||[]),S.d].filter(Boolean),coords=pts.map(x=>`${x.lng},${x.lat}`).join(';');const u=`https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`;const r=await fetch(u,{cache:'no-store'}),j=await r.json(),x=j.routes?.[0];if(!x)throw new Error('No route');const km=x.distance/1000,providerMin=Math.max(1,Math.round(x.duration/60));return{km,min:realisticRoadMinutes(km,providerMin),providerMin,geo:x.geometry?.coordinates||[]}}
+async function routeOSRM(){
+ const round=S.mode!=='rental'&&S.tripType==='roundtrip';
+ // 2-Way must estimate both directions, not assume the return journey is
+ // exactly twice the outward drive (one-way streets/turns can differ).
+ const pts=[S.p,...(S.stops||[]),S.d,...(round?[S.p]:[])].filter(Boolean);
+ const coords=pts.map(x=>`${x.lng},${x.lat}`).join(';');
+ const u=`https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`;
+ const r=await fetch(u,{cache:'no-store'});
+ if(!r.ok)throw new Error('Route service HTTP '+r.status);
+ const j=await r.json(),x=j.routes?.[0];
+ if(!x||!Number.isFinite(x.distance)||!Number.isFinite(x.duration)||x.distance<=0)
+  throw new Error('No valid road route');
+ const km=x.distance/1000,providerMin=Math.max(1,Math.round(x.duration/60));
+ return {km,min:realisticRoadMinutes(km,providerMin),providerMin,geo:x.geometry?.coordinates||[],roundTripRouted:round};
+}
 async function continueRide(){
  if(S.tripType==='carpool'){S.schedule='later';if(!S.scheduledAt)return say('Please select Car Pool date and time.');if(!S.carpoolName||S.carpoolMobile.length!==10)return say('Please enter passenger name and 10-digit mobile.');if(S.carpoolVehicle==='Sedan'&&S.carpoolSeats>3)return say('Sedan Car Pool supports up to 3 passenger seats.');}
  if(S.schedule==='later'&&!S.scheduledAt)return say('Please select schedule date and time.');if(S.rider==='other'&&(!S.riderName||S.riderMobile.length!==10))return say('Please enter rider name and 10-digit mobile.');
@@ -806,7 +820,7 @@ async function refreshCarpool(id,mobile){
 async function cancelCarpool(id,mobile){
  try{await carpoolApi('decline',{id,mobile});try{localStorage.removeItem('dbest_carpool_last')}catch(_){}say('Car Pool request cancelled.');open()}catch(e){say(String(e?.message||'')==='paid_request_refund_required'?'Paid Car Pool cancellation requires a refund workflow. Please contact DBest support.':'Unable to cancel Car Pool request.')}
 }
-function roundRules(){try{const x=JSON.parse(localStorage.getItem('d2_ride_config')||'null'),r=x?.roundTripRules||{};return{sedan:{perKm:Number(r.sedan?.perKm||15),nightHalt:Number(r.sedan?.nightHalt||1000)},suv:{perKm:Number(r.suv?.perKm||18),nightHalt:Number(r.suv?.nightHalt||1500)}}}catch(e){return{sedan:{perKm:15,nightHalt:1000},suv:{perKm:18,nightHalt:1500}}}}function visibleVehicles(){return S.mode==='rental'||S.tripType!=='roundtrip'?VEH:VEH.filter(v=>v.id==='sedan'||v.id==='suv')}function totalKm(){const k=S.route?.km||S.rentalKm;return S.mode!=='rental'&&S.tripType==='roundtrip'?k*2:k}function totalMin(){if(S.mode==='rental')return S.rentalHours*60;const oneWay=realisticRoadMinutes(Number(S.route?.km||0),Number(S.route?.min||1));return S.tripType==='roundtrip'?oneWay*2:oneWay}function fare(v){const k=S.route?.km||S.rentalKm;if(S.mode!=='rental'&&S.tripType==='roundtrip'){const rr=roundRules()[v.id];if(!rr)return 0;return Math.round((k*2)*rr.perKm+(S.nightHalt?rr.nightHalt:0))}return Math.round(Math.max(v.min,v.base+v.km*k)+PLATFORM_FEE)}
+function roundRules(){try{const x=JSON.parse(localStorage.getItem('d2_ride_config')||'null'),r=x?.roundTripRules||{};return{sedan:{perKm:Number(r.sedan?.perKm||15),nightHalt:Number(r.sedan?.nightHalt||1000)},suv:{perKm:Number(r.suv?.perKm||18),nightHalt:Number(r.suv?.nightHalt||1500)}}}catch(e){return{sedan:{perKm:15,nightHalt:1000},suv:{perKm:18,nightHalt:1500}}}}function visibleVehicles(){return S.mode==='rental'||S.tripType!=='roundtrip'?VEH:VEH.filter(v=>v.id==='sedan'||v.id==='suv')}function totalKm(){const k=S.route?.km||S.rentalKm;return S.mode!=='rental'&&S.tripType==='roundtrip'&&!S.route?.roundTripRouted?k*2:k}function totalMin(){if(S.mode==='rental')return S.rentalHours*60;const routeMin=realisticRoadMinutes(Number(S.route?.km||0),Number(S.route?.min||1));return S.tripType==='roundtrip'&&!S.route?.roundTripRouted?routeMin*2:routeMin}function fare(v){const k=S.route?.km||S.rentalKm;if(S.mode!=='rental'&&S.tripType==='roundtrip'){const rr=roundRules()[v.id];if(!rr)return 0;return Math.round(totalKm()*rr.perKm+(S.nightHalt?rr.nightHalt:0))}return Math.round(Math.max(v.min,v.base+v.km*k)+PLATFORM_FEE)}
 // No confirmed online Vaahak position is available on this quote screen.
 // Never manufacture a pickup ETA from the vehicle type.
 function vehCard(v){const rr=S.tripType==='roundtrip'?roundRules()[v.id]:null;return `<button type="button" class="cab6Veh ${S.selected===v.id?'on':''}" data-v="${v.id}"><span class="photo"><img src="${IMG[v.id]}" alt="${esc(v.name)}" loading="eager"></span><b>${esc(v.name)}${S.tripType==='roundtrip'?'<span style="display:block;font-size:7px;color:#315efb;margin-top:2px">ROUND TRIP</span>':''}</b><small>${v.seats} seat${v.seats>1?'s':''}${rr?' • ₹'+rr.perKm+'/km':''}</small><small style="color:#315efb;font-weight:900;margin-top:2px">Pickup ETA after assignment</small><strong>₹${fare(v)}</strong></button>`}
