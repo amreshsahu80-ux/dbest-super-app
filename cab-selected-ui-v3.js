@@ -737,18 +737,37 @@ function realisticRoadMinutes(km,providerMin){
 }
 async function routeOSRM(){
  const round=S.mode!=='rental'&&S.tripType==='roundtrip';
- // 2-Way must estimate both directions, not assume the return journey is
- // exactly twice the outward drive (one-way streets/turns can differ).
- const pts=[S.p,...(S.stops||[]),S.d,...(round?[S.p]:[])].filter(Boolean);
- const coords=pts.map(x=>`${x.lng},${x.lat}`).join(';');
- const u=`https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`;
- const r=await fetch(u,{cache:'no-store'});
- if(!r.ok)throw new Error('Route service HTTP '+r.status);
- const j=await r.json(),x=j.routes?.[0];
- if(!x||!Number.isFinite(x.distance)||!Number.isFinite(x.duration)||x.distance<=0)
-  throw new Error('No valid road route');
- const km=x.distance/1000,providerMin=Math.max(1,Math.round(x.duration/60));
- return {km,min:realisticRoadMinutes(km,providerMin),providerMin,geo:x.geometry?.coordinates||[],roundTripRouted:round};
+ const outward=[S.p,...(S.stops||[]),S.d].filter(Boolean);
+ const journey=async points=>{
+  const coords=points.map(x=>`${x.lng},${x.lat}`).join(';');
+  const url=`https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`;
+  const response=await fetch(url,{cache:'no-store'});
+  if(!response.ok)throw new Error('Road route HTTP '+response.status);
+  const json=await response.json(),route=json.routes?.[0];
+  if(json.code!=='Ok'&&json.code!==undefined)throw new Error('Road route '+json.code);
+  if(!route||!Number.isFinite(route.distance)||!Number.isFinite(route.duration)||route.distance<=0)
+   throw new Error('No valid road route');
+  return {km:route.distance/1000,min:Math.max(1,route.duration/60),
+   geo:Array.isArray(route.geometry?.coordinates)?route.geometry.coordinates:[]};
+ };
+ if(!round){
+  const leg=await journey(outward);
+  const providerMin=Math.max(1,Math.round(leg.min));
+  return {km:leg.km,min:realisticRoadMinutes(leg.km,providerMin),
+   providerMin,geo:leg.geo,roundTripRouted:false};
+ }
+ // Asking OSRM to solve P → D → P as one continuous waypoint route can
+ // impose a long U-turn detour. Quote both real road directions independently.
+ // The return travels from D directly back to P; outward stops stay outward.
+ const [onward,back]=await Promise.all([journey(outward),journey([S.d,S.p])]);
+ const km=onward.km+back.km,providerMin=Math.max(1,Math.round(onward.min+back.min));
+ const geo=onward.geo.concat(back.geo.length?back.geo.slice(1):[]);
+ const imbalance=Math.max(onward.km,back.km)/Math.max(.1,Math.min(onward.km,back.km));
+ return {km,min:realisticRoadMinutes(km,providerMin),providerMin,geo,
+  roundTripRouted:true,legs:{outwardKm:onward.km,returnKm:back.km},
+  routeWarning:imbalance>1.5&&Math.abs(onward.km-back.km)>2
+   ?'Road distance differs significantly between the outward and return journeys. Verify before booking.'
+   :''};
 }
 async function continueRide(){
  if(S.tripType==='carpool'){S.schedule='later';if(!S.scheduledAt)return say('Please select Car Pool date and time.');if(!S.carpoolName||S.carpoolMobile.length!==10)return say('Please enter passenger name and 10-digit mobile.');if(S.carpoolVehicle==='Sedan'&&S.carpoolSeats>3)return say('Sedan Car Pool supports up to 3 passenger seats.');}
@@ -835,7 +854,7 @@ async function renderRealMap(id){
 }
 function vehicles(){
  const list=visibleVehicles();if(!list.some(v=>v.id===S.selected))S.selected=list[0]?.id||'sedan';const k=totalKm(),m=totalMin(),title=`${pickupDisplayLabel()||'Pickup'} → ${S.mode==='rental'?'Hourly Rental':S.d?.label||'Destination'}${S.tripType==='roundtrip'?' → Return':''}`;
- screen(`${mapBlock(title)}<div class="cab6Sheet"><div class="cab6SheetHead"><b>Choose a ride</b><small>${S.tripType==='roundtrip'?'Same vehicle • Return included • Tolls extra':'Upfront fare'}</small></div><div class="cab6Meta"><div><small>${S.tripType==='roundtrip'?'Total round-trip distance':'Road distance'}</small><b>${k.toFixed(1)} km</b></div><div><small>${S.tripType==='roundtrip'?'Total driving time':'Travel time'}</small><b>~${m} min</b></div></div><div class="cab6Vehicles">${list.map(vehCard).join('')}</div><button type="button" id="cab6Book" class="cab6Book">Continue with ${esc(list.find(v=>v.id===S.selected)?.name||'Ride')}</button></div>`,'DBEST_CAB_SELECTED_UI.open()');
+ screen(`${mapBlock(title)}<div class="cab6Sheet"><div class="cab6SheetHead"><b>Choose a ride</b><small>${S.tripType==='roundtrip'?'Same vehicle • Return included • Tolls extra':'Upfront fare'}</small></div><div class="cab6Meta"><div><small>${S.tripType==='roundtrip'?'Total round-trip distance':'Road distance'}</small><b>${k.toFixed(1)} km</b></div><div><small>${S.tripType==='roundtrip'?'Total driving time':'Travel time'}</small><b>~${m} min</b></div></div>${S.tripType==='roundtrip'&&S.route?.legs?'<div class="cab6Legs" style="font-size:12px;color:#52627e;margin:12px 4px 4px">Outward: '+S.route.legs.outwardKm.toFixed(1)+' km · Return: '+S.route.legs.returnKm.toFixed(1)+' km'+(S.route.routeWarning?'<div style="font-weight:700;color:#aa5115;margin-top:5px">'+esc(S.route.routeWarning)+'</div>':'')+'</div>':''}<div class="cab6Vehicles">${list.map(vehCard).join('')}</div><button type="button" id="cab6Book" class="cab6Book">Continue with ${esc(list.find(v=>v.id===S.selected)?.name||'Ride')}</button></div>`,'DBEST_CAB_SELECTED_UI.open()');
  qa('[data-v]').forEach(b=>b.onclick=()=>{S.selected=b.dataset.v;qa('[data-v]').forEach(x=>x.classList.toggle('on',x===b));$('cab6Book').textContent='Continue with '+(list.find(v=>v.id===S.selected)?.name||'Ride')});$('cab6Book').onclick=()=>confirmRide(S.selected);setTimeout(()=>renderRealMap('cab6Map'),40)
 }
 function confirmRide(id){
