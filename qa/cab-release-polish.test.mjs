@@ -154,7 +154,7 @@ test('2-way QA computes both road directions independently and combines fares',a
     geometry:{coordinates:isReturn?[[85.65,22.6],[85.62,22.56]]:[[85.62,22.56],[85.65,22.6]]}}]})};
  },realisticRoadMinutes:(km,providerMin)=>Math.max(1,providerMin)};
  const q=await vm.runInNewContext(code+'\nrouteOSRM()',ctx);
- assert.equal(q.km,20.94);assert.equal(q.roundTripRouted,true);
+ assert.ok(Math.abs(q.km-20.94)<0.00001);assert.equal(q.roundTripRouted,true);
  assert.deepEqual([...urls].map(u=>u.split('/driving/')[1].split('?')[0]),[
   '85.62,22.56;85.65,22.6','85.65,22.6;85.62,22.56'
  ]);
