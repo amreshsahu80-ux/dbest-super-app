@@ -252,7 +252,8 @@ test('Cab inner-page header shows working previous-step and Cab Home navigation'
 test('Back from quote or pool returns to preserved Cab form, while confirmation returns to vehicle choices',()=>{
  const count=(source.match(/'DBEST_CAB_SELECTED_UI.returnToSearch\(\)'\);/g)||[]).length;
  assert.equal(count,2,'pool status and ride options must both return to Cab search');
- assert.match(source,/cab6Book\)[\s\S]*?function confirmRide\(/);
+ assert.match(source,/\$\('cab6Book'\)\.onclick=\(\)=>confirmRide\(S\.selected\)/);
+ assert.match(source,/function confirmRide\(id\)/);
  assert.match(source,/'DBEST_CAB_SELECTED_UI.vehicles\(\)'/);
  assert.match(source,/function returnToSearch\(\)\{open\(true\)\}/);
  assert.match(source,/function goCabHome\(\)/);
