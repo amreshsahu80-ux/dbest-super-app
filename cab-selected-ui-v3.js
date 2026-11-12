@@ -122,6 +122,8 @@ body:has(.cab6Page) #dbestServicePartnerQuick,body:has(.cab6Page) .floatingServi
 .cab6Page>.cab6Top.cab6IconNav.cab6HeroNav>button:first-child:after{content:'←';font-size:26px!important}
 .cab6Page>.cab6Top.cab6IconNav.cab6HeroNav>button:last-child:after{content:'⌂';font-size:25px!important}
 .cab6Page>.cab6Wrap{padding-top:6px}
+.cab6Page>.cab6Top.cab6IconNav.cab6HeroNav.cab6InnerNav>button:first-child{width:92px;border-radius:24px;padding:0 10px}
+.cab6Page>.cab6Top.cab6IconNav.cab6HeroNav.cab6InnerNav>button:first-child:after{content:'← Back';font-size:14px!important}
 .cab6Search.cab6EntrySheet .cab6Field.pick .cab6PickupNoteRow{margin:5px 0 0}
 .cab6Search.cab6EntrySheet .cab6Field.pick .cab6PickupNoteRow input{width:100%;box-sizing:border-box;min-height:40px;font-size:11px;padding:8px 12px;border:1px solid #d5e8e2;border-left:1px solid #d5e8e2;border-radius:12px;background:#f6fbfa;box-shadow:none;color:#164d43}
 .cab6Search.cab6EntrySheet .cab6Field.pick .cab6PickupNoteRow input:focus{outline:2px solid #a7dccc;outline-offset:1px}
@@ -133,7 +135,10 @@ body:has(.cab6Page) #dbestServicePartnerQuick,body:has(.cab6Page) .floatingServi
 .cab6Suggest .cab6NoNearby{padding:11px 12px;color:#59677c;font-size:11px;line-height:1.4}
 
 `;document.head.appendChild(x)}
-function header(back){return `<div class="cab6Top cab6IconNav cab6HeroNav" role="navigation" aria-label="Cab navigation"><button type="button" aria-label="Back" title="Back" onclick="${back}">Back</button><button type="button" aria-label="Home" title="Home" onclick="backHome()">Home</button></div>`}
+function header(back){
+ const inner=back!=='backHome()';
+ return `<div class="cab6Top cab6IconNav cab6HeroNav${inner?' cab6InnerNav':''}" role="navigation" aria-label="Cab navigation"><button type="button" aria-label="${inner?'Back to previous Cab step':'Back to main platform'}" title="${inner?'Previous Cab step':'Main platform'}" onclick="${back}">Back</button><button type="button" aria-label="${inner?'Cab Home':'Platform Home'}" title="${inner?'Cab Home':'Platform Home'}" onclick="${inner?'DBEST_CAB_SELECTED_UI.goCabHome()':'backHome()'}">Home</button></div>`;
+}
 function screen(body,back='backHome()'){css();destroyMap();sectionScreen(`<div class="cab6Page">${header(back)}<div class="cab6Wrap">${body}</div></div>`)}
 function destroyMap(){try{if(S.map&&S.map.remove)S.map.remove()}catch(e){}try{if(S.entryMap&&S.entryMap.remove)S.entryMap.remove()}catch(e){}S.map=null;S.layer=null;S.entryMap=null}
 function minLocal(){const d=new Date(Date.now()+15*60000);d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,16)}
@@ -149,7 +154,14 @@ function recents(){try{return (JSON.parse(localStorage.getItem(RECENT_KEY)||'[]'
 function saveRecent(v){v=String(v||'').trim();if(!v)return;try{localStorage.setItem(RECENT_KEY,JSON.stringify([v,...recents().filter(x=>x.toLowerCase()!==v.toLowerCase())].slice(0,4)))}catch(e){}}
 function renderRecents(){const h=$('cab6Recents');if(!h)return;const a=recents();h.innerHTML=a.length?a.map(v=>`<button type="button" class="cab6Recent" data-r="${esc(v)}">↻ ${esc(v.split(',')[0]||v)}</button>`).join(''):'<div style="font-size:9px;color:#8a92a4;padding:3px 2px">Your recent destinations will appear here.</div>';qa('[data-r]',h).forEach(b=>b.onclick=()=>{const d=$('cab6D');if(d){d.value=b.dataset.r||'';d.dispatchEvent(new Event('input',{bubbles:true}));d.focus()}})}
 function nearbyWatchdog(){const rail=$('cab6NearbyRail');if(!rail)return;const current=Number(rail.dataset.nearbyRun||0)+1;rail.dataset.nearbyRun=String(current);setTimeout(()=>{if(!rail.isConnected||Number(rail.dataset.nearbyRun)!==current||!rail.querySelector('.cab6Place.loading'))return;rail.innerHTML='<div style="font-size:12px;color:#687386;padding:12px">Still finding nearby destinations…</div>';},15000)}
-function open(){
+function returnToSearch(){open(true)}
+function goCabHome(){
+ // Cab home starts a new booking but keeps accurate GPS pickup if available.
+ S.tripType='oneway';S.mode='ride';S.schedule='now';S.scheduledAt='';
+ S.d=null;S.stops=[];S.route=null;S.nightHalt=false;S.carpoolRequestId='';
+ open(true);
+}
+function open(restore=false){
  S.route=null;
  // Closing/reopening the Cab screen invalidates old GPS callbacks.
  pickupGpsSeq++;
@@ -157,7 +169,47 @@ function open(){
  bindSearchPage();
  const noteInput=$('cab6PickupNote');
  if(noteInput){noteInput.value=S.pickupNote||'';noteInput.oninput=()=>{S.pickupNote=noteInput.value.slice(0,160)}}
- nearbyWatchdog();initSearchProvider().catch(()=>{});$('cab6EntryLocate').onclick=()=>useGps(true);useGps(false);renderEntryMap();
+ if(restore){
+  // Restore selected route and trip type without replacing accurate GPS pickup.
+  if(S.p)$('cab6P').value=S.p.label||'';
+  if(S.d)$('cab6D').value=S.d.label||'';
+  qa('[data-trip]').forEach(btn=>btn.classList.toggle('on',btn.dataset.trip===S.tripType));
+  const round=S.tripType==='roundtrip',pool=S.tripType==='carpool';
+  $('cab6RoundNote')?.classList.toggle('show',round);
+  $('cab6PoolBox')?.classList.toggle('show',pool);
+  if($('cab6NightHalt'))$('cab6NightHalt').checked=!!S.nightHalt;
+  if(pool){
+   S.schedule='later';
+   if($('cab6Go'))$('cab6Go').textContent='Find / Create Pool';
+   if($('cab6AddStop'))$('cab6AddStop').parentElement.style.display='none';
+  }
+  if(S.schedule==='later'){
+   $('cab6Schedule')?.classList.add('show');
+   q('[data-q="schedule"]')?.classList.add('on');
+   if($('cab6At'))$('cab6At').value=S.scheduledAt||'';
+  }
+  if(S.rider==='other'){
+   $('cab6Other')?.classList.add('show');
+   q('[data-q="other"]')?.classList.add('on');
+  }
+  if($('cab6PoolSeats'))$('cab6PoolSeats').value=String(S.carpoolSeats||1);
+  if($('cab6PoolVehicle'))$('cab6PoolVehicle').value=S.carpoolVehicle||'Any';
+  if($('cab6PoolName'))$('cab6PoolName').value=S.carpoolName||'';
+  if($('cab6PoolMobile'))$('cab6PoolMobile').value=S.carpoolMobile||'';
+  if($('cab6Name'))$('cab6Name').value=S.riderName||'';
+  if($('cab6Mobile'))$('cab6Mobile').value=S.riderMobile||'';
+  if(!pool&&S.stops?.length){
+   for(const p of S.stops){
+    $('cab6AddStop')?.click();
+    const items=qa('.cab6StopInput');
+    if(items.length)items[items.length-1].value=p.label||'';
+   }
+  }
+  pickupStatus(S.p?'Pickup retained from previous step. Tap ◎ to refresh GPS.':'Choose a pickup or tap ◎ for GPS.');
+  if(S.p&&Number.isFinite(S.p.lat)&&Number.isFinite(S.p.lng))
+   loadNearbyPlaces(S.p.lat,S.p.lng).catch(()=>{});
+ }else useGps(false);
+ nearbyWatchdog();initSearchProvider().catch(()=>{});$('cab6EntryLocate').onclick=()=>useGps(true);renderEntryMap();
 }
 function bindSearchPage(){
  renderRecents();const addStop=$('cab6AddStop');if(addStop)addStop.onclick=()=>{const list=$('cab6Stops'),count=list?.querySelectorAll('.cab6StopRow').length||0;if(count>=3)return say('Maximum 3 stops allowed.');const row=document.createElement('div');row.className='cab6StopRow';row.innerHTML='<div class="cab6Field"><input class="cab6StopInput" autocomplete="off" placeholder="Enter stop '+(count+1)+'"></div><button type="button" class="cab6StopRemove" aria-label="Remove stop">✕</button>';row.querySelector('.cab6StopRemove').onclick=()=>row.remove();list.appendChild(row)};qa('[data-trip]').forEach(btn=>btn.onclick=()=>{qa('[data-trip]').forEach(x=>x.classList.toggle('on',x===btn));S.tripType=btn.dataset.trip||'oneway';const round=S.tripType==='roundtrip',pool=S.tripType==='carpool';$('cab6RoundNote')?.classList.toggle('show',round);$('cab6PoolBox')?.classList.toggle('show',pool);if(round)S.selected='sedan';if(pool){S.mode='ride';S.schedule='later';if($('cab6Go'))$('cab6Go').textContent='Find / Create Pool';const sch=q('[data-q="schedule"]');if(sch)sch.classList.add('on');$('cab6Schedule')?.classList.add('show');if($('cab6Stops'))$('cab6Stops').innerHTML='';if($('cab6AddStop'))$('cab6AddStop').parentElement.style.display='none'}else{if($('cab6Go'))$('cab6Go').textContent='Search Cabs';if($('cab6AddStop'))$('cab6AddStop').parentElement.style.display='';}});const nh=$('cab6NightHalt');if(nh)nh.onchange=e=>S.nightHalt=!!e.target.checked;$('cab6Gps').onclick=()=>useGps(true);$('cab6Swap').onclick=()=>{pickupUserRevision++;pickupGpsSeq++;const a=$('cab6P').value;$('cab6P').value=$('cab6D').value;$('cab6D').value=a;const t=S.p;S.p=S.d;S.d=t};
@@ -805,7 +857,7 @@ function poolStatusScreen(d,mobile){
  const assigned=!!driver?.name||String(poolStatus)==='Assigned'||String(poolStatus)==='In Progress';
  const pin=d.startPin||'';
  const jobStatus=job?.status||'';
- screen(`<div class="cab6PoolSuccess"><div style="display:flex;justify-content:space-between;gap:10px;align-items:start"><div><div style="display:inline-block;padding:5px 8px;border-radius:999px;background:#eef4ff;color:#1f5cf3;font-size:9px;font-weight:900">CAR POOL</div><h2 style="margin-top:8px">${assigned?'Vaahak Assigned':ready?'Pool Ready':'Pool Forming'}</h2></div><span style="padding:6px 9px;border-radius:999px;background:${ready?'#e9f9ef':'#fff6df'};color:${ready?'#17633f':'#8a5b00'};font-size:9px;font-weight:900">${esc(String(poolStatus).toUpperCase())}</span></div><div class="cab6PoolId">${esc(id)}</div><div class="cab6RouteRow"><small>Route</small><b>${esc(S.p?.label||req.pickup||pool.pickup||'')} → ${esc(S.d?.label||req.dropoff||pool.dropoff||'')}</b></div><div class="cab6RouteRow"><small>Schedule</small><b>${esc(time)}</b></div><div class="cab6Meta" style="margin-top:10px"><div><small>Vehicle</small><b>${esc(vehicle)}</b></div><div><small>Seats held</small><b>${held} / ${totalSeats}</b></div><div><small>Paid seats</small><b>${confirmed}</b></div><div><small>Ready from</small><b>${minReady} seats</b></div></div><div class="cab6Fare"><div><small style="color:#858da0;font-size:9px">Per-seat fare</small><strong>₹${perSeat}</strong></div><div style="text-align:right"><small style="color:#858da0;font-size:9px">Your total</small><div style="font-size:20px;font-weight:950;color:#172960">₹${total}</div></div></div>${paid?'<div class="cab6RouteRow"><small>Payment</small><b style="color:#17633f">✓ Razorpay Verified</b></div>':''}${driver?.name?`<div class="cab6RouteRow"><small>Vaahak</small><b>${esc(driver.name)} • ${esc(driver.vehicle||vehicle)}${driver.vehicleNo?' • '+esc(driver.vehicleNo):''}</b></div>`:''}${pin?`<div style="margin:12px 0;padding:13px;border-radius:16px;background:#f2f6ff;text-align:center"><small style="display:block;color:#667085">POOL START PIN</small><b style="font-size:28px;letter-spacing:6px;color:#174da8">${esc(pin)}</b></div>`:''}${jobStatus?`<div class="cab6RouteRow"><small>Ride status</small><b>${esc(jobStatus)}</b></div>`:''}<p style="font-size:10px;color:#68758b;line-height:1.5">${paid?(ready?'Your paid seat is confirmed. The shared Vaahak job is being handled as one pooled ride.':'Your seat is paid and confirmed. DBest is waiting for enough paid seats to make this pool operational.'):'Paying confirms and reserves your seat. Unpaid seat holds are not counted for Vaahak dispatch.'}</p>${paid?'<button type="button" id="cab6PoolRefresh" class="cab6Book">Refresh Pool Status</button>':'<button type="button" id="cab6PoolPay" class="cab6Book">Pay & Confirm Seat • ₹'+total+'</button><button type="button" id="cab6PoolCancel" class="btn soft wide" style="margin-top:8px">Cancel Request</button>'}</div>`,'DBEST_CAB_SELECTED_UI.open()');
+ screen(`<div class="cab6PoolSuccess"><div style="display:flex;justify-content:space-between;gap:10px;align-items:start"><div><div style="display:inline-block;padding:5px 8px;border-radius:999px;background:#eef4ff;color:#1f5cf3;font-size:9px;font-weight:900">CAR POOL</div><h2 style="margin-top:8px">${assigned?'Vaahak Assigned':ready?'Pool Ready':'Pool Forming'}</h2></div><span style="padding:6px 9px;border-radius:999px;background:${ready?'#e9f9ef':'#fff6df'};color:${ready?'#17633f':'#8a5b00'};font-size:9px;font-weight:900">${esc(String(poolStatus).toUpperCase())}</span></div><div class="cab6PoolId">${esc(id)}</div><div class="cab6RouteRow"><small>Route</small><b>${esc(S.p?.label||req.pickup||pool.pickup||'')} → ${esc(S.d?.label||req.dropoff||pool.dropoff||'')}</b></div><div class="cab6RouteRow"><small>Schedule</small><b>${esc(time)}</b></div><div class="cab6Meta" style="margin-top:10px"><div><small>Vehicle</small><b>${esc(vehicle)}</b></div><div><small>Seats held</small><b>${held} / ${totalSeats}</b></div><div><small>Paid seats</small><b>${confirmed}</b></div><div><small>Ready from</small><b>${minReady} seats</b></div></div><div class="cab6Fare"><div><small style="color:#858da0;font-size:9px">Per-seat fare</small><strong>₹${perSeat}</strong></div><div style="text-align:right"><small style="color:#858da0;font-size:9px">Your total</small><div style="font-size:20px;font-weight:950;color:#172960">₹${total}</div></div></div>${paid?'<div class="cab6RouteRow"><small>Payment</small><b style="color:#17633f">✓ Razorpay Verified</b></div>':''}${driver?.name?`<div class="cab6RouteRow"><small>Vaahak</small><b>${esc(driver.name)} • ${esc(driver.vehicle||vehicle)}${driver.vehicleNo?' • '+esc(driver.vehicleNo):''}</b></div>`:''}${pin?`<div style="margin:12px 0;padding:13px;border-radius:16px;background:#f2f6ff;text-align:center"><small style="display:block;color:#667085">POOL START PIN</small><b style="font-size:28px;letter-spacing:6px;color:#174da8">${esc(pin)}</b></div>`:''}${jobStatus?`<div class="cab6RouteRow"><small>Ride status</small><b>${esc(jobStatus)}</b></div>`:''}<p style="font-size:10px;color:#68758b;line-height:1.5">${paid?(ready?'Your paid seat is confirmed. The shared Vaahak job is being handled as one pooled ride.':'Your seat is paid and confirmed. DBest is waiting for enough paid seats to make this pool operational.'):'Paying confirms and reserves your seat. Unpaid seat holds are not counted for Vaahak dispatch.'}</p>${paid?'<button type="button" id="cab6PoolRefresh" class="cab6Book">Refresh Pool Status</button>':'<button type="button" id="cab6PoolPay" class="cab6Book">Pay & Confirm Seat • ₹'+total+'</button><button type="button" id="cab6PoolCancel" class="btn soft wide" style="margin-top:8px">Cancel Request</button>'}</div>`,'DBEST_CAB_SELECTED_UI.returnToSearch()');
  if($('cab6PoolPay'))$('cab6PoolPay').onclick=()=>payCarpoolSeat(id,mobile,total,req.name||S.carpoolName||'DBest Passenger');
  if($('cab6PoolRefresh'))$('cab6PoolRefresh').onclick=()=>refreshCarpool(id,mobile);
  if($('cab6PoolCancel'))$('cab6PoolCancel').onclick=()=>cancelCarpool(id,mobile)
@@ -866,7 +918,7 @@ async function renderRealMap(id){
 }
 function vehicles(){
  const list=visibleVehicles();if(!list.some(v=>v.id===S.selected))S.selected=list[0]?.id||'sedan';const k=totalKm(),m=totalMin(),title=`${pickupDisplayLabel()||'Pickup'} → ${S.mode==='rental'?'Hourly Rental':S.d?.label||'Destination'}${S.tripType==='roundtrip'?' → Return':''}`;
- screen(`${mapBlock(title)}<div class="cab6Sheet"><div class="cab6SheetHead"><b>Choose a ride</b><small>${S.tripType==='roundtrip'?'Same vehicle • Return included • Tolls extra':'Upfront fare'}</small></div><div class="cab6Meta"><div><small>${S.tripType==='roundtrip'?'Total round-trip distance':'Road distance'}</small><b>${k.toFixed(1)} km</b></div><div><small>${S.tripType==='roundtrip'?'Total driving time':'Travel time'}</small><b>~${m} min</b></div></div>${S.tripType==='roundtrip'&&S.route?.legs?'<div class="cab6Legs" style="font-size:12px;color:#52627e;margin:12px 4px 4px">Outward: '+S.route.legs.outwardKm.toFixed(1)+' km · Return: '+S.route.legs.returnKm.toFixed(1)+' km'+(S.route.routeWarning?'<div style="font-weight:700;color:#aa5115;margin-top:5px">'+esc(S.route.routeWarning)+'</div>':'')+'</div>':''}<div class="cab6Vehicles">${list.map(vehCard).join('')}</div><button type="button" id="cab6Book" class="cab6Book">Continue with ${esc(list.find(v=>v.id===S.selected)?.name||'Ride')}</button></div>`,'DBEST_CAB_SELECTED_UI.open()');
+ screen(`${mapBlock(title)}<div class="cab6Sheet"><div class="cab6SheetHead"><b>Choose a ride</b><small>${S.tripType==='roundtrip'?'Same vehicle • Return included • Tolls extra':'Upfront fare'}</small></div><div class="cab6Meta"><div><small>${S.tripType==='roundtrip'?'Total round-trip distance':'Road distance'}</small><b>${k.toFixed(1)} km</b></div><div><small>${S.tripType==='roundtrip'?'Total driving time':'Travel time'}</small><b>~${m} min</b></div></div>${S.tripType==='roundtrip'&&S.route?.legs?'<div class="cab6Legs" style="font-size:12px;color:#52627e;margin:12px 4px 4px">Outward: '+S.route.legs.outwardKm.toFixed(1)+' km · Return: '+S.route.legs.returnKm.toFixed(1)+' km'+(S.route.routeWarning?'<div style="font-weight:700;color:#aa5115;margin-top:5px">'+esc(S.route.routeWarning)+'</div>':'')+'</div>':''}<div class="cab6Vehicles">${list.map(vehCard).join('')}</div><button type="button" id="cab6Book" class="cab6Book">Continue with ${esc(list.find(v=>v.id===S.selected)?.name||'Ride')}</button></div>`,'DBEST_CAB_SELECTED_UI.returnToSearch()');
  qa('[data-v]').forEach(b=>b.onclick=()=>{S.selected=b.dataset.v;qa('[data-v]').forEach(x=>x.classList.toggle('on',x===b));$('cab6Book').textContent='Continue with '+(list.find(v=>v.id===S.selected)?.name||'Ride')});$('cab6Book').onclick=()=>confirmRide(S.selected);setTimeout(()=>renderRealMap('cab6Map'),40)
 }
 function confirmRide(id){
@@ -875,6 +927,6 @@ function confirmRide(id){
  $('cab6ConfirmBook').onclick=()=>book(id);setTimeout(()=>renderRealMap('cab6Map'),40)
 }
 function book(id){const pay=q('input[name="cab6pay"]:checked')?.value||'cash';try{if(typeof window.bookRide==='function'){window.rideDraft=window.rideDraft||{};const round=S.mode!=='rental'&&S.tripType==='roundtrip';Object.assign(window.rideDraft,{quotedFare:fare(VEH.find(x=>x.id===id)||{base:0,km:0,min:0}),pickup:pickupDisplayLabel(),pickupInstructions:String(S.pickupNote||'').trim(),pickupCoords:(S.p&&Number.isFinite(S.p.lat)&&Number.isFinite(S.p.lng))?{lat:S.p.lat,lng:S.p.lng,label:pickupDisplayLabel()}:null,stops:(S.stops||[]).map(x=>x?.label||'').filter(Boolean),stopCoords:(S.stops||[]).filter(x=>Number.isFinite(x?.lat)&&Number.isFinite(x?.lng)).map(x=>({lat:x.lat,lng:x.lng,label:x.label||''})),drop:S.mode==='rental'?`${S.rentalHours} Hours / ${S.rentalKm} km`:S.d?.label||'',dropCoords:(S.mode!=='rental'&&S.d&&Number.isFinite(S.d.lat)&&Number.isFinite(S.d.lng))?{lat:S.d.lat,lng:S.d.lng,label:S.d.label||''}:null,distance:round?totalKm():S.route.km,roundTripDistance:round?totalKm():null,estimatedMinutes:round?totalMin():S.route.min,selected:id,schedule:S.schedule,scheduledAt:S.scheduledAt,rider:S.rider,riderName:S.riderName,riderMobile:S.riderMobile,mode:S.mode,bookingType:S.mode==='rental'?'Rental':(round?'Round Trip':'Ride'),tripType:round?'roundtrip':'oneway',roundTrip:round,sameVehicle:round,returnPickup:round?(S.d?.label||''):null,returnDrop:round?pickupDisplayLabel():null,nightHalt:round&&S.nightHalt,tollsExtra:round,rentalHours:S.rentalHours,rentalKm:S.rentalKm});const f=document.createElement('form');f.innerHTML=`<input name="payment" value="${esc(pay)}">`;return window.bookRide({preventDefault(){},target:f},id)}}catch(e){console.warn('Booking handoff failed',e)}say('Ride details are ready. Please retry booking.')}
-const api={version:VERSION,open,vehicles,confirm:confirmRide};
+const api={version:VERSION,open,vehicles,confirm:confirmRide,returnToSearch,goCabHome};
 window.DBEST_CAB_SELECTED_UI=api;window.DBEST_CAB_GOOGLE=api;window.DBEST_CAB_MAPPLS_RENTAL=api;window.DBEST_ACTIVE_CAB_VERSION='SELECTED_REALMAP_V6';window.openRidePlatform=open;css();
 })();
