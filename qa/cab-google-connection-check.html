@@ -11,6 +11,7 @@ small{color:#607087}code{font-size:12px;overflow-wrap:anywhere}
 </style></head>
 <body><main><div class="card"><h1>DBest Cab · Google Connection Check</h1>
 <p>Checks whether Google Maps and reverse-geocoding work from this authorized QA website. Uses a public test location, <b>not your GPS</b>. Displays no API keys or personal coordinates.</p>
+<div class="status"><b>Authorized origin</b><span id="origin" data-state="wait">Not checked</span></div>
 <div class="status"><b>Browser key</b><span id="key" data-state="wait">Not checked</span></div>
 <div class="status"><b>Maps JavaScript</b><span id="maps" data-state="wait">Not checked</span></div>
 <div class="status"><b>Google authorization</b><span id="auth" data-state="wait">Not checked</span></div>
@@ -24,13 +25,36 @@ small{color:#607087}code{font-size:12px;overflow-wrap:anywhere}
 'use strict';
 const $=id=>document.getElementById(id);
 const set=(id,t,state)=>{const e=$(id);if(e){e.textContent=t;e.dataset.state=state||'wait'}};
-let mapsFailed=false;
-window.gm_authFailure=()=>{mapsFailed=true;set('auth','Google rejected website/key','bad');set('notes','Check website referrer, API activation and billing.','bad')};
-window.addEventListener('error',e=>{
- const m=String(e.message||'');
- const match=m.match(/(RefererNotAllowedMapError|ApiTargetBlockedMapError|BillingNotEnabledMapError|ApiNotActivatedMapError|InvalidKeyMapError|ExpiredKeyMapError|OverQuotaMapError)/);
- if(match){mapsFailed=true;set('auth',match[1],'bad')}
-});
+let mapsFailed=false,authErrorCode='';
+const authPattern=/(RefererNotAllowedMapError|ApiTargetBlockedMapError|BillingNotEnabledMapError|ClientBillingNotEnabledMapError|ApiNotActivatedMapError|InvalidKeyMapError|ExpiredKeyMapError|OverQuotaMapError|MissingKeyMapError|ProjectDeniedMapError|ApiProjectMapError|RefererDeniedMapError|UnauthorizedURLForClientIdMapError|MalformedCredentialsMapError)/;
+const hints={
+ RefererNotAllowedMapError:'The exact website origin is not authorized in Google Cloud website restrictions.',
+ ApiTargetBlockedMapError:'The key API restrictions block Maps JavaScript API.',
+ ApiNotActivatedMapError:'Enable Maps JavaScript API in this Google Cloud project.',
+ BillingNotEnabledMapError:'Enable billing on the Google Cloud project.',
+ ClientBillingNotEnabledMapError:'Enable project billing.',
+ InvalidKeyMapError:'The browser key is invalid.',
+ ExpiredKeyMapError:'The key is expired or not yet recognized.',
+ OverQuotaMapError:'Project quota reached.',
+ ProjectDeniedMapError:'Google Cloud rejected the project.'
+};
+function captureAuthError(value){
+ const safe=String(value||'').match(authPattern);
+ if(!safe)return;
+ authErrorCode=safe[1];mapsFailed=true;
+ set('auth',authErrorCode,'bad');
+ set('notes',hints[authErrorCode]||'Google Maps key authorization failed.','bad');
+}
+const oldError=console.error.bind(console),oldWarn=console.warn.bind(console);
+console.error=(...a)=>{for(const x of a)captureAuthError(x);oldError(...a)};
+console.warn=(...a)=>{for(const x of a)captureAuthError(x);oldWarn(...a)};
+window.gm_authFailure=()=>{
+ mapsFailed=true;
+ set('auth',authErrorCode||'Google rejected website/key','bad');
+ set('notes',hints[authErrorCode]||'Check website referrer, API activation and billing.','bad');
+};
+window.addEventListener('error',e=>captureAuthError(e.message));
+window.addEventListener('unhandledrejection',e=>captureAuthError(e.reason?.message||e.reason));
 function loadScript(url){
  return new Promise((res,rej)=>{
   const s=document.createElement('script');s.async=true;s.src=url;
@@ -41,6 +65,8 @@ function loadScript(url){
 const timeout=(ms)=>new Promise((_,rej)=>setTimeout(()=>rej(Error('Timed out after '+ms/1000+'s')),ms));
 async function run(){
  $('start').disabled=true;
+ mapsFailed=false;authErrorCode='';
+ set('origin',location.origin,'wait');
  set('key','Checking…','wait');set('maps','Checking…','wait');set('auth','Checking…','wait');set('geo','Checking…','wait');set('duration','—','wait');set('notes','','wait');
  const began=performance.now();
  try{
@@ -51,7 +77,7 @@ async function run(){
   window.dbestCabQaReady=()=>{};
   const host='https://maps.googleapis.com/maps/api/js?key='+encodeURIComponent(key)+'&libraries=geocoding&v=weekly&callback=dbestCabQaReady';
   await Promise.race([loadScript(host),timeout(13000)]);
-  if(mapsFailed)throw Error('Google rejected this website/key');
+  if(mapsFailed)throw Error(authErrorCode||'Google rejected this website/key');
   if(!window.google?.maps?.importLibrary)throw Error('Google Maps script loaded but library unavailable');
   set('maps','Loaded','ok');
   const {Geocoder}=await Promise.race([google.maps.importLibrary('geocoding'),timeout(8000)]);
@@ -66,7 +92,7 @@ async function run(){
   const m=String(e?.code||e?.message||'Error');
   if($('maps').dataset.state!=='ok'&&!mapsFailed)set('maps',m,'bad');
   else set('geo',m,'bad');
-  set('notes','This is a QA diagnostic. No production changes were made.','wait');
+  if(!authErrorCode)set('notes','This is a QA diagnostic. No production changes were made.','wait');
  }finally{
   set('duration',Math.round(performance.now()-began)+' ms','wait');
   $('start').disabled=false;
