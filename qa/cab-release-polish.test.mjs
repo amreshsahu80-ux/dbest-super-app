@@ -58,3 +58,60 @@ test('manual pickup and stale suggestion callbacks are guarded',()=>{
  assert.match(source,/pickupUserRevision\+\+;pickupGpsSeq\+\+/);
  assert.match(source,/if\(run!==seq\|\|inp\.value\.trim\(\)!==term\)return/);
 });
+
+test('Google reverse geocode prefers a street address over an administrative locality',async()=>{
+ const code=between('async function reverseGoogle(', '\nasync function reverseNominatim(');
+ const ctx={
+   console:{warn:()=>{}},
+   S:{provider:'fallback'},
+   initSearchProvider:async()=>{},
+   waitGoogleKey:async()=> 'QA_KEY',
+   loadScript:async()=>{},
+   window:{google:{maps:{Geocoder:class{geocode(req,cb){
+     assert.equal(req.location.lat,22.67);
+     cb([{formatted_address:'General Chakradharpur locality',types:['locality']},
+          {formatted_address:'Bata Road, Chakradharpur, Jharkhand',types:['route']}],'OK');
+   }}}}},
+ };
+ ctx.google=ctx.window.google;
+ const result=await vm.runInNewContext(code+'\nreverseGoogle(22.67,85.63)',ctx);
+ assert.equal(result,'Bata Road, Chakradharpur, Jharkhand');
+});
+test('fallback reverse geocoding prefers a real mapped road when provided',async()=>{
+ const code=between('async function reverseNominatim(', '\nfunction placePhotoUrl(');
+ const ctx={
+  AbortController, URLSearchParams,encodeURIComponent,setTimeout,clearTimeout,
+  fetch:async()=>({ok:true,json:async()=>({display_name:'Danda, West Singhbhum, Jharkhand',
+     address:{road:'Bata Road',town:'Chakradharpur',state:'Jharkhand',postcode:'833102'}})}),
+  console:{warn:()=>{}}
+ };
+ const result=await vm.runInNewContext(code+'\nreverseNominatim(22.67,85.63)',ctx);
+ assert.equal(result,'Bata Road, Chakradharpur, Jharkhand, 833102');
+});
+test('late Google runtime response still applies the Maps key after render timeout',async()=>{
+ const runtime=readFileSync(new URL('../runtime-config.js',import.meta.url),'utf8');
+ assert.doesNotThrow(()=>new vm.Script(runtime));
+ const code=runtime.slice(runtime.indexOf('  const loadRuntimeSecrets='),runtime.indexOf('  const googleConfigured='));
+ assert.match(code,/s\.onload=\(\)=>\{s\.dataset\.loaded='1';apply\(\)\}/);
+ assert.match(code,/setTimeout\(finish,1600\)/);
+ const events=[];
+ let listener=null;
+ const script={dataset:{},setAttribute(){},set src(v){},set async(v){},set onload(fn){listener=fn}};
+ const ctx={
+  document:{querySelector:()=>null,createElement:()=>script,head:{appendChild:()=>{}}},
+  window:{DBEST_RUNTIME_CONFIG:{googleMapsApiKey:''},DBEST_RUNTIME_SECRETS:{}},
+  V:'qa',encodeURIComponent,setTimeout:(fn,ms)=>{events.push({fn,ms});return 1},
+  applyRuntimeSecrets:()=>{ctx.window.DBEST_RUNTIME_CONFIG.googleMapsApiKey=ctx.window.DBEST_RUNTIME_SECRETS.googleMapsApiKey||''}
+ };
+ const p=vm.runInNewContext(code+'\nloadRuntimeSecrets()',ctx);
+ events.find(x=>x.ms===1600).fn();
+ await p;
+ ctx.window.DBEST_RUNTIME_SECRETS.googleMapsApiKey='SAFE_LATE_QA_KEY';
+ listener();
+ assert.equal(ctx.window.DBEST_RUNTIME_CONFIG.googleMapsApiKey,'SAFE_LATE_QA_KEY');
+});
+test('retries late provider initialization instead of permanently caching fallback',()=>{
+ const code=between('async function initSearchProvider(', '\nasync function initLeaflet(');
+ assert.match(code,/waitGoogleKey\(6500\)/);
+ assert.match(code,/searchProviderPromise=null/);
+});
