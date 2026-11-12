@@ -1,0 +1,29 @@
+name: DBest Cab Final Polish Regression Tests (QA only)
+on:
+  push:
+    branches: [qa/cab-final-release-polish-20261112]
+    paths:
+      - 'cab-selected-ui-v3.js'
+      - 'runtime-config.js'
+      - 'qa/cab-release-polish.test.mjs'
+      - '.github/workflows/qa-cab-final-polish.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  cab-safe-polish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Cab JS syntax
+        run: node --check cab-selected-ui-v3.js
+      - name: Runtime key loader syntax
+        run: node --check runtime-config.js
+      - name: Cab 500km, GPS, address, photo, Vaahak ETA and UI tests
+        run: node --test qa/cab-release-polish.test.mjs

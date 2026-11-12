@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='20261005-local-smart-search-v9';
+const VERSION='20261112-cab-release-polish-qa';
 const cfg=()=>({...window.DBEST_RUNTIME_CONFIG,...window.DBEST_RUNTIME_SECRETS});
 const RECENT_KEY='dbest_cab_recent_places_v6';
 const IMG={
@@ -145,7 +145,7 @@ function open(){
  S.route=null;
  // Closing/reopening the Cab screen invalidates old GPS callbacks.
  pickupGpsSeq++;
- screen(`<div class="cab6EntryMapWrap"><div id="cab6EntryMap" class="cab6EntryMap"><div class="cab6EntryMapFallback"><div class="cab6EntryMapPin"></div></div></div><div class="cab6EntryMapBadge">Live pickup map</div><button type="button" id="cab6EntryLocate" class="cab6EntryLocate" aria-label="Use current location">◎</button></div><div class="cab6Search cab6EntrySheet"><div class="cab6Spark">✦</div><h1 class="cab6Title">Enter Your Destination</h1><p class="cab6Sub">Choose pickup, destination and ride preference.</p><div class="cab6EntryHandle"></div><div class="cab6EntryHeading"><b>Book Your Ride</b><small>DBest Cab</small></div><div class="cab6Field pick"><input id="cab6P" autocomplete="off" placeholder="My Location / Pickup"><div id="cab6PS" class="cab6Suggest"></div><small id="cab6PickupGpsStatus" role="status" aria-live="polite" style="display:block;padding:6px 4px 0;color:#27664e;font-size:11px">Locating pickup with phone GPS…</small><div class="cab6PickupNoteRow"><input type="text" id="cab6PickupNote" maxlength="160" autocomplete="off" placeholder="Add building, house number or landmark (optional)" aria-label="Additional pickup address details"></div></div><div id="cab6DropWrap" class="cab6Field drop"><input id="cab6D" autocomplete="off" placeholder="Enter destination"><div id="cab6DS" class="cab6Suggest"></div><div class="cab6DestSearchMode"><span id="cab6DestScopeLabel">Nearby destinations · within 500 km of pickup</span><button type="button" id="cab6DestScope" aria-label="Change destination search area">Search all India</button></div></div><div id="cab6Stops" class="cab6Stops"></div><div class="cab6StopBar"><button type="button" id="cab6AddStop" class="cab6AddStop">＋ Add Stop</button></div><div class="cab6TripType"><button type="button" class="on" data-trip="oneway">One Way</button><button type="button" data-trip="roundtrip">2 Way</button><button type="button" data-trip="carpool">Car Pool</button></div><div id="cab6RoundNote" class="cab6RoundNote"><b>Same vehicle for onward + return</b><br>Sedan ₹15/km • SUV ₹18/km • Tolls extra<br><label><input type="checkbox" id="cab6NightHalt"> Night halt: Sedan ₹1,000 / SUV ₹1,500</label></div><div id="cab6PoolBox" class="cab6PoolBox"><div class="cab6PoolNote"><b>Scheduled shared ride</b><br>Request seats on the same route. Co-passenger mobile numbers stay private.</div><div class="cab6PoolGrid"><div class="cab6Field"><select id="cab6PoolSeats"><option value="1">1 Seat</option><option value="2">2 Seats</option><option value="3">3 Seats</option><option value="4">4 Seats</option><option value="5">5 Seats</option></select></div><div class="cab6Field"><select id="cab6PoolVehicle"><option value="Any">Sedan / SUV</option><option value="Sedan">Sedan</option><option value="SUV">SUV</option></select></div></div><div class="cab6Field"><input id="cab6PoolName" placeholder="Passenger name"></div><div class="cab6Field"><input id="cab6PoolMobile" inputmode="numeric" maxlength="10" placeholder="10-digit mobile"></div></div><div class="cab6Tools"><button type="button" class="gps" id="cab6Gps">◎ Current location</button><button type="button" id="cab6Swap">⇅</button></div><div id="cab6Nearby" class="cab6Nearby"><div class="cab6NearbyHead"><b>Popular near you</b><small>Based on your pickup area</small></div><div id="cab6NearbyRail" class="cab6NearbyRail"><div class="cab6Place loading">Finding nearby places…</div></div></div><div class="cab6Quick"><button type="button" data-q="schedule"><span>🗓</span>Schedule Later</button><button type="button" data-q="other"><span>👥</span>Book for Someone Else</button><button type="button" data-q="rental"><span>⏱</span>Hourly Rental</button></div><div id="cab6Schedule" class="cab6Extra"><div class="cab6Field"><input id="cab6At" type="datetime-local" min="${minLocal()}"></div></div><div id="cab6Other" class="cab6Extra"><div class="cab6Field"><input id="cab6Name" placeholder="Rider name"></div><div class="cab6Field"><input id="cab6Mobile" inputmode="numeric" maxlength="10" placeholder="10-digit mobile"></div></div><div id="cab6Rental" class="cab6Extra"><div class="cab6Field"><select id="cab6RentalPkg"><option value="1|10">1 Hour / 10 km</option><option value="2|20" selected>2 Hours / 20 km</option><option value="4|40">4 Hours / 40 km</option><option value="8|80">8 Hours / 80 km</option><option value="12|120">12 Hours / 120 km</option></select></div></div><button type="button" id="cab6Go" class="cab6Go">Search Cabs</button></div>`);
+ screen(`<div class="cab6EntryMapWrap"><div id="cab6EntryMap" class="cab6EntryMap"><div class="cab6EntryMapFallback"><div class="cab6EntryMapPin"></div></div></div><div class="cab6EntryMapBadge">Live pickup map</div><button type="button" id="cab6EntryLocate" class="cab6EntryLocate" aria-label="Use current location">◎</button></div><div class="cab6Search cab6EntrySheet"><div class="cab6Spark">✦</div><h1 class="cab6Title">Enter Your Destination</h1><p class="cab6Sub">Choose pickup, destination and ride preference.</p><div class="cab6EntryHandle"></div><div class="cab6EntryHeading"><b>Book Your Ride</b><small>DBest Cab</small></div><div class="cab6Field pick"><input id="cab6P" autocomplete="off" placeholder="My Location / Pickup"><div id="cab6PS" class="cab6Suggest"></div><small id="cab6PickupGpsStatus" role="status" aria-live="polite" style="display:block;padding:6px 4px 0;color:#27664e;font-size:11px">Locating pickup with phone GPS…</small><div class="cab6PickupNoteRow"><input type="text" id="cab6PickupNote" maxlength="160" autocomplete="off" placeholder="Add building, house number or landmark (optional)" aria-label="Additional pickup address details"></div></div><div id="cab6DropWrap" class="cab6Field drop"><input id="cab6D" autocomplete="off" placeholder="Enter destination"><div id="cab6DS" class="cab6Suggest"></div><div class="cab6DestSearchMode"><span id="cab6DestScopeLabel">Nearby destinations · within 500 km of pickup</span><button type="button" id="cab6DestScope" aria-label="Change destination search area">Search all India</button></div></div><div id="cab6Stops" class="cab6Stops"></div><div class="cab6StopBar"><button type="button" id="cab6AddStop" class="cab6AddStop">＋ Add Stop</button></div><div class="cab6TripType"><button type="button" class="on" data-trip="oneway">One Way</button><button type="button" data-trip="roundtrip">2 Way</button><button type="button" data-trip="carpool">Car Pool</button></div><div id="cab6RoundNote" class="cab6RoundNote"><b>Same vehicle for onward + return</b><br>Sedan ₹15/km • SUV ₹18/km • Tolls extra<br><label><input type="checkbox" id="cab6NightHalt"> Night halt: Sedan ₹1,000 / SUV ₹1,500</label></div><div id="cab6PoolBox" class="cab6PoolBox"><div class="cab6PoolNote"><b>Scheduled shared ride</b><br>Request seats on the same route. Co-passenger mobile numbers stay private.</div><div class="cab6PoolGrid"><div class="cab6Field"><select id="cab6PoolSeats"><option value="1">1 Seat</option><option value="2">2 Seats</option><option value="3">3 Seats</option><option value="4">4 Seats</option><option value="5">5 Seats</option></select></div><div class="cab6Field"><select id="cab6PoolVehicle"><option value="Any">Sedan / SUV</option><option value="Sedan">Sedan</option><option value="SUV">SUV</option></select></div></div><div class="cab6Field"><input id="cab6PoolName" placeholder="Passenger name"></div><div class="cab6Field"><input id="cab6PoolMobile" inputmode="numeric" maxlength="10" placeholder="10-digit mobile"></div></div><div class="cab6Tools"><button type="button" class="gps" id="cab6Gps">◎ Current location</button><button type="button" id="cab6Swap">⇅</button></div><div id="cab6Nearby" class="cab6Nearby"><div class="cab6NearbyHead"><b>Popular near you</b><small>Based on your pickup area</small></div><div id="cab6NearbyRail" class="cab6NearbyRail"><div class="cab6Place loading">Finding nearby places…</div></div></div><div class="cab6Quick"><button type="button" data-q="schedule"><span>🗓</span>Schedule Later</button><button type="button" data-q="other"><span>👥</span>Book for Someone Else</button></div><div id="cab6Schedule" class="cab6Extra"><div class="cab6Field"><input id="cab6At" type="datetime-local" min="${minLocal()}"></div></div><div id="cab6Other" class="cab6Extra"><div class="cab6Field"><input id="cab6Name" placeholder="Rider name"></div><div class="cab6Field"><input id="cab6Mobile" inputmode="numeric" maxlength="10" placeholder="10-digit mobile"></div></div><div id="cab6Rental" class="cab6Extra"><div class="cab6Field"><select id="cab6RentalPkg"><option value="1|10">1 Hour / 10 km</option><option value="2|20" selected>2 Hours / 20 km</option><option value="4|40">4 Hours / 40 km</option><option value="8|80">8 Hours / 80 km</option><option value="12|120">12 Hours / 120 km</option></select></div></div><button type="button" id="cab6Go" class="cab6Go">Search Cabs</button></div>`);
  bindSearchPage();
  const noteInput=$('cab6PickupNote');
  if(noteInput){noteInput.value=S.pickupNote||'';noteInput.oninput=()=>{S.pickupNote=noteInput.value.slice(0,160)}}
@@ -175,18 +175,49 @@ function loadScript(src,id){return new Promise((ok,no)=>{const old=$(id);if(old)
 function loadCss(href,id){if($(id))return;const l=document.createElement('link');l.id=id;l.rel='stylesheet';l.href=href;document.head.appendChild(l)}
 async function waitGoogleKey(ms=2200){const end=Date.now()+ms;while(Date.now()<end){const k=String(cfg().googleMapsApiKey||'').trim();if(k)return k;await new Promise(r=>setTimeout(r,120))}return String(cfg().googleMapsApiKey||'').trim()}
 async function initSearchProvider(){
+ if(S.provider==='google'&&window.google?.maps?.Geocoder)return;
  if(searchProviderPromise)return searchProviderPromise;
- searchProviderPromise=(async()=>{const k=await waitGoogleKey();if(k){try{if(!window.google?.maps)await loadScript('https://maps.googleapis.com/maps/api/js?key='+encodeURIComponent(k)+'&libraries=places&v=weekly','cab6-google');if(window.google?.maps){S.provider='google';return}}catch(e){console.warn('DBest Google Places unavailable',e)}}S.provider=String(cfg().supabaseUrl||'').trim()?'supabase':'osm'})();return searchProviderPromise
+ searchProviderPromise=(async()=>{
+  // Runtime keys can arrive after page paint. Waiting is better than presenting
+  // an unrelated village as a precise pickup address.
+  const k=await waitGoogleKey(6500);
+  if(k){
+   try{
+    if(!window.google?.maps?.Geocoder)await loadScript('https://maps.googleapis.com/maps/api/js?key='+encodeURIComponent(k)+'&libraries=places&v=weekly','cab6-google');
+    if(window.google?.maps?.Geocoder){S.provider='google';return}
+   }catch(e){console.warn('DBest Google Maps SDK unavailable',e)}
+  }
+  S.provider=String(cfg().supabaseUrl||'').trim()?'supabase':'osm';
+ })();
+ try{return await searchProviderPromise}
+ finally{if(S.provider!=='google')searchProviderPromise=null}
 }
 async function initLeaflet(){
  if(window.L)return window.L;if(leafletPromise)return leafletPromise;
  loadCss('https://unpkg.com/leaflet@1.9.4/dist/leaflet.css','cab6-leaflet-css');leafletPromise=loadScript('https://unpkg.com/leaflet@1.9.4/dist/leaflet.js','cab6-leaflet').then(()=>window.L);return leafletPromise
 }
+let cabReverseGoogleStatus='not_checked';
+function cabGoogleStatusMessage(){
+ const messages={
+  browser_key_missing:'Google Maps QA key not received',
+  google_sdk_unavailable:'Google Maps SDK not loaded',
+  REQUEST_DENIED:'Google Geocoding access denied',
+  OVER_QUERY_LIMIT:'Google Geocoding quota reached',
+  ZERO_RESULTS:'No mapped Google street address',
+  UNKNOWN_ERROR:'Google Geocoding unavailable',
+  geocoder_error:'Google Geocoding failed',
+  response_timeout:'Google address lookup timed out',
+  ERROR:'Google address service unreachable',
+  INVALID_REQUEST:'Google address request invalid'
+ };
+ return messages[cabReverseGoogleStatus]||'Google address lookup: '+cabReverseGoogleStatus;
+}
 async function reverseGoogle(lat,lng){
+ cabReverseGoogleStatus='checking';
  try{
   // Google Maps credentials arrive asynchronously from the existing
   // DBest runtime config. Do not permanently accept an early fallback.
-  await Promise.race([initSearchProvider(),new Promise(resolve=>setTimeout(resolve,2400))]);
+  await initSearchProvider();
   if(!window.google?.maps?.Geocoder){
    const key=await waitGoogleKey(3500);
    if(key){
@@ -196,24 +227,66 @@ async function reverseGoogle(lat,lng){
     ]);
    }
   }
-  if(!window.google?.maps?.Geocoder)return '';
+  if(!window.google?.maps?.Geocoder){
+   cabReverseGoogleStatus=String(cfg().googleMapsApiKey||'').trim()?'google_sdk_unavailable':'browser_key_missing';
+   return '';
+  }
   S.provider='google';
-  return await new Promise(resolve=>{
-   let done=false;
-   const finish=v=>{if(done)return;done=true;clearTimeout(timer);resolve(v)};
-   const timer=setTimeout(()=>finish(''),6500);
-   new google.maps.Geocoder().geocode({location:{lat,lng}},(rows,status)=>{
-    finish(status==='OK'&&rows?.[0]?.formatted_address?rows[0].formatted_address:'');
-   });
-  });
- }catch(e){console.warn('Pickup Google reverse geocode failed',e);return ''}
+  // Maps JavaScript Geocoder returns a Promise. Earlier callback-based QA
+  // calls sometimes timed out silently, leaving the status at "checking".
+  const outcome=await Promise.race([
+    Promise.resolve().then(()=>new google.maps.Geocoder().geocode({location:{lat,lng},language:'en'}))
+      .then(response=>({response}),error=>({error})),
+    new Promise(resolve=>setTimeout(()=>resolve({timeout:true}),7500))
+  ]);
+  if(outcome.timeout){
+    cabReverseGoogleStatus='response_timeout';
+    return '';
+  }
+  if(outcome.error){
+    const raw=String(outcome.error?.code||outcome.error?.status||outcome.error?.message||outcome.error||'UNKNOWN_ERROR');
+    cabReverseGoogleStatus=['REQUEST_DENIED','OVER_QUERY_LIMIT','ZERO_RESULTS','INVALID_REQUEST','UNKNOWN_ERROR','ERROR']
+      .find(code=>raw.includes(code))||'geocoder_error';
+    console.warn('Google reverse lookup status',cabReverseGoogleStatus);
+    return '';
+  }
+  const rows=outcome.response?.results;
+  if(!Array.isArray(rows)||!rows.length){
+    cabReverseGoogleStatus='ZERO_RESULTS';
+    return '';
+  }
+  cabReverseGoogleStatus='OK';
+  // Prefer mapped road/premise/address over administrative locality.
+  // Retain actual device GPS coordinates for all routing.
+  const score=r=>{
+    const t=Array.isArray(r?.types)?r.types:[];
+    if(t.includes('street_address'))return 100;
+    if(t.includes('premise')||t.includes('subpremise'))return 95;
+    if(t.includes('intersection'))return 90;
+    if(t.includes('route'))return 85;
+    if(t.includes('plus_code'))return 55;
+    if(t.includes('neighborhood')||t.includes('sublocality'))return 35;
+    if(t.includes('locality'))return 20;
+    return 0;
+  };
+  const best=rows.filter(r=>String(r?.formatted_address||'').trim())
+    .sort((a,b)=>score(b)-score(a))[0];
+  return best?.formatted_address||'';
+ }catch(e){cabReverseGoogleStatus='geocoder_error';console.warn('Pickup Google reverse geocode failed',e);return ''}
 }
 async function reverseNominatim(lat,lng){
  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),8500);
  try{
-  const r=await fetch('https://nominatim.openstreetmap.org/reverse?format=jsonv2&addressdetails=1&lat='+encodeURIComponent(lat)+'&lon='+encodeURIComponent(lng),{headers:{Accept:'application/json'},signal:controller.signal});
+  const r=await fetch('https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&addressdetails=1&lat='+encodeURIComponent(lat)+'&lon='+encodeURIComponent(lng),{headers:{Accept:'application/json'},signal:controller.signal});
   if(!r.ok)return '';
-  const j=await r.json();return String(j.display_name||'').trim();
+  const j=await r.json(),a=j?.address||{};
+  const road=String(a.road||a.pedestrian||a.residential||a.footway||'').trim();
+  const locality=String(a.suburb||a.neighbourhood||a.village||a.town||a.city||'').trim();
+  const district=String(a.city_district||a.county||a.state_district||'').trim();
+  const state=String(a.state||'').trim(),postcode=String(a.postcode||'').trim();
+  // Display a mapped road first when one is available; never invent one.
+  const structured=[road,locality,district,state,postcode].filter(Boolean).filter((x,i,all)=>all.indexOf(x)===i);
+  return road&&structured.length?structured.join(', '):String(j.display_name||'').trim();
  }catch(e){console.warn('Pickup OSM reverse geocode failed',e);return ''}finally{clearTimeout(timer)}
 }
 function placePhotoUrl(lat,lng,name){return 'https://maps.googleapis.com/maps/api/streetview?size=360x220&location='+encodeURIComponent(lat+','+lng)+'&fov=80&pitch=0&key='+encodeURIComponent(googleKey())}
@@ -403,8 +476,8 @@ async function useGps(noisy){
      if(S.p&&S.p.lat===lat&&S.p.lng===lng&&S.p.source==='device-gps'){
        S.p.label=label;
        if(input.value===fallback||!input.value.trim())input.value=label;
-       pickupStatus('GPS '+gpsAccuracyText(accuracy)+(googleAddress?' · Google Maps address':label===fallback?' · Address unavailable':' · Address fallback')+
-         (lowAccuracy?' · Confirm pickup manually for accuracy.':' · You can adjust pickup.'),lowAccuracy);
+       pickupStatus('GPS '+gpsAccuracyText(accuracy)+(googleAddress?' · Google road/address':label===fallback?' · '+cabGoogleStatusMessage():' · '+cabGoogleStatusMessage()+' · Approximate address (fallback)')+
+         (lowAccuracy?' · Location may be approximate.':' · Address may differ from actual road.'),lowAccuracy||!googleAddress);
      }
    }catch(e){
      console.warn('Pickup reverse geocoding failed',e);
@@ -431,8 +504,8 @@ async function renderEntryMap(){
  try{if(S.entryMap&&S.entryMap.remove)S.entryMap.remove()}catch(e){}S.entryMap=null;
  try{
    const L=await initLeaflet();if(request!==entryMapSeq||!el.isConnected)return;
-   el.innerHTML='';S.entryMap=L.map(el,{zoomControl:false,attributionControl:false,preferCanvas:true}).setView([pos.lat,pos.lng],14);
-   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(S.entryMap);
+   el.innerHTML='';S.entryMap=L.map(el,{zoomControl:false,attributionControl:true,preferCanvas:true}).setView([pos.lat,pos.lng],14);
+   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'}).addTo(S.entryMap);
    L.circleMarker([pos.lat,pos.lng],{radius:8,weight:4,color:'#fff',fillColor:'#2362ee',fillOpacity:1}).addTo(S.entryMap);
    setTimeout(()=>S.entryMap?.invalidateSize?.(),100);
  }catch(e){console.warn('Entry map failed',e)}
@@ -486,7 +559,7 @@ async function cabGoogleSuggestions(query,origin,nearby){
        const p=s.placePrediction;
        return p?{label:String(p.text?.text||p.mainText?.text||''),
          googlePrediction:p,distanceMeters:Number.isFinite(+p.distanceMeters)?+p.distanceMeters:undefined}:null;
-     }).filter(p=>p&&p.label&&(!nearby||p.distanceMeters==null||p.distanceMeters<=CAB_DESTINATION_NEARBY_KM*1000)).slice(0,8);
+     }).filter(p=>p&&p.label&&(!nearby||(Number.isFinite(p.distanceMeters)&&p.distanceMeters<=CAB_DESTINATION_NEARBY_KM*1000))).slice(0,8);
    }
    // Old Google API offers a location *bias*, not a hard boundary.
    // Suppress predictions lacking trustworthy distance while in local mode.
@@ -631,8 +704,10 @@ function bindSearch(i,b,k){
        (Number.isFinite(x.distanceKm)?' · '+Math.round(x.distanceKm)+' km away':'')+'</small></button>').join('');
      box.classList.add('show');
      qa('button',box).forEach(btn=>btn.onclick=async()=>{
+       if(run!==seq||inp.value.trim()!==term)return;
        const p=await resolvePlace(rows[+btn.dataset.i]);
        if(!p)return say('Could not resolve this location.');
+       if(run!==seq||!inp.isConnected)return;
        if(k==='d'&&!cabDestinationPermitted(p))
          return say('Destination is outside the nearby search area. Tap Search all India for an outstation ride.');
        if(k==='p'){
@@ -660,7 +735,21 @@ function realisticRoadMinutes(km,providerMin){
  const floor=Math.max(2,Math.ceil((k/avgKmph)*60));
  return Math.max(Math.round(raw),floor)
 }
-async function routeOSRM(){const pts=[S.p,...(S.stops||[]),S.d].filter(Boolean),coords=pts.map(x=>`${x.lng},${x.lat}`).join(';');const u=`https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`;const r=await fetch(u,{cache:'no-store'}),j=await r.json(),x=j.routes?.[0];if(!x)throw new Error('No route');const km=x.distance/1000,providerMin=Math.max(1,Math.round(x.duration/60));return{km,min:realisticRoadMinutes(km,providerMin),providerMin,geo:x.geometry?.coordinates||[]}}
+async function routeOSRM(){
+ const round=S.mode!=='rental'&&S.tripType==='roundtrip';
+ // 2-Way must estimate both directions, not assume the return journey is
+ // exactly twice the outward drive (one-way streets/turns can differ).
+ const pts=[S.p,...(S.stops||[]),S.d,...(round?[S.p]:[])].filter(Boolean);
+ const coords=pts.map(x=>`${x.lng},${x.lat}`).join(';');
+ const u=`https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`;
+ const r=await fetch(u,{cache:'no-store'});
+ if(!r.ok)throw new Error('Route service HTTP '+r.status);
+ const j=await r.json(),x=j.routes?.[0];
+ if(!x||!Number.isFinite(x.distance)||!Number.isFinite(x.duration)||x.distance<=0)
+  throw new Error('No valid road route');
+ const km=x.distance/1000,providerMin=Math.max(1,Math.round(x.duration/60));
+ return {km,min:realisticRoadMinutes(km,providerMin),providerMin,geo:x.geometry?.coordinates||[],roundTripRouted:round};
+}
 async function continueRide(){
  if(S.tripType==='carpool'){S.schedule='later';if(!S.scheduledAt)return say('Please select Car Pool date and time.');if(!S.carpoolName||S.carpoolMobile.length!==10)return say('Please enter passenger name and 10-digit mobile.');if(S.carpoolVehicle==='Sedan'&&S.carpoolSeats>3)return say('Sedan Car Pool supports up to 3 passenger seats.');}
  if(S.schedule==='later'&&!S.scheduledAt)return say('Please select schedule date and time.');if(S.rider==='other'&&(!S.riderName||S.riderMobile.length!==10))return say('Please enter rider name and 10-digit mobile.');
@@ -731,9 +820,10 @@ async function refreshCarpool(id,mobile){
 async function cancelCarpool(id,mobile){
  try{await carpoolApi('decline',{id,mobile});try{localStorage.removeItem('dbest_carpool_last')}catch(_){}say('Car Pool request cancelled.');open()}catch(e){say(String(e?.message||'')==='paid_request_refund_required'?'Paid Car Pool cancellation requires a refund workflow. Please contact DBest support.':'Unable to cancel Car Pool request.')}
 }
-function roundRules(){try{const x=JSON.parse(localStorage.getItem('d2_ride_config')||'null'),r=x?.roundTripRules||{};return{sedan:{perKm:Number(r.sedan?.perKm||15),nightHalt:Number(r.sedan?.nightHalt||1000)},suv:{perKm:Number(r.suv?.perKm||18),nightHalt:Number(r.suv?.nightHalt||1500)}}}catch(e){return{sedan:{perKm:15,nightHalt:1000},suv:{perKm:18,nightHalt:1500}}}}function visibleVehicles(){return S.mode==='rental'||S.tripType!=='roundtrip'?VEH:VEH.filter(v=>v.id==='sedan'||v.id==='suv')}function totalKm(){const k=S.route?.km||S.rentalKm;return S.mode!=='rental'&&S.tripType==='roundtrip'?k*2:k}function totalMin(){if(S.mode==='rental')return S.rentalHours*60;const oneWay=realisticRoadMinutes(Number(S.route?.km||0),Number(S.route?.min||1));return S.tripType==='roundtrip'?oneWay*2:oneWay}function fare(v){const k=S.route?.km||S.rentalKm;if(S.mode!=='rental'&&S.tripType==='roundtrip'){const rr=roundRules()[v.id];if(!rr)return 0;return Math.round((k*2)*rr.perKm+(S.nightHalt?rr.nightHalt:0))}return Math.round(Math.max(v.min,v.base+v.km*k)+PLATFORM_FEE)}
-function pickupEta(v){const m={bike:4,auto:5,sedan:6,suv:7};return m[v.id]||6}
-function vehCard(v){const rr=S.tripType==='roundtrip'?roundRules()[v.id]:null;return `<button type="button" class="cab6Veh ${S.selected===v.id?'on':''}" data-v="${v.id}"><span class="photo"><img src="${IMG[v.id]}" alt="${esc(v.name)}" loading="eager"></span><b>${esc(v.name)}${S.tripType==='roundtrip'?'<span style="display:block;font-size:7px;color:#315efb;margin-top:2px">ROUND TRIP</span>':''}</b><small>${v.seats} seat${v.seats>1?'s':''}${rr?' • ₹'+rr.perKm+'/km':''}</small><small style="color:#315efb;font-weight:900;margin-top:2px">~${pickupEta(v)} min away</small><strong>₹${fare(v)}</strong></button>`}
+function roundRules(){try{const x=JSON.parse(localStorage.getItem('d2_ride_config')||'null'),r=x?.roundTripRules||{};return{sedan:{perKm:Number(r.sedan?.perKm||15),nightHalt:Number(r.sedan?.nightHalt||1000)},suv:{perKm:Number(r.suv?.perKm||18),nightHalt:Number(r.suv?.nightHalt||1500)}}}catch(e){return{sedan:{perKm:15,nightHalt:1000},suv:{perKm:18,nightHalt:1500}}}}function visibleVehicles(){return S.mode==='rental'||S.tripType!=='roundtrip'?VEH:VEH.filter(v=>v.id==='sedan'||v.id==='suv')}function totalKm(){const k=S.route?.km||S.rentalKm;return S.mode!=='rental'&&S.tripType==='roundtrip'&&!S.route?.roundTripRouted?k*2:k}function totalMin(){if(S.mode==='rental')return S.rentalHours*60;const routeMin=realisticRoadMinutes(Number(S.route?.km||0),Number(S.route?.min||1));return S.tripType==='roundtrip'&&!S.route?.roundTripRouted?routeMin*2:routeMin}function fare(v){const k=S.route?.km||S.rentalKm;if(S.mode!=='rental'&&S.tripType==='roundtrip'){const rr=roundRules()[v.id];if(!rr)return 0;return Math.round(totalKm()*rr.perKm+(S.nightHalt?rr.nightHalt:0))}return Math.round(Math.max(v.min,v.base+v.km*k)+PLATFORM_FEE)}
+// No confirmed online Vaahak position is available on this quote screen.
+// Never manufacture a pickup ETA from the vehicle type.
+function vehCard(v){const rr=S.tripType==='roundtrip'?roundRules()[v.id]:null;return `<button type="button" class="cab6Veh ${S.selected===v.id?'on':''}" data-v="${v.id}"><span class="photo"><img src="${IMG[v.id]}" alt="${esc(v.name)}" loading="eager"></span><b>${esc(v.name)}${S.tripType==='roundtrip'?'<span style="display:block;font-size:7px;color:#315efb;margin-top:2px">ROUND TRIP</span>':''}</b><small>${v.seats} seat${v.seats>1?'s':''}${rr?' • ₹'+rr.perKm+'/km':''}</small><small style="color:#315efb;font-weight:900;margin-top:2px">Pickup ETA after assignment</small><strong>₹${fare(v)}</strong></button>`}
 function mapBlock(title,id='cab6Map'){return `<div class="cab6MapFrame"><div id="${id}" class="cab6Map"></div><div class="cab6MapShade"></div><div class="cab6RoutePill">${esc(title)}</div></div>`}
 async function renderRealMap(id){
  const el=$(id);if(!el)return;
