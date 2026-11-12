@@ -124,6 +124,27 @@ body:has(.cab6Page) #dbestServicePartnerQuick,body:has(.cab6Page) .floatingServi
 .cab6Page>.cab6Wrap{padding-top:6px}
 .cab6Page>.cab6Top.cab6IconNav.cab6HeroNav.cab6InnerNav>button:first-child{width:92px;border-radius:24px;padding:0 10px}
 .cab6Page>.cab6Top.cab6IconNav.cab6HeroNav.cab6InnerNav>button:first-child:after{content:'← Back';font-size:14px!important}
+/* QA navigation fix: keep controls in document flow above Leaflet panes.
+   The previous absolute overlay was hidden beneath the map on mobile. */
+.cab6Page>.cab6Top.cab6IconNav.cab6HeroNav{
+ position:sticky!important;top:0!important;left:auto!important;right:auto!important;
+ z-index:99999!important;display:flex!important;align-items:center!important;
+ justify-content:space-between!important;min-height:58px!important;
+ padding:7px 14px!important;margin:0!important;box-sizing:border-box!important;
+ background:rgba(248,250,255,.97)!important;border-bottom:1px solid #e0e5f1!important;
+ box-shadow:0 3px 14px #1e2a5615!important;pointer-events:auto!important;
+}
+.cab6Page>.cab6Top.cab6IconNav.cab6HeroNav>button{
+ position:relative!important;z-index:2!important;display:grid!important;
+ visibility:visible!important;opacity:1!important;pointer-events:auto!important;
+ width:48px!important;height:44px!important;min-height:44px!important;
+ color:#263566!important;background:#fff!important;
+}
+.cab6Page>.cab6Top.cab6IconNav.cab6HeroNav.cab6InnerNav>button:first-child{
+ width:96px!important;border-radius:24px!important;
+}
+.cab6Page>.cab6Wrap{padding-top:8px!important}
+
 .cab6Search.cab6EntrySheet .cab6Field.pick .cab6PickupNoteRow{margin:5px 0 0}
 .cab6Search.cab6EntrySheet .cab6Field.pick .cab6PickupNoteRow input{width:100%;box-sizing:border-box;min-height:40px;font-size:11px;padding:8px 12px;border:1px solid #d5e8e2;border-left:1px solid #d5e8e2;border-radius:12px;background:#f6fbfa;box-shadow:none;color:#164d43}
 .cab6Search.cab6EntrySheet .cab6Field.pick .cab6PickupNoteRow input:focus{outline:2px solid #a7dccc;outline-offset:1px}
