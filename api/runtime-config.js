@@ -82,6 +82,15 @@ async function nearbyHandler(req,res){
 }
 
 module.exports = async function handler(req, res) {
+  // Isolated Cab QA diagnostics: boolean configuration flags ONLY; never return keys.
+  if (req.query && req.query.mode === 'cab-qa-check') {
+    res.setHeader('Cache-Control','no-store');
+    return res.status(200).json({
+      qaGoogleBrowserKeyConfigured: !!String(process.env.GOOGLE_MAPS_BROWSER_KEY||'').trim(),
+      qaGoogleNearbyServerKeyConfigured: !!String(process.env.GOOGLE_MAPS_SERVER_KEY||'').trim(),
+      mapDiagnosticsVersion: '20261112-cab-qa'
+    });
+  }
   if (req.query && req.query.mode === 'nearby') return nearbyHandler(req,res);
   res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
   res.setHeader('Cache-Control', 'no-store, max-age=0, must-revalidate');
