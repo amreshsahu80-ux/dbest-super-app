@@ -67,10 +67,12 @@ test('Google reverse geocode prefers a street address over an administrative loc
    initSearchProvider:async()=>{},
    waitGoogleKey:async()=> 'QA_KEY',
    loadScript:async()=>{},
-   window:{google:{maps:{Geocoder:class{geocode(req,cb){
+   window:{google:{maps:{Geocoder:class{async geocode(req){
      assert.equal(req.location.lat,22.67);
-     cb([{formatted_address:'General Chakradharpur locality',types:['locality']},
-          {formatted_address:'Bata Road, Chakradharpur, Jharkhand',types:['route']}],'OK');
+     return {results:[
+       {formatted_address:'General Chakradharpur locality',types:['locality']},
+       {formatted_address:'Bata Road, Chakradharpur, Jharkhand',types:['route']}
+     ]};
    }}}}},
  };
  ctx.google=ctx.window.google;
@@ -114,4 +116,27 @@ test('retries late provider initialization instead of permanently caching fallba
  const code=between('async function initSearchProvider(', '\nasync function initLeaflet(');
  assert.match(code,/waitGoogleKey\(6500\)/);
  assert.match(code,/searchProviderPromise=null/);
+});
+
+test('Google reverse geocoder reports denied API request instead of a permanent checking message',async()=>{
+ const code=between('let cabReverseGoogleStatus=', '\nasync function reverseNominatim(');
+ const ctx={S:{provider:'fallback'},console:{warn:()=>{}},setTimeout,clearTimeout,
+  cfg:()=>({googleMapsApiKey:'QA_DUMMY'}),
+  initSearchProvider:async()=>{},waitGoogleKey:async()=> 'QA_DUMMY',loadScript:async()=>{},
+  window:{google:{maps:{Geocoder:class{async geocode(){throw Error('REQUEST_DENIED')}}}}}};
+ ctx.google=ctx.window.google;
+ const data=await vm.runInNewContext(code+'\nreverseGoogle(22.67,85.63).then(v=>({v,status:cabReverseGoogleStatus,message:cabGoogleStatusMessage()}))',ctx);
+ assert.equal(data.v,'');assert.equal(data.status,'REQUEST_DENIED');
+ assert.equal(data.message,'Google Geocoding access denied');
+});
+test('Google reverse geocoder uses timeout fallback without leaving status checking',async()=>{
+ const code=between('let cabReverseGoogleStatus=', '\nasync function reverseNominatim(');
+ const ctx={S:{provider:'fallback'},console:{warn:()=>{}},clearTimeout, 
+  setTimeout:(fn,ms)=>ms===7500?Promise.resolve().then(fn):0,
+  cfg:()=>({googleMapsApiKey:'QA_DUMMY'}),
+  initSearchProvider:async()=>{},waitGoogleKey:async()=> 'QA_DUMMY',loadScript:async()=>{},
+  window:{google:{maps:{Geocoder:class{geocode(){return new Promise(()=>{})}}}}}};
+ ctx.google=ctx.window.google;
+ const data=await vm.runInNewContext(code+'\nreverseGoogle(22.67,85.63).then(v=>({v,status:cabReverseGoogleStatus}))',ctx);
+ assert.equal(data.v,'');assert.equal(data.status,'response_timeout');
 });
