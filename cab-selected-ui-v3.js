@@ -196,7 +196,21 @@ async function initLeaflet(){
  if(window.L)return window.L;if(leafletPromise)return leafletPromise;
  loadCss('https://unpkg.com/leaflet@1.9.4/dist/leaflet.css','cab6-leaflet-css');leafletPromise=loadScript('https://unpkg.com/leaflet@1.9.4/dist/leaflet.js','cab6-leaflet').then(()=>window.L);return leafletPromise
 }
+let cabReverseGoogleStatus='not_checked';
+function cabGoogleStatusMessage(){
+ const messages={
+  browser_key_missing:'Google Maps QA key not received',
+  google_sdk_unavailable:'Google Maps SDK not loaded',
+  REQUEST_DENIED:'Google Geocoding access denied',
+  OVER_QUERY_LIMIT:'Google Geocoding quota reached',
+  ZERO_RESULTS:'No mapped Google street address',
+  UNKNOWN_ERROR:'Google Geocoding unavailable',
+  geocoder_error:'Google Geocoding failed'
+ };
+ return messages[cabReverseGoogleStatus]||'Google address lookup: '+cabReverseGoogleStatus;
+}
 async function reverseGoogle(lat,lng){
+ cabReverseGoogleStatus='checking';
  try{
   // Google Maps credentials arrive asynchronously from the existing
   // DBest runtime config. Do not permanently accept an early fallback.
@@ -210,13 +224,17 @@ async function reverseGoogle(lat,lng){
     ]);
    }
   }
-  if(!window.google?.maps?.Geocoder)return '';
+  if(!window.google?.maps?.Geocoder){
+   cabReverseGoogleStatus=String(cfg().googleMapsApiKey||'').trim()?'google_sdk_unavailable':'browser_key_missing';
+   return '';
+  }
   S.provider='google';
   return await new Promise(resolve=>{
    let done=false;
    const finish=v=>{if(done)return;done=true;clearTimeout(timer);resolve(v)};
    const timer=setTimeout(()=>finish(''),6500);
    new google.maps.Geocoder().geocode({location:{lat,lng}},(rows,status)=>{
+    cabReverseGoogleStatus=String(status||'UNKNOWN_ERROR');
     if(status!=='OK'||!Array.isArray(rows))return finish('');
     // The first result is not guaranteed to be the most useful street address.
     // Prefer verified address/premise/street results over locality-only names.
@@ -236,7 +254,7 @@ async function reverseGoogle(lat,lng){
     finish(best?.formatted_address||'');
    });
   });
- }catch(e){console.warn('Pickup Google reverse geocode failed',e);return ''}
+ }catch(e){cabReverseGoogleStatus='geocoder_error';console.warn('Pickup Google reverse geocode failed',e);return ''}
 }
 async function reverseNominatim(lat,lng){
  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),8500);
@@ -440,8 +458,8 @@ async function useGps(noisy){
      if(S.p&&S.p.lat===lat&&S.p.lng===lng&&S.p.source==='device-gps'){
        S.p.label=label;
        if(input.value===fallback||!input.value.trim())input.value=label;
-       pickupStatus('GPS '+gpsAccuracyText(accuracy)+(googleAddress?' · Google address':label===fallback?' · Address not mapped':' · Approximate address (fallback)')+
-         (lowAccuracy?' · Location may be approximate.':' · Add a landmark below if your road is missing.'),lowAccuracy||!googleAddress);
+       pickupStatus('GPS '+gpsAccuracyText(accuracy)+(googleAddress?' · Google road/address':label===fallback?' · '+cabGoogleStatusMessage():' · '+cabGoogleStatusMessage()+' · Approximate address (fallback)')+
+         (lowAccuracy?' · Location may be approximate.':' · Address may differ from actual road.'),lowAccuracy||!googleAddress);
      }
    }catch(e){
      console.warn('Pickup reverse geocoding failed',e);
