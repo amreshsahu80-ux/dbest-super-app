@@ -236,3 +236,27 @@ test('QA Car Pool must not send real create, confirm or payment requests',()=>{
  assert.match(source,/if\(cabQaPreview\(\)\)return say\('QA PREVIEW ONLY: Confirming Car Pool seats is disabled/);
  assert.match(source,/max="\$\{maxLocal\(\)\}"/);
 });
+
+test('Cab inner-page header shows working previous-step and Cab Home navigation',()=>{
+ const code=between('function header(', '\nfunction destroyMap(');
+ const ctx={};
+ const inner=vm.runInNewContext(code+'\nheader("DBEST_CAB_SELECTED_UI.returnToSearch()")',ctx);
+ assert.match(inner,/cab6InnerNav/);
+ assert.match(inner,/onclick="DBEST_CAB_SELECTED_UI.returnToSearch\(\)"/);
+ assert.match(inner,/onclick="DBEST_CAB_SELECTED_UI.goCabHome\(\)"/);
+ assert.match(inner,/Back to previous Cab step/);
+ const entry=vm.runInNewContext('header("backHome()")',ctx);
+ assert.doesNotMatch(entry,/cab6InnerNav/);
+ assert.match(entry,/onclick="backHome\(\)"/);
+});
+test('Back from quote or pool returns to preserved Cab form, while confirmation returns to vehicle choices',()=>{
+ const count=(source.match(/'DBEST_CAB_SELECTED_UI.returnToSearch\(\)'\);/g)||[]).length;
+ assert.equal(count,2,'pool status and ride options must both return to Cab search');
+ assert.match(source,/cab6Book\)[\s\S]*?function confirmRide\(/);
+ assert.match(source,/'DBEST_CAB_SELECTED_UI.vehicles\(\)'/);
+ assert.match(source,/function returnToSearch\(\)\{open\(true\)\}/);
+ assert.match(source,/function goCabHome\(\)/);
+ assert.match(source,/if\(restore\)\{/);
+ assert.match(source,/if\(S\.p\)\$\('cab6P'\)\.value=S\.p\.label/);
+ assert.match(source,/if\(S\.d\)\$\('cab6D'\)\.value=S\.d\.label/);
+});
