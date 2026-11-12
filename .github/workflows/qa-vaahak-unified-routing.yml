@@ -1,0 +1,24 @@
+name: DBest Vaahak Unified Cab + Marketplace Synthetic QA (No Release)
+on:
+  push:
+    branches: [qa/vaahak-unified-routing-dispatch-20261112]
+    paths:
+      - 'qa/vaahak-shared-dispatch-eligibility.mjs'
+      - 'qa/vaahak-shared-dispatch-eligibility.test.mjs'
+      - '.github/workflows/qa-vaahak-unified-routing.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  synthetic-dual-service-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify shared Vaahak offers, activity and road-ETA ranking (no network)
+        run: node --test qa/vaahak-shared-dispatch-eligibility.test.mjs
