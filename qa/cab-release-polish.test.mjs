@@ -141,19 +141,66 @@ test('Google reverse geocoder uses timeout fallback without leaving status check
  assert.equal(data.v,'');assert.equal(data.status,'response_timeout');
 });
 
-test('2-way QA routes all the way back to pickup without an assumed double-distance',async()=>{
+test('2-way QA computes both road directions independently and combines fares',async()=>{
  const code=between('async function routeOSRM(', '\nasync function continueRide(');
  const original={p:{lat:22.56,lng:85.62},d:{lat:22.60,lng:85.65},stops:[],
    mode:'ride',tripType:'roundtrip'};
- let u='';
- const ctx={S:original,fetch:async(url,opts)=>{u=url;return{ok:true,json:async()=>({
-   routes:[{distance:20940,duration:2350,geometry:{coordinates:[[85.62,22.56],[85.65,22.60],[85.62,22.56]]}}]})}},
-   realisticRoadMinutes:(km,providerMin)=>Math.max(1,providerMin)};
+ const urls=[];
+ const ctx={S:original,fetch:async(url)=>{
+  urls.push(url);
+  const isReturn=url.includes('85.65,22.6;85.62,22.56');
+  return {ok:true,json:async()=>({code:'Ok',
+   routes:[{distance:isReturn?11040:9900,duration:isReturn?1300:1050,
+    geometry:{coordinates:isReturn?[[85.65,22.6],[85.62,22.56]]:[[85.62,22.56],[85.65,22.6]]}}]})};
+ },realisticRoadMinutes:(km,providerMin)=>Math.max(1,providerMin)};
  const q=await vm.runInNewContext(code+'\nrouteOSRM()',ctx);
  assert.equal(q.km,20.94);assert.equal(q.roundTripRouted,true);
- assert.match(u,/85\.62,22\.56;85\.65,22\.6;85\.62,22\.56/);
- assert.equal(q.geo.length,3);
+ assert.deepEqual([...urls].map(u=>u.split('/driving/')[1].split('?')[0]),[
+  '85.62,22.56;85.65,22.6','85.65,22.6;85.62,22.56'
+ ]);
+ assert.deepEqual([...q.geo].map(x=>[...x]),[[85.62,22.56],[85.65,22.6],[85.62,22.56]]);
+ assert.equal(q.legs.outwardKm,9.9);
+ assert.equal(q.legs.returnKm,11.04);
+ assert.equal(q.routeWarning,'');
 });
+test('2-way routes with intermediate stops go directly back to pickup without returning to each stop',async()=>{
+ const code=between('async function routeOSRM(', '\nasync function continueRide(');
+ const urls=[];
+ const ctx={S:{p:{lat:22.56,lng:85.62},d:{lat:22.60,lng:85.65},
+   stops:[{lat:22.58,lng:85.63}],mode:'ride',tripType:'roundtrip'},
+  fetch:async url=>{urls.push(url);return {ok:true,json:async()=>({code:'Ok',
+   routes:[{distance:8000,duration:900,geometry:{coordinates:[]}}]})}},
+  realisticRoadMinutes:(km,m)=>m};
+ const q=await vm.runInNewContext(code+'\nrouteOSRM()',ctx);
+ assert.equal(q.km,16);
+ assert.equal(urls.length,2);
+ assert.match(urls[0],/85\.62,22\.56;85\.63,22\.58;85\.65,22\.6/);
+ assert.match(urls[1],/85\.65,22\.6;85\.62,22\.56/);
+});
+test('asymmetric returns show a clear warning, never invent a lower fare',async()=>{
+ const code=between('async function routeOSRM(', '\nasync function continueRide(');
+ const ctx={S:{p:{lat:22.56,lng:85.62},d:{lat:22.60,lng:85.65},stops:[],
+  mode:'ride',tripType:'roundtrip'},fetch:async url=>{
+   const isReturn=url.includes('85.65,22.6;85.62,22.56');
+   return {ok:true,json:async()=>({code:'Ok',routes:[{distance:isReturn?21000:8100,
+    duration:isReturn?2100:900,geometry:{coordinates:[]}}]})};
+  },realisticRoadMinutes:(km,m)=>m};
+ const quote=await vm.runInNewContext(code+'\nrouteOSRM()',ctx);
+ assert.equal(quote.km,29.1);
+ assert.match(quote.routeWarning,/differs significantly/);
+ assert.equal(quote.legs.outwardKm,8.1);
+ assert.equal(quote.legs.returnKm,21);
+});
+test('invalid return route cannot silently become an assumed two-times outward fare',async()=>{
+ const code=between('async function routeOSRM(', '\nasync function continueRide(');
+ const ctx={S:{p:{lat:22.56,lng:85.62},d:{lat:22.60,lng:85.65},stops:[],
+  mode:'ride',tripType:'roundtrip'},fetch:async url=>({
+    ok:true,json:async()=>url.includes('85.65,22.6;85.62,22.56')?
+     {code:'NoRoute',routes:[]}:{code:'Ok',routes:[{distance:8100,duration:900,geometry:{coordinates:[]}}]}
+  }),realisticRoadMinutes:(km,m)=>m};
+ await assert.rejects(vm.runInNewContext(code+'\nrouteOSRM()',ctx),/NoRoute/);
+});
+
 test('2-way quote must never double the already-returned route, preserve sedan and SUV rates',()=>{
  const code=between('function roundRules(){','\n// No confirmed online Vaahak position');
  const ctx={S:{route:{km:20.94,min:40,roundTripRouted:true},mode:'ride',tripType:'roundtrip',nightHalt:false},
