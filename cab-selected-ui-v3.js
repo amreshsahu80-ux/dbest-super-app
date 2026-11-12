@@ -175,8 +175,22 @@ function loadScript(src,id){return new Promise((ok,no)=>{const old=$(id);if(old)
 function loadCss(href,id){if($(id))return;const l=document.createElement('link');l.id=id;l.rel='stylesheet';l.href=href;document.head.appendChild(l)}
 async function waitGoogleKey(ms=2200){const end=Date.now()+ms;while(Date.now()<end){const k=String(cfg().googleMapsApiKey||'').trim();if(k)return k;await new Promise(r=>setTimeout(r,120))}return String(cfg().googleMapsApiKey||'').trim()}
 async function initSearchProvider(){
+ if(S.provider==='google'&&window.google?.maps?.Geocoder)return;
  if(searchProviderPromise)return searchProviderPromise;
- searchProviderPromise=(async()=>{const k=await waitGoogleKey();if(k){try{if(!window.google?.maps)await loadScript('https://maps.googleapis.com/maps/api/js?key='+encodeURIComponent(k)+'&libraries=places&v=weekly','cab6-google');if(window.google?.maps){S.provider='google';return}}catch(e){console.warn('DBest Google Places unavailable',e)}}S.provider=String(cfg().supabaseUrl||'').trim()?'supabase':'osm'})();return searchProviderPromise
+ searchProviderPromise=(async()=>{
+  // Runtime keys can arrive after page paint. Waiting is better than presenting
+  // an unrelated village as a precise pickup address.
+  const k=await waitGoogleKey(6500);
+  if(k){
+   try{
+    if(!window.google?.maps?.Geocoder)await loadScript('https://maps.googleapis.com/maps/api/js?key='+encodeURIComponent(k)+'&libraries=places&v=weekly','cab6-google');
+    if(window.google?.maps?.Geocoder){S.provider='google';return}
+   }catch(e){console.warn('DBest Google Maps SDK unavailable',e)}
+  }
+  S.provider=String(cfg().supabaseUrl||'').trim()?'supabase':'osm';
+ })();
+ try{return await searchProviderPromise}
+ finally{if(S.provider!=='google')searchProviderPromise=null}
 }
 async function initLeaflet(){
  if(window.L)return window.L;if(leafletPromise)return leafletPromise;
@@ -186,7 +200,7 @@ async function reverseGoogle(lat,lng){
  try{
   // Google Maps credentials arrive asynchronously from the existing
   // DBest runtime config. Do not permanently accept an early fallback.
-  await Promise.race([initSearchProvider(),new Promise(resolve=>setTimeout(resolve,2400))]);
+  await initSearchProvider();
   if(!window.google?.maps?.Geocoder){
    const key=await waitGoogleKey(3500);
    if(key){
@@ -203,7 +217,23 @@ async function reverseGoogle(lat,lng){
    const finish=v=>{if(done)return;done=true;clearTimeout(timer);resolve(v)};
    const timer=setTimeout(()=>finish(''),6500);
    new google.maps.Geocoder().geocode({location:{lat,lng}},(rows,status)=>{
-    finish(status==='OK'&&rows?.[0]?.formatted_address?rows[0].formatted_address:'');
+    if(status!=='OK'||!Array.isArray(rows))return finish('');
+    // The first result is not guaranteed to be the most useful street address.
+    // Prefer verified address/premise/street results over locality-only names.
+    const score=r=>{
+     const t=Array.isArray(r?.types)?r.types:[];
+     if(t.includes('street_address'))return 100;
+     if(t.includes('premise')||t.includes('subpremise'))return 95;
+     if(t.includes('intersection'))return 90;
+     if(t.includes('route'))return 85;
+     if(t.includes('plus_code'))return 55;
+     if(t.includes('neighborhood')||t.includes('sublocality'))return 35;
+     if(t.includes('locality'))return 20;
+     return 0;
+    };
+    const best=rows.filter(r=>String(r?.formatted_address||'').trim())
+     .sort((a,b)=>score(b)-score(a))[0];
+    finish(best?.formatted_address||'');
    });
   });
  }catch(e){console.warn('Pickup Google reverse geocode failed',e);return ''}
@@ -211,9 +241,16 @@ async function reverseGoogle(lat,lng){
 async function reverseNominatim(lat,lng){
  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),8500);
  try{
-  const r=await fetch('https://nominatim.openstreetmap.org/reverse?format=jsonv2&addressdetails=1&lat='+encodeURIComponent(lat)+'&lon='+encodeURIComponent(lng),{headers:{Accept:'application/json'},signal:controller.signal});
+  const r=await fetch('https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&addressdetails=1&lat='+encodeURIComponent(lat)+'&lon='+encodeURIComponent(lng),{headers:{Accept:'application/json'},signal:controller.signal});
   if(!r.ok)return '';
-  const j=await r.json();return String(j.display_name||'').trim();
+  const j=await r.json(),a=j?.address||{};
+  const road=String(a.road||a.pedestrian||a.residential||a.footway||'').trim();
+  const locality=String(a.suburb||a.neighbourhood||a.village||a.town||a.city||'').trim();
+  const district=String(a.city_district||a.county||a.state_district||'').trim();
+  const state=String(a.state||'').trim(),postcode=String(a.postcode||'').trim();
+  // Display a mapped road first when one is available; never invent one.
+  const structured=[road,locality,district,state,postcode].filter(Boolean).filter((x,i,all)=>all.indexOf(x)===i);
+  return road&&structured.length?structured.join(', '):String(j.display_name||'').trim();
  }catch(e){console.warn('Pickup OSM reverse geocode failed',e);return ''}finally{clearTimeout(timer)}
 }
 function placePhotoUrl(lat,lng,name){return 'https://maps.googleapis.com/maps/api/streetview?size=360x220&location='+encodeURIComponent(lat+','+lng)+'&fov=80&pitch=0&key='+encodeURIComponent(googleKey())}
@@ -403,8 +440,8 @@ async function useGps(noisy){
      if(S.p&&S.p.lat===lat&&S.p.lng===lng&&S.p.source==='device-gps'){
        S.p.label=label;
        if(input.value===fallback||!input.value.trim())input.value=label;
-       pickupStatus('GPS '+gpsAccuracyText(accuracy)+(googleAddress?' · Google Maps address':label===fallback?' · Address unavailable':' · Address fallback')+
-         (lowAccuracy?' · Confirm pickup manually for accuracy.':' · You can adjust pickup.'),lowAccuracy);
+       pickupStatus('GPS '+gpsAccuracyText(accuracy)+(googleAddress?' · Google address':label===fallback?' · Address not mapped':' · Approximate address (fallback)')+
+         (lowAccuracy?' · Location may be approximate.':' · Add a landmark below if your road is missing.'),lowAccuracy||!googleAddress);
      }
    }catch(e){
      console.warn('Pickup reverse geocoding failed',e);
