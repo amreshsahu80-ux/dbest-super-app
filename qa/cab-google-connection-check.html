@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DBest Cab Google Maps QA Connection Test</title>
+<style>
+body{font:15px/1.55 system-ui,sans-serif;margin:0;background:#f5f7fd;color:#1e2a44}
+main{max-width:640px;margin:24px auto;padding:18px}.card{padding:20px;border-radius:18px;background:#fff;border:1px solid #dae3f3;box-shadow:0 5px 24px #1b2a4d11}
+h1{font-size:23px}p{color:#465773}button{font:inherit;color:#fff;background:#304ee9;border:0;border-radius:11px;padding:12px 18px;font-weight:700}
+.status{border-bottom:1px solid #e6eaf2;padding:12px 0;display:flex;justify-content:space-between;gap:20px}.status span{font-weight:700;text-align:right}
+[data-state="ok"]{color:#11754d}[data-state="bad"]{color:#ac3242}[data-state="wait"]{color:#775c22}
+small{color:#607087}code{font-size:12px;overflow-wrap:anywhere}
+</style></head>
+<body><main><div class="card"><h1>DBest Cab · Google Connection Check</h1>
+<p>Checks whether Google Maps and reverse-geocoding work from this authorized QA website. Uses a public test location, <b>not your GPS</b>. Displays no API keys or personal coordinates.</p>
+<div class="status"><b>Browser key</b><span id="key" data-state="wait">Not checked</span></div>
+<div class="status"><b>Maps JavaScript</b><span id="maps" data-state="wait">Not checked</span></div>
+<div class="status"><b>Google authorization</b><span id="auth" data-state="wait">Not checked</span></div>
+<div class="status"><b>Reverse Geocoding</b><span id="geo" data-state="wait">Not checked</span></div>
+<div class="status"><b>Response time</b><span id="duration" data-state="wait">—</span></div>
+<p><button id="start">Run Google Maps test</button></p><small>Test uses an approximate public location in central Kolkata. One Google Geocoding request can count toward usage. No real Cab booking is created.</small>
+<p id="notes" aria-live="polite"></p>
+</div></main>
+<script>
+(function(){
+'use strict';
+const $=id=>document.getElementById(id);
+const set=(id,t,state)=>{const e=$(id);if(e){e.textContent=t;e.dataset.state=state||'wait'}};
+let mapsFailed=false;
+window.gm_authFailure=()=>{mapsFailed=true;set('auth','Google rejected website/key','bad');set('notes','Check website referrer, API activation and billing.','bad')};
+window.addEventListener('error',e=>{
+ const m=String(e.message||'');
+ const match=m.match(/(RefererNotAllowedMapError|ApiTargetBlockedMapError|BillingNotEnabledMapError|ApiNotActivatedMapError|InvalidKeyMapError|ExpiredKeyMapError|OverQuotaMapError)/);
+ if(match){mapsFailed=true;set('auth',match[1],'bad')}
+});
+function loadScript(url){
+ return new Promise((res,rej)=>{
+  const s=document.createElement('script');s.async=true;s.src=url;
+  s.onload=()=>res(true);s.onerror=()=>rej(Error('Google Maps script network error'));
+  document.head.appendChild(s);
+ });
+}
+const timeout=(ms)=>new Promise((_,rej)=>setTimeout(()=>rej(Error('Timed out after '+ms/1000+'s')),ms));
+async function run(){
+ $('start').disabled=true;
+ set('key','Checking…','wait');set('maps','Checking…','wait');set('auth','Checking…','wait');set('geo','Checking…','wait');set('duration','—','wait');set('notes','','wait');
+ const began=performance.now();
+ try{
+  await Promise.race([loadScript('/api/runtime-config?qa=maps'+Date.now()),timeout(9000)]);
+  const key=String(window.DBEST_RUNTIME_SECRETS?.googleMapsApiKey||'').trim();
+  if(!key){set('key','Missing','bad');throw Error('Browser key missing in preview runtime')};
+  set('key','Present (value hidden)','ok');
+  window.dbestCabQaReady=()=>{};
+  const host='https://maps.googleapis.com/maps/api/js?key='+encodeURIComponent(key)+'&libraries=geocoding&v=weekly&callback=dbestCabQaReady';
+  await Promise.race([loadScript(host),timeout(13000)]);
+  if(mapsFailed)throw Error('Google rejected this website/key');
+  if(!window.google?.maps?.importLibrary)throw Error('Google Maps script loaded but library unavailable');
+  set('maps','Loaded','ok');
+  const {Geocoder}=await Promise.race([google.maps.importLibrary('geocoding'),timeout(8000)]);
+  set('auth',mapsFailed?'Rejected':'SDK initialized',''+(mapsFailed?'bad':'ok'));
+  const r=await Promise.race([
+   new Geocoder().geocode({location:{lat:22.5726,lng:88.3639},language:'en'}),
+   timeout(12000)
+  ]);
+  if(!r?.results?.length){set('geo','No results','bad')}
+  else set('geo','Success · '+String(r.results[0]?.formatted_address||'').slice(0,85),'ok');
+ }catch(e){
+  const m=String(e?.code||e?.message||'Error');
+  if($('maps').dataset.state!=='ok'&&!mapsFailed)set('maps',m,'bad');
+  else set('geo',m,'bad');
+  set('notes','This is a QA diagnostic. No production changes were made.','wait');
+ }finally{
+  set('duration',Math.round(performance.now()-began)+' ms','wait');
+  $('start').disabled=false;
+ }
+}
+$('start').addEventListener('click',run);
+})();
+</script></body></html>
