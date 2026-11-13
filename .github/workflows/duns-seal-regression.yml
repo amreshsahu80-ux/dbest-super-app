@@ -1,0 +1,27 @@
+name: DUNS seal regression
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'platform-footer-legal.js'
+      - '.github/workflows/duns-seal-regression.yml'
+  pull_request:
+    paths:
+      - 'platform-footer-legal.js'
+      - '.github/workflows/duns-seal-regression.yml'
+permissions:
+  contents: read
+jobs:
+  check-seal:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Verify approved DUNS seal and no obsolete directory link
+        run: |
+          node - <<'NODE'
+          const fs=require('fs');
+          const s=fs.readFileSync('platform-footer-legal.js','utf8');
+          for(const required of ['dbestDunsRegisteredSeal','https://dunsregistered.dnb.com/SealAuthentication.aspx?Cid=1','D-U-N-S Registered']) if(!s.includes(required)) throw Error('Approved DUNS seal missing: '+required);
+          if(s.includes('Clientlisting.aspx')) throw Error('Removed D&B directory link has returned');
+          console.log('Approved DUNS seal source present');
+          NODE
