@@ -1,0 +1,19 @@
+name: Partner onboarding isolated regression checks
+on:
+  push:
+    branches: [fix/partner-onboarding-kyc-audit-20261113]
+  pull_request:
+    paths:
+      - 'partner-kyc-registration-upload-v2.js'
+      - 'owner-partner-kyc-center.js'
+      - 'supabase/functions/vaahak-live/index.ts'
+      - 'scripts/test-partner-onboarding-fix.cjs'
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node scripts/test-partner-onboarding-fix.cjs
