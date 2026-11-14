@@ -13,7 +13,9 @@ jobs:
         with:
           node-version: '22'
       - name: Verify onboarding scripts
-        run: node scripts/test-partner-build10-kyc.cjs
+        run: |
+          node scripts/test-partner-build10-kyc.cjs
+          node scripts/test-partner-build10-kyc-contract.cjs
   android-build10-unsigned:
     runs-on: ubuntu-latest
     defaults:
