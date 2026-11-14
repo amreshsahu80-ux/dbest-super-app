@@ -13,5 +13,6 @@ assert.match(service,/Please retry submission with the missing documents/);
 assert.match(service,/return}}localStorage\.removeItem\(savedKey\);await startAgreement/);
 assert.match(service,/saved\?\.transactionId\?\{transactionId:saved\.transactionId/);
 assert.match(service,/localStorage\.setItem\(savedKey/);
+assert.match(service,/d\.ok!==true\|\|!d\.document\?\.id\|\|d\.document\?\.field_name!==field/);
 assert.match(upload,/event\.preventDefault\(\);event\.stopImmediatePropagation\(\)/);
 console.log('Build 10 static KYC regression checks passed');
