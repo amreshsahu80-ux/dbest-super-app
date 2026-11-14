@@ -14,3 +14,28 @@ jobs:
           node-version: '22'
       - name: Verify onboarding scripts
         run: node scripts/test-partner-build10-kyc.cjs
+  android-build10-unsigned:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: partner-android-app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Check release identity
+        run: |
+          grep -Fq "applicationId 'com.dbest4u.partner'" app/build.gradle
+          grep -Fq 'versionCode 10' app/build.gradle
+          grep -Fq "versionName '1.0.6'" app/build.gradle
+      - name: Compile isolated unsigned candidate
+        run: gradle :app:assembleRelease --no-daemon
+      - name: Keep unsigned candidate private
+        uses: actions/upload-artifact@v4
+        with:
+          name: partner-build10-unsigned-candidate
+          path: partner-android-app/app/build/outputs/apk/release/*.apk
+          retention-days: 1
