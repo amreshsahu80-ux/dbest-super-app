@@ -69,5 +69,16 @@ sandbox.FileReader = class {
   assert.equal(await upload('vaahak', token, files), 1, 'Vaahak retry must verify persisted KYC');
   assert.deepEqual(requests.map(r => r.action), ['upload', 'list_own']);
   assert.ok(requests.every(r => r.partnerKind === 'vaahak'));
+  // Transport errors must fail closed and permit an explicit retry, never a false success.
+  requests.length = 0;
+  responses.push({ body: { ok: true, document: { doc_type: 'pan' } } },
+    { status: 400, body: { error: 'list_own_temporarily_unavailable' } });
+  await assert.rejects(upload('vaahak', token, files), /list_own_temporarily_unavailable/);
+  assert.deepEqual(requests.map(r => r.action), ['upload', 'list_own']);
+  requests.length = 0;
+  responses.push({ body: { ok: true, document: { doc_type: 'pan' } } },
+    { body: { documents: [{ doc_type: 'pan' }], kyc: { complete: true } } });
+  assert.equal(await upload('vaahak', token, files), 1, 'Retry after list_own failure must succeed');
+  assert.deepEqual(requests.map(r => r.action), ['upload', 'list_own']);
   console.log('PASS: mocked KYC persistence failure, safe retry, HTTP failure recovery, upload confirmation guard; no live calls');
 })().catch(err => { console.error(err); process.exitCode = 1; });
