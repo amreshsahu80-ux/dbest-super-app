@@ -1,0 +1,13 @@
+const fs=require('node:fs');const assert=require('node:assert/strict');const vm=require('node:vm');
+const upload=fs.readFileSync('partner-kyc-registration-upload-v2.js','utf8');
+new vm.Script(upload,{filename:'partner-kyc-registration-upload-v2.js'});
+assert.match(upload,/function missingRequired\(form,kind\)/);
+assert.match(upload,/validateRequired\(form,'vendor'\)/);
+assert.match(upload,/validateRequired\(form,'vaahak'\)/);
+assert.match(upload,/kyc_upload_unconfirmed_/);
+assert.match(upload,/kyc_documents_not_persisted_/);
+const service=fs.readFileSync('service-partner-onboarding-v3.html','utf8');
+assert.match(service,/document upload\(s\) need retry/);
+assert.match(service,/Please retry submission with the missing documents/);
+assert.match(service,/return}}await startAgreement/);
+console.log('Build 10 static KYC regression checks passed');
