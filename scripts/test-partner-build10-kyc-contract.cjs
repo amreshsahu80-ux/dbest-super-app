@@ -80,5 +80,16 @@ sandbox.FileReader = class {
     { body: { documents: [{ doc_type: 'pan' }], kyc: { complete: true } } });
   assert.equal(await upload('vaahak', token, files), 1, 'Retry after list_own failure must succeed');
   assert.deepEqual(requests.map(r => r.action), ['upload', 'list_own']);
+  // A document listed in storage is insufficient when the backend says required KYC is incomplete.
+  requests.length = 0;
+  responses.push({ body: { ok: true, document: { doc_type: 'pan' } } },
+    { body: { documents: [{ doc_type: 'pan' }], kyc: { complete: false, missing: ['bank_proof'] } } });
+  await assert.rejects(upload('vendor', token, files), /kyc_required_documents_missing_bank_proof/);
+  assert.deepEqual(requests.map(r => r.action), ['upload', 'list_own']);
+  requests.length = 0;
+  responses.push({ body: { ok: true, document: { doc_type: 'pan' } } },
+    { body: { documents: [{ doc_type: 'pan' }], kyc: { complete: true } } });
+  assert.equal(await upload('vendor', token, files), 1, 'Retry must confirm full required KYC completion');
+  assert.deepEqual(requests.map(r => r.action), ['upload', 'list_own']);
   console.log('PASS: mocked KYC persistence failure, safe retry, HTTP failure recovery, upload confirmation guard; no live calls');
 })().catch(err => { console.error(err); process.exitCode = 1; });
