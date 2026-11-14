@@ -46,5 +46,15 @@ sandbox.FileReader = class {
   responses.push({ body: { ok: true, document: { doc_type: 'wrong_type' } } });
   await assert.rejects(upload('vaahak', token, files), /kyc_upload_unconfirmed_pan/);
   assert.deepEqual(requests.map(r => r.action), ['upload']);
-  console.log('PASS: mocked KYC persistence failure, safe retry, upload confirmation guard; no live calls');
+  // A rejected upload must not proceed to list_own or be counted as persisted.
+  requests.length = 0;
+  responses.push({ status: 400, body: { error: 'storage_write_failed' } });
+  await assert.rejects(upload('vendor', token, files), /storage_write_failed/);
+  assert.deepEqual(requests.map(r => r.action), ['upload']);
+  requests.length = 0;
+  responses.push({ body: { ok: true, document: { doc_type: 'pan' } } },
+    { body: { documents: [{ doc_type: 'pan' }], kyc: { complete: true } } });
+  assert.equal(await upload('vendor', token, files), 1, 'Retry after HTTP upload failure must succeed');
+  assert.deepEqual(requests.map(r => r.action), ['upload', 'list_own']);
+  console.log('PASS: mocked KYC persistence failure, safe retry, HTTP failure recovery, upload confirmation guard; no live calls');
 })().catch(err => { console.error(err); process.exitCode = 1; });
