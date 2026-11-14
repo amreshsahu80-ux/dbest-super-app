@@ -15,4 +15,17 @@ assert.match(service,/saved\?\.transactionId\?\{transactionId:saved\.transaction
 assert.match(service,/localStorage\.setItem\(savedKey/);
 assert.match(service,/d\.ok!==true\|\|!d\.document\?\.id\|\|d\.document\?\.field_name!==field/);
 assert.match(upload,/event\.preventDefault\(\);event\.stopImmediatePropagation\(\)/);
-console.log('Build 10 static KYC regression checks passed');
+
+const owner=fs.readFileSync('owner-control-deployment-build10.html','utf8');
+assert.match(owner,/owner-control-deployment/);
+assert.match(owner,/x-dbest-owner-token/);
+assert.match(owner,/verify-owner-otp/);
+assert.match(owner,/window\.confirm\(/);
+assert.match(owner,/Existing matching accounts may be updated/);
+assert.match(owner,/service_partner/);
+const ownerConsole=fs.readFileSync('owner-live-onboarding.html','utf8');
+assert.match(ownerConsole,/owner-control-deployment-build10\.html/);
+const gradle=fs.readFileSync('partner-android-app\/app\/build.gradle','utf8');
+assert.match(gradle,/versionCode 10/);
+assert.match(gradle,/versionName '1\.0\.6'/);
+console.log('Build 10 static onboarding and release identity checks passed');
