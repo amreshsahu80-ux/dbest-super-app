@@ -7,6 +7,16 @@ assert.match(upload,/validateRequired\(form,'vaahak'\)/);
 assert.match(upload,/kyc_upload_unconfirmed_/);
 assert.match(upload,/kyc_documents_not_persisted_/);
 assert.match(upload,/verified\.kyc\?\.complete!==true/);
+
+// Registration must not resolve successfully when mandatory KYC persistence fails.
+assert.match(upload,/throw new Error\('vendor_registration_id_unconfirmed'\)/);
+assert.match(upload,/throw new Error\('vaahak_registration_id_unconfirmed'\)/);
+assert.match(upload,/throw new Error\('vendor_kyc_registration_context_missing'\)/);
+assert.match(upload,/throw new Error\('vaahak_kyc_registration_context_missing'\)/);
+assert.match(upload,/await secureVendorRegistration\(id,fd,files\);return r/);
+assert.match(upload,/await secureVaahakRegistration\(id,pin,files\);return r/);
+assert.match(upload,/throw e\}\}/);
+
 const service=fs.readFileSync('service-partner-onboarding-v3.html','utf8');
 assert.match(service,/document upload\(s\) need retry/);
 assert.match(service,/Please retry submission with the missing documents/);
