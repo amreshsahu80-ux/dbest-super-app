@@ -2,7 +2,7 @@ name: Partner Build 10 isolated KYC checks
 on:
   push:
     branches:
-      - fix/partner-build10-onboarding-release-20261114
+      - release/partner-build10-isolated-20261114
   workflow_dispatch:
 jobs:
   kyc-static:
