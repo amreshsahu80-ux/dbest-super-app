@@ -17,6 +17,11 @@ assert.match(upload,/await secureVendorRegistration\(id,fd,files\);return r/);
 assert.match(upload,/await secureVaahakRegistration\(id,pin,files\);return r/);
 assert.match(upload,/throw e\}\}/);
 
+// Standalone Vaahak asynchronous upload must have a rejection handler and actionable retry guidance.
+assert.match(upload,/if\(!p\?\.id\)throw new Error\('vaahak_registration_id_unconfirmed'\)/);
+assert.match(upload,/\}\)\(\)\.catch\(err=>\{/);
+assert.match(upload,/Vaahak KYC upload was not confirmed/);
+
 const service=fs.readFileSync('service-partner-onboarding-v3.html','utf8');
 assert.match(service,/document upload\(s\) need retry/);
 assert.match(service,/Please retry submission with the missing documents/);
