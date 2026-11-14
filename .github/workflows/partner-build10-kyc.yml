@@ -34,10 +34,19 @@ jobs:
           grep -Fq 'versionCode 10' app/build.gradle
           grep -Fq "versionName '1.0.6'" app/build.gradle
       - name: Compile isolated unsigned candidate
-        run: gradle :app:assembleRelease --no-daemon
+        run: gradle :app:assembleRelease :app:bundleRelease --no-daemon
+      - name: Validate release bundle and launcher reference
+        run: |
+          test -s app/build/outputs/bundle/release/app-release.aab
+          grep -Fq 'android:icon="@drawable/dbest_brand"' app/src/main/AndroidManifest.xml
+          test -s app/src/main/res/drawable-nodpi/dbest_brand.png
+          file app/src/main/res/drawable-nodpi/dbest_brand.png | grep -q 'PNG image data'
+          jarsigner -verify app/build/outputs/bundle/release/app-release.aab >/dev/null 2>&1 && echo 'Bundle is signed' || echo 'Unsigned bundle: private signing required before Play upload'
       - name: Keep unsigned candidate private
         uses: actions/upload-artifact@v4
         with:
-          name: partner-build10-unsigned-candidate
-          path: partner-android-app/app/build/outputs/apk/release/*.apk
+          name: partner-build10-unsigned-aab-and-apk
+          path: |
+            partner-android-app/app/build/outputs/bundle/release/*.aab
+            partner-android-app/app/build/outputs/apk/release/*.apk
           retention-days: 1
