@@ -219,7 +219,7 @@ final class PartnerAccountBinding {
         if (hasAccountBinding()) {
             // The existing Link control becomes an explicit one-tap synthetic QA
             // action ONLY for the same authenticated, already-bound Vaahak.
-            if ("Vaahak".equals(role) &&
+            if (BuildConfig.DEBUG && "Vaahak".equals(role) &&
                     role.equals(prefs().getString("bound_role", ""))) {
                 new AlertDialog.Builder(activity)
                     .setTitle("Vaahak device already linked")

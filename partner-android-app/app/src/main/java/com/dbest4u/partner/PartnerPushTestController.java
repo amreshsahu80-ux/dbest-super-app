@@ -76,11 +76,15 @@ public final class PartnerPushTestController {
             return;
         }
         if(on()){
-            new AlertDialog.Builder(activity).setTitle("Partner notification controls")
-                .setMessage("This phone is ready for opt-in notifications. Automatic business-event sending stays disabled until the owner authorizes the restricted server canary.")
+            AlertDialog.Builder dialog = new AlertDialog.Builder(activity)
+                .setTitle("Partner notification controls")
+                .setMessage("This phone is opted in to partner notifications. Delivery remains controlled by the server and the linked account.")
                 .setPositiveButton("Turn OFF and unlink",(d,w)->disable())
-                .setNeutralButton("Show local test alert",(d,w)->showLocalTest())
-                .setNegativeButton("Cancel",null).show();
+                .setNegativeButton("Cancel",null);
+            if (BuildConfig.DEBUG) {
+                dialog.setNeutralButton("Show local test alert",(d,w)->showLocalTest());
+            }
+            dialog.show();
         }else{
             new AlertDialog.Builder(activity).setTitle("Enable Partner notification pilot?")
                 .setMessage("This enables Firebase locally on this phone. It does not link any account or activate production event sending. You must separately sign in, tap Link, and consent before a device can be registered.")
