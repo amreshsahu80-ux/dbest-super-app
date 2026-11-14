@@ -8,6 +8,7 @@
         android:allowBackup="false"
         android:label="DBest Partner"
         android:icon="@drawable/dbest_brand"
+        android:roundIcon="@drawable/dbest_brand"
         android:usesCleartextTraffic="false"
         android:theme="@style/Theme.DBestPartner">
         <!-- Opt-in only: no automatic FCM token collection before user consent. -->
