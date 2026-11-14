@@ -42,6 +42,10 @@ jobs:
         run: |
           test -s app/build/outputs/bundle/release/app-release.aab
           grep -Fq 'android:icon="@drawable/dbest_brand"' app/src/main/AndroidManifest.xml
+          grep -Fq 'android:roundIcon="@drawable/dbest_brand"' app/src/main/AndroidManifest.xml
+          test ! -e app/src/main/res/drawable/partner_launcher.xml
+          test ! -e app/src/main/res/drawable/partner_symbol.xml
+          ! grep -R -E '@drawable/(partner_launcher|partner_symbol)' app/src/main
           test -s app/src/main/res/drawable-nodpi/dbest_brand.png
           file app/src/main/res/drawable-nodpi/dbest_brand.png | grep -q 'PNG image data'
           jarsigner -verify app/build/outputs/bundle/release/app-release.aab >/dev/null 2>&1 && echo 'Bundle is signed' || echo 'Unsigned bundle: private signing required before Play upload'
