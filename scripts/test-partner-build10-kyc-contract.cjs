@@ -56,5 +56,18 @@ sandbox.FileReader = class {
     { body: { documents: [{ doc_type: 'pan' }], kyc: { complete: true } } });
   assert.equal(await upload('vendor', token, files), 1, 'Retry after HTTP upload failure must succeed');
   assert.deepEqual(requests.map(r => r.action), ['upload', 'list_own']);
+  // Vaahak must use its own scoped token and confirm the persisted document list.
+  requests.length = 0;
+  responses.push({ body: { ok: true, document: { doc_type: 'pan' } } },
+    { body: { documents: [], kyc: { complete: false, missing: ['id_proof'] } } });
+  await assert.rejects(upload('vaahak', token, files), /kyc_documents_not_persisted_pan/);
+  assert.deepEqual(requests.map(r => r.action), ['upload', 'list_own']);
+  assert.ok(requests.every(r => r.partnerKind === 'vaahak'));
+  requests.length = 0;
+  responses.push({ body: { ok: true, document: { doc_type: 'pan' } } },
+    { body: { documents: [{ doc_type: 'pan' }], kyc: { complete: true } } });
+  assert.equal(await upload('vaahak', token, files), 1, 'Vaahak retry must verify persisted KYC');
+  assert.deepEqual(requests.map(r => r.action), ['upload', 'list_own']);
+  assert.ok(requests.every(r => r.partnerKind === 'vaahak'));
   console.log('PASS: mocked KYC persistence failure, safe retry, HTTP failure recovery, upload confirmation guard; no live calls');
 })().catch(err => { console.error(err); process.exitCode = 1; });
