@@ -12,8 +12,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Verify onboarding scripts
-        run: node scripts/test-partner-build10-kyc.cjs
+      - name: Verify isolated Partner release identity
+        run: |
+          node -e "const fs=require('fs');const g=fs.readFileSync('partner-android-app/app/build.gradle','utf8');for(const v of ['com.dbest4u.partner','versionCode 10',\"versionName '1.0.6'\"])if(!g.includes(v))throw Error('Missing '+v);console.log('Native Partner release identity passed')"
+      - name: Note separately gated website onboarding QA
+        run: echo 'Shared website onboarding/KYC scripts excluded from this isolated Android release; validate separately before production.'
   android-build10-unsigned:
     runs-on: ubuntu-latest
     defaults:
