@@ -1,0 +1,16 @@
+name: Partner Build 10 isolated KYC checks
+on:
+  push:
+    branches:
+      - fix/partner-build10-onboarding-release-20261114
+  workflow_dispatch:
+jobs:
+  kyc-static:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify onboarding scripts
+        run: node scripts/test-partner-build10-kyc.cjs
