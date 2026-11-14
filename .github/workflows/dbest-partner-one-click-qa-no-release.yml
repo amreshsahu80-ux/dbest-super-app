@@ -1,0 +1,75 @@
+name: DBest Partner One-Click FCM QA Candidate (No Release)
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'qa/partner-android-one-click-fcm-canary-20261111'
+    paths:
+      - 'partner-android-app/**'
+      - '.github/workflows/dbest-partner-one-click-qa-no-release.yml'
+  pull_request:
+    paths:
+      - 'partner-android-app/**'
+      - '.github/workflows/dbest-partner-one-click-qa-no-release.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  qa-only-canary:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: partner-android-app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+      - name: Verify production identity and tightly scoped user-initiated QA route
+        run: |
+          set -eu
+          grep -Fq "applicationId 'com.dbest4u.partner'" app/build.gradle
+          grep -Fq "versionCode 10" app/build.gradle
+          grep -Fq 'android:label="DBest Partner"' app/src/main/AndroidManifest.xml
+          b=app/src/main/java/com/dbest4u/partner/PartnerAccountBinding.java
+          r=app/src/main/java/com/dbest4u/partner/PartnerMessagingService.java
+          grep -Fq 'native-fcm-register"' "$b"
+          grep -Fq 'native-fcm-qa-single"' "$b"
+          grep -Fq 'new AlertDialog.Builder(activity)' "$b"
+          grep -Fq 'sendOneQaWithConsent()' "$b"
+          grep -Fq 'currentAccountOwnsInstallation("Vaahak", session)' "$b"
+          grep -Fq 'role.equals(prefs().getString("bound_role", ""))' "$b"
+          grep -Fq 'payload.put("consent", true);' "$b"
+          grep -Fq 'payload.put("installationId", installationId());' "$b"
+          grep -Fq 'providerAccepted' "$b"
+          grep -Fq 'trustedPage()' "$b"
+          grep -Fq 'vaahak_ride_offer' "$r"
+          grep -Fq 'getBoolean("bound", false)' "$r"
+          if grep -R -nE 'DBEST_FCM_SEND_ENABLED=true|native-fcm-partner-event-qa|native-fcm-register-partner-qa|Copy FCM test token|REVIEW_HOST' app/src/main/java; then
+            echo "::error::Unexpected QA app, token export, or production sender enablement"
+            exit 1
+          fi
+          python3 - <<'PY'
+          import json
+          with open("app/google-services.json") as f: cfg=json.load(f)
+          assert cfg["project_info"]["project_id"]=="dbest-mobile-notifications"
+          prod=[c for c in cfg["client"] if c["client_info"]["android_client_info"]["package_name"]=="com.dbest4u.partner"]
+          assert len(prod)==1
+          print("PASS: correct production Android Firebase client and one-click QA safety constraints")
+          PY
+      - name: Compile without publishing, signing, or sending FCM
+        run: gradle :app:assembleDebug :app:bundleRelease
+      - name: Confirm private unsigned candidate exists
+        run: test -f app/build/outputs/bundle/release/app-release.aab
+      - name: Retain UNSIGNED build for restricted QA verification (one-day lifetime)
+        uses: actions/upload-artifact@v4
+        with:
+          name: dbest-partner-code10-unsigned-internal-qa
+          path: partner-android-app/app/build/outputs/bundle/release/app-release.aab
+          retention-days: 1
+          if-no-files-found: error

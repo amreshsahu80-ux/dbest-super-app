@@ -1,0 +1,117 @@
+name: DBest Partner Android Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'feat/dbest-partner-android-pilot-20261029'
+      - 'feat/dbest-partner-fcm-account-binding-20261102'
+      - 'qa/partner-fcm-deletion-build-candidate-20261110'
+      - 'qa/partner-side-by-side-ui-isolated-20261110'
+      - 'qa/partner-fcm-isolated-config-20261110'
+      - 'qa/partner-android-reviewer-deeplink-20261111'
+      - 'qa/partner-synthetic-event-fcm-20261111'
+    paths:
+      - 'partner-android-app/**'
+      - '.github/workflows/dbest-partner-android.yml'
+
+permissions:
+  contents: read
+  statuses: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: partner-android-app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+      - name: Check public Reviewer sign-in is absent
+        run: |
+          if grep -R -n -E 'Google Play reviewer sign-in|openServiceReviewerPortal' app/src/main/java; then
+            echo "::error::Customer-facing Play Reviewer entry must not ship in Partner app"
+            exit 1
+          fi
+      - name: Check isolated Partner QA package, privacy and Firebase identity
+        run: |
+          grep -q "applicationId 'com.dbest4u.partner.qa'" app/build.gradle
+          grep -q "id 'com.google.gms.google-services'" app/build.gradle
+          grep -q 'android:label="DBest Partner QA"' app/src/main/AndroidManifest.xml
+          grep -q 'private void showAccountSettings()' app/src/main/java/com/dbest4u/partner/MainActivity.java
+          grep -q 'new PartnerPushTestController(' app/src/main/java/com/dbest4u/partner/MainActivity.java
+          grep -q 'native-fcm-register-partner-qa' app/src/main/java/com/dbest4u/partner/PartnerAccountBinding.java
+          grep -q 'currentAccountOwnsInstallation' app/src/main/java/com/dbest4u/partner/PartnerAccountBinding.java
+          if grep -nE 'Button deleteAccount =|TextView accountDeletion =' app/src/main/java/com/dbest4u/partner/MainActivity.java; then
+            echo "::error::Account deletion must remain inside Account & Privacy"
+            exit 1
+          fi
+          python3 - <<'PY'
+          import json
+          with open("app/google-services.json") as f: config=json.load(f)
+          assert config["project_info"]["project_id"] == "dbest-mobile-notifications"
+          qa=[c for c in config["client"] if c["client_info"]["android_client_info"]["package_name"]=="com.dbest4u.partner.qa"]
+          assert len(qa)==1, "One dedicated Firebase Android QA registration required"
+          assert qa[0]["client_info"]["mobilesdk_app_id"]=="1:905212518251:android:9c20528a318acf11d7b62e"
+          print("Isolated Partner Firebase Android client matches user-supplied configuration")
+          PY
+      - name: Verify reviewer route hidden from main UI and HTTPS QA host pinned
+        run: |
+          java=app/src/main/java/com/dbest4u/partner/MainActivity.java
+          grep -q 'Reviewer access (QA only)' "$java"
+          grep -q 'private boolean isQaReview' "$java"
+          grep -q 'dbest-super-5ey64ubmn-db-est.vercel.app' "$java"
+          grep -q '"1".equals(url.getQueryParameter("review"))' "$java"
+          if grep -q 'Google Play reviewer sign-in' "$java"; then
+            echo "::error::Customer-facing reviewer button must remain absent"
+            exit 1
+          fi
+      - name: Verify consented synthetic event QA is isolated from live dispatch
+        run: |
+          binder=app/src/main/java/com/dbest4u/partner/PartnerAccountBinding.java
+          controller=app/src/main/java/com/dbest4u/partner/PartnerPushTestController.java
+          activity=app/src/main/java/com/dbest4u/partner/MainActivity.java
+          grep -q 'native-fcm-partner-event-qa' "$binder"
+          grep -q 'testSyntheticEventWithConsent()' "$binder"
+          grep -q 'testSyntheticBusinessEvent()' "$controller"
+          grep -q 'Simulated event notification (QA only)' "$activity"
+          grep -q 'body.put("consent", true)' "$binder"
+          grep -q 'trustedPage()' "$binder"
+          grep -q 'QA_EVENT_ENDPOINT' "$binder"
+          if grep -q 'DBEST_FCM_SEND_ENABLED=true' "$binder"; then
+            echo "::error::The Android QA app must not enable production FCM"
+            exit 1
+          fi
+      - name: Build partner debug APK and unsigned release AAB
+        run: gradle :app:assembleDebug :app:bundleRelease
+      - name: Upload installable debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: dbest-partner-debug-apk
+          path: partner-android-app/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+      - name: Upload unsigned release AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: dbest-partner-unsigned-aab
+          path: partner-android-app/app/build/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
+      - name: Report build status
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUILD_RESULT: ${{ job.status }}
+        run: |
+          if [ "$BUILD_RESULT" = "success" ]; then state=success; else state=failure; fi
+          gh api -X POST "repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
+            -f state="$state" \
+            -f context="DBest Partner Android build" \
+            -f description="Partner build: $BUILD_RESULT" \
+            -f target_url="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"

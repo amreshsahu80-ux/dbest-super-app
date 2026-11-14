@@ -1,0 +1,80 @@
+name: DBest Partner Production-ID Canary Candidate (No Release)
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'qa/partner-production-canary-build-20261111'
+    paths:
+      - 'partner-android-app/**'
+      - '.github/workflows/dbest-partner-production-canary-candidate.yml'
+  pull_request:
+    paths:
+      - 'partner-android-app/**'
+      - '.github/workflows/dbest-partner-production-canary-candidate.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  canary-candidate-build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: partner-android-app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+      - name: Assert correct production Firebase client and no QA-host or synthetic production exposure
+        run: |
+          set -eu
+          grep -q "applicationId 'com.dbest4u.partner'" app/build.gradle
+          grep -q "id 'com.google.gms.google-services'" app/build.gradle
+          grep -q 'android:label="DBest Partner"' app/src/main/AndroidManifest.xml
+          grep -q 'firebase_messaging_auto_init_enabled.*false' app/src/main/AndroidManifest.xml
+          binder=app/src/main/java/com/dbest4u/partner/PartnerAccountBinding.java
+          push=app/src/main/java/com/dbest4u/partner/PartnerPushTestController.java
+          activity=app/src/main/java/com/dbest4u/partner/MainActivity.java
+          receiver=app/src/main/java/com/dbest4u/partner/PartnerMessagingService.java
+          grep -q '/functions/v1/native-fcm-register"' "$binder"
+          grep -q 'trustedPage()' "$binder"
+          grep -q 'connectWithConsent()' "$binder"
+          grep -q 'revokeAndThen(' "$binder"
+          grep -q 'currentAccountOwnsInstallation(' "$binder"
+          grep -q 'openTrustedPushTarget' "$activity"
+          grep -q 'dbest.notification.role' "$receiver"
+          grep -q 'marketplace_vendor_new_order' "$receiver"
+          grep -q 'vaahak_ride_offer' "$receiver"
+          grep -q 'service_partner_job_assigned' "$receiver"
+          grep -q 'getBoolean("bound", false)' "$receiver"
+          grep -q 'setAutoInitEnabled(false)' "$push"
+          if grep -R -nE '(native-fcm-register-partner-qa|native-fcm-partner-event-qa|Simulated event notification|Reviewer access \(QA only\)|REVIEW_HOST|dbest-super-5ey64ubmn-db-est.vercel.app|Copy FCM test token|DBEST_FCM_SEND_ENABLED=true)' app/src/main/java; then
+            echo "::error::Production candidate must contain no QA endpoints, reviewer previews, token-copy or sender-activation flow"
+            exit 1
+          fi
+          python3 - <<'PY'
+          import json
+          with open('app/google-services.json') as f: j=json.load(f)
+          assert j["project_info"]["project_id"]=="dbest-mobile-notifications"
+          prod=[c for c in j["client"] if c["client_info"]["android_client_info"]["package_name"]=="com.dbest4u.partner"]
+          assert len(prod)==1, "Exactly one production Partner Firebase Android client is required"
+          print("PASS: Correct production Partner Firebase project/client; no private tokens output")
+          PY
+      - name: Compile release candidate (UNSIGNED, no artifact distribution or deployment)
+        run: gradle :app:assembleDebug :app:bundleRelease
+      - name: Confirm unsigned bundle exists but do not publish or distribute
+        run: |
+          test -f app/build/outputs/bundle/release/app-release.aab
+          echo "PASS: unsigned QA-only candidate compiled; no Play upload, signed APK or live notification deployment"
+      - name: Retain unsigned bundle privately for local signing verification
+        uses: actions/upload-artifact@v4
+        with:
+          name: dbest-partner-code7-unsigned-private-ci
+          path: partner-android-app/app/build/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
+          retention-days: 1

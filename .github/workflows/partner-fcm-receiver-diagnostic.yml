@@ -1,0 +1,61 @@
+name: DBest Partner receiver diagnostic build (isolated)
+
+on:
+  push:
+    branches:
+      - fix/partner-fcm-receiver-diagnostic-20261111
+    paths:
+      - partner-android-app/**
+      - .github/workflows/partner-fcm-receiver-diagnostic.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: partner-receiver-diagnostic-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  compile:
+    if: github.ref == 'refs/heads/fix/partner-fcm-receiver-diagnostic-20261111'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: partner-android-app
+    steps:
+      - name: Checkout isolated QA branch
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Set up Gradle 8.13
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+      - name: Assert isolated build and QA receiver guards
+        run: |
+          set -euo pipefail
+          grep -q "applicationId 'com.dbest4u.partner'" app/build.gradle
+          grep -q "versionCode 9" app/build.gradle
+          grep -q "versionName '1.0.5-qa-receiver-diagnostic'" app/build.gradle
+          grep -q '"qa_vaahak_one_device"' app/src/main/java/com/dbest4u/partner/PartnerMessagingService.java
+          grep -q 'Show local test alert' app/src/main/java/com/dbest4u/partner/PartnerPushTestController.java
+          grep -q 'dbest_partner_updates' app/src/main/java/com/dbest4u/partner/PartnerMessagingService.java
+          test -f app/google-services.json
+      - name: Compile debug APK and unsigned release bundle
+        run: gradle --no-daemon :app:assembleDebug :app:bundleRelease
+      - name: Upload isolated build diagnostics only
+        uses: actions/upload-artifact@v4
+        with:
+          name: partner-receiver-qa-unsigned-build
+          path: |
+            partner-android-app/app/build/outputs/apk/debug/app-debug.apk
+            partner-android-app/app/build/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
+          retention-days: 2
