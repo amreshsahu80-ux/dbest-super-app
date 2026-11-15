@@ -32,8 +32,23 @@ jobs:
           grep -Fq 'versionCode 10' app/build.gradle
           grep -Fq 'Gravity.BOTTOM|Gravity.RIGHT' app/src/main/java/com/dbest4u/partner/PartnerPushTestController.java
           grep -Fq 'Partner notifications off. Tap for settings' app/src/main/java/com/dbest4u/partner/PartnerPushTestController.java
+      - name: Configure isolated QA Firebase client for compilation only
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          path = Path('app/google-services.json')
+          data = json.loads(path.read_text())
+          source = next(c for c in data['client'] if c['client_info']['android_client_info']['package_name'] == 'com.dbest4u.partner')
+          qa = json.loads(json.dumps(source))
+          qa['client_info']['android_client_info']['package_name'] = 'com.dbest4u.partner.qa'
+          data['client'].append(qa)
+          out = Path('app/src/qa/google-services.json')
+          out.parent.mkdir(parents=True, exist_ok=True)
+          out.write_text(json.dumps(data))
+          PY
       - name: Compile separate-install QA APK and production release AAB without signing
-        run: gradle :app:assembleProductionDebug :app:bundleProductionRelease :app:assembleQaDebug -x :app:processQaDebugGoogleServices --no-daemon
+        run: gradle :app:assembleProductionDebug :app:bundleProductionRelease :app:assembleQaDebug --no-daemon
       - name: Publish separate-install QA APK (not a Play release)
         uses: actions/upload-artifact@v4
         with:
