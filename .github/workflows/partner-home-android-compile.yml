@@ -32,11 +32,11 @@ jobs:
           grep -Fq 'versionCode 10' app/build.gradle
           grep -Fq 'Gravity.BOTTOM|Gravity.RIGHT' app/src/main/java/com/dbest4u/partner/PartnerPushTestController.java
           grep -Fq 'Partner notifications off. Tap for settings' app/src/main/java/com/dbest4u/partner/PartnerPushTestController.java
-      - name: Compile QA APK and release AAB without signing
-        run: gradle :app:assembleDebug :app:bundleRelease --no-daemon
-      - name: Publish installable QA APK (not a Play release)
+      - name: Compile separate-install QA APK and production release AAB without signing
+        run: gradle :app:assembleProductionDebug :app:bundleProductionRelease :app:assembleQaDebug -x :app:processQaDebugGoogleServices --no-daemon
+      - name: Publish separate-install QA APK (not a Play release)
         uses: actions/upload-artifact@v4
         with:
-          name: partner-home-debug-apk
-          path: partner-android-app/app/build/outputs/apk/debug/*.apk
+          name: partner-home-qa-separate-app-apk
+          path: partner-android-app/app/build/outputs/apk/qa/debug/*.apk
           retention-days: 3
