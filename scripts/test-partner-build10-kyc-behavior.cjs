@@ -3,7 +3,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const vm=require('node:vm');
 const source=fs.readFileSync('partner-kyc-registration-upload-v2.js','utf8');
-async function scenario({uploadOk=true,listed=true,complete=true,uploadResponseType=null,listTypes=null,listOk=true,listDocumentsValid=true,listMalformed=false,uploadHttpOk=true,listHttpOk=true,retry=false,readFailureOn=null,readAbortOn=null,token='test-token',kind='vendor',filesOverride=null}){
+async function scenario({uploadOk=true,listed=true,complete=true,missing=[],uploadResponseType=null,listTypes=null,listOk=true,listDocumentsValid=true,listMalformed=false,uploadHttpOk=true,listHttpOk=true,retry=false,readFailureOn=null,readAbortOn=null,token='test-token',kind='vendor',filesOverride=null}){
  const calls=[];const headersSeen=[];let uploadCount=0;const uploadedTypes=[];
  const sandbox={
    window:{DBEST_RUNTIME_CONFIG:{supabaseUrl:'https://example.invalid',supabasePublishableKey:'test-public-key'}},
@@ -15,7 +15,7 @@ async function scenario({uploadOk=true,listed=true,complete=true,uploadResponseT
    fetch:async(url,opts)=>{
      const body=JSON.parse(opts.body);calls.push(body.action);headersSeen.push(opts.headers);if(body.action==='upload')uploadedTypes.push(body.docType);
      const data=body.action==='upload'?{ok:Array.isArray(uploadOk)?uploadOk[uploadCount++]:uploadOk,document:{doc_type:uploadResponseType||body.docType}}:
-       {ok:listOk,documents:listDocumentsValid?(listed?(listMalformed?[null]:((listTypes||uploadedTypes).map(doc_type=>({doc_type})))):[]):null,kyc:{complete}};
+       {ok:listOk,documents:listDocumentsValid?(listed?(listMalformed?[null]:((listTypes||uploadedTypes).map(doc_type=>({doc_type})))):[]):null,kyc:{complete,missing}};
      const httpOk=body.action==='upload'?uploadHttpOk:listHttpOk;
      return {ok:httpOk,status:httpOk?200:503,json:async()=>httpOk?data:{error:'temporarily_unavailable'}};
    }
@@ -30,6 +30,10 @@ async function scenario({uploadOk=true,listed=true,complete=true,uploadResponseT
  return {calls,headersSeen,error:errors[errors.length-1],errors};
 }
 (async()=>{
+ const contradictory=await scenario({complete:true,missing:['pan']});
+ assert.match(contradictory.error,/kyc_required_documents_missing_pan/,'A contradictory backend completion response must not be accepted');
+ const malformedMissing=await scenario({complete:true,missing:null});
+ assert.match(malformedMissing.error,/kyc_required_documents_missing/,'A malformed missing-documents response must not be accepted');
  const missingSession=await scenario({token:''});
  assert.match(missingSession.error,/kyc_partner_session_missing/);
  assert.deepEqual(missingSession.calls,[]);
