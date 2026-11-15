@@ -56,6 +56,7 @@ jobs:
           assert 'page.setPadding(dp(16), dp(8), dp(16), dp(84));' in src, 'Home footer may be obscured'
           assert 'actions.addView(workspace, new LinearLayout.LayoutParams(0, dp(48), 1.5f));' in src
           assert 'actions.addView(join, new LinearLayout.LayoutParams(0, dp(48), 0.72f));' in src
+          assert 'brand.addView(privacyMenu, new LinearLayout.LayoutParams(dp(48), dp(48)));' in src, 'Home privacy menu needs 48x48dp touch target'
           assert 'back.setContentDescription("Back");' in src
           # Keep all compact workspace-header controls at accessible 48dp height.
           # Back, Home and Privacy must each meet 48x48dp minimum touch targets.
