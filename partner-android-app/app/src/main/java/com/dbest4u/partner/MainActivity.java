@@ -101,7 +101,7 @@ public final class MainActivity extends ComponentActivity {
         scroll.setFillViewport(true);
         scroll.setClipToPadding(false);
         LinearLayout page = column();
-        page.setPadding(dp(16), dp(11), dp(16), dp(25));
+        page.setPadding(dp(16), dp(8), dp(16), dp(20));
         scroll.addView(page);
 
         // Genuine DBest logo, bundled locally so the first screen never waits for network images.
@@ -110,7 +110,7 @@ public final class MainActivity extends ComponentActivity {
         logo.setImageResource(R.drawable.dbest_brand);
         logo.setAdjustViewBounds(true);
         logo.setScaleType(ImageView.ScaleType.FIT_CENTER);
-        brand.addView(logo, new LinearLayout.LayoutParams(dp(150), dp(62)));
+        brand.addView(logo, new LinearLayout.LayoutParams(dp(130), dp(52)));
         View empty = new View(this);
         brand.addView(empty, new LinearLayout.LayoutParams(0, 1, 1));
         TextView partner = txt("PARTNER\nNETWORK", 11, BLUE, true);
@@ -123,29 +123,29 @@ public final class MainActivity extends ComponentActivity {
         privacyMenu.setOnClickListener(v -> showAccountSettings());
         brand.addView(privacyMenu, new LinearLayout.LayoutParams(dp(44), dp(48)));
         page.addView(brand);
-        space(page, 12);
+        space(page, 8);
 
         LinearLayout hero = column();
-        hero.setPadding(dp(19), dp(17), dp(19), dp(18));
+        hero.setPadding(dp(16), dp(13), dp(16), dp(14));
         GradientDrawable heroShape = new GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 new int[]{0xFF102F68, 0xFF1760FF, 0xFF6D52EF});
-        heroShape.setCornerRadius(dp(22));
+        heroShape.setCornerRadius(dp(18));
         hero.setBackground(heroShape);
         hero.addView(txt("ONE PARTNER NETWORK", 10, 0xFFE6EDFF, true));
         space(hero, 8);
-        hero.addView(txt("Your work. Your growth.", 25, Color.WHITE, true));
+        hero.addView(txt("Your work. Your growth.", 22, Color.WHITE, true));
         space(hero, 6);
         TextView caption = txt("Orders, trips and service jobs—one dedicated DBest app.", 12, 0xFFF0F3FF, false);
         caption.setLineSpacing(dp(2), 1);
         hero.addView(caption);
         page.addView(hero);
-        space(page, 20);
+        space(page, 14);
 
-        page.addView(txt("Choose your workspace", 22, NAVY, true));
+        page.addView(txt("Choose your workspace", 20, NAVY, true));
         space(page, 4);
         page.addView(txt("Real opportunities. Secure access to your existing partner account.", 12, 0xFF627189, false));
-        space(page, 13);
+        space(page, 9);
 
         page.addView(roleCard(
                 "Vendor", "GROCERY · RESTAURANT · PHARMACY",
@@ -176,7 +176,7 @@ public final class MainActivity extends ComponentActivity {
         // Account deletion stays accessible via the Account & Privacy menu,
         // not as a prominent button on the Partner home screen.
         space(page, 18);
-        TextView legal = txt("DBest Partner • Canary candidate", 11, 0xFF8B98AB, false);
+        TextView legal = txt("DBest Partner • Secure partner access", 11, 0xFF8B98AB, false);
         legal.setGravity(Gravity.CENTER);
         page.addView(legal);
         return scroll;
@@ -186,7 +186,7 @@ public final class MainActivity extends ComponentActivity {
     private View roleCard(String title, String category, String summary, int color,
                           int photoResource, String loginPath, String joinPath) {
         LinearLayout card = column();
-        card.setPadding(dp(10), dp(10), dp(10), dp(13));
+        card.setPadding(dp(10), dp(10), dp(10), dp(10));
         card.setBackground(bordered(Color.WHITE, 0xFFE3E8F0, 20));
         card.setElevation(dp(2));
 
@@ -205,12 +205,12 @@ public final class MainActivity extends ComponentActivity {
         overlayParams.leftMargin = dp(9);
         overlayParams.topMargin = dp(9);
         photoFrame.addView(overlay, overlayParams);
-        card.addView(photoFrame, new LinearLayout.LayoutParams(-1, dp(151)));
+        card.addView(photoFrame, new LinearLayout.LayoutParams(-1, dp(104)));
 
         space(card, 11);
         LinearLayout titleRow = row();
         titleRow.setPadding(dp(4), 0, dp(4), 0);
-        titleRow.addView(txt(title, 20, NAVY, true));
+        titleRow.addView(txt(title, 18, NAVY, true));
         View gap = new View(this);
         titleRow.addView(gap, new LinearLayout.LayoutParams(0, 1, 1));
         TextView ready = txt("• DBest Partner", 10, color, true);
@@ -221,16 +221,16 @@ public final class MainActivity extends ComponentActivity {
         TextView desc = txt(summary, 12, 0xFF657187, false);
         desc.setPadding(dp(4), 0, dp(4), 0);
         card.addView(desc);
-        space(card, 12);
+        space(card, 8);
 
         LinearLayout actions = row();
         Button workspace = button("Open workspace", Color.WHITE, color);
         workspace.setOnClickListener(v -> openPortal(title, loginPath));
-        actions.addView(workspace, new LinearLayout.LayoutParams(0, dp(46), 1.5f));
+        actions.addView(workspace, new LinearLayout.LayoutParams(0, dp(42), 1.5f));
         spaceWidth(actions, 8);
         Button join = button("Join", color, tint(color));
         join.setOnClickListener(v -> openPortal(title + " · Join", joinPath));
-        actions.addView(join, new LinearLayout.LayoutParams(0, dp(46), 0.72f));
+        actions.addView(join, new LinearLayout.LayoutParams(0, dp(42), 0.72f));
         card.addView(actions);
         return card;
     }
