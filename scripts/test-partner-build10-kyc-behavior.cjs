@@ -64,6 +64,10 @@ async function scenario({uploadOk=true,listed=true,complete=true,uploadResponseT
  const secondUploadRejected=await scenario({kind:'vaahak',uploadOk:[true,false],filesOverride:[{docType:'id_proof',file:{name:'id.pdf',type:'application/pdf',size:4}},{docType:'driving_licence',file:{name:'licence.pdf',type:'application/pdf',size:4}}]});
  assert.match(secondUploadRejected.error,/kyc_upload_unconfirmed_driving_licence/);
  assert.deepEqual(secondUploadRejected.calls,['upload','upload'],'A failed second upload must not be reported as persisted or invoke list_own');
+ const vaahakRetry=await scenario({kind:'vaahak',retry:true,uploadOk:[true,false,true,true],filesOverride:[{docType:'id_proof',file:{name:'id.pdf',type:'application/pdf',size:4}},{docType:'driving_licence',file:{name:'licence.pdf',type:'application/pdf',size:4}}]});
+ assert.match(vaahakRetry.errors[0],/kyc_upload_unconfirmed_driving_licence/);
+ assert.equal(vaahakRetry.errors[1],null,'Retry must succeed only after both Vaahak uploads and persistence check');
+ assert.deepEqual(vaahakRetry.calls,['upload','upload','upload','upload','list_own'],'First failed attempt must not call persistence confirmation; retry must verify both documents');
  const vaahakGood=await scenario({kind:'vaahak',filesOverride:[{docType:'id_proof',file:{name:'id.pdf',type:'application/pdf',size:4}},{docType:'driving_licence',file:{name:'licence.pdf',type:'application/pdf',size:4}}]});
  assert.equal(vaahakGood.error,null,'Vaahak multiple document upload must confirm persisted types');
  assert.deepEqual(vaahakGood.calls,['upload','upload','list_own']);
