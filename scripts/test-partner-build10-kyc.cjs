@@ -17,6 +17,9 @@ assert.match(upload,/await secureVendorRegistration\(id,fd,files\);return r/);
 assert.match(upload,/await secureVaahakRegistration\(id,pin,files\);return r/);
 assert.match(upload,/throw e\}\}/);
 
+// Missing standalone Vaahak PIN/KYC context must cancel native submission, not just display a warning.
+assert.match(upload,/Required Vaahak KYC or PIN is missing[^\n]*event\.preventDefault\(\);event\.stopImmediatePropagation\(\);return/);
+
 // Standalone Vaahak asynchronous upload must have a rejection handler and actionable retry guidance.
 assert.match(upload,/if\(!p\?\.id\)throw new Error\('vaahak_registration_id_unconfirmed'\)/);
 assert.match(upload,/\}\)\(\)\.catch\(err=>\{/);
