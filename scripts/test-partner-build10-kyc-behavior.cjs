@@ -113,6 +113,12 @@ async function scenario({uploadOk=true,listed=true,complete=true,uploadResponseT
  assert.match(absent.error,/kyc_documents_not_persisted_pan/);
  const incomplete=await scenario({complete:false});
  assert.match(incomplete.error,/kyc_required_documents_missing_/);
+ const repeatedFailedPersistence=await scenario({retry:true,listed:false});
+ assert.deepEqual(repeatedFailedPersistence.errors,['kyc_documents_not_persisted_pan','kyc_documents_not_persisted_pan'],'Retries must never claim success when the backend still cannot confirm persisted documents');
+ assert.deepEqual(repeatedFailedPersistence.calls,['upload','list_own','upload','list_own']);
+ const repeatedIncomplete=await scenario({retry:true,complete:false});
+ assert.deepEqual(repeatedIncomplete.errors,['kyc_required_documents_missing_','kyc_required_documents_missing_'],'Repeated incomplete KYC must remain blocked');
+ assert.deepEqual(repeatedIncomplete.calls,['upload','list_own','upload','list_own']);
  const retried=await scenario({uploadOk:[false,true],retry:true});
  assert.match(retried.errors[0],/kyc_upload_unconfirmed_pan/);
  assert.equal(retried.errors[1],null);
