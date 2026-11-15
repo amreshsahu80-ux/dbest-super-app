@@ -30,7 +30,7 @@ jobs:
         run: |
           grep -Fq "applicationId 'com.dbest4u.partner'" app/build.gradle
           grep -Fq 'versionCode 10' app/build.gradle
-          grep -Fq 'Gravity.BOTTOM|Gravity.RIGHT' app/src/main/java/com/dbest4u/partner/PartnerPushTestController.java
+          grep -Fq 'Gravity.BOTTOM|Gravity.LEFT' app/src/main/java/com/dbest4u/partner/PartnerPushTestController.java
           grep -Fq 'Partner notifications off. Tap for settings' app/src/main/java/com/dbest4u/partner/PartnerPushTestController.java
       - name: Regression-check all three Partner home routes and safe navigation
         run: |
@@ -64,8 +64,9 @@ jobs:
           assert 'home.setContentDescription("Partner home");' in src
           assert 'linkAccount.setContentDescription("Link signed-in partner account to notifications");' in src
           push=Path('app/src/main/java/com/dbest4u/partner/PartnerPushTestController.java').read_text()
-          assert 'Gravity.BOTTOM|Gravity.RIGHT' in push, 'Notification toggle gravity changed'
+          assert 'Gravity.BOTTOM|Gravity.LEFT' in push, 'Notification toggle gravity changed'
           assert 'setHomeVisible' in push, 'Notification visibility API missing'
+          assert 'dp(48),Gravity.BOTTOM|Gravity.LEFT' in push, 'Notification toggle must avoid bottom-right WhatsApp floater'
           print('PASS: role routes, join actions, accessibility, canonical push role and safe navigation')
           PY
       - name: Configure isolated QA Firebase client for compilation only
