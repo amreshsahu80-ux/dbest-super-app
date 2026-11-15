@@ -3,7 +3,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const vm=require('node:vm');
 const source=fs.readFileSync('partner-kyc-registration-upload-v2.js','utf8');
-async function scenario({uploadOk=true,listed=true,complete=true,uploadResponseType=null,listTypes=null,listOk=true,listDocumentsValid=true,listMalformed=false,uploadHttpOk=true,listHttpOk=true,retry=false,readFailureOn=null,token='test-token',kind='vendor',filesOverride=null}){
+async function scenario({uploadOk=true,listed=true,complete=true,uploadResponseType=null,listTypes=null,listOk=true,listDocumentsValid=true,listMalformed=false,uploadHttpOk=true,listHttpOk=true,retry=false,readFailureOn=null,readAbortOn=null,token='test-token',kind='vendor',filesOverride=null}){
  const calls=[];let uploadCount=0;const uploadedTypes=[];
  const sandbox={
    window:{DBEST_RUNTIME_CONFIG:{supabaseUrl:'https://example.invalid',supabasePublishableKey:'test-public-key'}},
@@ -11,7 +11,7 @@ async function scenario({uploadOk=true,listed=true,complete=true,uploadResponseT
    location:{pathname:'/test'},
    setInterval:()=>0,clearInterval:()=>{},setTimeout:()=>0,
    console,alert:()=>{},
-   FileReader:class{readAsDataURL(file){if(file.name===readFailureOn){this.onerror();return;}this.result='data:application/pdf;base64,VEVTVA==';this.onload();}},
+   FileReader:class{readAsDataURL(file){if(file.name===readFailureOn){this.onerror();return;}if(file.name===readAbortOn){this.onabort();return;}this.result='data:application/pdf;base64,VEVTVA==';this.onload();}},
    fetch:async(url,opts)=>{
      const body=JSON.parse(opts.body);calls.push(body.action);if(body.action==='upload')uploadedTypes.push(body.docType);
      const data=body.action==='upload'?{ok:Array.isArray(uploadOk)?uploadOk[uploadCount++]:uploadOk,document:{doc_type:uploadResponseType||body.docType}}:
@@ -67,6 +67,9 @@ async function scenario({uploadOk=true,listed=true,complete=true,uploadResponseT
  const unreadableLater=await scenario({readFailureOn:'unreadable.pdf',filesOverride:[{docType:'pan',file:fakeFile},{docType:'bank_proof',file:{name:'unreadable.pdf',type:'application/pdf',size:4}}]});
  assert.match(unreadableLater.error,/file_read_failed/);
  assert.deepEqual(unreadableLater.calls,[],'Preflight must reject an unreadable later file without uploading earlier files');
+ const abortedLater=await scenario({readAbortOn:'cancelled.pdf',filesOverride:[{docType:'pan',file:fakeFile},{docType:'bank_proof',file:{name:'cancelled.pdf',type:'application/pdf',size:4}}]});
+ assert.match(abortedLater.error,/file_read_aborted/);
+ assert.deepEqual(abortedLater.calls,[],'Aborted second file read must fail before any backend upload');
  const secondUploadRejected=await scenario({kind:'vaahak',uploadOk:[true,false],filesOverride:[{docType:'id_proof',file:{name:'id.pdf',type:'application/pdf',size:4}},{docType:'driving_licence',file:{name:'licence.pdf',type:'application/pdf',size:4}}]});
  assert.match(secondUploadRejected.error,/kyc_upload_unconfirmed_driving_licence/);
  assert.deepEqual(secondUploadRejected.calls,['upload','upload'],'A failed second upload must not be reported as persisted or invoke list_own');
