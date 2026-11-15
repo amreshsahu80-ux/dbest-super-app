@@ -3,7 +3,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const vm=require('node:vm');
 const source=fs.readFileSync('partner-kyc-registration-upload-v2.js','utf8');
-async function scenario({uploadOk=true,listed=true,complete=true,uploadResponseType='pan',retry=false}){
+async function scenario({uploadOk=true,listed=true,complete=true,uploadResponseType='pan',listOk=true,retry=false}){
  const calls=[];let uploadCount=0;
  const sandbox={
    window:{DBEST_RUNTIME_CONFIG:{supabaseUrl:'https://example.invalid',supabasePublishableKey:'test-public-key'}},
@@ -15,7 +15,7 @@ async function scenario({uploadOk=true,listed=true,complete=true,uploadResponseT
    fetch:async(url,opts)=>{
      const body=JSON.parse(opts.body);calls.push(body.action);
      const data=body.action==='upload'?{ok:Array.isArray(uploadOk)?uploadOk[uploadCount++]:uploadOk,document:{doc_type:uploadResponseType}}:
-       {documents:listed?[{doc_type:'pan'}]:[],kyc:{complete}};
+       {ok:listOk,documents:listed?[{doc_type:'pan'}]:[],kyc:{complete}};
      return {ok:true,status:200,json:async()=>data};
    }
  };
@@ -37,6 +37,9 @@ async function scenario({uploadOk=true,listed=true,complete=true,uploadResponseT
  const wrongType=await scenario({uploadResponseType:'aadhaar'});
  assert.match(wrongType.error,/kyc_upload_unconfirmed_pan/);
  assert.deepEqual(wrongType.calls,['upload']);
+ const unconfirmedList=await scenario({listOk:false});
+ assert.match(unconfirmedList.error,/kyc_document_list_unconfirmed/);
+ assert.deepEqual(unconfirmedList.calls,['upload','list_own']);
  const absent=await scenario({listed:false});
  assert.match(absent.error,/kyc_documents_not_persisted_pan/);
  const incomplete=await scenario({complete:false});
