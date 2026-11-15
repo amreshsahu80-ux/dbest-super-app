@@ -49,6 +49,19 @@ jobs:
           PY
       - name: Compile separate-install QA APK and production release AAB without signing
         run: gradle :app:assembleProductionDebug :app:bundleProductionRelease :app:assembleQaDebug --no-daemon
+      - name: Verify generated APK and unsigned AAB outputs
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib
+          qa=list(Path('app/build/outputs/apk/qa/debug').glob('*.apk'))
+          aab=list(Path('app/build/outputs/bundle/productionRelease').glob('*.aab'))
+          assert len(qa)==1 and qa[0].stat().st_size>100000, f'Expected one nonempty QA APK: {qa}'
+          assert len(aab)==1 and aab[0].stat().st_size>100000, f'Expected one nonempty production AAB: {aab}'
+          for p in qa+aab:
+              print(f'{p}: {p.stat().st_size} bytes sha256={hashlib.sha256(p.read_bytes()).hexdigest()}')
+          print('Release AAB is NOT verified signed; no Play upload authorized.')
+          PY
       - name: Publish separate-install QA APK (not a Play release)
         uses: actions/upload-artifact@v4
         with:
