@@ -46,6 +46,12 @@ async function scenario({uploadOk=true,listed=true,complete=true,uploadResponseT
  const duplicate=await scenario({filesOverride:[{docType:'pan',file:fakeFile},{docType:'pan',file:fakeFile}]});
  assert.match(duplicate.error,/kyc_documents_invalid_or_duplicate/);
  assert.deepEqual(duplicate.calls,[]);
+ const crossRole=await scenario({filesOverride:[{docType:'driving_licence',file:fakeFile}]});
+ assert.match(crossRole.error,/kyc_documents_invalid_or_duplicate/);
+ assert.deepEqual(crossRole.calls,[]);
+ const crossRoleVaahak=await scenario({kind:'vaahak',filesOverride:[{docType:'pan',file:fakeFile}]});
+ assert.match(crossRoleVaahak.error,/kyc_documents_invalid_or_duplicate/);
+ assert.deepEqual(crossRoleVaahak.calls,[]);
  const good=await scenario({});
  assert.equal(good.error,null);assert.deepEqual(good.calls,['upload','list_own']);
  const rejected=await scenario({uploadOk:false});
