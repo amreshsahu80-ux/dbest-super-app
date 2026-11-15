@@ -292,6 +292,17 @@ public final class MainActivity extends ComponentActivity {
 
         webView.setWebViewClient(new WebViewClient() {
             @Override public void onPageFinished(WebView v, String url) {
+                // A Join flow may redirect to the signed-in workspace. Reflect the
+                // actual destination instead of retaining a stale "Join" title.
+                Uri loaded = Uri.parse(url);
+                if (isDbest(loaded) && browserTitle != null && currentRole != null) {
+                    String path = loaded.getPath() == null ? "" : loaded.getPath().toLowerCase(java.util.Locale.ROOT);
+                    String role = currentRole.replace(" · Join", "");
+                    boolean workspace = ("Vaahak".equals(role) && path.equals("/vaahak"))
+                            || ("Vendor".equals(role) && path.equals("/vendor"))
+                            || ("Service Partner".equals(role) && path.equals("/servicepartnerdashboard"));
+                    if (workspace) browserTitle.setText(role + " · Workspace");
+                }
                 if (partnerTestPush != null && isDbest(Uri.parse(url))) {
                     v.postDelayed(() -> {
                         if (partnerTestPush != null) partnerTestPush.onPortalPageLoaded();
