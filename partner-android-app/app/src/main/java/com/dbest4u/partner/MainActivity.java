@@ -101,7 +101,9 @@ public final class MainActivity extends ComponentActivity {
         scroll.setFillViewport(true);
         scroll.setClipToPadding(false);
         LinearLayout page = column();
-        page.setPadding(dp(16), dp(8), dp(16), dp(20));
+        // Reserve space for the native notification toggle floating at bottom-right.
+        // Keep the last home content fully scrollable above it on compact phones.
+        page.setPadding(dp(16), dp(8), dp(16), dp(76));
         scroll.addView(page);
 
         // Genuine DBest logo, bundled locally so the first screen never waits for network images.
