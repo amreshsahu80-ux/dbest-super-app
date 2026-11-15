@@ -52,6 +52,9 @@ async function scenario({uploadOk=true,listed=true,complete=true,uploadResponseT
  const crossRoleVaahak=await scenario({kind:'vaahak',filesOverride:[{docType:'pan',file:fakeFile}]});
  assert.match(crossRoleVaahak.error,/kyc_documents_invalid_or_duplicate/);
  assert.deepEqual(crossRoleVaahak.calls,[]);
+ const zeroByteLater=await scenario({filesOverride:[{docType:'pan',file:fakeFile},{docType:'bank_proof',file:{name:'empty.pdf',type:'application/pdf',size:0}}]});
+ assert.match(zeroByteLater.error,/kyc_file_empty/);
+ assert.deepEqual(zeroByteLater.calls,[],'Zero-byte later document must fail preflight before any backend upload');
  const oversizedLater=await scenario({filesOverride:[{docType:'pan',file:fakeFile},{docType:'bank_proof',file:{name:'large.pdf',type:'application/pdf',size:9*1024*1024}}]});
  assert.match(oversizedLater.error,/file_too_large/);
  assert.deepEqual(oversizedLater.calls,[],'Preflight must reject later invalid files before any upload');
