@@ -45,8 +45,9 @@ public final class PartnerPushTestController {
         control.setContentDescription("Partner notification settings");
         control.setTextColor(Color.WHITE);
         FrameLayout.LayoutParams lp=new FrameLayout.LayoutParams(
-            FrameLayout.LayoutParams.WRAP_CONTENT,dp(48),Gravity.BOTTOM|Gravity.RIGHT);
+            FrameLayout.LayoutParams.WRAP_CONTENT,dp(48),Gravity.BOTTOM|Gravity.LEFT);
         lp.setMargins(dp(12),0,dp(12),dp(12));
+        // Keep native notification toggle bottom-left, away from the portal's bottom-right WhatsApp floater.
         root.addView(control,lp);
         control.setOnClickListener(v->tap());
         refresh();
