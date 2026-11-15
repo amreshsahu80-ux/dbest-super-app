@@ -68,3 +68,9 @@ jobs:
           name: partner-home-qa-separate-app-apk
           path: partner-android-app/app/build/outputs/apk/qa/debug/*.apk
           retention-days: 3
+      - name: Publish unsigned production AAB for build inspection only
+        uses: actions/upload-artifact@v4
+        with:
+          name: partner-home-production-UNSIGNED-aab-NOT-FOR-PLAY
+          path: partner-android-app/app/build/outputs/bundle/productionRelease/*.aab
+          retention-days: 3
