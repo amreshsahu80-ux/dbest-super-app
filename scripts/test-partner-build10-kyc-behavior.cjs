@@ -77,6 +77,12 @@ async function scenario({uploadOk=true,listed=true,complete=true,missing=[],uplo
  const secondUploadRejected=await scenario({kind:'vaahak',uploadOk:[true,false],filesOverride:[{docType:'id_proof',file:{name:'id.pdf',type:'application/pdf',size:4}},{docType:'driving_licence',file:{name:'licence.pdf',type:'application/pdf',size:4}}]});
  assert.match(secondUploadRejected.error,/kyc_upload_unconfirmed_driving_licence/);
  assert.deepEqual(secondUploadRejected.calls,['upload','upload'],'A failed second upload must not be reported as persisted or invoke list_own');
+ const vaahakHttpFailure=await scenario({kind:'vaahak',uploadHttpOk:false,filesOverride:[{docType:'id_proof',file:{name:'id.pdf',type:'application/pdf',size:4}},{docType:'driving_licence',file:{name:'licence.pdf',type:'application/pdf',size:4}}]});
+ assert.match(vaahakHttpFailure.error,/temporarily_unavailable/,'Backend HTTP rejection must fail closed');
+ assert.deepEqual(vaahakHttpFailure.calls,['upload'],'A failed first upload must not continue to later documents or persistence confirmation');
+ const vaahakListFailure=await scenario({kind:'vaahak',listHttpOk:false,filesOverride:[{docType:'id_proof',file:{name:'id.pdf',type:'application/pdf',size:4}},{docType:'driving_licence',file:{name:'licence.pdf',type:'application/pdf',size:4}}]});
+ assert.match(vaahakListFailure.error,/temporarily_unavailable/,'Failed backend persistence confirmation must fail closed');
+ assert.deepEqual(vaahakListFailure.calls,['upload','upload','list_own'],'Confirmation failure must not be mistaken for successful KYC');
  const vaahakRetry=await scenario({kind:'vaahak',retry:true,uploadOk:[true,false,true,true],filesOverride:[{docType:'id_proof',file:{name:'id.pdf',type:'application/pdf',size:4}},{docType:'driving_licence',file:{name:'licence.pdf',type:'application/pdf',size:4}}]});
  assert.match(vaahakRetry.errors[0],/kyc_upload_unconfirmed_driving_licence/);
  assert.equal(vaahakRetry.errors[1],null,'Retry must succeed only after both Vaahak uploads and persistence check');
