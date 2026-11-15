@@ -252,11 +252,11 @@ public final class MainActivity extends ComponentActivity {
             if (webView.canGoBack()) webView.goBack();
             else showHome();
         });
-        bar.addView(back, new LinearLayout.LayoutParams(dp(38), dp(40)));
+        bar.addView(back, new LinearLayout.LayoutParams(dp(44), dp(48)));
         browserTitle = txt("DBest Partner", 13, NAVY, true);
         browserTitle.setGravity(Gravity.CENTER_VERTICAL);
         browserTitle.setPadding(dp(6), 0, 0, 0);
-        bar.addView(browserTitle, new LinearLayout.LayoutParams(0, dp(40), 1));
+        bar.addView(browserTitle, new LinearLayout.LayoutParams(0, dp(48), 1));
         // Explicit action inside the selected Vendor, Vaahak or Service
         // Partner workspace. No user token is uploaded without consent.
         Button linkAccount = button("Link", Color.WHITE, BLUE);
@@ -265,20 +265,20 @@ public final class MainActivity extends ComponentActivity {
         linkAccount.setOnClickListener(v -> {
             if (partnerTestPush != null) partnerTestPush.connectAccount();
         });
-        bar.addView(linkAccount, new LinearLayout.LayoutParams(dp(52), dp(40)));
+        bar.addView(linkAccount, new LinearLayout.LayoutParams(dp(52), dp(48)));
         spaceWidth(bar, dp(4));
         Button home = button("⌂", BLUE, 0xFFEAF0FF);
         home.setTextSize(23);
         home.setContentDescription("Partner home");
         home.setOnClickListener(v -> showHome());
-        bar.addView(home, new LinearLayout.LayoutParams(dp(42), dp(40)));
+        bar.addView(home, new LinearLayout.LayoutParams(dp(44), dp(48)));
         // All Partner roles use the same privacy menu; never show
         // account-deletion copy inside the public-facing workspace header.
         Button privacy = button("⋮", NAVY, 0xFFF0F4FB);
         privacy.setTextSize(23);
         privacy.setContentDescription("Account & Privacy");
         privacy.setOnClickListener(v -> showAccountSettings());
-        bar.addView(privacy, new LinearLayout.LayoutParams(dp(36), dp(40)));
+        bar.addView(privacy, new LinearLayout.LayoutParams(dp(40), dp(48)));
         shell.addView(bar);
 
         webView = new WebView(this);
