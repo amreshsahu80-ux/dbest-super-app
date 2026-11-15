@@ -123,7 +123,7 @@ public final class MainActivity extends ComponentActivity {
         privacyMenu.setContentDescription("Account & Privacy");
         privacyMenu.setTextSize(23);
         privacyMenu.setOnClickListener(v -> showAccountSettings());
-        brand.addView(privacyMenu, new LinearLayout.LayoutParams(dp(44), dp(48)));
+        brand.addView(privacyMenu, new LinearLayout.LayoutParams(dp(48), dp(48)));
         page.addView(brand);
         space(page, 8);
 
