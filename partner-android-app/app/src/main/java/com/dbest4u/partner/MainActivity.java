@@ -252,7 +252,7 @@ public final class MainActivity extends ComponentActivity {
             if (webView.canGoBack()) webView.goBack();
             else showHome();
         });
-        bar.addView(back, new LinearLayout.LayoutParams(dp(44), dp(48)));
+        bar.addView(back, new LinearLayout.LayoutParams(dp(48), dp(48)));
         browserTitle = txt("DBest Partner", 13, NAVY, true);
         browserTitle.setGravity(Gravity.CENTER_VERTICAL);
         browserTitle.setPadding(dp(6), 0, 0, 0);
@@ -271,14 +271,14 @@ public final class MainActivity extends ComponentActivity {
         home.setTextSize(23);
         home.setContentDescription("Partner home");
         home.setOnClickListener(v -> showHome());
-        bar.addView(home, new LinearLayout.LayoutParams(dp(44), dp(48)));
+        bar.addView(home, new LinearLayout.LayoutParams(dp(48), dp(48)));
         // All Partner roles use the same privacy menu; never show
         // account-deletion copy inside the public-facing workspace header.
         Button privacy = button("⋮", NAVY, 0xFFF0F4FB);
         privacy.setTextSize(23);
         privacy.setContentDescription("Account & Privacy");
         privacy.setOnClickListener(v -> showAccountSettings());
-        bar.addView(privacy, new LinearLayout.LayoutParams(dp(40), dp(48)));
+        bar.addView(privacy, new LinearLayout.LayoutParams(dp(48), dp(48)));
         shell.addView(bar);
 
         webView = new WebView(this);
