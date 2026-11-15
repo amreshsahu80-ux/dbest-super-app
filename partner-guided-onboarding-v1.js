@@ -3,7 +3,7 @@
 const form=document.getElementById('regForm');
 if(!form||document.getElementById('dbestGuidedSteps'))return;
 const kind=/vaahak/i.test(document.title)?'vaahak':'vendor';
-const grid=form.querySelector('.grid');if(!grid)return;
+const grid=form.querySelector('.grid');if(!grid)return;form.noValidate=true;
 const groups=kind==='vaahak'
  ?[['name','mobile','email','pin'],['vehicle','vehicleNo','ride','delivery'],['whatsappConsent']]
  :[['name','ownerName','type','mobile','email','pin'],['address','city','pincode'],['whatsappConsent']];
