@@ -54,6 +54,9 @@ jobs:
           assert 'if (partnerTestPush != null) partnerTestPush.setHomeVisible(true);' in src
           # Guard compact-device layout and the native notification safe area.
           assert 'page.setPadding(dp(16), dp(8), dp(16), dp(84));' in src, 'Home footer may be obscured'
+          assert 'card.addView(photoFrame, new LinearLayout.LayoutParams(-1, dp(84)));' in src, 'Compact role-card photo height regressed'
+          assert 'new LinearLayout.LayoutParams(-1, -2)' in src, 'Role card container layout missing'
+          assert 'dp(48), 1.5f' in src and 'dp(48), 0.72f' in src, 'Role action proportions regressed'
           assert 'actions.addView(workspace, new LinearLayout.LayoutParams(0, dp(48), 1.5f));' in src
           assert 'actions.addView(join, new LinearLayout.LayoutParams(0, dp(48), 0.72f));' in src
           assert 'brand.addView(privacyMenu, new LinearLayout.LayoutParams(dp(48), dp(48)));' in src, 'Home privacy menu needs 48x48dp touch target'
