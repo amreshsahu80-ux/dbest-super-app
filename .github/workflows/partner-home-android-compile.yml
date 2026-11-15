@@ -58,8 +58,9 @@ jobs:
           assert 'actions.addView(join, new LinearLayout.LayoutParams(0, dp(48), 0.72f));' in src
           assert 'back.setContentDescription("Back");' in src
           # Keep all compact workspace-header controls at accessible 48dp height.
-          for width in (44, 52, 40):
-              assert f'new LinearLayout.LayoutParams(dp({width}), dp(48))' in src, f'Header touch target {width}dp regressed'
+          # Back, Home and Privacy must each meet 48x48dp minimum touch targets.
+          assert src.count('new LinearLayout.LayoutParams(dp(48), dp(48))') >= 3, 'Header navigation touch targets must be at least 48x48dp'
+          assert 'new LinearLayout.LayoutParams(dp(52), dp(48))' in src, 'Notification account-link target regressed'
           assert 'new LinearLayout.LayoutParams(0, dp(48), 1)' in src
           assert 'home.setContentDescription("Partner home");' in src
           assert 'linkAccount.setContentDescription("Link signed-in partner account to notifications");' in src
