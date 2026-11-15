@@ -101,7 +101,9 @@ public final class MainActivity extends ComponentActivity {
         scroll.setFillViewport(true);
         scroll.setClipToPadding(false);
         LinearLayout page = column();
-        page.setPadding(dp(16), dp(8), dp(16), dp(20));
+        // Reserve space for the 40dp notification control and its 12dp bottom margin.
+        // Scrolling to the bottom must never put legal/footer text under the overlay.
+        page.setPadding(dp(16), dp(8), dp(16), dp(84));
         scroll.addView(page);
 
         // Genuine DBest logo, bundled locally so the first screen never waits for network images.
