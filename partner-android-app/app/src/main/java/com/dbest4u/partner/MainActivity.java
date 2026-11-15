@@ -225,10 +225,12 @@ public final class MainActivity extends ComponentActivity {
 
         LinearLayout actions = row();
         Button workspace = button("Open workspace", Color.WHITE, color);
+        workspace.setContentDescription("Open " + title + " workspace");
         workspace.setOnClickListener(v -> openPortal(title, loginPath));
         actions.addView(workspace, new LinearLayout.LayoutParams(0, dp(42), 1.5f));
         spaceWidth(actions, 8);
         Button join = button("Join", color, tint(color));
+        join.setContentDescription("Join as " + title);
         join.setOnClickListener(v -> openPortal(title + " · Join", joinPath));
         actions.addView(join, new LinearLayout.LayoutParams(0, dp(42), 0.72f));
         card.addView(actions);
