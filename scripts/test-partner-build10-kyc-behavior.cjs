@@ -3,7 +3,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const vm=require('node:vm');
 const source=fs.readFileSync('partner-kyc-registration-upload-v2.js','utf8');
-async function scenario({uploadOk=true,listed=true,complete=true,uploadResponseType='pan',listOk=true,retry=false}){
+async function scenario({uploadOk=true,listed=true,complete=true,uploadResponseType='pan',listOk=true,uploadHttpOk=true,listHttpOk=true,retry=false}){
  const calls=[];let uploadCount=0;
  const sandbox={
    window:{DBEST_RUNTIME_CONFIG:{supabaseUrl:'https://example.invalid',supabasePublishableKey:'test-public-key'}},
@@ -16,7 +16,8 @@ async function scenario({uploadOk=true,listed=true,complete=true,uploadResponseT
      const body=JSON.parse(opts.body);calls.push(body.action);
      const data=body.action==='upload'?{ok:Array.isArray(uploadOk)?uploadOk[uploadCount++]:uploadOk,document:{doc_type:uploadResponseType}}:
        {ok:listOk,documents:listed?[{doc_type:'pan'}]:[],kyc:{complete}};
-     return {ok:true,status:200,json:async()=>data};
+     const httpOk=body.action==='upload'?uploadHttpOk:listHttpOk;
+     return {ok:httpOk,status:httpOk?200:503,json:async()=>httpOk?data:{error:'temporarily_unavailable'}};
    }
  };
  vm.runInNewContext(source,sandbox,{filename:'partner-kyc-registration-upload-v2.js'});
@@ -40,6 +41,12 @@ async function scenario({uploadOk=true,listed=true,complete=true,uploadResponseT
  const unconfirmedList=await scenario({listOk:false});
  assert.match(unconfirmedList.error,/kyc_document_list_unconfirmed/);
  assert.deepEqual(unconfirmedList.calls,['upload','list_own']);
+ const failedUploadHttp=await scenario({uploadHttpOk:false});
+ assert.match(failedUploadHttp.error,/temporarily_unavailable/);
+ assert.deepEqual(failedUploadHttp.calls,['upload']);
+ const failedListHttp=await scenario({listHttpOk:false});
+ assert.match(failedListHttp.error,/temporarily_unavailable/);
+ assert.deepEqual(failedListHttp.calls,['upload','list_own']);
  const absent=await scenario({listed:false});
  assert.match(absent.error,/kyc_documents_not_persisted_pan/);
  const incomplete=await scenario({complete:false});
@@ -48,5 +55,5 @@ async function scenario({uploadOk=true,listed=true,complete=true,uploadResponseT
  assert.match(retried.errors[0],/kyc_upload_unconfirmed_pan/);
  assert.equal(retried.errors[1],null);
  assert.deepEqual(retried.calls,['upload','upload','list_own']);
- console.log('PASS: upload rejection, mismatched document response, persistence absence, incomplete KYC, confirmed KYC');
+ console.log('PASS: HTTP failures, upload rejection, mismatched document response, persistence absence, incomplete KYC, confirmed KYC');
 })().catch(e=>{console.error(e);process.exitCode=1;});
