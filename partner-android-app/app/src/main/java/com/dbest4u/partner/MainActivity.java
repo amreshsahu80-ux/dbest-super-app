@@ -436,8 +436,12 @@ public final class MainActivity extends ComponentActivity {
 
     private void openPortal(String name, String route) {
         if (!route.startsWith("/") || route.startsWith("//")) return;
-        if (partnerTestPush != null) partnerTestPush.onWorkspaceSelected(name);
-        currentRole = name;
+        // Keep the notification account role canonical even when the UI opens Join.
+        // A display suffix must never become a push subscription role.
+        String canonicalRole = name.endsWith(" · Join")
+                ? name.substring(0, name.length() - " · Join".length()) : name;
+        if (partnerTestPush != null) partnerTestPush.onWorkspaceSelected(canonicalRole);
+        currentRole = canonicalRole;
         browserTitle.setText(name);
         showingBrowser = true;
         homeScreen.setVisibility(View.GONE);
