@@ -72,7 +72,7 @@ public final class PartnerPushTestController {
             accountBinding.hasAccountBinding() ? "Notification unlink pending. Tap to retry" :
             "Partner notifications off. Tap for settings");
         control.setBackgroundTintList(ColorStateList.valueOf(active?0xFF18784B:0xFF3D5B83));
-        control.setStateDescription(active ? "On" : "Off");
+        // Accessible ON/OFF state is included in contentDescription above.
     }
     private void tap(){
         if(!firebaseReady){Toast.makeText(activity,"Firebase not ready.",Toast.LENGTH_LONG).show();return;}
