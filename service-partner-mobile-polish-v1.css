@@ -1,0 +1,26 @@
+/* DBest Service Partner: presentation-only polish. No onboarding/payment logic changes. */
+:root{--sp-ink:#162c4b;--sp-blue:#1765f3;--sp-line:#dce6f3}
+body{background:#f4f7fd!important;color:var(--sp-ink)!important;-webkit-text-size-adjust:100%}
+.wrap{max-width:760px;padding:12px!important}
+.top{background:#fff;border:1px solid var(--sp-line);padding:12px 14px;border-radius:14px;flex-wrap:wrap}
+.top .brand{font-size:17px;letter-spacing:-.02em}
+.top a{font-size:13px;color:#2557a1}
+.card{border:1px solid var(--sp-line);border-radius:20px!important;box-shadow:0 5px 18px #16345d0b!important;padding:20px!important}
+.hero{background:linear-gradient(125deg,#123f91,#216cf0)!important;border:0!important}
+.hero h1{font-size:clamp(24px,5vw,31px);line-height:1.18;letter-spacing:-.03em}
+.hero p{line-height:1.5}
+.fee{font-size:30px;letter-spacing:-.02em}
+#onboardingProgress{background:#eef4ff;border-color:#d4e3ff}
+#onboardingProgress>b{color:#2457a0;font-size:14px}
+#progressBar{background:#1765f3!important}
+.card h2{font-size:clamp(21px,4.5vw,27px);line-height:1.25;letter-spacing:-.02em;margin-top:0}
+label{color:#4f617b;line-height:1.45}
+input,textarea,select{min-height:48px;border:1px solid #cbd8e8!important;border-radius:12px!important;background:#fff;font-size:16px!important;max-width:100%}
+input:focus,textarea:focus,select:focus{outline:2px solid #a6c5ff;outline-offset:1px}
+input[type=checkbox]{min-height:auto;accent-color:#1765f3}
+.btn{min-height:48px;border-radius:12px!important;line-height:1.35;white-space:normal}
+.note{border-radius:12px;line-height:1.55}
+#accountCard,#loginCard,#otpCard,#kycCard,#agreementCard,#successCard{scroll-margin-top:18px}
+#kycForm input[type=file]{width:100%;max-width:100%;font-size:13px}
+@media(max-width:640px){.wrap{padding:10px!important}.card{padding:16px!important;margin:12px 0!important}.grid{grid-template-columns:minmax(0,1fr)!important;gap:14px!important}.full{grid-column:1/-1!important}.hero h1{font-size:25px}.top{gap:8px}.agree{align-items:flex-start}}
+@media(prefers-reduced-motion:reduce){#progressBar{transition:none!important}}
