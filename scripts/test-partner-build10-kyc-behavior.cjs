@@ -3,7 +3,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const vm=require('node:vm');
 const source=fs.readFileSync('partner-kyc-registration-upload-v2.js','utf8');
-async function scenario({uploadOk=true,listed=true,complete=true,uploadResponseType='pan',listOk=true,listDocumentsValid=true,uploadHttpOk=true,listHttpOk=true,retry=false,token='test-token',kind='vendor',filesOverride=null}){
+async function scenario({uploadOk=true,listed=true,complete=true,uploadResponseType='pan',listOk=true,listDocumentsValid=true,uploadHttpOk=true,listHttpOk=true,retry=false,readFailureOn=null,token='test-token',kind='vendor',filesOverride=null}){
  const calls=[];let uploadCount=0;
  const sandbox={
    window:{DBEST_RUNTIME_CONFIG:{supabaseUrl:'https://example.invalid',supabasePublishableKey:'test-public-key'}},
@@ -11,7 +11,7 @@ async function scenario({uploadOk=true,listed=true,complete=true,uploadResponseT
    location:{pathname:'/test'},
    setInterval:()=>0,clearInterval:()=>{},setTimeout:()=>0,
    console,alert:()=>{},
-   FileReader:class{readAsDataURL(){this.result='data:application/pdf;base64,VEVTVA==';this.onload();}},
+   FileReader:class{readAsDataURL(file){if(file.name===readFailureOn){this.onerror();return;}this.result='data:application/pdf;base64,VEVTVA==';this.onload();}},
    fetch:async(url,opts)=>{
      const body=JSON.parse(opts.body);calls.push(body.action);
      const data=body.action==='upload'?{ok:Array.isArray(uploadOk)?uploadOk[uploadCount++]:uploadOk,document:{doc_type:uploadResponseType}}:
@@ -55,6 +55,9 @@ async function scenario({uploadOk=true,listed=true,complete=true,uploadResponseT
  const oversizedLater=await scenario({filesOverride:[{docType:'pan',file:fakeFile},{docType:'bank_proof',file:{name:'large.pdf',type:'application/pdf',size:9*1024*1024}}]});
  assert.match(oversizedLater.error,/file_too_large/);
  assert.deepEqual(oversizedLater.calls,[],'Preflight must reject later invalid files before any upload');
+ const unreadableLater=await scenario({readFailureOn:'unreadable.pdf',filesOverride:[{docType:'pan',file:fakeFile},{docType:'bank_proof',file:{name:'unreadable.pdf',type:'application/pdf',size:4}}]});
+ assert.match(unreadableLater.error,/file_read_failed/);
+ assert.deepEqual(unreadableLater.calls,[],'Preflight must reject an unreadable later file without uploading earlier files');
  const good=await scenario({});
  assert.equal(good.error,null);assert.deepEqual(good.calls,['upload','list_own']);
  const rejected=await scenario({uploadOk:false});
