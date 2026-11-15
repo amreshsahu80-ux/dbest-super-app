@@ -4,7 +4,7 @@ const fs=require('node:fs');
 const vm=require('node:vm');
 const source=fs.readFileSync('partner-kyc-registration-upload-v2.js','utf8');
 async function scenario({uploadOk=true,listed=true,complete=true,uploadResponseType=null,listTypes=null,listOk=true,listDocumentsValid=true,listMalformed=false,uploadHttpOk=true,listHttpOk=true,retry=false,readFailureOn=null,readAbortOn=null,token='test-token',kind='vendor',filesOverride=null}){
- const calls=[];let uploadCount=0;const uploadedTypes=[];
+ const calls=[];const headersSeen=[];let uploadCount=0;const uploadedTypes=[];
  const sandbox={
    window:{DBEST_RUNTIME_CONFIG:{supabaseUrl:'https://example.invalid',supabasePublishableKey:'test-public-key'}},
    document:{querySelector:()=>null,querySelectorAll:()=>[],addEventListener:()=>{}},
@@ -13,7 +13,7 @@ async function scenario({uploadOk=true,listed=true,complete=true,uploadResponseT
    console,alert:()=>{},
    FileReader:class{readAsDataURL(file){if(file.name===readFailureOn){this.onerror();return;}if(file.name===readAbortOn){this.onabort();return;}this.result='data:application/pdf;base64,VEVTVA==';this.onload();}},
    fetch:async(url,opts)=>{
-     const body=JSON.parse(opts.body);calls.push(body.action);if(body.action==='upload')uploadedTypes.push(body.docType);
+     const body=JSON.parse(opts.body);calls.push(body.action);headersSeen.push(opts.headers);if(body.action==='upload')uploadedTypes.push(body.docType);
      const data=body.action==='upload'?{ok:Array.isArray(uploadOk)?uploadOk[uploadCount++]:uploadOk,document:{doc_type:uploadResponseType||body.docType}}:
        {ok:listOk,documents:listDocumentsValid?(listed?(listMalformed?[null]:((listTypes||uploadedTypes).map(doc_type=>({doc_type})))):[]):null,kyc:{complete}};
      const httpOk=body.action==='upload'?uploadHttpOk:listHttpOk;
@@ -27,7 +27,7 @@ async function scenario({uploadOk=true,listed=true,complete=true,uploadResponseT
   try{await sandbox.window.DBEST_PARTNER_KYC_REGISTRATION_V2.upload(kind,token,filesOverride===null?[{docType:'pan',file}]:filesOverride);errors.push(null);}
   catch(e){error=String(e.message);errors.push(error);}
  }
- return {calls,error:errors[errors.length-1],errors};
+ return {calls,headersSeen,error:errors[errors.length-1],errors};
 }
 (async()=>{
  const missingSession=await scenario({token:''});
@@ -80,11 +80,13 @@ async function scenario({uploadOk=true,listed=true,complete=true,uploadResponseT
  const vaahakGood=await scenario({kind:'vaahak',filesOverride:[{docType:'id_proof',file:{name:'id.pdf',type:'application/pdf',size:4}},{docType:'driving_licence',file:{name:'licence.pdf',type:'application/pdf',size:4}}]});
  assert.equal(vaahakGood.error,null,'Vaahak multiple document upload must confirm persisted types');
  assert.deepEqual(vaahakGood.calls,['upload','upload','list_own']);
+ assert.ok(vaahakGood.headersSeen.every(h=>h['x-vaahak-token']==='test-token'&&!('x-vendor-token' in h)),'Vaahak KYC must use only Vaahak session credentials');
  const vaahakMissingPersistence=await scenario({kind:'vaahak',listTypes:['id_proof'],filesOverride:[{docType:'id_proof',file:{name:'id.pdf',type:'application/pdf',size:4}},{docType:'driving_licence',file:{name:'licence.pdf',type:'application/pdf',size:4}}]});
  assert.match(vaahakMissingPersistence.error,/kyc_documents_not_persisted_driving_licence/);
  assert.deepEqual(vaahakMissingPersistence.calls,['upload','upload','list_own']);
  const good=await scenario({});
  assert.equal(good.error,null);assert.deepEqual(good.calls,['upload','list_own']);
+ assert.ok(good.headersSeen.every(h=>h['x-vendor-token']==='test-token'&&!('x-vaahak-token' in h)),'Vendor KYC must use only Vendor session credentials');
  const rejected=await scenario({uploadOk:false});
  assert.match(rejected.error,/kyc_upload_unconfirmed_pan/);
  assert.deepEqual(rejected.calls,['upload']);
