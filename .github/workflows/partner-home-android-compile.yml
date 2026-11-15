@@ -57,6 +57,10 @@ jobs:
           assert 'actions.addView(workspace, new LinearLayout.LayoutParams(0, dp(48), 1.5f));' in src
           assert 'actions.addView(join, new LinearLayout.LayoutParams(0, dp(48), 0.72f));' in src
           assert 'back.setContentDescription("Back");' in src
+          # Keep all compact workspace-header controls at accessible 48dp height.
+          for width in (44, 52, 40):
+              assert f'new LinearLayout.LayoutParams(dp({width}), dp(48))' in src, f'Header touch target {width}dp regressed'
+          assert 'new LinearLayout.LayoutParams(0, dp(48), 1)' in src
           assert 'home.setContentDescription("Partner home");' in src
           assert 'linkAccount.setContentDescription("Link signed-in partner account to notifications");' in src
           push=Path('app/src/main/java/com/dbest4u/partner/PartnerPushTestController.java').read_text()
