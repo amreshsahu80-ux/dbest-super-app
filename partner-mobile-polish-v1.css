@@ -1,0 +1,29 @@
+/* DBest Partner responsive visual polish; web-only, scoped to portal surfaces. */
+:root{--dbp-ink:#152846;--dbp-blue:#2165ef;--dbp-line:#dde6f2;--dbp-bg:#f5f7fc}
+html{scroll-behavior:smooth}
+body{background:var(--dbp-bg);color:var(--dbp-ink);-webkit-text-size-adjust:100%}
+.top{padding:12px 14px!important;background:#fff!important;color:var(--dbp-ink)!important;border-bottom:1px solid var(--dbp-line)}
+.top .wrap{padding:0!important}
+.top h2,.top .brandline h2{font-size:18px!important;line-height:1.25;margin:0}
+.top small,.toplinks a{color:#536782!important}
+.toplinks{display:flex;flex-wrap:wrap;gap:10px}
+.toplinks a{margin:0!important}
+main.wrap{padding:12px!important;max-width:780px}
+.card{border-radius:18px!important;border:1px solid var(--dbp-line)!important;box-shadow:0 4px 16px rgba(18,44,88,.05)!important;padding:18px!important}
+.card h2{font-size:clamp(21px,5vw,27px);line-height:1.2;letter-spacing:-.02em}
+.field label{font-size:13px!important;color:#54677e!important;line-height:1.4}
+.field input,.field select,.field textarea{min-height:48px!important;border-radius:12px!important;border:1px solid #cbd7e6!important;background:#fff!important;max-width:100%;font-size:16px!important}
+.field input:focus,.field select:focus,.field textarea:focus{outline:2px solid #9bbdff;outline-offset:1px;border-color:var(--dbp-blue)!important}
+.btn{min-height:46px;border-radius:12px!important;white-space:normal}
+#register>.card,#register{scroll-margin-top:12px}
+#register>h2{margin-bottom:12px}
+#regForm .grid{gap:14px!important}
+#regForm input[type="file"]{max-width:100%;width:100%;font-size:13px}
+#regForm .notice{border-radius:12px;line-height:1.5}
+#regForm .row{align-items:center}
+#regForm .row>.btn{flex:1 1 150px}
+#dbestGuidedSteps{scroll-margin-top:18px}
+#dash .card{margin-bottom:12px}
+#dash .row{align-items:center}
+@media(max-width:600px){main.wrap{padding:10px!important}.card{padding:15px!important;margin:10px 0!important}.grid{grid-template-columns:1fr!important}.full{grid-column:1/-1!important}.btn{font-size:15px!important}.top{padding:10px 12px!important}.dashboardCard .identityLine{gap:10px;flex-wrap:wrap}.dashboardCard .identityLine h2{font-size:20px!important}.dashboardCard .miniMeta{overflow-wrap:anywhere}.navTabs{overflow-x:auto;scrollbar-width:thin}.navTabs button{min-height:44px}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
