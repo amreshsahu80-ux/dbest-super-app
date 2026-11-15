@@ -1,0 +1,33 @@
+/* Partner mobile UI refinement v2: presentation only, no form or business logic. */
+:root{--dbp-shadow:0 10px 28px rgba(18,44,88,.07)}
+body{font-family:system-ui,-apple-system,"Segoe UI",Arial,sans-serif}
+.top{position:relative;z-index:1}
+.top h2{letter-spacing:-.035em}
+.top .brandline{align-items:center;gap:8px}
+.top .brandline small{display:block;margin-top:5px;line-height:1.4}
+.toplinks{padding-top:6px}
+.toplinks a{text-decoration:none;font-weight:700}
+main.wrap{padding-bottom:calc(26px + env(safe-area-inset-bottom))!important}
+#home.card{background:linear-gradient(160deg,#fff 60%,#f2f7ff);padding:22px!important}
+#home h2{letter-spacing:-.035em}
+#home .muted{line-height:1.55}
+#home .row{gap:12px;margin-top:20px}
+#home .btn{flex:1 1 170px}
+#register.card,#login.card{padding:22px!important}
+#register>h2,#login>h2{letter-spacing:-.035em;margin-bottom:18px}
+#dbestGuidedSteps{background:linear-gradient(130deg,#f0f5ff,#f8fbff)!important;border:1px solid #d9e6fc!important;box-shadow:inset 0 1px 0 #fff;padding:18px!important;border-radius:18px!important}
+#dbestGuidedSteps .dbest-step-count{letter-spacing:.02em}
+#dbestGuidedSteps .dbest-step-title{font-weight:800;letter-spacing:-.03em}
+#dbestGuidedSteps .dbest-step-help{line-height:1.5}
+#regForm .field{min-width:0}
+#regForm .field label{display:block;margin-bottom:7px;font-weight:700}
+#regForm input:not([type=checkbox]):not([type=file]),#regForm select,#regForm textarea{box-shadow:0 1px 2px rgba(20,45,80,.03);padding:12px 14px!important}
+#regForm .notice{background:#f4f7ff;border:1px solid #dde8f7;padding:14px}
+#regForm input[type=checkbox]{accent-color:#2165ef}
+#regForm input[type=file]{padding:8px;line-height:1.6;border:1px solid #d4deea;border-radius:10px;background:#fff}
+#regForm input[type=file]::file-selector-button{background:#e9f1ff;border:0;border-radius:8px;padding:9px 12px;color:#1c57b3;font-weight:700;margin-right:8px}
+.dbest-wizard-actions{gap:12px!important}
+.dbest-wizard-actions .btn{min-width:0}
+#dash .card{box-shadow:var(--dbp-shadow)!important}
+#dash .statusDot{white-space:normal}
+@media(max-width:600px){#home.card,#register.card,#login.card{padding:17px!important}#home .row{display:grid;grid-template-columns:minmax(0,1fr)}#home .btn{width:100%;min-height:50px}#register>h2{font-size:24px}#dbestGuidedSteps{padding:16px!important}.toplinks{font-size:13px}.dbest-wizard-actions .btn{padding:12px 8px!important}#regForm input[type=file]{font-size:12px}}
