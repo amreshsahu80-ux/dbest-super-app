@@ -32,6 +32,28 @@ jobs:
           grep -Fq 'versionCode 10' app/build.gradle
           grep -Fq 'Gravity.BOTTOM|Gravity.RIGHT' app/src/main/java/com/dbest4u/partner/PartnerPushTestController.java
           grep -Fq 'Partner notifications off. Tap for settings' app/src/main/java/com/dbest4u/partner/PartnerPushTestController.java
+      - name: Regression-check all three Partner home routes and safe navigation
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          src=Path('app/src/main/java/com/dbest4u/partner/MainActivity.java').read_text()
+          expected={
+              'Vendor': ('/Vendor','/partner?type=Vendor'),
+              'Vaahak': ('/vaahak','/partner?type=Vaahak'),
+              'Service Partner': ('/ServicePartnerDashboard','/partner?type=Service%20Partner'),
+          }
+          for role,(workspace,join) in expected.items():
+              assert f'"{workspace}", "{join}"' in src, f'{role}: route regression'
+              assert f'openPortal(title, loginPath)' in src
+              assert f'openPortal(title + " · Join", joinPath)' in src
+              assert f'Open " + title + " workspace' in src
+              assert f'Join as " + title' in src
+          assert 'onWorkspaceSelected(canonicalRole)' in src, 'Push role must remain canonical'
+          assert 'if (!route.startsWith("/") || route.startsWith("//")) return;' in src
+          assert 'if (isDbest(url)) return false;' in src
+          assert 'if (partnerTestPush != null) partnerTestPush.setHomeVisible(true);' in src
+          print('PASS: role routes, join actions, accessibility, canonical push role and safe navigation')
+          PY
       - name: Configure isolated QA Firebase client for compilation only
         run: |
           python3 - <<'PY'
