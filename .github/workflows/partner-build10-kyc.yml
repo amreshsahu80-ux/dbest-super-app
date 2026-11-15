@@ -16,6 +16,7 @@ jobs:
         run: |
           node scripts/test-partner-build10-kyc.cjs
           node scripts/test-partner-build10-kyc-contract.cjs
+          node scripts/test-partner-build10-kyc-behavior.cjs
   android-build10-unsigned:
     runs-on: ubuntu-latest
     defaults:
