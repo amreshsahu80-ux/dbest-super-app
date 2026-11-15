@@ -12,6 +12,17 @@ android {
         versionCode 10
         versionName '1.0.6'
     }
+    // QA-only build: installs alongside the Play-distributed Partner app.
+    // Never change the production applicationId or release signing identity.
+    flavorDimensions 'distribution'
+    productFlavors {
+        production { dimension 'distribution' }
+        qa {
+            dimension 'distribution'
+            applicationIdSuffix '.qa'
+            versionNameSuffix '-qa'
+        }
+    }
     buildTypes {
         release {
             minifyEnabled false
