@@ -3,7 +3,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const vm=require('node:vm');
 const source=fs.readFileSync('partner-kyc-registration-upload-v2.js','utf8');
-async function scenario({uploadOk=true,listed=true,complete=true,uploadResponseType=null,listTypes=null,listOk=true,listDocumentsValid=true,uploadHttpOk=true,listHttpOk=true,retry=false,readFailureOn=null,token='test-token',kind='vendor',filesOverride=null}){
+async function scenario({uploadOk=true,listed=true,complete=true,uploadResponseType=null,listTypes=null,listOk=true,listDocumentsValid=true,listMalformed=false,uploadHttpOk=true,listHttpOk=true,retry=false,readFailureOn=null,token='test-token',kind='vendor',filesOverride=null}){
  const calls=[];let uploadCount=0;const uploadedTypes=[];
  const sandbox={
    window:{DBEST_RUNTIME_CONFIG:{supabaseUrl:'https://example.invalid',supabasePublishableKey:'test-public-key'}},
@@ -15,7 +15,7 @@ async function scenario({uploadOk=true,listed=true,complete=true,uploadResponseT
    fetch:async(url,opts)=>{
      const body=JSON.parse(opts.body);calls.push(body.action);if(body.action==='upload')uploadedTypes.push(body.docType);
      const data=body.action==='upload'?{ok:Array.isArray(uploadOk)?uploadOk[uploadCount++]:uploadOk,document:{doc_type:uploadResponseType||body.docType}}:
-       {ok:listOk,documents:listDocumentsValid?(listed?(listTypes||uploadedTypes).map(doc_type=>({doc_type})):[]):null,kyc:{complete}};
+       {ok:listOk,documents:listDocumentsValid?(listed?(listMalformed?[null]:((listTypes||uploadedTypes).map(doc_type=>({doc_type})))):[]):null,kyc:{complete}};
      const httpOk=body.action==='upload'?uploadHttpOk:listHttpOk;
      return {ok:httpOk,status:httpOk?200:503,json:async()=>httpOk?data:{error:'temporarily_unavailable'}};
    }
@@ -91,6 +91,9 @@ async function scenario({uploadOk=true,listed=true,complete=true,uploadResponseT
  const invalidListShape=await scenario({listDocumentsValid:false});
  assert.match(invalidListShape.error,/kyc_document_list_unconfirmed/);
  assert.deepEqual(invalidListShape.calls,['upload','list_own']);
+ const malformedListRecord=await scenario({listMalformed:true});
+ assert.match(malformedListRecord.error,/kyc_document_list_malformed/);
+ assert.deepEqual(malformedListRecord.calls,['upload','list_own'],'Malformed persistence records must fail closed');
  const failedUploadHttp=await scenario({uploadHttpOk:false});
  assert.match(failedUploadHttp.error,/temporarily_unavailable/);
  assert.deepEqual(failedUploadHttp.calls,['upload']);
