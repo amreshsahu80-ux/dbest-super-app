@@ -61,6 +61,9 @@ async function scenario({uploadOk=true,listed=true,complete=true,uploadResponseT
  const unreadableLater=await scenario({readFailureOn:'unreadable.pdf',filesOverride:[{docType:'pan',file:fakeFile},{docType:'bank_proof',file:{name:'unreadable.pdf',type:'application/pdf',size:4}}]});
  assert.match(unreadableLater.error,/file_read_failed/);
  assert.deepEqual(unreadableLater.calls,[],'Preflight must reject an unreadable later file without uploading earlier files');
+ const secondUploadRejected=await scenario({kind:'vaahak',uploadOk:[true,false],filesOverride:[{docType:'id_proof',file:{name:'id.pdf',type:'application/pdf',size:4}},{docType:'driving_licence',file:{name:'licence.pdf',type:'application/pdf',size:4}}]});
+ assert.match(secondUploadRejected.error,/kyc_upload_unconfirmed_driving_licence/);
+ assert.deepEqual(secondUploadRejected.calls,['upload','upload'],'A failed second upload must not be reported as persisted or invoke list_own');
  const vaahakGood=await scenario({kind:'vaahak',filesOverride:[{docType:'id_proof',file:{name:'id.pdf',type:'application/pdf',size:4}},{docType:'driving_licence',file:{name:'licence.pdf',type:'application/pdf',size:4}}]});
  assert.equal(vaahakGood.error,null,'Vaahak multiple document upload must confirm persisted types');
  assert.deepEqual(vaahakGood.calls,['upload','upload','list_own']);
