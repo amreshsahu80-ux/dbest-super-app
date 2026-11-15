@@ -91,8 +91,12 @@ async function loadWorkPrefs(){
   workPrefs=p;renderWorkPrefs();return true;
  }catch(e){workPrefs=null;renderWorkPrefs();console.warn('Work preference load failed',e);return false}
 }
+let workPreferenceSaving=false;
 async function toggleWorkType(k){
- if(busy)return;busy=true;
+ if(workPreferenceSaving)return;
+ workPreferenceSaving=true;
+ const button=document.querySelector('[data-work-type="'+k+'"]');
+ if(button)button.setAttribute('aria-busy','true');
  try{
   if(!workPrefs&&!(await loadWorkPrefs()))throw new Error('Cannot verify saved preferences. Retry after reconnecting.');
   const next={...workPrefs,[k]:!workPrefs[k]};
@@ -101,7 +105,7 @@ async function toggleWorkType(k){
   note((workPrefs[k]?'Enabled ':'Disabled ')+(k==='carpool'?'Car Pool':k==='deliveries'?'Deliveries':'Rides')+' requests.');
   await loadStatus(true)
  }catch(e){note('Unable to update job preference: '+e.message,false)}
- finally{busy=false}
+ finally{workPreferenceSaving=false;if(button)button.removeAttribute('aria-busy')}
 }
 document.querySelectorAll('[data-work-type]').forEach(b=>b.onclick=()=>toggleWorkType(b.dataset.workType));
 function ensureDriverIdentity(){
