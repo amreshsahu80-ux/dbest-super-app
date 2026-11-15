@@ -39,13 +39,13 @@ public final class PartnerPushTestController {
         control=new Button(activity);
         control.setAllCaps(false);
         control.setTextSize(11);
-        control.setMinWidth(0);
-        control.setMinimumWidth(0);
+        control.setMinWidth(dp(64));
+        control.setMinimumWidth(dp(64));
         control.setPadding(dp(9),0,dp(9),0);
         control.setContentDescription("Partner notification settings");
         control.setTextColor(Color.WHITE);
         FrameLayout.LayoutParams lp=new FrameLayout.LayoutParams(
-            FrameLayout.LayoutParams.WRAP_CONTENT,dp(40),Gravity.BOTTOM|Gravity.RIGHT);
+            FrameLayout.LayoutParams.WRAP_CONTENT,dp(48),Gravity.BOTTOM|Gravity.RIGHT);
         lp.setMargins(dp(12),0,dp(12),dp(12));
         root.addView(control,lp);
         control.setOnClickListener(v->tap());
@@ -72,6 +72,7 @@ public final class PartnerPushTestController {
             accountBinding.hasAccountBinding() ? "Notification unlink pending. Tap to retry" :
             "Partner notifications off. Tap for settings");
         control.setBackgroundTintList(ColorStateList.valueOf(active?0xFF18784B:0xFF3D5B83));
+        control.setStateDescription(active ? "On" : "Off");
     }
     private void tap(){
         if(!firebaseReady){Toast.makeText(activity,"Firebase not ready.",Toast.LENGTH_LONG).show();return;}
