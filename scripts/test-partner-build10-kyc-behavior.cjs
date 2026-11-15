@@ -3,7 +3,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const vm=require('node:vm');
 const source=fs.readFileSync('partner-kyc-registration-upload-v2.js','utf8');
-async function scenario({uploadOk=true,listed=true,complete=true,uploadResponseType='pan',listOk=true,uploadHttpOk=true,listHttpOk=true,retry=false}){
+async function scenario({uploadOk=true,listed=true,complete=true,uploadResponseType='pan',listOk=true,uploadHttpOk=true,listHttpOk=true,retry=false,token='test-token',filesOverride=null}){
  const calls=[];let uploadCount=0;
  const sandbox={
    window:{DBEST_RUNTIME_CONFIG:{supabaseUrl:'https://example.invalid',supabasePublishableKey:'test-public-key'}},
@@ -24,12 +24,18 @@ async function scenario({uploadOk=true,listed=true,complete=true,uploadResponseT
  const file={name:'pan.pdf',type:'application/pdf',size:4};
  let error=null;const errors=[];
  for(let attempt=0;attempt<(retry?2:1);attempt++){
-  try{await sandbox.window.DBEST_PARTNER_KYC_REGISTRATION_V2.upload('vendor','test-token',[{docType:'pan',file}]);errors.push(null);}
+  try{await sandbox.window.DBEST_PARTNER_KYC_REGISTRATION_V2.upload('vendor',token,filesOverride===null?[{docType:'pan',file}]:filesOverride);errors.push(null);}
   catch(e){error=String(e.message);errors.push(error);}
  }
  return {calls,error:errors[errors.length-1],errors};
 }
 (async()=>{
+ const missingSession=await scenario({token:''});
+ assert.match(missingSession.error,/kyc_partner_session_missing/);
+ assert.deepEqual(missingSession.calls,[]);
+ const missingDocuments=await scenario({filesOverride:[]});
+ assert.match(missingDocuments.error,/kyc_documents_missing/);
+ assert.deepEqual(missingDocuments.calls,[]);
  const good=await scenario({});
  assert.equal(good.error,null);assert.deepEqual(good.calls,['upload','list_own']);
  const rejected=await scenario({uploadOk:false});
