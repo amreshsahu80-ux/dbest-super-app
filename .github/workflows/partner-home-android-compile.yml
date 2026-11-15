@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - feat/partner-home-compact-ui-20261115
+      - feat/partner-home-notification-safe-area-20261115
   workflow_dispatch:
 permissions:
   contents: read
