@@ -58,6 +58,12 @@ async function scenario({uploadOk=true,listed=true,complete=true,uploadResponseT
  const oversizedLater=await scenario({filesOverride:[{docType:'pan',file:fakeFile},{docType:'bank_proof',file:{name:'large.pdf',type:'application/pdf',size:9*1024*1024}}]});
  assert.match(oversizedLater.error,/file_too_large/);
  assert.deepEqual(oversizedLater.calls,[],'Preflight must reject later invalid files before any upload');
+ const unsupportedLater=await scenario({filesOverride:[{docType:'pan',file:fakeFile},{docType:'bank_proof',file:{name:'malware.exe',type:'application/x-msdownload',size:4}}]});
+ assert.match(unsupportedLater.error,/kyc_file_type_invalid_bank_proof/);
+ assert.deepEqual(unsupportedLater.calls,[],'Unsupported later document must fail preflight before uploading earlier files');
+ const unnamedLater=await scenario({filesOverride:[{docType:'pan',file:fakeFile},{docType:'bank_proof',file:{name:'',type:'application/pdf',size:4}}]});
+ assert.match(unnamedLater.error,/kyc_file_type_invalid_bank_proof/);
+ assert.deepEqual(unnamedLater.calls,[],'Unnamed later document must not cause a partial upload');
  const unreadableLater=await scenario({readFailureOn:'unreadable.pdf',filesOverride:[{docType:'pan',file:fakeFile},{docType:'bank_proof',file:{name:'unreadable.pdf',type:'application/pdf',size:4}}]});
  assert.match(unreadableLater.error,/file_read_failed/);
  assert.deepEqual(unreadableLater.calls,[],'Preflight must reject an unreadable later file without uploading earlier files');
