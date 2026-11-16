@@ -310,6 +310,10 @@ public final class MainActivity extends ComponentActivity {
                 if (showingBrowser && browserLoading != null) browserLoading.setVisibility(View.VISIBLE);
             }
             @Override public void onPageFinished(WebView v, String url) {
+                // WebView may finish an older navigation after a different role has opened.
+                // Only the currently displayed main-frame URL may clear history, change
+                // the header, or dismiss the new workspace's progress indicator.
+                if (!showingBrowser || url == null || !url.equals(v.getUrl())) return;
                 if (resetWorkspaceHistoryOnLoad && showingBrowser) {
                     v.clearHistory();
                     resetWorkspaceHistoryOnLoad = false;
