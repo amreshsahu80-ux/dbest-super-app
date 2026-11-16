@@ -478,6 +478,9 @@ public final class MainActivity extends ComponentActivity {
         // A display suffix must never become a push subscription role.
         String canonicalRole = name.endsWith(" · Join")
                 ? name.substring(0, name.length() - " · Join".length()) : name;
+        // Cancel any chooser from the previous role before the WebView changes context.
+        // A late document-picker result must never be delivered to another workspace.
+        cancelPendingFileChooser();
         if (partnerTestPush != null) partnerTestPush.onWorkspaceSelected(canonicalRole);
         currentRole = canonicalRole;
         browserTitle.setText(name);
@@ -493,6 +496,7 @@ public final class MainActivity extends ComponentActivity {
     }
 
     private void showHome() {
+        cancelPendingFileChooser();
         showingBrowser = false;
         // A pending WebView callback from a previous workspace must not leave
         // stale progress or clear the next workspace's navigation history.
@@ -542,6 +546,14 @@ public final class MainActivity extends ComponentActivity {
             locationCallback.invoke(locationOrigin, ok, false);
             locationCallback = null;
             locationOrigin = null;
+        }
+    }
+
+    private void cancelPendingFileChooser() {
+        if (fileCallback != null) {
+            ValueCallback<Uri[]> pending = fileCallback;
+            fileCallback = null;
+            pending.onReceiveValue(null);
         }
     }
 
