@@ -384,6 +384,12 @@ public final class MainActivity extends ComponentActivity {
             }
             @Override public boolean onShowFileChooser(WebView v,
                     ValueCallback<Uri[]> callback, FileChooserParams params) {
+                // A delayed chooser request must not launch over Home or another
+                // role. Only the visible trusted workspace may request files.
+                if (!showingBrowser || !isDbest(Uri.parse(v.getUrl()))) {
+                    callback.onReceiveValue(null);
+                    return true;
+                }
                 if (fileCallback != null) fileCallback.onReceiveValue(null);
                 fileCallback = callback;
                 try {
