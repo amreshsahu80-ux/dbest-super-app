@@ -48,6 +48,9 @@ jobs:
               assert f'openPortal(title + " · Join", joinPath)' in src
               assert f'Open " + title + " workspace' in src
               assert f'Join as " + title' in src
+          assert 'card.setOnClickListener(v -> openPortal(title, loginPath));' in src, 'Role card surface must open workspace'
+          assert 'card.setContentDescription(title + " partner card. Open workspace");' in src, 'Role card needs accessible action label'
+          assert 'join.setOnClickListener(v -> openPortal(title + " · Join", joinPath));' in src, 'Join must keep its distinct route'
           assert 'onWorkspaceSelected(canonicalRole)' in src, 'Push role must remain canonical'
           assert 'if (!route.startsWith("/") || route.startsWith("//")) return;' in src
           assert 'if (isDbest(url)) return false;' in src
