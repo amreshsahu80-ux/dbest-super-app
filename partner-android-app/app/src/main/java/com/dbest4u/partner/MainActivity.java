@@ -303,6 +303,11 @@ public final class MainActivity extends ComponentActivity {
         if (android.os.Build.VERSION.SDK_INT >= 26) s.setSafeBrowsingEnabled(true);
 
         webView.setWebViewClient(new WebViewClient() {
+            @Override public void onPageStarted(WebView v, String url, android.graphics.Bitmap favicon) {
+                // Show progress for in-portal navigation and redirects, not only the first workspace open.
+                // Never expose a loading overlay on the native home screen.
+                if (showingBrowser && browserLoading != null) browserLoading.setVisibility(View.VISIBLE);
+            }
             @Override public void onPageFinished(WebView v, String url) {
                 if (browserLoading != null) browserLoading.setVisibility(View.GONE);
                 // A Join flow may redirect to the signed-in workspace. Reflect the
