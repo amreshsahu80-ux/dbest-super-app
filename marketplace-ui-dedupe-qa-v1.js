@@ -41,11 +41,11 @@
       grid.querySelectorAll('*').forEach(function(el){
         if(el.matches('.productCard,.productBody,.productImage,button,small'))return;
         if(el.closest('.productCard'))return;
-        if(el.children.length || !/^1\\s*plates?$/i.test((el.textContent||'').trim()))return;
+        if(el.children.length || !/^1\s*plates?$/i.test((el.textContent||'').trim()))return;
         el.remove();
       });
       Array.from(grid.childNodes).forEach(function(node){
-        if(node.nodeType===3 && /^1\\s*plates?$/i.test((node.textContent||'').trim()))node.remove();
+        if(node.nodeType===3 && /^1\s*plates?$/i.test((node.textContent||'').trim()))node.remove();
       });
     });
     document.querySelectorAll('.cartItem').forEach(function(item){
