@@ -27,12 +27,12 @@ assert.match(upload,/Vaahak KYC upload was not confirmed/);
 
 // Standalone Vaahak must await server-confirmed KYC before showing registration success.
 const standalone=fs.readFileSync('vaahak.html','utf8');
-assert.match(standalone,/await window\\.DBEST_PARTNER_KYC_REGISTRATION_V2\\.completeVaahakRegistration\\(d\\.id/);
+assert.match(standalone,/await window\.DBEST_PARTNER_KYC_REGISTRATION_V2\.completeVaahakRegistration\(d\.id/);
 assert.match(standalone,/Registration and mandatory KYC confirmed/);
-assert.match(standalone,/partner-kyc-registration-upload-v2\\.js/);
-assert.match(upload,/completeVaahakRegistration:async\\(id,pin,form\\)/);
-assert.match(upload,/await secureVaahakRegistration\\(id,pin,files\\)/);
-assert.match(upload,/vh\\.id!=='regForm'/);
+assert.match(standalone,/partner-kyc-registration-upload-v2\.js/);
+assert.match(upload,/completeVaahakRegistration:async\(id,pin,form\)/);
+assert.match(upload,/await secureVaahakRegistration\(id,pin,files\)/);
+assert.match(upload,/vh\.id!=='regForm'/);
 
 const service=fs.readFileSync('service-partner-onboarding-v3.html','utf8');
 assert.match(service,/document upload\(s\) need retry/);
