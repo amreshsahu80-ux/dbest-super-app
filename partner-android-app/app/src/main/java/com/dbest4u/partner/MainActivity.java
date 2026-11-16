@@ -90,7 +90,7 @@ public final class MainActivity extends ComponentActivity {
             @Override public void handleOnBackPressed() {
                 if (!showingBrowser) {
                     finish();
-                } else if (webView.canGoBack()) {
+                } else if (!resetWorkspaceHistoryOnLoad && webView.canGoBack()) {
                     webView.goBack();
                 } else {
                     showHome();
@@ -258,7 +258,7 @@ public final class MainActivity extends ComponentActivity {
         back.setTextSize(24);
         back.setContentDescription("Back");
         back.setOnClickListener(v -> {
-            if (webView.canGoBack()) webView.goBack();
+            if (!resetWorkspaceHistoryOnLoad && webView.canGoBack()) webView.goBack();
             else showHome();
         });
         bar.addView(back, new LinearLayout.LayoutParams(dp(48), dp(48)));
