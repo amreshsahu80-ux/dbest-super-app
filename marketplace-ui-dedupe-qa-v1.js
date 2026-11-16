@@ -17,6 +17,22 @@
         }
         break;
       }
+      // Extra unit text may be injected INSIDE productBody after Add to Cart.
+      // Keep the legitimate unit/category small above the button.
+      var body=card.querySelector('.productBody'),add=body&&body.querySelector('button.addCartBtn');
+      if(body&&add){
+        var tail=add.nextSibling,limit=0;
+        while(tail&&limit++<12){
+          var node=tail,raw=(node.textContent||'').trim();
+          tail=node.nextSibling;
+          if(node.nodeType===3&&!raw)continue;
+          if(/^1\\s*plates?$/i.test(raw)&&
+             (node.nodeType===3||(node.nodeType===1&&!node.querySelector('button,input,img')))){
+            node.remove();continue;
+          }
+          break;
+        }
+      }
       var buttons=Array.from(card.querySelectorAll('button')).filter(function(b){return /add\s*to\s*cart/i.test(b.textContent||'')});
       buttons.slice(1).forEach(function(b){b.style.setProperty('display','none','important');b.hidden=true;b.setAttribute('aria-hidden','true');b.tabIndex=-1});
     });
