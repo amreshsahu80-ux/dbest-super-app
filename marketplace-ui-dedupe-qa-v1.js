@@ -23,9 +23,22 @@
   function schedule(){if(scheduled)return;scheduled=true;requestAnimationFrame(function(){scheduled=false;clean()})}
   var style=document.createElement('style');style.textContent='.dbestMarketplaceBusy{display:inline-block;width:16px;height:16px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:dbestMarketSpin .7s linear infinite;vertical-align:middle;margin-right:7px}@keyframes dbestMarketSpin{to{transform:rotate(360deg)}}';document.head.appendChild(style);
   var obs=new MutationObserver(schedule);obs.observe(document.documentElement,{childList:true,subtree:true});
+  // Use one delegated cart action instead of relying on inline onclick in the Android WebView.
   document.addEventListener('click',function(e){
-    var b=e.target.closest('button');if(!b||!scope())return;
-    if(/add\s*to\s*cart/i.test(b.textContent||'')){if(b.dataset.dbestBusy==='1'){e.preventDefault();e.stopImmediatePropagation();return}b.dataset.dbestBusy='1';b.setAttribute('aria-busy','true');setTimeout(function(){b.dataset.dbestBusy='0';b.removeAttribute('aria-busy')},700)}
+    var btn=e.target.closest('.productCard .addCartBtn');
+    if(!btn)return;
+    e.preventDefault();e.stopImmediatePropagation();
+    if(btn.dataset.dbestAdding==='1')return;
+    var card=btn.closest('.productCard');
+    var cards=Array.from(document.querySelectorAll('.productGrid .productCard'));
+    var index=cards.indexOf(card);
+    var type=typeof marketState!=='undefined'?marketState.type:null;
+    if(!type||index<0||typeof commerceConfig==='undefined'||typeof marketAdd!=='function')return;
+    var products=commerceConfig.products.filter(function(p){return p.type===type&&catalogueLive(p)&&Number(p.stock||0)>0});
+    products=products.filter(function(p){return (marketState.category==='All'||p.category===marketState.category)&&(marketState.vendor==='All'||p.vendorId===marketState.vendor)&&(!marketState.search||(p.name+' '+p.category+' '+(marketVendor(p.vendorId)?.name||'')).toLowerCase().includes(String(marketState.search).toLowerCase()))});
+    var p=products[index];
+    if(!p){if(typeof toast==='function')toast('Product could not be identified. Refresh and retry.');return}
+    marketAdd(type,p.id,btn);
   },true);
   document.addEventListener('submit',function(e){
     var form=e.target;if(!scope()||!form.matches('.checkoutCard'))return;
