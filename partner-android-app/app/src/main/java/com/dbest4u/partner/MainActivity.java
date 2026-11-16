@@ -57,6 +57,7 @@ public final class MainActivity extends ComponentActivity {
     private GeolocationPermissions.Callback locationCallback;
     private String locationOrigin;
     private boolean showingBrowser;
+    private boolean resetWorkspaceHistoryOnLoad;
     private String currentRole = "";
 
     @Override public void onCreate(Bundle state) {
@@ -309,6 +310,10 @@ public final class MainActivity extends ComponentActivity {
                 if (showingBrowser && browserLoading != null) browserLoading.setVisibility(View.VISIBLE);
             }
             @Override public void onPageFinished(WebView v, String url) {
+                if (resetWorkspaceHistoryOnLoad && showingBrowser) {
+                    v.clearHistory();
+                    resetWorkspaceHistoryOnLoad = false;
+                }
                 if (browserLoading != null) browserLoading.setVisibility(View.GONE);
                 // A Join flow may redirect to the signed-in workspace. Reflect the
                 // actual destination instead of retaining a stale "Join" title.
@@ -469,6 +474,9 @@ public final class MainActivity extends ComponentActivity {
         browserShell.setVisibility(View.VISIBLE);
         if (partnerTestPush != null) partnerTestPush.setHomeVisible(false);
         if (browserLoading != null) browserLoading.setVisibility(View.VISIBLE);
+        // A different role must not inherit the previous workspace back stack.
+        // Clear old entries once the new main frame finishes loading.
+        resetWorkspaceHistoryOnLoad = true;
         webView.loadUrl(ORIGIN + route);
     }
 
