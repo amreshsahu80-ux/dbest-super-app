@@ -36,6 +36,18 @@
       var buttons=Array.from(card.querySelectorAll('button')).filter(function(b){return /add\s*to\s*cart/i.test(b.textContent||'')});
       buttons.slice(1).forEach(function(b){b.style.setProperty('display','none','important');b.hidden=true;b.setAttribute('aria-hidden','true');b.tabIndex=-1});
     });
+    // Restrict orphan-label removal to product grids, never the legitimate unit metadata.
+    document.querySelectorAll('.productGrid').forEach(function(grid){
+      grid.querySelectorAll('*').forEach(function(el){
+        if(el.matches('.productCard,.productBody,.productImage,button,small'))return;
+        if(el.closest('.productCard'))return;
+        if(el.children.length || !/^1\\s*plates?$/i.test((el.textContent||'').trim()))return;
+        el.remove();
+      });
+      Array.from(grid.childNodes).forEach(function(node){
+        if(node.nodeType===3 && /^1\\s*plates?$/i.test((node.textContent||'').trim()))node.remove();
+      });
+    });
     document.querySelectorAll('.cartItem').forEach(function(item){
       var controls=Array.from(item.querySelectorAll('.qtyControl'));
       var groups=Array.from(item.querySelectorAll('.qtyControl')).concat(Array.from(item.querySelectorAll('button')).filter(function(b){return /^[+−-]$/.test((b.textContent||'').trim())&&!b.closest('.qtyControl')}).map(function(b){return b.parentElement}).filter(Boolean));var unique=Array.from(new Set(groups));unique.slice(1).forEach(function(c){c.style.setProperty('display','none','important');c.hidden=true;c.setAttribute('aria-hidden','true')});
@@ -57,7 +69,7 @@
     if(btn.dataset.dbestAdding==='1')return;
     var id=btn.getAttribute('data-market-id'),type=btn.getAttribute('data-market-type');
     if(!id||!type)return;
-    btn.dataset.dbestAdding='1';btn.disabled=true;
+    btn.dataset.dbestAdding='1';btn.disabled=true;btn.setAttribute('aria-busy','true');
     btn.innerHTML='<span class="dbestMarketplaceBusy" aria-hidden="true"></span>Adding…';
     try{
       var product=commerceConfig.products.find(function(p){return String(p.id)===String(id)&&p.type===type});
@@ -74,7 +86,7 @@
     }catch(err){
       console.error('DBest marketplace cart',err);
       if(typeof toast==='function')toast(err.message||'Could not add item');
-      btn.disabled=false;btn.dataset.dbestAdding='0';btn.textContent='+ Add to Cart';
+      btn.disabled=false;btn.dataset.dbestAdding='0';btn.removeAttribute('aria-busy');btn.textContent='+ Add to Cart';
     }
   },true);
   document.addEventListener('submit',function(e){
