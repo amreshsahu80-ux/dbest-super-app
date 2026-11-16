@@ -66,6 +66,7 @@ jobs:
           assert 'browserLoading.setVisibility(View.GONE)' in home, 'Home must clear stale loading progress'
           assert 'req.getUrl() != null && req.getUrl().toString().equals(v.getUrl())' in src, 'Late WebView errors must not interrupt a newer workspace'
           assert 'v.clearHistory();' in src and 'resetWorkspaceHistoryOnLoad = false;' in src, 'New workspace must clear old back stack after load'
+          assert 'url != null && url.equals(v.getUrl())' in src.split('onPageStarted(WebView v, String url', 1)[1].split('onPageFinished(WebView v, String url', 1)[0], 'Stale page-start must not revive loading indicator'
           assert 'if (!route.startsWith("/") || route.startsWith("//")) return;' in src
           assert 'if (isDbest(url)) return false;' in src
           assert 'if (partnerTestPush != null) partnerTestPush.setHomeVisible(true);' in src
