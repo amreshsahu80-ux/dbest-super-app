@@ -40,8 +40,10 @@ import androidx.core.view.WindowInsetsCompat;
 
 public final class MainActivity extends ComponentActivity {
     private static final String ORIGIN = "https://dbest4u.com";
-    private static final int FILE_REQUEST = 1201;
-    private static final int FILE_REQUEST_MAX = 1250;
+    // Keep document-picker request codes separate from location permission (1202)
+    // and push-notification permission requests.
+    private static final int FILE_REQUEST = 1301;
+    private static final int FILE_REQUEST_MAX = 1350;
     private static final int LOCATION_REQUEST = 1202;
     private static final int NAVY = 0xFF10264B;
     private static final int BLUE = 0xFF1760FF;
