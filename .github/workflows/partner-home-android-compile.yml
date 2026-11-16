@@ -55,6 +55,9 @@ jobs:
           assert 'join.setOnClickListener(v -> openPortal(title + " · Join", joinPath));' in src, 'Join must keep its distinct route'
           assert 'onWorkspaceSelected(canonicalRole)' in src, 'Push role must remain canonical'
           assert 'resetWorkspaceHistoryOnLoad = true;' in src, 'Role switch must reset previous workspace history'
+          home = src.split('private void showHome() {', 1)[1].split('\n    }', 1)[0]
+          assert 'resetWorkspaceHistoryOnLoad = false;' in home, 'Home must cancel pending role history reset'
+          assert 'browserLoading.setVisibility(View.GONE)' in home, 'Home must clear stale loading progress'
           assert 'v.clearHistory();' in src and 'resetWorkspaceHistoryOnLoad = false;' in src, 'New workspace must clear old back stack after load'
           assert 'if (!route.startsWith("/") || route.startsWith("//")) return;' in src
           assert 'if (isDbest(url)) return false;' in src
