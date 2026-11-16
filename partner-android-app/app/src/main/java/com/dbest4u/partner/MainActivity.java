@@ -326,9 +326,15 @@ public final class MainActivity extends ComponentActivity {
                             || ("Service Partner".equals(role) && path.equals("/servicepartnerdashboard"));
                     if (workspace) browserTitle.setText(role + " · Workspace");
                 }
-                if (partnerTestPush != null && isDbest(Uri.parse(url))) {
+                if (showingBrowser && partnerTestPush != null && isDbest(Uri.parse(url))) {
+                    final String completedUrl = url;
                     v.postDelayed(() -> {
-                        if (partnerTestPush != null) partnerTestPush.onPortalPageLoaded();
+                        // A delayed callback from a previous role must not update push
+                        // state after Home navigation or a subsequent workspace switch.
+                        if (showingBrowser && partnerTestPush != null
+                                && completedUrl.equals(v.getUrl())) {
+                            partnerTestPush.onPortalPageLoaded();
+                        }
                     }, 500);
                 }
             }
