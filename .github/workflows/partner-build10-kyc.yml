@@ -32,6 +32,7 @@ jobs:
           node scripts/test-partner-build10-kyc-contract.cjs
           node scripts/test-partner-build10-kyc-behavior.cjs
           node scripts/test-partner-build10-safe-replacement.cjs
+          node scripts/test-partner-build10-serialized-replacement.cjs
   android-build10-unsigned:
     runs-on: ubuntu-latest
     defaults:
