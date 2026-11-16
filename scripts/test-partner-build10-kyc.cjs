@@ -34,6 +34,14 @@ assert.match(upload,/completeVaahakRegistration:async\(id,pin,form\)/);
 assert.match(upload,/await secureVaahakRegistration\(id,pin,files\)/);
 assert.match(upload,/vh\.id!=='regForm'/);
 
+
+// Explicit category choice avoids silently registering an electronics/retail shop as grocery.
+const vendorPortal=fs.readFileSync('vendor.html','utf8');
+assert.match(vendorPortal,/<select name="type" required><option value="" disabled selected>Select your business category<\/option>/);
+for(const category of ['grocery','restaurant','medicine','fashion','electronics','other']) {
+  assert.match(vendorPortal,new RegExp('<option value="'+category+'">'));
+}
+
 const service=fs.readFileSync('service-partner-onboarding-v3.html','utf8');
 assert.match(service,/document upload\(s\) need retry/);
 assert.match(service,/Please retry submission with the missing documents/);
