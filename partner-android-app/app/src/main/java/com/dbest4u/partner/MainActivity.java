@@ -352,7 +352,10 @@ public final class MainActivity extends ComponentActivity {
             }
             @Override public void onReceivedError(WebView v, WebResourceRequest req,
                                                    android.webkit.WebResourceError error) {
-                if (req.isForMainFrame() && showingBrowser) {
+                // Ignore a late main-frame failure from a previous workspace or redirect.
+                // It must not hide the current role's progress or show a false error.
+                if (req.isForMainFrame() && showingBrowser
+                        && req.getUrl() != null && req.getUrl().toString().equals(v.getUrl())) {
                     if (browserLoading != null) browserLoading.setVisibility(View.GONE);
                     Toast.makeText(MainActivity.this,
                             "Unable to load partner portal. Check your connection.", Toast.LENGTH_SHORT).show();
