@@ -386,7 +386,8 @@ public final class MainActivity extends ComponentActivity {
                     ValueCallback<Uri[]> callback, FileChooserParams params) {
                 // A delayed chooser request must not launch over Home or another
                 // role. Only the visible trusted workspace may request files.
-                if (!showingBrowser || !isDbest(Uri.parse(v.getUrl()))) {
+                String activeUrl = v.getUrl();
+                if (!showingBrowser || activeUrl == null || !isDbest(Uri.parse(activeUrl))) {
                     callback.onReceiveValue(null);
                     return true;
                 }
