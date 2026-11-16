@@ -6,7 +6,7 @@
   function clean(){
     if(!scope())return;
     document.querySelectorAll('.productCard').forEach(function(card){
-      Array.from(card.childNodes).forEach(function(node){if(node.nodeType===3&&/^\s*\d+\s*(plate|plates|piece|pieces)\s*$/i.test(node.textContent||''))node.remove()});
+      Array.from(card.childNodes).forEach(function(node){if(node.nodeType===3&&/\bplate\b/i.test(node.textContent||''))node.remove()});Array.from(card.children).forEach(function(el){if(!el.matches('.productImage,.productBody'))el.style.setProperty('display','none','important')});
       var buttons=Array.from(card.querySelectorAll('button')).filter(function(b){return /add\s*to\s*cart/i.test(b.textContent||'')});
       buttons.slice(1).forEach(function(b){b.style.setProperty('display','none','important');b.hidden=true;b.setAttribute('aria-hidden','true');b.tabIndex=-1});
     });
@@ -23,16 +23,33 @@
   function schedule(){if(scheduled)return;scheduled=true;requestAnimationFrame(function(){scheduled=false;clean()})}
   var style=document.createElement('style');style.textContent='.dbestMarketplaceBusy{display:inline-block;width:16px;height:16px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:dbestMarketSpin .7s linear infinite;vertical-align:middle;margin-right:7px}@keyframes dbestMarketSpin{to{transform:rotate(360deg)}}';document.head.appendChild(style);
   var obs=new MutationObserver(schedule);obs.observe(document.documentElement,{childList:true,subtree:true});
-  // Use one delegated cart action instead of relying on inline onclick in the Android WebView.
+  // Product ID is bound to each card; use a single delegated action.
   document.addEventListener('click',function(e){
-    var btn=e.target.closest('.productCard .addCartBtn');
+    var btn=e.target.closest('button.addCartBtn[data-market-id]');
     if(!btn)return;
     e.preventDefault();e.stopImmediatePropagation();
     if(btn.dataset.dbestAdding==='1')return;
-    var type=btn.dataset.marketType;
-    var id=btn.dataset.marketId;
-    if(!type||!id||typeof marketAdd!=='function'){if(typeof toast==='function')toast('Please refresh the Marketplace and retry');return}
-    marketAdd(type,id,btn);
+    var id=btn.getAttribute('data-market-id'),type=btn.getAttribute('data-market-type');
+    if(!id||!type)return;
+    btn.dataset.dbestAdding='1';btn.disabled=true;
+    btn.innerHTML='<span class="dbestMarketplaceBusy" aria-hidden="true"></span>Adding…';
+    try{
+      var product=commerceConfig.products.find(function(p){return String(p.id)===String(id)&&p.type===type});
+      if(!product||Number(product.stock)<=0)throw Error('Product unavailable');
+      var cart=(commerceCarts[type]||[]).filter(function(r){return marketProduct(r.id)&&Number(r.qty)>0});
+      var row=cart.find(function(r){return String(r.id)===String(id)});
+      if(row){if(Number(row.qty)>=Number(product.stock))throw Error('Stock limit reached');row.qty=Number(row.qty)+1}
+      else cart.push({id:product.id,qty:1});
+      commerceCarts[type]=cart;
+      localStorage.setItem('d2_commerce_carts',JSON.stringify(commerceCarts));
+      if(typeof save==='function')save();
+      if(typeof toast==='function')toast(product.name+' added to cart');
+      setTimeout(function(){if(typeof openMarketplace==='function')openMarketplace(type)},200);
+    }catch(err){
+      console.error('DBest marketplace cart',err);
+      if(typeof toast==='function')toast(err.message||'Could not add item');
+      btn.disabled=false;btn.dataset.dbestAdding='0';btn.textContent='+ Add to Cart';
+    }
   },true);
   document.addEventListener('submit',function(e){
     var form=e.target;if(!scope()||!form.matches('.checkoutCard'))return;
