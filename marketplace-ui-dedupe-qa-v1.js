@@ -33,6 +33,24 @@
           break;
         }
       }
+      // Remove only exact orphan unit labels located after the action in DOM order.
+      // A nested wrapper can hold multiple text nodes; preserve descriptions above the action.
+      if(body&&add){
+        var walker=document.createTreeWalker(body,NodeFilter.SHOW_TEXT);
+        var textNodes=[],current;
+        while((current=walker.nextNode()))textNodes.push(current);
+        textNodes.forEach(function(node){
+          if(!/^1\\s*plates?$/i.test((node.textContent||'').trim()))return;
+          if(!(add.compareDocumentPosition(node)&Node.DOCUMENT_POSITION_FOLLOWING))return;
+          var parent=node.parentElement;
+          if(!parent||parent.closest('button,small,[contenteditable="true"]'))return;
+          node.remove();
+          // Remove only now-empty, noninteractive wrappers after stripping orphan text.
+          while(parent&&parent!==body&&!parent.textContent.trim()&&!parent.querySelector('button,input,img,svg')){
+            var outer=parent.parentElement;parent.remove();parent=outer;
+          }
+        });
+      }
       var buttons=Array.from(card.querySelectorAll('button')).filter(function(b){return /add\s*to\s*cart/i.test(b.textContent||'')});
       buttons.slice(1).forEach(function(b){b.style.setProperty('display','none','important');b.hidden=true;b.setAttribute('aria-hidden','true');b.tabIndex=-1});
     });
