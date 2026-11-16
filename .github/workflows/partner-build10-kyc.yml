@@ -3,6 +3,14 @@ on:
   push:
     branches:
       - fix/partner-build10-onboarding-release-20261114
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'partner-kyc-registration-upload-v2.js'
+      - 'scripts/test-partner-build10-kyc*.cjs'
+      - 'partner-android-app/**'
+      - '.github/workflows/partner-build10-kyc.yml'
   workflow_dispatch:
 jobs:
   kyc-static:
