@@ -307,7 +307,9 @@ public final class MainActivity extends ComponentActivity {
             @Override public void onPageStarted(WebView v, String url, android.graphics.Bitmap favicon) {
                 // Show progress for in-portal navigation and redirects, not only the first workspace open.
                 // Never expose a loading overlay on the native home screen.
-                if (showingBrowser && browserLoading != null) browserLoading.setVisibility(View.VISIBLE);
+                // A late start event from an abandoned role must not revive the loading bar.
+                if (showingBrowser && url != null && url.equals(v.getUrl())
+                        && browserLoading != null) browserLoading.setVisibility(View.VISIBLE);
             }
             @Override public void onPageFinished(WebView v, String url) {
                 // WebView may finish an older navigation after a different role has opened.
