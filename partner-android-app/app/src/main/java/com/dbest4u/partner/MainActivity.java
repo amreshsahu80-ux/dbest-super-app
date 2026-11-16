@@ -236,6 +236,12 @@ public final class MainActivity extends ComponentActivity {
         join.setOnClickListener(v -> openPortal(title + " · Join", joinPath));
         actions.addView(join, new LinearLayout.LayoutParams(0, dp(48), 0.72f));
         card.addView(actions);
+        // Make the image/title area actionable without changing the separate Join action.
+        // Child buttons retain their own click handlers and routes.
+        card.setClickable(true);
+        card.setFocusable(true);
+        card.setContentDescription(title + " partner card. Open workspace");
+        card.setOnClickListener(v -> openPortal(title, loginPath));
         return card;
     }
 
