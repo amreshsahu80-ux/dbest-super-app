@@ -41,6 +41,7 @@ import androidx.core.view.WindowInsetsCompat;
 public final class MainActivity extends ComponentActivity {
     private static final String ORIGIN = "https://dbest4u.com";
     private static final int FILE_REQUEST = 1201;
+    private static final int FILE_REQUEST_MAX = 1250;
     private static final int LOCATION_REQUEST = 1202;
     private static final int NAVY = 0xFF10264B;
     private static final int BLUE = 0xFF1760FF;
@@ -54,6 +55,8 @@ public final class MainActivity extends ComponentActivity {
     private TextView browserTitle;
     private ProgressBar browserLoading;
     private ValueCallback<Uri[]> fileCallback;
+    private int nextFileRequestCode = FILE_REQUEST;
+    private int activeFileRequestCode = -1;
     private GeolocationPermissions.Callback locationCallback;
     private String locationOrigin;
     private boolean showingBrowser;
@@ -391,14 +394,19 @@ public final class MainActivity extends ComponentActivity {
                     callback.onReceiveValue(null);
                     return true;
                 }
-                if (fileCallback != null) fileCallback.onReceiveValue(null);
+                cancelPendingFileChooser();
                 fileCallback = callback;
+                // Give each picker launch a distinct request code. An old picker result
+                // must not be delivered to a new role's pending chooser callback.
+                int requestCode = nextFileRequestCode;
+                nextFileRequestCode = nextFileRequestCode >= FILE_REQUEST_MAX
+                        ? FILE_REQUEST : nextFileRequestCode + 1;
+                activeFileRequestCode = requestCode;
                 try {
-                    startActivityForResult(params.createIntent(), FILE_REQUEST);
+                    startActivityForResult(params.createIntent(), requestCode);
                     return true;
                 } catch (ActivityNotFoundException e) {
-                    fileCallback = null;
-                    callback.onReceiveValue(null);
+                    cancelPendingFileChooser();
                     return true;
                 }
             }
@@ -562,6 +570,7 @@ public final class MainActivity extends ComponentActivity {
     }
 
     private void cancelPendingFileChooser() {
+        activeFileRequestCode = -1;
         if (fileCallback != null) {
             ValueCallback<Uri[]> pending = fileCallback;
             fileCallback = null;
@@ -571,15 +580,17 @@ public final class MainActivity extends ComponentActivity {
 
     @Override protected void onActivityResult(int code, int resultCode, Intent data) {
         super.onActivityResult(code, resultCode, data);
-        if (code == FILE_REQUEST && fileCallback != null) {
-            fileCallback.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(resultCode, data));
+        if (code == activeFileRequestCode && fileCallback != null) {
+            ValueCallback<Uri[]> pending = fileCallback;
             fileCallback = null;
+            activeFileRequestCode = -1;
+            pending.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(resultCode, data));
         }
     }
 
     @Override protected void onDestroy() {
         if (partnerTestPush != null) partnerTestPush.shutdown();
-        if (fileCallback != null) fileCallback.onReceiveValue(null);
+        cancelPendingFileChooser();
         if (webView != null) webView.destroy();
         super.onDestroy();
     }
