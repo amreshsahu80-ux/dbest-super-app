@@ -1,7 +1,7 @@
 'use strict';
 const assert = require('node:assert/strict');
 const { replaceKycDocument } = require('./partner-build10-safe-kyc-replacement.cjs');
-async function scenario({ uploadFails = false, uploadThrows = false, persistFails = false, removeFails = false, readbackStale = false, committedButErrored = false, readbackThrows = false } = {}) {
+async function scenario({ uploadFails = false, uploadThrows = false, persistFails = false, removeFails = false, readbackStale = false, committedButErrored = false, readbackThrows = false, committedWithoutData = false } = {}) {
   const removed = [];
   const previous = { storage_path: 'vendor/old.pdf' };
   let current = previous;
@@ -12,12 +12,13 @@ async function scenario({ uploadFails = false, uploadThrows = false, persistFail
   };
   const documents = {
     async find() { reads++; if (readbackThrows && reads > 1) throw new Error('readback unavailable'); return readbackStale && reads > 1 ? previous : current; },
-    async upsert(row) { if (persistFails) return { error: new Error('db failed') }; current = row; if (committedButErrored) return { error: new Error('response lost') }; return { data: row }; }
+    async upsert(row) { if (persistFails) return { error: new Error('db failed') }; current = row; if (committedButErrored) return { error: new Error('response lost') }; if (committedWithoutData) return { data: null }; return { data: row }; }
   };
   const call = () => replaceKycDocument({ storage, documents, key: { partner_kind: 'vendor', partner_id: 'TEST', doc_type: 'pan' }, bytes: Buffer.from('test'), contentType: 'application/pdf', fileName: 'new.pdf', path: 'vendor/new.pdf' });
-  if (uploadFails || uploadThrows || persistFails || readbackStale || committedButErrored || readbackThrows) await assert.rejects(call);
+  if (uploadFails || uploadThrows || persistFails || readbackStale || committedButErrored || readbackThrows || committedWithoutData) await assert.rejects(call);
   else assert.equal((await call()).storage_path, 'vendor/new.pdf');
-  if (readbackThrows) { assert.deepEqual(removed, []); assert.equal(current.storage_path, 'vendor/new.pdf'); }
+  if (committedWithoutData) { assert.deepEqual(removed, []); assert.equal(current.storage_path, 'vendor/new.pdf'); }
+  else if (readbackThrows) { assert.deepEqual(removed, []); assert.equal(current.storage_path, 'vendor/new.pdf'); }
   else if (committedButErrored) { assert.deepEqual(removed, []); assert.equal(current.storage_path, 'vendor/new.pdf'); }
   else if (readbackStale) { assert.deepEqual(removed, []); assert.equal(current.storage_path, 'vendor/new.pdf'); }
   else if (uploadFails || uploadThrows) { assert.deepEqual(removed, []); assert.equal(current, previous); }
@@ -45,5 +46,6 @@ async function scenario({ uploadFails = false, uploadThrows = false, persistFail
   await scenario({ readbackStale: true });
   await scenario({ committedButErrored: true });
   await scenario({ readbackThrows: true });
-  console.log('PASS: upload-first KYC replacement success, upload failure, thrown upload error, same-path retry rejection, persistence failure, cleanup failure, unconfirmed readback, ambiguous committed upsert, unavailable persistence readback');
+  await scenario({ committedWithoutData: true });
+  console.log('PASS: upload-first KYC replacement success, upload failure, thrown upload error, same-path retry rejection, persistence failure, cleanup failure, unconfirmed readback, ambiguous committed upsert, unavailable persistence readback, committed upsert with missing response data');
 })().catch(e => { console.error(e); process.exitCode = 1; });
