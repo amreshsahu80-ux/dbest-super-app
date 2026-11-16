@@ -58,6 +58,11 @@ jobs:
           assert 'if (!showingBrowser || url == null || !url.equals(v.getUrl())) return;' in src, 'Stale page-finished callbacks must not clear new workspace state'
           home = src.split('private void showHome() {', 1)[1].split('\n    }', 1)[0]
           assert 'resetWorkspaceHistoryOnLoad = false;' in home, 'Home must cancel pending role history reset'
+          assert 'cancelPendingFileChooser();' in home, 'Home must cancel pending document selection'
+          portal=src.split('private void openPortal(String name, String route) {',1)[1].split('\n    }',1)[0]
+          assert 'cancelPendingFileChooser();' in portal, 'Role changes must cancel pending document selection'
+          chooser=src.split('private void cancelPendingFileChooser() {',1)[1].split('\n    }',1)[0]
+          assert 'fileCallback = null;' in chooser and 'pending.onReceiveValue(null);' in chooser, 'Cancel must clear callback before resolving it'
           assert 'browserLoading.setVisibility(View.GONE)' in home, 'Home must clear stale loading progress'
           assert 'v.clearHistory();' in src and 'resetWorkspaceHistoryOnLoad = false;' in src, 'New workspace must clear old back stack after load'
           assert 'if (!route.startsWith("/") || route.startsWith("//")) return;' in src
