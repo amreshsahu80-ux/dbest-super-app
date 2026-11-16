@@ -50,7 +50,7 @@ jobs:
               assert f'Join as " + title' in src
           assert 'card.setOnClickListener(v -> openPortal(title, loginPath));' in src, 'Role card surface must open workspace'
           assert 'onPageStarted(WebView v, String url, android.graphics.Bitmap favicon)' in src, 'Workspace navigation must show progress'
-          assert 'if (showingBrowser && browserLoading != null) browserLoading.setVisibility(View.VISIBLE);' in src, 'Progress must not overlay native home'
+          assert 'if (showingBrowser && url != null && url.equals(v.getUrl())' in src and '&& browserLoading != null) browserLoading.setVisibility(View.VISIBLE);' in src, 'Progress must be scoped to the active workspace URL and never overlay native home'
           assert 'card.setContentDescription(title + " partner card. Open workspace");' in src, 'Role card needs accessible action label'
           assert 'join.setOnClickListener(v -> openPortal(title + " · Join", joinPath));' in src, 'Join must keep its distinct route'
           assert 'onWorkspaceSelected(canonicalRole)' in src, 'Push role must remain canonical'
