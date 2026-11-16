@@ -29,16 +29,10 @@
     if(!btn)return;
     e.preventDefault();e.stopImmediatePropagation();
     if(btn.dataset.dbestAdding==='1')return;
-    var card=btn.closest('.productCard');
-    var cards=Array.from(document.querySelectorAll('.productGrid .productCard'));
-    var index=cards.indexOf(card);
-    var type=typeof marketState!=='undefined'?marketState.type:null;
-    if(!type||index<0||typeof commerceConfig==='undefined'||typeof marketAdd!=='function')return;
-    var products=commerceConfig.products.filter(function(p){return p.type===type&&catalogueLive(p)&&Number(p.stock||0)>0});
-    products=products.filter(function(p){return (marketState.category==='All'||p.category===marketState.category)&&(marketState.vendor==='All'||p.vendorId===marketState.vendor)&&(!marketState.search||(p.name+' '+p.category+' '+(marketVendor(p.vendorId)?.name||'')).toLowerCase().includes(String(marketState.search).toLowerCase()))});
-    var p=products[index];
-    if(!p){if(typeof toast==='function')toast('Product could not be identified. Refresh and retry.');return}
-    marketAdd(type,p.id,btn);
+    var type=btn.dataset.marketType;
+    var id=btn.dataset.marketId;
+    if(!type||!id||typeof marketAdd!=='function'){if(typeof toast==='function')toast('Please refresh the Marketplace and retry');return}
+    marketAdd(type,id,btn);
   },true);
   document.addEventListener('submit',function(e){
     var form=e.target;if(!scope()||!form.matches('.checkoutCard'))return;
