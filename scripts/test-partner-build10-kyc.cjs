@@ -42,6 +42,11 @@ for(const category of ['grocery','restaurant','medicine','fashion','electronics'
   assert.match(vendorPortal,new RegExp('<option value="'+category+'">'));
 }
 
+// Missing GPS must not be interpreted as valid zero coordinates in vendor discovery readiness.
+assert.match(vendorPortal,/vendor\.lat!==null&&vendor\.lat!==undefined&&String\(vendor\.lat\)\.trim\(\)!==''/);
+assert.match(vendorPortal,/vendor\.lng!==null&&vendor\.lng!==undefined&&String\(vendor\.lng\)\.trim\(\)!==''/);
+assert.match(vendorPortal,/Math\.abs\(Number\(vendor\.lat\)\)<=90&&Math\.abs\(Number\(vendor\.lng\)\)<=180/);
+
 const service=fs.readFileSync('service-partner-onboarding-v3.html','utf8');
 assert.match(service,/document upload\(s\) need retry/);
 assert.match(service,/Please retry submission with the missing documents/);
