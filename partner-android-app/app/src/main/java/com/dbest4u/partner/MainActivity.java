@@ -340,7 +340,7 @@ public final class MainActivity extends ComponentActivity {
             }
             @Override public void onReceivedError(WebView v, WebResourceRequest req,
                                                    android.webkit.WebResourceError error) {
-                if (req.isForMainFrame()) {
+                if (req.isForMainFrame() && showingBrowser) {
                     if (browserLoading != null) browserLoading.setVisibility(View.GONE);
                     Toast.makeText(MainActivity.this,
                             "Unable to load partner portal. Check your connection.", Toast.LENGTH_SHORT).show();
