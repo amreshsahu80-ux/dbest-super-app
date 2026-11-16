@@ -11,14 +11,14 @@ async function replaceKycDocument({ storage, documents, key, bytes, contentType,
   try {
     const saved = await documents.upsert({ ...key, storage_path: path, file_name: fileName, content_type: contentType, size_bytes: bytes.length });
     if (saved.error || !saved.data || saved.data.storage_path !== path) throw new Error('kyc_persistence_failed');
-    // Cleanup failure is nonfatal: the new record must remain valid.
+    // Read back persisted state before deleting the previous object. A successful\n    // upsert response alone does not prove the record is durable.\n    const confirmed = await documents.find(key);\n    if (!confirmed || confirmed.storage_path !== path) {\n      // Upsert may have committed despite stale/failed readback. Retain both\n      // objects for reconciliation rather than risk deleting the active file.\n      throw Object.assign(new Error('kyc_persistence_unconfirmed'), { preserveNewUpload: true });\n    }\n    // Cleanup failure is nonfatal: the new record must remain valid.
     if (previous?.storage_path) {
       try { await storage.remove([previous.storage_path]); } catch (_) {}
     }
     return saved.data;
   } catch (error) {
     // Do not delete previous record/file. Clean only newly uploaded orphan.
-    try { await storage.remove([path]); } catch (_) {}
+    if (!error.preserveNewUpload) {\n      try { await storage.remove([path]); } catch (_) {}\n    }
     throw error;
   }
 }
