@@ -6,6 +6,7 @@
   function clean(){
     if(!scope())return;
     document.querySelectorAll('.productCard').forEach(function(card){
+      Array.from(card.childNodes).forEach(function(node){if(node.nodeType===3&&/^\s*\d+\s*(plate|plates|piece|pieces)\s*$/i.test(node.textContent||''))node.remove()});
       var buttons=Array.from(card.querySelectorAll('button')).filter(function(b){return /add\s*to\s*cart/i.test(b.textContent||'')});
       buttons.slice(1).forEach(function(b){b.style.setProperty('display','none','important');b.hidden=true;b.setAttribute('aria-hidden','true');b.tabIndex=-1});
     });
