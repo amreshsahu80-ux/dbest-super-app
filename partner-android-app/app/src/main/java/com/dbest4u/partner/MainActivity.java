@@ -482,6 +482,10 @@ public final class MainActivity extends ComponentActivity {
 
     private void showHome() {
         showingBrowser = false;
+        // A pending WebView callback from a previous workspace must not leave
+        // stale progress or clear the next workspace's navigation history.
+        resetWorkspaceHistoryOnLoad = false;
+        if (browserLoading != null) browserLoading.setVisibility(View.GONE);
         homeScreen.setVisibility(View.VISIBLE);
         browserShell.setVisibility(View.GONE);
         if (partnerTestPush != null) partnerTestPush.setHomeVisible(true);
