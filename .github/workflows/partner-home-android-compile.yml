@@ -54,6 +54,8 @@ jobs:
           assert 'card.setContentDescription(title + " partner card. Open workspace");' in src, 'Role card needs accessible action label'
           assert 'join.setOnClickListener(v -> openPortal(title + " · Join", joinPath));' in src, 'Join must keep its distinct route'
           assert 'onWorkspaceSelected(canonicalRole)' in src, 'Push role must remain canonical'
+          assert 'resetWorkspaceHistoryOnLoad = true;' in src, 'Role switch must reset previous workspace history'
+          assert 'v.clearHistory();' in src and 'resetWorkspaceHistoryOnLoad = false;' in src, 'New workspace must clear old back stack after load'
           assert 'if (!route.startsWith("/") || route.startsWith("//")) return;' in src
           assert 'if (isDbest(url)) return false;' in src
           assert 'if (partnerTestPush != null) partnerTestPush.setHomeVisible(true);' in src
