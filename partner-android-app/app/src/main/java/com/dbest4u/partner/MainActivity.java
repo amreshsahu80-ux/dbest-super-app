@@ -328,10 +328,12 @@ public final class MainActivity extends ComponentActivity {
                 }
                 if (showingBrowser && partnerTestPush != null && isDbest(Uri.parse(url))) {
                     final String completedUrl = url;
+                    final String completedRole = currentRole;
                     v.postDelayed(() -> {
                         // A delayed callback from a previous role must not update push
                         // state after Home navigation or a subsequent workspace switch.
                         if (showingBrowser && partnerTestPush != null
+                                && java.util.Objects.equals(completedRole, currentRole)
                                 && completedUrl.equals(v.getUrl())) {
                             partnerTestPush.onPortalPageLoaded();
                         }
