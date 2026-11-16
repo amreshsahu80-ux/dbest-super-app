@@ -27,7 +27,17 @@ async function replaceKycDocument({ storage, documents, key, bytes, contentType,
   } catch (error) {
     // Do not delete previous record/file. Clean only newly uploaded orphan.
     if (!error.preserveNewUpload) {
-      try { await storage.remove([path]); } catch (_) {}
+      // An upsert can commit even if its response is lost. Recheck the
+      // authoritative row before removing the uploaded object.
+      let authoritative;
+      try { authoritative = await documents.find(key); }
+      catch (_) { authoritative = null; }
+      if (!authoritative || authoritative.storage_path === path) {
+        // Unknown state or committed replacement: retain for reconciliation.
+        error.preserveNewUpload = true;
+      } else {
+        try { await storage.remove([path]); } catch (_) {}
+      }
     }
     throw error;
   }
