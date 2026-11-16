@@ -6,8 +6,14 @@ on:
   pull_request:
     branches:
       - main
+      - release/partner-android-105-ready-20261111
     paths:
       - 'partner-kyc-registration-upload-v2.js'
+      - 'vaahak.html'
+      - 'vendor.html'
+      - 'service-partner-onboarding-v3.html'
+      - 'owner-control-deployment-build10.html'
+      - 'owner-live-onboarding.html'
       - 'scripts/test-partner-build10-kyc*.cjs'
       - 'partner-android-app/**'
       - '.github/workflows/partner-build10-kyc.yml'
