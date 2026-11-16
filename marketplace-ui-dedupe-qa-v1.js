@@ -12,7 +12,7 @@
       while(next&&guard++<6){
         var candidate=next,raw=(candidate.textContent||'').trim();
         if(candidate.nodeType===3&&!raw){next=candidate.nextSibling;continue}
-        if(/^1\\s*plates?$/i.test(raw) && (candidate.nodeType===3 || (candidate.nodeType===1 && !candidate.querySelector('button,img,.productCard')))){
+        if(/^1\s*plates?$/i.test(raw) && (candidate.nodeType===3 || (candidate.nodeType===1 && !candidate.querySelector('button,img,.productCard')))){
           next=candidate.nextSibling;candidate.remove();continue;
         }
         break;
@@ -26,7 +26,7 @@
           var node=tail,raw=(node.textContent||'').trim();
           tail=node.nextSibling;
           if(node.nodeType===3&&!raw)continue;
-          if(/^1\\s*plates?$/i.test(raw)&&
+          if(/^1\s*plates?$/i.test(raw)&&
              (node.nodeType===3||(node.nodeType===1&&!node.querySelector('button,input,img')))){
             node.remove();continue;
           }
