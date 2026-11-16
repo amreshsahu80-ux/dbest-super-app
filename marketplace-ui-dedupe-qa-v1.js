@@ -7,6 +7,16 @@
     if(!scope())return;
     document.querySelectorAll('.productCard').forEach(function(card){
       Array.from(card.childNodes).forEach(function(node){if(node.nodeType===3&&/\bplate\b/i.test(node.textContent||''))node.remove()});Array.from(card.children).forEach(function(el){if(!el.matches('.productImage,.productBody'))el.style.setProperty('display','none','important')});
+      // Remove stray unit labels injected after a card (outside productBody).
+      var next=card.nextSibling,guard=0;
+      while(next&&guard++<6){
+        var candidate=next,raw=(candidate.textContent||'').trim();
+        if(candidate.nodeType===3&&!raw){next=candidate.nextSibling;continue}
+        if(/^1\\s*plates?$/i.test(raw) && (candidate.nodeType===3 || (candidate.nodeType===1 && !candidate.querySelector('button,img,.productCard')))){
+          next=candidate.nextSibling;candidate.remove();continue;
+        }
+        break;
+      }
       var buttons=Array.from(card.querySelectorAll('button')).filter(function(b){return /add\s*to\s*cart/i.test(b.textContent||'')});
       buttons.slice(1).forEach(function(b){b.style.setProperty('display','none','important');b.hidden=true;b.setAttribute('aria-hidden','true');b.tabIndex=-1});
     });
@@ -44,7 +54,7 @@
       localStorage.setItem('d2_commerce_carts',JSON.stringify(commerceCarts));
       if(typeof save==='function')save();
       if(typeof toast==='function')toast(product.name+' added to cart');
-      setTimeout(function(){if(typeof openMarketplace==='function')openMarketplace(type)},200);
+      setTimeout(function(){if(typeof openMarketplace==='function')openMarketplace(type)},650);
     }catch(err){
       console.error('DBest marketplace cart',err);
       if(typeof toast==='function')toast(err.message||'Could not add item');
