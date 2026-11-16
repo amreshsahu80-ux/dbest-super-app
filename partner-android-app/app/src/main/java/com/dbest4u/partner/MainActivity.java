@@ -24,6 +24,7 @@ import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -51,6 +52,7 @@ public final class MainActivity extends ComponentActivity {
     private LinearLayout browserShell;
     private WebView webView;
     private TextView browserTitle;
+    private ProgressBar browserLoading;
     private ValueCallback<Uri[]> fileCallback;
     private GeolocationPermissions.Callback locationCallback;
     private String locationOrigin;
@@ -302,6 +304,7 @@ public final class MainActivity extends ComponentActivity {
 
         webView.setWebViewClient(new WebViewClient() {
             @Override public void onPageFinished(WebView v, String url) {
+                if (browserLoading != null) browserLoading.setVisibility(View.GONE);
                 // A Join flow may redirect to the signed-in workspace. Reflect the
                 // actual destination instead of retaining a stale "Join" title.
                 Uri loaded = Uri.parse(url);
@@ -327,9 +330,11 @@ public final class MainActivity extends ComponentActivity {
             }
             @Override public void onReceivedError(WebView v, WebResourceRequest req,
                                                    android.webkit.WebResourceError error) {
-                if (req.isForMainFrame())
+                if (req.isForMainFrame()) {
+                    if (browserLoading != null) browserLoading.setVisibility(View.GONE);
                     Toast.makeText(MainActivity.this,
                             "Unable to load partner portal. Check your connection.", Toast.LENGTH_SHORT).show();
+                }
             }
         });
         webView.setWebChromeClient(new WebChromeClient() {
@@ -369,6 +374,11 @@ public final class MainActivity extends ComponentActivity {
             if (isHttp(u)) openExternal(u);
             else Toast.makeText(this, "Download link is not supported.", Toast.LENGTH_SHORT).show();
         });
+        browserLoading = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
+        browserLoading.setIndeterminate(true);
+        browserLoading.setContentDescription("Loading partner workspace");
+        browserLoading.setVisibility(View.GONE);
+        shell.addView(browserLoading, new LinearLayout.LayoutParams(-1, dp(3)));
         shell.addView(webView, new LinearLayout.LayoutParams(-1, 0, 1));
         return shell;
     }
@@ -453,6 +463,7 @@ public final class MainActivity extends ComponentActivity {
         homeScreen.setVisibility(View.GONE);
         browserShell.setVisibility(View.VISIBLE);
         if (partnerTestPush != null) partnerTestPush.setHomeVisible(false);
+        if (browserLoading != null) browserLoading.setVisibility(View.VISIBLE);
         webView.loadUrl(ORIGIN + route);
     }
 
