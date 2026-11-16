@@ -4,7 +4,8 @@ const { replaceKycDocument } = require('./partner-build10-safe-kyc-replacement.c
 async function scenario({ uploadFails = false, persistFails = false, removeFails = false, readbackStale = false } = {}) {
   const removed = [];
   const previous = { storage_path: 'vendor/old.pdf' };
-  let current = previous;\n  let reads = 0;
+  let current = previous;
+  let reads = 0;
   const storage = {
     async upload(path) { return { error: uploadFails ? new Error('upload failed') : null }; },
     async remove(paths) { removed.push(...paths); if (removeFails) throw new Error('cleanup failed'); }
@@ -16,7 +17,8 @@ async function scenario({ uploadFails = false, persistFails = false, removeFails
   const call = () => replaceKycDocument({ storage, documents, key: { partner_kind: 'vendor', partner_id: 'TEST', doc_type: 'pan' }, bytes: Buffer.from('test'), contentType: 'application/pdf', fileName: 'new.pdf', path: 'vendor/new.pdf' });
   if (uploadFails || persistFails || readbackStale) await assert.rejects(call);
   else assert.equal((await call()).storage_path, 'vendor/new.pdf');
-  if (readbackStale) { assert.deepEqual(removed, []); assert.equal(current.storage_path, 'vendor/new.pdf'); }\n  else if (uploadFails) { assert.deepEqual(removed, []); assert.equal(current, previous); }
+  if (readbackStale) { assert.deepEqual(removed, []); assert.equal(current.storage_path, 'vendor/new.pdf'); }
+  else if (uploadFails) { assert.deepEqual(removed, []); assert.equal(current, previous); }
   else if (persistFails) { assert.deepEqual(removed, ['vendor/new.pdf']); assert.equal(current, previous); }
   else { assert.equal(current.storage_path, 'vendor/new.pdf'); assert.deepEqual(removed, ['vendor/old.pdf']); }
 }
@@ -24,6 +26,7 @@ async function scenario({ uploadFails = false, persistFails = false, removeFails
   await scenario();
   await scenario({ uploadFails: true });
   await scenario({ persistFails: true });
-  await scenario({ removeFails: true });\n  await scenario({ readbackStale: true });
+  await scenario({ removeFails: true });
+  await scenario({ readbackStale: true });
   console.log('PASS: upload-first KYC replacement success, upload failure, persistence failure, cleanup failure, unconfirmed readback');
 })().catch(e => { console.error(e); process.exitCode = 1; });
