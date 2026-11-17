@@ -3983,9 +3983,9 @@ function marketTotals(type){
  if(!window.DBestTaxEngine)result.blockers.push('GST calculation module unavailable');
  else{
    try{
-     const taxLines=rows.map(r=>{const p=marketProduct(r.id);return {id:p.id,name:p.name,qty:Number(r.qty),unitPrice:Number(p.price),taxInclusive:!!p.taxInclusive,taxRule:p.taxRule};});
+     const taxLines=rows.map(r=>{const p=marketProduct(r.id),v=marketVendor(p.vendorId);return {id:p.id,name:p.name,qty:Number(r.qty),unitPrice:Number(p.price),taxInclusive:!!p.taxInclusive,taxRule:p.taxRule,hsnSac:p.hsnSac,vendorGstStatus:v?.verifiedGstStatus,supplierState:v?.verifiedSupplierState,placeOfSupplyState:commerceConfig.verifiedPlaceOfSupplyState,ecoLiabilityVerified:commerceConfig.verifiedEcoLiability===true};});
      const deliveryTaxRule=commerceConfig.verifiedDeliveryTaxRule;
-     const delivery=result.delivery>0?{amount:result.delivery,taxRule:deliveryTaxRule}:undefined;
+     const delivery=result.delivery>0?{amount:result.delivery,taxRule:deliveryTaxRule,vendorGstStatus:commerceConfig.verifiedDeliveryGstStatus,supplierState:commerceConfig.verifiedDeliverySupplierState,placeOfSupplyState:commerceConfig.verifiedPlaceOfSupplyState,ecoLiabilityVerified:commerceConfig.verifiedEcoLiability===true}:undefined;
      const calculated=window.DBestTaxEngine.calculate({lines:taxLines,delivery,orderDate:new Date().toISOString().slice(0,10),supplyType:commerceConfig.verifiedSupplyType});
      result.tax=calculated.gstTotal;result.taxLines=calculated.lines;
      if(calculated.reviewRequired)result.blockers.push('Tax liability review pending');
