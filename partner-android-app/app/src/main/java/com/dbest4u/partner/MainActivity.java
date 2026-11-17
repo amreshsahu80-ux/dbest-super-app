@@ -546,7 +546,14 @@ public final class MainActivity extends ComponentActivity {
         // Returning from a workspace must show the role choices, not a stale
         // footer position left behind by an earlier visit to the landing page.
         if (homeScreen instanceof ScrollView) {
-            ((ScrollView) homeScreen).scrollTo(0, 0);
+            ScrollView landingScroll = (ScrollView) homeScreen;
+            // Reset after the visible screen is laid out; an immediate scrollTo
+            // can be overridden by focus restoration when returning from WebView.
+            landingScroll.post(() -> {
+                if (!showingBrowser && homeScreen == landingScroll) {
+                    landingScroll.scrollTo(0, 0);
+                }
+            });
         }
         browserShell.setVisibility(View.GONE);
         if (partnerTestPush != null) partnerTestPush.setHomeVisible(true);
