@@ -375,7 +375,7 @@ public final class MainActivity extends ComponentActivity {
         webView.setWebChromeClient(new WebChromeClient() {
             @Override public void onGeolocationPermissionsShowPrompt(
                     String origin, GeolocationPermissions.Callback callback) {
-                if (!showingBrowser || !isDbest(Uri.parse(origin))
+                if (!showingBrowser || origin == null || !isDbest(Uri.parse(origin))
                         || locationPermissionRequestInFlight) {
                     callback.invoke(origin, false, false);
                     return;
