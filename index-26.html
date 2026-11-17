@@ -3461,7 +3461,7 @@ function earningSourcesHtml(u){
     </button>`).join("")}
   </div>`;
 }
-async function memberDash(id){
+async async function memberDash(id){
   let u=users.find(x=>String(x.id||"")===String(id||""));
   if(!u){try{const saved=JSON.parse(localStorage.getItem("d2_users")||"[]");const found=Array.isArray(saved)?saved.find(x=>String(x.id||"")===String(id||"")):null;if(found){users.push(found);u=found}}catch(_){}}
   if(!u&&String(id||"")===String(session.id||"")){
