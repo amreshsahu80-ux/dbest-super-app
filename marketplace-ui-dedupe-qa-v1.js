@@ -126,6 +126,14 @@
       if(!bar){var parent=btn.parentElement; if(parent&&/items? in cart/i.test(parent.textContent||''))bar=parent;else if(parent&&parent.parentElement&&/items? in cart/i.test(parent.parentElement.textContent||''))bar=parent.parentElement;}
       if(bar&&bar!==page&&!bar.contains(page)){bar.hidden=true;bar.style.setProperty('display','none','important');}
     });
+    // Hide standalone Important chip preceding the cart order summary.
+    var summary=page.querySelector('.orderSummary');
+    if(summary){Array.from(page.querySelectorAll('*')).forEach(function(el){
+      if(el.children.length||!/^(?:⚠\\s*)?important$/i.test((el.textContent||'').trim()))return;
+      if(el.closest('.orderSummary,.cartItem,.dbestDeliveryRules,button'))return;
+      var wrapper=el.closest('.importantTag,.importantChip,.noticeBadge')||el;
+      wrapper.hidden=true;wrapper.style.setProperty('display','none','important');
+    });}
     page.querySelectorAll('span,div,b,small').forEach(function(el){
       if(el.children.length||!/^(?:⚠\s*)?important$/i.test((el.textContent||'').trim()))return;
       if(el.closest('.dbestDeliveryRules,.orderSummary,.cartItem'))return;
