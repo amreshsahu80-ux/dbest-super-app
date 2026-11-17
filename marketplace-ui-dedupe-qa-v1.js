@@ -113,5 +113,29 @@
     form.dataset.dbestSubmitting='1';var b=form.querySelector('[type="submit"],[data-dbest-submit]');if(b){b.disabled=true;b.dataset.dbestOriginal=b.textContent;b.innerHTML='<span class="dbestMarketplaceBusy" aria-hidden="true"></span>Processing order…';b.setAttribute('aria-busy','true')}
     setTimeout(function(){if(form.isConnected){form.dataset.dbestSubmitting='0';if(b){b.disabled=false;b.textContent=b.dataset.dbestOriginal||'Place Order';b.removeAttribute('aria-busy')}}},15000);
   },true);
+
+  // Cart-only cleanup: never show the listing's sticky View Cart bar or stray Important chip.
+  function cartUiCleanup(){
+    var cart=document.querySelector('.sectionContent.shopPage .cartList');
+    if(!cart)return;
+    var page=cart.closest('.sectionContent.shopPage');
+    if(!page||!page.querySelector('.orderSummary'))return;
+    document.querySelectorAll('button').forEach(function(btn){
+      if(!/^view cart$/i.test((btn.textContent||'').trim()))return;
+      var bar=btn.closest('.cartPill,.stickyCartBar,.cartFloatingBar,[class*="cartBar"],[class*="CartBar"]');
+      if(!bar){var parent=btn.parentElement; if(parent&&/items? in cart/i.test(parent.textContent||''))bar=parent;else if(parent&&parent.parentElement&&/items? in cart/i.test(parent.parentElement.textContent||''))bar=parent.parentElement;}
+      if(bar&&bar!==page&&!bar.contains(page)){bar.hidden=true;bar.style.setProperty('display','none','important');}
+    });
+    page.querySelectorAll('span,div,b,small').forEach(function(el){
+      if(el.children.length||!/^(?:⚠\\s*)?important$/i.test((el.textContent||'').trim()))return;
+      if(el.closest('.dbestDeliveryRules,.orderSummary,.cartItem'))return;
+      var parent=el.parentElement;
+      if(parent&&parent.children.length===1&&parent!==page)parent.remove();else el.remove();
+    });
+  }
+  var cartCleanupScheduled=false;
+  function scheduleCartCleanup(){if(cartCleanupScheduled)return;cartCleanupScheduled=true;requestAnimationFrame(function(){cartCleanupScheduled=false;cartUiCleanup()})}
+  new MutationObserver(scheduleCartCleanup).observe(document.documentElement,{childList:true,subtree:true});
+  scheduleCartCleanup();
   schedule();
 })();
