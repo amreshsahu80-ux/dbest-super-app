@@ -543,6 +543,11 @@ public final class MainActivity extends ComponentActivity {
         resetWorkspaceHistoryOnLoad = false;
         if (browserLoading != null) browserLoading.setVisibility(View.GONE);
         homeScreen.setVisibility(View.VISIBLE);
+        // Returning from a workspace must show the role choices, not a stale
+        // footer position left behind by an earlier visit to the landing page.
+        if (homeScreen instanceof ScrollView) {
+            ((ScrollView) homeScreen).scrollTo(0, 0);
+        }
         browserShell.setVisibility(View.GONE);
         if (partnerTestPush != null) partnerTestPush.setHomeVisible(true);
     }
