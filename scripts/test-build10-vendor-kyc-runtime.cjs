@@ -16,9 +16,10 @@ function harness(mode,kind='vendor'){
    const b=JSON.parse(opts.body);requests.push({action:b.action,docType:b.docType,headers:opts.headers});
    let data;
    if(b.action==='upload')data={ok:mode!=='upload-unconfirmed',document:{doc_type:b.docType}};
-   else if(b.action==='list_own')data={ok:true,documents:expected.map(doc_type=>({doc_type})),
+   else if(b.action==='list_own')data={ok:mode!=='list-unconfirmed',documents:expected.map(doc_type=>({doc_type})),
     kyc:{complete:mode!=='incomplete',missing:mode==='incomplete'?['bank_proof']:[]}};
    else throw Error('unexpected action '+b.action);
+   if(mode==='malformed-list'&&b.action==='list_own')data.documents=[{doc_type:''}];
    if(mode==='missing'&&b.action==='list_own')data.documents=data.documents.filter(x=>x.doc_type!==(kind==='vaahak'?'rc':'pan'));
    return {ok:mode!=='http-failure',status:mode==='http-failure'?503:200,json:async()=>mode==='http-failure'?{error:'temporary_unavailable'}:data};
   },
@@ -44,6 +45,10 @@ const docs=DOCS.map(docType=>({docType,file:{name:docType+'.pdf',type:'applicati
  await assert.rejects(h.upload('vendor','test-session',docs),/kyc_documents_not_persisted_pan/);
  h=harness('incomplete');
  await assert.rejects(h.upload('vendor','test-session',docs),/kyc_required_documents_missing_bank_proof/);
+ h=harness('list-unconfirmed');
+ await assert.rejects(h.upload('vendor','test-session',docs),/kyc_document_list_unconfirmed/);
+ h=harness('malformed-list');
+ await assert.rejects(h.upload('vendor','test-session',docs),/kyc_document_list_malformed/);
  h=harness('complete');
  await assert.rejects(h.upload('vendor','',docs),/kyc_partner_session_missing/);
  await assert.rejects(h.upload('vendor','test-session',[docs[0],docs[0]]),/kyc_documents_invalid_or_duplicate/);
@@ -66,6 +71,8 @@ const docs=DOCS.map(docType=>({docType,file:{name:docType+'.pdf',type:'applicati
  assert.ok(h.requests.every(x=>!('x-vendor-token' in x.headers)),'Vaahak must not send Vendor token');
  h=harness('missing','vaahak');
  await assert.rejects(h.upload('vaahak','vaahak-test-session',vaahakDocs),/kyc_documents_not_persisted_rc/);
+ h=harness('malformed-list','vaahak');
+ await assert.rejects(h.upload('vaahak','vaahak-test-session',vaahakDocs),/kyc_document_list_malformed/);
  h=harness('http-failure','vaahak');
  await assert.rejects(h.upload('vaahak','vaahak-test-session',vaahakDocs),/temporary_unavailable/);
  assert.equal(h.requests.length,1,'Vaahak HTTP failure must stop further uploads');
