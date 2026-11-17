@@ -38,7 +38,7 @@ jobs:
           from pathlib import Path
           import re
           src = Path('app/src/main/java/com/dbest4u/partner/MainActivity.java').read_text()
-          header = src.split('private View makeBrowser()', 1)[1].split('private void showHome()', 1)[0]
+          header = src.split('private LinearLayout makeBrowser() {', 1)[1].split('private void showHome()', 1)[0]
           for label in ('Back', 'Home'):
               assert label in header, f'Missing {label} workspace navigation'
           assert 'dp(48)' in header, 'Workspace header must retain 48dp touch targets'
