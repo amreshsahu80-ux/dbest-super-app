@@ -260,7 +260,7 @@ public final class MainActivity extends ComponentActivity {
         LinearLayout shell = column();
         shell.setBackgroundColor(Color.WHITE);
         LinearLayout bar = row();
-        bar.setPadding(dp(6), dp(3), dp(6), dp(3));
+        bar.setPadding(dp(4), dp(3), dp(4), dp(3));
         bar.setBackgroundColor(Color.WHITE);
         Button back = button("‹", NAVY, 0xFFF0F4FB);
         back.setTextSize(24);
@@ -269,11 +269,13 @@ public final class MainActivity extends ComponentActivity {
             if (!resetWorkspaceHistoryOnLoad && webView.canGoBack()) webView.goBack();
             else showHome();
         });
-        bar.addView(back, new LinearLayout.LayoutParams(dp(48), dp(48)));
+        bar.addView(back, new LinearLayout.LayoutParams(dp(40), dp(44)));
         browserTitle = txt("DBest Partner", 13, NAVY, true);
         browserTitle.setGravity(Gravity.CENTER_VERTICAL);
-        browserTitle.setPadding(dp(6), 0, 0, 0);
-        bar.addView(browserTitle, new LinearLayout.LayoutParams(0, dp(48), 1));
+        browserTitle.setSingleLine(true);
+        browserTitle.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        browserTitle.setPadding(dp(4), 0, dp(4), 0);
+        bar.addView(browserTitle, new LinearLayout.LayoutParams(0, dp(44), 1));
         // Explicit action inside the selected Vendor, Vaahak or Service
         // Partner workspace. No user token is uploaded without consent.
         Button linkAccount = button("Link", Color.WHITE, BLUE);
@@ -282,20 +284,20 @@ public final class MainActivity extends ComponentActivity {
         linkAccount.setOnClickListener(v -> {
             if (partnerTestPush != null) partnerTestPush.connectAccount();
         });
-        bar.addView(linkAccount, new LinearLayout.LayoutParams(dp(52), dp(48)));
+        bar.addView(linkAccount, new LinearLayout.LayoutParams(dp(44), dp(44)));
         spaceWidth(bar, dp(4));
         Button home = button("⌂", BLUE, 0xFFEAF0FF);
         home.setTextSize(23);
         home.setContentDescription("Partner home");
         home.setOnClickListener(v -> showHome());
-        bar.addView(home, new LinearLayout.LayoutParams(dp(48), dp(48)));
+        bar.addView(home, new LinearLayout.LayoutParams(dp(40), dp(44)));
         // All Partner roles use the same privacy menu; never show
         // account-deletion copy inside the public-facing workspace header.
         Button privacy = button("⋮", NAVY, 0xFFF0F4FB);
         privacy.setTextSize(23);
         privacy.setContentDescription("Account & Privacy");
         privacy.setOnClickListener(v -> showAccountSettings());
-        bar.addView(privacy, new LinearLayout.LayoutParams(dp(48), dp(48)));
+        bar.addView(privacy, new LinearLayout.LayoutParams(dp(40), dp(44)));
         shell.addView(bar);
 
         webView = new WebView(this);
