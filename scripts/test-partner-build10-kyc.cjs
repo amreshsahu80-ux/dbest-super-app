@@ -47,6 +47,12 @@ assert.match(vendorPortal,/vendor\.lat!==null&&vendor\.lat!==undefined&&String\(
 assert.match(vendorPortal,/vendor\.lng!==null&&vendor\.lng!==undefined&&String\(vendor\.lng\)\.trim\(\)!==''/);
 assert.match(vendorPortal,/Math\.abs\(Number\(vendor\.lat\)\)<=90&&Math\.abs\(Number\(vendor\.lng\)\)<=180/);
 
+// GPS retries must invalidate previous coordinates before a new capture attempt.
+assert.match(vendorPortal,/if\(btn\.disabled\)return;regLoc=null;status\.textContent='Shop GPS not yet confirmed\.'/);
+assert.match(vendorPortal,/btn\.disabled=true;btn\.setAttribute\('aria-busy','true'\)/);
+assert.match(vendorPortal,/const finish=\(\)=>\{btn\.disabled=false;btn\.removeAttribute\('aria-busy'\)/);
+assert.match(vendorPortal,/Math\.abs\(lat\)>90\|\|Math\.abs\(lng\)>180/);
+
 const service=fs.readFileSync('service-partner-onboarding-v3.html','utf8');
 assert.match(service,/document upload\(s\) need retry/);
 assert.match(service,/Please retry submission with the missing documents/);
