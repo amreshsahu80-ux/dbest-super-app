@@ -503,6 +503,7 @@ public final class MainActivity extends ComponentActivity {
         // Cancel any chooser from the previous role before the WebView changes context.
         // A late document-picker result must never be delivered to another workspace.
         cancelPendingFileChooser();
+        cancelPendingLocationPrompt();
         if (partnerTestPush != null) partnerTestPush.onWorkspaceSelected(canonicalRole);
         currentRole = canonicalRole;
         browserTitle.setText(name);
@@ -519,6 +520,7 @@ public final class MainActivity extends ComponentActivity {
 
     private void showHome() {
         cancelPendingFileChooser();
+        cancelPendingLocationPrompt();
         showingBrowser = false;
         // A pending WebView callback from a previous workspace must not leave
         // stale progress or clear the next workspace's navigation history.
@@ -568,6 +570,18 @@ public final class MainActivity extends ComponentActivity {
             locationCallback.invoke(locationOrigin, ok, false);
             locationCallback = null;
             locationOrigin = null;
+        }
+    }
+
+    // A location prompt belongs to the workspace that requested it. A late
+    // Android permission result must not grant location to a different role.
+    private void cancelPendingLocationPrompt() {
+        if (locationCallback != null) {
+            GeolocationPermissions.Callback pending = locationCallback;
+            String origin = locationOrigin;
+            locationCallback = null;
+            locationOrigin = null;
+            pending.invoke(origin, false, false);
         }
     }
 
