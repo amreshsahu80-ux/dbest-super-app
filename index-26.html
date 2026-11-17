@@ -3926,8 +3926,8 @@ async function refreshMarketplaceRoadDistances(type){
    const vendor=marketVendor(id);
    if(!vendor)return;
    vendor.roadDistanceVerified=false;delete vendor.verifiedRoadDistanceKm;
-   const lat=Number(vendor.latitude??vendor.lat),lng=Number(vendor.longitude??vendor.lng);
-   if(!Number.isFinite(lat)||!Number.isFinite(lng)||(lat===0&&lng===0)||Math.abs(lat)>90||Math.abs(lng)>180)return;
+   // The server validates vendor coordinates against its approved registry.
+   // Do not require untrusted or absent browser-side coordinates.
    try{
      const response=await fetch('/api/runtime-config?mode=marketplace-road-distance',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({vendorId:String(id),destination})});
      if(!response.ok)return;
@@ -4012,7 +4012,7 @@ function marketDeliveryRules(type,t){
  const qualifies=t.subtotal>=rule.threshold;
  return (qualifies?"Free within 5 km":"₹"+rule.rate+"/km from first km")+
    " • "+(qualifies?"₹"+rule.rate+"/km beyond 5 km":"Free delivery from ₹"+rule.threshold+" within 5 km")+
-   " • Service radius "+rule.radius+" km • Actual delivery charge pending verified vendor-to-customer road distance.";
+   " • Service radius "+rule.radius+" km • "+(t.deliveryGroups?.length&&t.deliveryGroups.length===new Set(marketValidCart(type).map(r=>marketProduct(r.id)?.vendorId).filter(Boolean)).size?"Delivery distance verified":"Delivery distance awaiting verification")+".";
 }
 function marketCheckoutQty(type,id,delta){
  let cart=marketCart(type),row=cart.find(x=>String(x.id)===String(id)),p=marketProduct(id);
