@@ -222,6 +222,13 @@ function openVendorMenu(){document.getElementById('vendorMenu')?.classList.add('
     button.addEventListener('click',function(){camera.value='';camera.click()});
     camera.addEventListener('change',function(){
       if(!camera.files||!camera.files.length)return;
+      var captured=camera.files[0];
+      if(!['image/jpeg','image/png','image/webp'].includes(String(captured.type||'').toLowerCase())||captured.size===0||captured.size>8*1024*1024){
+        camera.value='';
+        var warning=document.getElementById('msg');
+        if(warning){warning.textContent='Camera photo must be JPG, PNG or WEBP and no larger than 8 MB. Please retake or choose a smaller file.';warning.className='card msg danger';}
+        return;
+      }
       try{
         var transfer=new DataTransfer();
         transfer.items.add(camera.files[0]);
