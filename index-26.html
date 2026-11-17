@@ -3930,13 +3930,13 @@ async function refreshMarketplaceRoadDistances(type){
    // Do not require untrusted or absent browser-side coordinates.
    try{
      const response=await fetch('/api/runtime-config?mode=marketplace-road-distance',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({vendorId:String(id),destination})});
-     if(!response.ok){const failure=await response.json().catch(()=>({}));vendor.roadDistanceError=response.status===503?'Routing service not configured for this preview':String(failure.error||'Routing request failed (HTTP '+response.status+')');return;}
+     if(!response.ok){const failure=await response.json().catch(()=>({}));if(requestVersion===marketplaceRouteRequestVersion&&commerceLocation.lat===destination.lat&&commerceLocation.lng===destination.lng)vendor.roadDistanceError=response.status===503?'Routing service not configured for this preview':String(failure.error||'Routing request failed (HTTP '+response.status+')');return;}
      const route=await response.json();
      if(requestVersion!==marketplaceRouteRequestVersion||commerceLocation.lat!==destination.lat||commerceLocation.lng!==destination.lng)return;
      if(route.verified===true&&route.source==='google-routes'&&route.vendorId===String(id)&&Number.isFinite(route.distanceKm)&&route.distanceKm>=0){
        vendor.verifiedRoadDistanceKm=route.distanceKm;vendor.roadDistanceVerified=true;delete vendor.roadDistanceError;
      }
-   }catch(error){vendor.roadDistanceError='Routing network request failed';console.warn('Road distance unavailable',error)}
+   }catch(error){if(requestVersion===marketplaceRouteRequestVersion&&commerceLocation.lat===destination.lat&&commerceLocation.lng===destination.lng)vendor.roadDistanceError='Routing network request failed';console.warn('Road distance unavailable',error)}
  }));
  if(requestVersion===marketplaceRouteRequestVersion&&document.querySelector('.cartList'))marketCartScreen(type);
 }
