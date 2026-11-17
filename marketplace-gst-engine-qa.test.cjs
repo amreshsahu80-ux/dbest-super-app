@@ -1,0 +1,23 @@
+/* Node smoke tests. Rates are synthetic fixtures, NOT Indian GST defaults. */
+const assert=require('node:assert/strict');
+require('./marketplace-gst-engine-qa-v1.js');
+const tax=globalThis.DBestTaxEngine;
+const rule=(hsnSac,gstRate,treatment='taxable')=>({hsnSac,gstRate,treatment,effectiveFrom:'2026-01-01',effectiveTo:'2026-12-31',verified:true,sourceReference:'TEST FIXTURE ONLY',liability:'vendor'});
+const a=rule('TEST-A',5),b=rule('TEST-B',18),c=rule('TEST-C',0,'exempt');
+tax.setTaxMaster([a,b,c]);
+const line=(id,hsnSac,unitPrice,qty=1,extra={})=>({id,hsnSac,unitPrice,qty,vendorGstStatus:'registered',supplierState:'Jharkhand',placeOfSupplyState:'Jharkhand',...extra});
+const order={orderDate:'2026-11-17',supplyType:'intra_state',lines:[line('a','TEST-A',100),line('b','TEST-B',118,1,{taxInclusive:true}),line('c','TEST-C',50)]};
+const result=tax.calculate(order);
+assert.equal(result.gstTotal,23);
+assert.equal(result.grandTotal,268);
+assert.equal(result.lines[0].split.cgst,2.5);
+assert.equal(result.lines[1].split.sgst,9);
+assert.equal(result.lines[2].gst,0);
+const interstate=tax.calculate({...order,supplyType:'inter_state',lines:order.lines.map(x=>({...x,placeOfSupplyState:'Odisha'}))});
+assert.equal(interstate.lines[0].split.igst,5);
+assert.throws(()=>tax.calculate({...order,lines:[line('missing','UNCLASSIFIED',100)]}),/verified effective tax rule/);
+assert.throws(()=>tax.calculate({...order,lines:[line('unregistered','TEST-A',100,1,{vendorGstStatus:'unregistered'})]}),/Unregistered vendor/);
+assert.throws(()=>tax.calculate({...order,lines:[line('eco','TEST-A',100,1,{taxRule:{...a,liability:'platform'}})]}),/operator liability/);
+assert.throws(()=>tax.calculate({...order,delivery:{amount:20}}),/Delivery GST treatment/);
+assert.throws(()=>tax.calculate({...order,orderDate:'2027-01-01'}),/verified effective tax rule/);
+console.log('GST isolated smoke scenarios passed');
