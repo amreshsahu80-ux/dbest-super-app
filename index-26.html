@@ -3997,6 +3997,9 @@ function marketTotals(type){
  if(!result.verified)result.total=null;
  return result;
 }
+// Capture the strict calculator before any legacy marketplace script can replace the global function.
+window.DBestVerifiedMarketTotals=marketTotals.bind(null);
+
 function marketDeliveryLabel(type,t){
  if(type==="digital")return "No physical delivery";
  if(t&&t.verified)return "₹"+Number(t.delivery).toFixed(2);
