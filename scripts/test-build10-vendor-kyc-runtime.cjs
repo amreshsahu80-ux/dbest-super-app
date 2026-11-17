@@ -5,7 +5,9 @@ const fs=require('node:fs');
 const vm=require('node:vm');
 const source=fs.readFileSync(require('node:path').join(__dirname,'../partner-kyc-registration-upload-v2.js'),'utf8');
 const DOCS=['shop_photo','owner_photo','pan','establishment','bank_proof'];
-function harness(mode){
+const VAAHAK_DOCS=['id_proof','driving_licence','rc','insurance','puc'];
+function harness(mode,kind='vendor'){
+ const expected=kind==='vaahak'?VAAHAK_DOCS:DOCS;
  const requests=[];
  const window={DBEST_RUNTIME_CONFIG:{supabaseUrl:'https://test.invalid',supabasePublishableKey:'public-test-only'}};
  const ctx={window,console,document:{querySelector:()=>null,querySelectorAll:()=>[],addEventListener:()=>{}},
@@ -14,10 +16,10 @@ function harness(mode){
    const b=JSON.parse(opts.body);requests.push({action:b.action,docType:b.docType,headers:opts.headers});
    let data;
    if(b.action==='upload')data={ok:mode!=='upload-unconfirmed',document:{doc_type:b.docType}};
-   else if(b.action==='list_own')data={ok:true,documents:DOCS.map(doc_type=>({doc_type})),
+   else if(b.action==='list_own')data={ok:true,documents:expected.map(doc_type=>({doc_type})),
     kyc:{complete:mode!=='incomplete',missing:mode==='incomplete'?['bank_proof']:[]}};
    else throw Error('unexpected action '+b.action);
-   if(mode==='missing'&&b.action==='list_own')data.documents=data.documents.filter(x=>x.doc_type!=='pan');
+   if(mode==='missing'&&b.action==='list_own')data.documents=data.documents.filter(x=>x.doc_type!==(kind==='vaahak'?'rc':'pan'));
    return {ok:mode!=='http-failure',status:mode==='http-failure'?503:200,json:async()=>mode==='http-failure'?{error:'temporary_unavailable'}:data};
   },
   FileReader:class {readAsDataURL(){this.result='data:application/pdf;base64,QQ==';this.onload()}},
@@ -54,5 +56,22 @@ const docs=DOCS.map(docType=>({docType,file:{name:docType+'.pdf',type:'applicati
  await assert.rejects(h.upload('vendor','test-session',[...docs.slice(0,4),{docType:'bank_proof',file:{name:'huge.pdf',type:'application/pdf',size:8*1024*1024+1}}]),/file_too_large/);
  assert.equal(h.requests.length,0,'oversized final document must prevent all earlier writes');
 
- console.log('PASS: authenticated upload, persisted list, incomplete KYC rejection, preflight fail-closed (offline)');
+ // Verify Vaahak uses its own session header, document allowlist and persistence checks.
+ const vaahakDocs=VAAHAK_DOCS.map(docType=>({docType,file:{name:docType+'.pdf',type:'application/pdf',size:10}}));
+ h=harness('complete','vaahak');
+ assert.equal(await h.upload('vaahak','vaahak-test-session',vaahakDocs),5);
+ assert.equal(h.requests.filter(x=>x.action==='upload').length,5);
+ assert.equal(h.requests.at(-1).action,'list_own');
+ assert.ok(h.requests.every(x=>x.headers['x-vaahak-token']==='vaahak-test-session'));
+ assert.ok(h.requests.every(x=>!('x-vendor-token' in x.headers)),'Vaahak must not send Vendor token');
+ h=harness('missing','vaahak');
+ await assert.rejects(h.upload('vaahak','vaahak-test-session',vaahakDocs),/kyc_documents_not_persisted_rc/);
+ h=harness('http-failure','vaahak');
+ await assert.rejects(h.upload('vaahak','vaahak-test-session',vaahakDocs),/temporary_unavailable/);
+ assert.equal(h.requests.length,1,'Vaahak HTTP failure must stop further uploads');
+ h=harness('complete','vaahak');
+ await assert.rejects(h.upload('vaahak','vaahak-test-session',docs),/kyc_documents_invalid_or_duplicate/);
+ assert.equal(h.requests.length,0,'Vendor-only document types must be rejected for Vaahak');
+
+ console.log('PASS: Vendor and Vaahak authenticated upload, persisted list, incomplete KYC rejection, preflight fail-closed (offline)');
 })().catch(e=>{console.error(e);process.exitCode=1});
