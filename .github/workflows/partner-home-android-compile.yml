@@ -32,6 +32,18 @@ jobs:
           grep -Fq 'versionCode 10' app/build.gradle
           grep -Fq 'Gravity.BOTTOM|Gravity.LEFT' app/src/main/java/com/dbest4u/partner/PartnerPushTestController.java
           grep -Fq 'Partner notifications off. Tap for settings' app/src/main/java/com/dbest4u/partner/PartnerPushTestController.java
+      - name: Verify compact workspace navigation has accessible touch targets
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          src = Path('app/src/main/java/com/dbest4u/partner/MainActivity.java').read_text()
+          header = src.split('private View makeBrowser()', 1)[1].split('private void showHome()', 1)[0]
+          for label in ('Back', 'Home'):
+              assert label in header, f'Missing {label} workspace navigation'
+          assert 'dp(48)' in header, 'Workspace header must retain 48dp touch targets'
+          assert 'browserTitle' in header and 'setSingleLine(true)' in header, 'Workspace title must truncate on narrow screens'
+          PY
       - name: Regression-check all three Partner home routes and safe navigation
         run: |
           python3 - <<'PY'
