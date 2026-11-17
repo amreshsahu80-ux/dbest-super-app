@@ -186,7 +186,7 @@ function openVendorMenu(){document.getElementById('vendorMenu')?.classList.add('
 (function(){
   const box=document.getElementById('vendorKycRequirements');
   if(!box)return;
-  box.querySelectorAll('input[type="file"]').forEach(input=>{
+  box.querySelectorAll('input[type="file"][name][required]').forEach(input=>{
     const status=document.createElement('span');
     status.className='muted';
     status.setAttribute('role','status');
