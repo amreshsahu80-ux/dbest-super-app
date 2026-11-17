@@ -61,6 +61,9 @@ public final class MainActivity extends ComponentActivity {
     private int activeFileRequestCode = -1;
     private GeolocationPermissions.Callback locationCallback;
     private String locationOrigin;
+    // Keep the Android permission request reserved until its result arrives,
+    // even if the originating workspace is closed in the meantime.
+    private boolean locationPermissionRequestInFlight;
     private boolean showingBrowser;
     private boolean resetWorkspaceHistoryOnLoad;
     private String currentRole = "";
@@ -372,7 +375,8 @@ public final class MainActivity extends ComponentActivity {
         webView.setWebChromeClient(new WebChromeClient() {
             @Override public void onGeolocationPermissionsShowPrompt(
                     String origin, GeolocationPermissions.Callback callback) {
-                if (!isDbest(Uri.parse(origin))) {
+                if (!showingBrowser || !isDbest(Uri.parse(origin))
+                        || locationPermissionRequestInFlight) {
                     callback.invoke(origin, false, false);
                     return;
                 }
@@ -382,6 +386,7 @@ public final class MainActivity extends ComponentActivity {
                 } else {
                     locationOrigin = origin;
                     locationCallback = callback;
+                    locationPermissionRequestInFlight = true;
                     ActivityCompat.requestPermissions(MainActivity.this,
                             new String[]{Manifest.permission.ACCESS_FINE_LOCATION,
                                     Manifest.permission.ACCESS_COARSE_LOCATION}, LOCATION_REQUEST);
@@ -564,12 +569,17 @@ public final class MainActivity extends ComponentActivity {
             partnerTestPush.onPermissionResult(granted);
             return;
         }
-        if (code == LOCATION_REQUEST && locationCallback != null) {
-            boolean ok = false;
-            for (int r : results) if (r == PackageManager.PERMISSION_GRANTED) ok = true;
-            locationCallback.invoke(locationOrigin, ok, false);
+        if (code == LOCATION_REQUEST) {
+            locationPermissionRequestInFlight = false;
+            GeolocationPermissions.Callback pending = locationCallback;
+            String origin = locationOrigin;
             locationCallback = null;
             locationOrigin = null;
+            if (pending != null && showingBrowser) {
+                boolean ok = false;
+                for (int r : results) if (r == PackageManager.PERMISSION_GRANTED) ok = true;
+                pending.invoke(origin, ok, false);
+            }
         }
     }
 
@@ -606,6 +616,7 @@ public final class MainActivity extends ComponentActivity {
 
     @Override protected void onDestroy() {
         if (partnerTestPush != null) partnerTestPush.shutdown();
+        cancelPendingLocationPrompt();
         cancelPendingFileChooser();
         if (webView != null) webView.destroy();
         super.onDestroy();
