@@ -40,7 +40,7 @@
         var textNodes=[],current;
         while((current=walker.nextNode()))textNodes.push(current);
         textNodes.forEach(function(node){
-          if(!/^1\\s*plates?$/i.test((node.textContent||'').trim()))return;
+          if(!/^1\s*plates?$/i.test((node.textContent||'').trim()))return;
           if(!(add.compareDocumentPosition(node)&Node.DOCUMENT_POSITION_FOLLOWING))return;
           var parent=node.parentElement;
           if(!parent||parent.closest('button,small,[contenteditable="true"]'))return;
