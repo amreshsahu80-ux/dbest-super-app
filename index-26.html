@@ -3925,18 +3925,18 @@ async function refreshMarketplaceRoadDistances(type){
  await Promise.all(ids.map(async id=>{
    const vendor=marketVendor(id);
    if(!vendor)return;
-   vendor.roadDistanceVerified=false;delete vendor.verifiedRoadDistanceKm;
+   vendor.roadDistanceVerified=false;delete vendor.verifiedRoadDistanceKm;vendor.roadDistanceError='Routing verification pending';
    // The server validates vendor coordinates against its approved registry.
    // Do not require untrusted or absent browser-side coordinates.
    try{
      const response=await fetch('/api/runtime-config?mode=marketplace-road-distance',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({vendorId:String(id),destination})});
-     if(!response.ok)return;
+     if(!response.ok){const failure=await response.json().catch(()=>({}));vendor.roadDistanceError=response.status===503?'Routing service not configured for this preview':String(failure.error||'Routing request failed (HTTP '+response.status+')');return;}
      const route=await response.json();
      if(requestVersion!==marketplaceRouteRequestVersion||commerceLocation.lat!==destination.lat||commerceLocation.lng!==destination.lng)return;
      if(route.verified===true&&route.source==='google-routes'&&route.vendorId===String(id)&&Number.isFinite(route.distanceKm)&&route.distanceKm>=0){
-       vendor.verifiedRoadDistanceKm=route.distanceKm;vendor.roadDistanceVerified=true;
+       vendor.verifiedRoadDistanceKm=route.distanceKm;vendor.roadDistanceVerified=true;delete vendor.roadDistanceError;
      }
-   }catch(error){console.warn('Road distance unavailable',error)}
+   }catch(error){vendor.roadDistanceError='Routing network request failed';console.warn('Road distance unavailable',error)}
  }));
  if(requestVersion===marketplaceRouteRequestVersion&&document.querySelector('.cartList'))marketCartScreen(type);
 }
@@ -3977,7 +3977,7 @@ function marketTotals(type){
    const vendor=marketVendor(id),items=groups[id],vendorSubtotal=items.reduce((sum,r)=>sum+Number(r.p.price||0)*r.qty,0);
    if(type==='restaurant'||type==='grocery'){
      const distance=Number(vendor&&vendor.verifiedRoadDistanceKm);
-     if(!vendor||!vendor.roadDistanceVerified||!Number.isFinite(distance)||distance<0||!window.DBestDeliveryQA){result.blockers.push('Verified road distance missing for '+(vendor?.name||id));return;}
+     if(!vendor||!vendor.roadDistanceVerified||!Number.isFinite(distance)||distance<0||!window.DBestDeliveryQA){result.blockers.push('Verified road distance missing for '+(vendor?.name||id)+(vendor?.roadDistanceError?' — '+vendor.roadDistanceError:''));return;}
      try{const charge=window.DBestDeliveryQA.calculate({type,subtotal:vendorSubtotal,distanceKm:distance});if(!charge.eligible){result.blockers.push((vendor?.name||id)+': '+charge.reason);return;}result.delivery+=charge.deliveryFee;result.deliveryGroups.push({vendorId:id,...charge});}catch(err){result.blockers.push(err.message)}
    }else if(commerceNeedsLocation(type))result.blockers.push('Approved delivery tariff missing for '+type);
  });
