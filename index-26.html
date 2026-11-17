@@ -3916,6 +3916,26 @@ function marketVendor(id){return commerceConfig.vendors.find(v=>String(v.id)===S
 function marketValidCart(type){return marketCart(type).filter(r=>marketProduct(r.id)&&marketProduct(r.id).type===type&&Number(r.qty)>0)}
 function marketCartCount(type){return marketValidCart(type).reduce((a,x)=>a+Number(x.qty||0),0)}
 function commerceNeedsLocation(type){return ["grocery","restaurant","medicine"].includes(type)}
+async function refreshMarketplaceRoadDistances(type){
+ if(!['restaurant','grocery'].includes(type)||!Number.isFinite(commerceLocation.lat)||!Number.isFinite(commerceLocation.lng))return;
+ const ids=[...new Set(marketValidCart(type).map(row=>marketProduct(row.id)?.vendorId).filter(Boolean))];
+ await Promise.all(ids.map(async id=>{
+   const vendor=marketVendor(id);
+   if(!vendor)return;
+   vendor.roadDistanceVerified=false;delete vendor.verifiedRoadDistanceKm;
+   const lat=Number(vendor.latitude??vendor.lat),lng=Number(vendor.longitude??vendor.lng);
+   if(!Number.isFinite(lat)||!Number.isFinite(lng)||Math.abs(lat)>90||Math.abs(lng)>180)return;
+   try{
+     const response=await fetch('/api/marketplace-road-distance',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({origin:{lat,lng},destination:{lat:commerceLocation.lat,lng:commerceLocation.lng}})});
+     if(!response.ok)return;
+     const route=await response.json();
+     if(route.verified===true&&route.source==='google-routes'&&Number.isFinite(route.distanceKm)&&route.distanceKm>=0){
+       vendor.verifiedRoadDistanceKm=route.distanceKm;vendor.roadDistanceVerified=true;
+     }
+   }catch(error){console.warn('Road distance unavailable',error)}
+ }));
+ if(document.querySelector('.cartList'))marketCartScreen(type);
+}
 function requestCommerceLocation(type,silent=false){
   if(!window.isSecureContext){
     let s=$("commerceLocationStatus");if(s)s.textContent="HTTPS required for real Android GPS.";
@@ -3931,7 +3951,7 @@ function requestCommerceLocation(type,silent=false){
     let s=$("commerceLocationStatus");if(s)s.innerHTML=`GPS locked • ±${Math.round(pos.coords.accuracy)} m<span class="gpsAddress">${esc(label)}</span>`;
     let addr=document.querySelector('textarea[name="address"]');if(addr&&!addr.value)addr.value=label;
     let dg=$("commerceGpsDiag");if(dg)dg.innerHTML=gpsDiagHtml(commerceLocation);
-    if(!silent)toast("Live delivery location captured");
+    if(!silent)toast("Live delivery location captured");refreshMarketplaceRoadDistances(type);
   },err=>{
     let s=$("commerceLocationStatus");if(s)s.textContent=locationErrorMessage(err);
     let dg=$("commerceGpsDiag");if(dg)dg.innerHTML=gpsDiagHtml(null);
