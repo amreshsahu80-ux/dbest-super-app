@@ -61,6 +61,14 @@ jobs:
           assert 'cancelPendingFileChooser();' in home, 'Home must cancel pending document selection'
           portal=src.split('private void openPortal(String name, String route) {',1)[1].split('\n    }',1)[0]
           assert 'cancelPendingFileChooser();' in portal, 'Role changes must cancel pending document selection'
+          assert 'cancelPendingLocationPrompt();' in portal and 'cancelPendingLocationPrompt();' in home, 'Role switch and Home must reject outstanding geolocation prompts'
+          assert 'private boolean locationPermissionRequestInFlight;' in src, 'Location permission request needs in-flight reservation'
+          prompt=src.split('onGeolocationPermissionsShowPrompt(',1)[1].split('onShowFileChooser(',1)[0]
+          assert '|| locationPermissionRequestInFlight' in prompt, 'Second workspace must not claim previous Android permission result'
+          assert 'locationPermissionRequestInFlight = true;' in prompt, 'Permission request must reserve result code'
+          permission=src.split('if (code == LOCATION_REQUEST) {',1)[1].split('\\n        }',1)[0]
+          assert 'locationPermissionRequestInFlight = false;' in permission, 'Permission result must release reservation even after cancellation'
+          assert 'if (pending != null && showingBrowser)' in permission, 'Stale result must never grant cancelled workspace'
           assert 'String activeUrl = v.getUrl();' in src and 'activeUrl == null || !isDbest(Uri.parse(activeUrl))' in src, 'File chooser must reject missing or untrusted active URLs without Uri.parse(null)'
           chooser=src.split('private void cancelPendingFileChooser() {',1)[1].split('\n    }',1)[0]
           assert 'fileCallback = null;' in chooser and 'pending.onReceiveValue(null);' in chooser, 'Cancel must clear callback before resolving it'
