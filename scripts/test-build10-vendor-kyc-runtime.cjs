@@ -13,12 +13,12 @@ function harness(mode){
   fetch:async(url,opts)=>{
    const b=JSON.parse(opts.body);requests.push({action:b.action,docType:b.docType,headers:opts.headers});
    let data;
-   if(b.action==='upload')data={ok:true,document:{doc_type:b.docType}};
+   if(b.action==='upload')data={ok:mode!=='upload-unconfirmed',document:{doc_type:b.docType}};
    else if(b.action==='list_own')data={ok:true,documents:DOCS.map(doc_type=>({doc_type})),
     kyc:{complete:mode!=='incomplete',missing:mode==='incomplete'?['bank_proof']:[]}};
    else throw Error('unexpected action '+b.action);
    if(mode==='missing'&&b.action==='list_own')data.documents=data.documents.filter(x=>x.doc_type!=='pan');
-   return {ok:true,json:async()=>data};
+   return {ok:mode!=='http-failure',status:mode==='http-failure'?503:200,json:async()=>mode==='http-failure'?{error:'temporary_unavailable'}:data};
   },
   FileReader:class {readAsDataURL(){this.result='data:application/pdf;base64,QQ==';this.onload()}},
   alert:()=>{},FormData:class {},File:class {},location:{pathname:'/vendor.html'}};
@@ -32,6 +32,12 @@ const docs=DOCS.map(docType=>({docType,file:{name:docType+'.pdf',type:'applicati
  assert.equal(h.requests.filter(x=>x.action==='upload').length,5);
  assert.equal(h.requests.at(-1).action,'list_own');
  assert.ok(h.requests.every(x=>x.headers['x-vendor-token']==='test-session'));
+ h=harness('http-failure');
+ await assert.rejects(h.upload('vendor','test-session',docs),/temporary_unavailable/);
+ assert.equal(h.requests.length,1,'HTTP failure must stop subsequent document uploads');
+ h=harness('upload-unconfirmed');
+ await assert.rejects(h.upload('vendor','test-session',docs),/kyc_upload_unconfirmed_shop_photo/);
+ assert.equal(h.requests.length,1,'unconfirmed upload must stop subsequent writes');
  h=harness('missing');
  await assert.rejects(h.upload('vendor','test-session',docs),/kyc_documents_not_persisted_pan/);
  h=harness('incomplete');
