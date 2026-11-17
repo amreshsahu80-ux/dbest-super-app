@@ -60,6 +60,21 @@ jobs:
           assert 'setContentDescription(active ?' in native, 'Notification toggle must expose ON/OFF accessibility state'
           assert 'You must separately sign in, tap Link, and consent' in native, 'Enabling local alerts must not silently register an account'
           PY
+      - name: Verify workspace URL boundary and release identity isolation
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          main = Path('app/src/main/java/com/dbest4u/partner/MainActivity.java').read_text()
+          gradle = Path('app/build.gradle').read_text()
+          assert 'private static final String ORIGIN = "https://dbest4u.com";' in main
+          assert 'if (!route.startsWith("/") || route.startsWith("//")) return;' in main, 'Reject protocol-relative and nonlocal role routes'
+          assert 'webView.loadUrl(ORIGIN + route);' in main, 'Role workspace must load from canonical DBest origin'
+          assert '!"https".equalsIgnoreCase(u.getScheme())' in main, 'Only HTTPS portal URLs may remain in WebView'
+          assert 'host.equalsIgnoreCase("dbest4u.com")' in main and 'host.equalsIgnoreCase("www.dbest4u.com")' in main, 'Explicit host allowlist required'
+          assert "applicationId 'com.dbest4u.partner'" in gradle, 'Play application identity must remain unchanged'
+          assert "applicationIdSuffix '.qa'" in gradle, 'QA installs must remain isolated from Play application'
+          assert "production { dimension 'distribution' }" in gradle, 'Production flavor must remain available'
+          PY
       - name: Regression-check all three Partner home routes and safe navigation
         run: |
           python3 - <<'PY'
