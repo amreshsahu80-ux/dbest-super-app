@@ -140,6 +140,7 @@ jobs:
           assert 'url != null && url.equals(v.getUrl())' in src.split('onPageStarted(WebView v, String url', 1)[1].split('onPageFinished(WebView v, String url', 1)[0], 'Stale page-start must not revive loading indicator'
           assert 'if (!route.startsWith("/") || route.startsWith("//")) return;' in src
           assert 'if (isDbest(url)) return false;' in src
+          assert 'if (!req.isForMainFrame()) return false;' in src, 'Embedded payment/auth frames must not launch external apps'
           assert 'if (partnerTestPush != null) partnerTestPush.setHomeVisible(true);' in src
           # Guard compact-device layout and the native notification safe area.
           assert 'page.setPadding(dp(16), dp(8), dp(16), dp(84));' in src, 'Home footer may be obscured'
