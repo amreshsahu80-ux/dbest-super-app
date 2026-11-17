@@ -460,7 +460,7 @@ public final class MainActivity extends ComponentActivity {
     }
 
     private boolean isDbest(Uri u) {
-        if (u == null || !"https".equalsIgnoreCase(u.getScheme())) return false;
+        if (u == null || !"https".equalsIgnoreCase(u.getScheme()) || (u.getPort() != -1 && u.getPort() != 443)) return false;
         String host = u.getHost();
         return host != null && (host.equalsIgnoreCase("dbest4u.com")
                 || host.equalsIgnoreCase("www.dbest4u.com"));
