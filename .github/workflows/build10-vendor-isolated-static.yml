@@ -22,3 +22,5 @@ jobs:
         run: node scripts/test-build10-vendor-camera-static.cjs
       - name: Verify Vendor categories and GPS static contract
         run: node scripts/test-build10-vendor-category-gps-static.cjs
+      - name: Verify authenticated KYC upload persistence and fail-closed behavior offline
+        run: node scripts/test-build10-vendor-kyc-runtime.cjs
