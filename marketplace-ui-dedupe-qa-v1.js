@@ -12,7 +12,7 @@
       while(next&&guard++<6){
         var candidate=next,raw=(candidate.textContent||'').trim();
         if(candidate.nodeType===3&&!raw){next=candidate.nextSibling;continue}
-        if(/^1\s*plates?$/i.test(raw) && (candidate.nodeType===3 || (candidate.nodeType===1 && !candidate.querySelector('button,img,.productCard')))){
+        if(/^(?:1\\s*(?:plates?|[×x]\\s*1)|1\\s*[×x]\\s*1)$/i.test(raw) && (candidate.nodeType===3 || (candidate.nodeType===1 && !candidate.querySelector('button,img,.productCard')))){
           next=candidate.nextSibling;candidate.remove();continue;
         }
         break;
@@ -26,7 +26,7 @@
           var node=tail,raw=(node.textContent||'').trim();
           tail=node.nextSibling;
           if(node.nodeType===3&&!raw)continue;
-          if(/^1\s*plates?$/i.test(raw)&&
+          if(/^(?:1\\s*(?:plates?|[×x]\\s*1)|1\\s*[×x]\\s*1)$/i.test(raw)&&
              (node.nodeType===3||(node.nodeType===1&&!node.querySelector('button,input,img')))){
             node.remove();continue;
           }
@@ -40,7 +40,7 @@
         var textNodes=[],current;
         while((current=walker.nextNode()))textNodes.push(current);
         textNodes.forEach(function(node){
-          if(!/^1\s*plates?$/i.test((node.textContent||'').trim()))return;
+          if(!/^(?:1\\s*(?:plates?|[×x]\\s*1)|1\\s*[×x]\\s*1)$/i.test((node.textContent||'').trim()))return;
           if(!(add.compareDocumentPosition(node)&Node.DOCUMENT_POSITION_FOLLOWING))return;
           var parent=node.parentElement;
           if(!parent||parent.closest('button,small,[contenteditable="true"]'))return;
@@ -59,11 +59,11 @@
       grid.querySelectorAll('*').forEach(function(el){
         if(el.matches('.productCard,.productBody,.productImage,button,small'))return;
         if(el.closest('.productCard'))return;
-        if(el.children.length || !/^1\s*plates?$/i.test((el.textContent||'').trim()))return;
+        if(el.children.length || !/^(?:1\\s*(?:plates?|[×x]\\s*1)|1\\s*[×x]\\s*1)$/i.test((el.textContent||'').trim()))return;
         el.remove();
       });
       Array.from(grid.childNodes).forEach(function(node){
-        if(node.nodeType===3 && /^1\s*plates?$/i.test((node.textContent||'').trim()))node.remove();
+        if(node.nodeType===3 && /^(?:1\\s*(?:plates?|[×x]\\s*1)|1\\s*[×x]\\s*1)$/i.test((node.textContent||'').trim()))node.remove();
       });
     });
     document.querySelectorAll('.cartItem').forEach(function(item){
