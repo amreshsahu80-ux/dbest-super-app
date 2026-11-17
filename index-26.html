@@ -3929,11 +3929,11 @@ async function refreshMarketplaceRoadDistances(type){
    const lat=Number(vendor.latitude??vendor.lat),lng=Number(vendor.longitude??vendor.lng);
    if(!Number.isFinite(lat)||!Number.isFinite(lng)||(lat===0&&lng===0)||Math.abs(lat)>90||Math.abs(lng)>180)return;
    try{
-     const response=await fetch('/api/marketplace-road-distance',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({origin:{lat,lng},destination})});
+     const response=await fetch('/api/marketplace-road-distance',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({vendorId:String(id),destination})});
      if(!response.ok)return;
      const route=await response.json();
      if(requestVersion!==marketplaceRouteRequestVersion||commerceLocation.lat!==destination.lat||commerceLocation.lng!==destination.lng)return;
-     if(route.verified===true&&route.source==='google-routes'&&Number.isFinite(route.distanceKm)&&route.distanceKm>=0){
+     if(route.verified===true&&route.source==='google-routes'&&route.vendorId===String(id)&&Number.isFinite(route.distanceKm)&&route.distanceKm>=0){
        vendor.verifiedRoadDistanceKm=route.distanceKm;vendor.roadDistanceVerified=true;
      }
    }catch(error){console.warn('Road distance unavailable',error)}
