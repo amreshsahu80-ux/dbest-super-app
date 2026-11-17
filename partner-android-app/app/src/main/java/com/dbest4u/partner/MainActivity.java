@@ -230,7 +230,7 @@ public final class MainActivity extends ComponentActivity {
         roleTitle.setSingleLine(true);
         roleTitle.setEllipsize(android.text.TextUtils.TruncateAt.END);
         titleRow.addView(roleTitle, new LinearLayout.LayoutParams(0, -2, 1));
-        spaceWidth(titleRow, dp(6));
+        spaceWidth(titleRow, 6);
         TextView ready = txt("• DBest Partner", 10, color, true);
         ready.setSingleLine(true);
         ready.setGravity(Gravity.RIGHT | Gravity.CENTER_VERTICAL);
