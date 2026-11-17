@@ -1,0 +1,24 @@
+name: Build 10 Vendor isolated static checks
+on:
+  push:
+    branches:
+      - fix/build10-standalone-vendor-kyc-20261117
+    paths:
+      - 'vendor.html'
+      - 'scripts/test-build10-vendor-*.cjs'
+      - '.github/workflows/build10-vendor-isolated-static.yml'
+  workflow_dispatch:
+jobs:
+  vendor-static:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify Vendor camera and KYC static contract
+        run: node scripts/test-build10-vendor-camera-static.cjs
+      - name: Verify Vendor categories and GPS static contract
+        run: node scripts/test-build10-vendor-category-gps-static.cjs
