@@ -54,6 +54,9 @@ jobs:
           assert 'dp(48),Gravity.BOTTOM|Gravity.LEFT' in native, 'Notification control must retain 48dp height'
           assert 'setHomeVisible(boolean show)' in native and 'View.GONE' in native, 'Hide native toggle inside portal to avoid WhatsApp overlay'
           assert 'partnerTestPush.setHomeVisible(' in main, 'MainActivity must synchronize native toggle visibility'
+          home = main.split('private View makeHome() {', 1)[1].split('private View roleCard(', 1)[0]
+          assert 'page.setPadding(dp(16), dp(8), dp(16), dp(84))' in home, 'Home must reserve bottom safe area for notification floater'
+          assert 'scroll.setClipToPadding(false)' in home, 'Home footer must remain scrollable above native controls'
           assert 'setContentDescription(active ?' in native, 'Notification toggle must expose ON/OFF accessibility state'
           assert 'You must separately sign in, tap Link, and consent' in native, 'Enabling local alerts must not silently register an account'
           PY
