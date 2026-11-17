@@ -213,12 +213,15 @@ public final class MainActivity extends ComponentActivity {
         photoFrame.addView(image, new FrameLayout.LayoutParams(-1, -1));
         TextView overlay = txt("  " + category + "  ", 10, Color.WHITE, true);
         overlay.setPadding(dp(7), dp(4), dp(7), dp(4));
+        overlay.setSingleLine(true);
+        overlay.setEllipsize(android.text.TextUtils.TruncateAt.END);
         overlay.setBackground(rounded(0xD3101F3A, 9));
-        FrameLayout.LayoutParams overlayParams = new FrameLayout.LayoutParams(-2, -2, Gravity.TOP | Gravity.LEFT);
+        FrameLayout.LayoutParams overlayParams = new FrameLayout.LayoutParams(-1, -2, Gravity.TOP | Gravity.LEFT);
         overlayParams.leftMargin = dp(9);
+        overlayParams.rightMargin = dp(9);
         overlayParams.topMargin = dp(9);
         photoFrame.addView(overlay, overlayParams);
-        card.addView(photoFrame, new LinearLayout.LayoutParams(-1, dp(84)));
+        card.addView(photoFrame, new LinearLayout.LayoutParams(-1, dp(68)));
 
         space(card, 8);
         LinearLayout titleRow = row();
