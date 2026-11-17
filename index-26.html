@@ -3683,7 +3683,7 @@ function applyMasterDesign(){
   `;
 }
 let ownerSyncBusy=false;
-async function syncOwnerMasterConfig(silent=false){
+async async function syncOwnerMasterConfig(silent=false){
   if(ownerSyncBusy)return; ownerSyncBusy=true;
   try{
     const r=await fetch(DBEST_SUPABASE_URL+"/rest/v1/rpc/get_master_app_config",{method:"POST",headers:{apikey:DBEST_SUPABASE_KEY,Authorization:"Bearer "+DBEST_SUPABASE_KEY,"Content-Type":"application/json"},body:"{}",cache:"no-store"});
