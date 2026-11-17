@@ -3970,6 +3970,7 @@ function marketQty(type,id,delta){let cart=marketCart(type),row=cart.find(x=>x.i
 function marketTotals(type){
  const rows=marketValidCart(type),subtotal=rows.reduce((sum,r)=>{const p=marketProduct(r.id);return sum+(p?Number(p.price||0)*Number(r.qty||0):0)},0);
  const result={subtotal,delivery:0,tax:0,total:subtotal,verified:false,blockers:[],deliveryGroups:[],taxLines:[]};
+ if(!rows.length){result.blockers.push('No valid '+type+' items found for pricing; refresh catalogue and cart');result.total=null;return result;}
  // Calculate per vendor: never use obsolete localStorage flat-fee or global taxPercent.
  const groups={};rows.forEach(r=>{const p=marketProduct(r.id);if(!p)return;const id=String(p.vendorId||'unknown');(groups[id]||(groups[id]=[])).push({p,qty:Number(r.qty)});});
  Object.keys(groups).forEach(id=>{
