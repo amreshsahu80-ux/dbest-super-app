@@ -3947,7 +3947,7 @@ function requestCommerceLocation(type,silent=false){
   let st=$("commerceLocationStatus");if(st)st.textContent="Fetching live GPS…";
   navigator.geolocation.getCurrentPosition(async pos=>{
     let label=await reverseGeoLabel(pos.coords.latitude,pos.coords.longitude);
-    commerceLocation={lat:pos.coords.latitude,lng:pos.coords.longitude,accuracy:pos.coords.accuracy,timestamp:pos.timestamp,label};
+    commerceLocation={lat:pos.coords.latitude,lng:pos.coords.longitude,accuracy:pos.coords.accuracy,timestamp:pos.timestamp,label};commerceConfig.vendors.forEach(v=>{v.roadDistanceVerified=false;delete v.verifiedRoadDistanceKm;});
     let s=$("commerceLocationStatus");if(s)s.innerHTML=`GPS locked • ±${Math.round(pos.coords.accuracy)} m<span class="gpsAddress">${esc(label)}</span>`;
     let addr=document.querySelector('textarea[name="address"]');if(addr&&!addr.value)addr.value=label;
     let dg=$("commerceGpsDiag");if(dg)dg.innerHTML=gpsDiagHtml(commerceLocation);
