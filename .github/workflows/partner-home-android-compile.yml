@@ -44,6 +44,19 @@ jobs:
           assert 'dp(48)' in header, 'Workspace header must retain 48dp touch targets'
           assert 'browserTitle' in header and 'setSingleLine(true)' in header, 'Workspace title must truncate on narrow screens'
           PY
+      - name: Regression-check notification floater separation and opt-in safety
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          native = Path('app/src/main/java/com/dbest4u/partner/PartnerPushTestController.java').read_text()
+          main = Path('app/src/main/java/com/dbest4u/partner/MainActivity.java').read_text()
+          assert 'Gravity.BOTTOM|Gravity.LEFT' in native, 'Notification control must remain bottom-left'
+          assert 'dp(48),Gravity.BOTTOM|Gravity.LEFT' in native, 'Notification control must retain 48dp height'
+          assert 'setHomeVisible(boolean show)' in native and 'View.GONE' in native, 'Hide native toggle inside portal to avoid WhatsApp overlay'
+          assert 'partnerTestPush.setHomeVisible(' in main, 'MainActivity must synchronize native toggle visibility'
+          assert 'setContentDescription(active ?' in native, 'Notification toggle must expose ON/OFF accessibility state'
+          assert 'You must separately sign in, tap Link, and consent' in native, 'Enabling local alerts must not silently register an account'
+          PY
       - name: Regression-check all three Partner home routes and safe navigation
         run: |
           python3 - <<'PY'
