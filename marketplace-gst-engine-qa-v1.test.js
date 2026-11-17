@@ -1,0 +1,24 @@
+/* Run: node marketplace-gst-engine-qa-v1.test.js */
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const vm=require('node:vm');
+const sandbox={};sandbox.window=sandbox;
+vm.runInNewContext(fs.readFileSync('marketplace-gst-engine-qa-v1.js','utf8'),sandbox);
+const calc=sandbox.DBestTaxEngine.calculate;
+const rule=(rate,treatment='taxable')=>({verified:true,hsnSac:'TEST-CLASSIFICATION',effectiveFrom:'2026-01-01',treatment,gstRate:rate,liability:'vendor'});
+const base={orderDate:'2026-11-17',supplyType:'intra_state'};
+const ex=(lines,extra={})=>calc({...base,lines,...extra});
+let a=ex([{id:'a',qty:2,unitPrice:100,taxInclusive:false,taxRule:rule(5)}]);
+assert.equal(a.taxableSubtotal,200);assert.equal(a.gstTotal,10);assert.equal(a.grandTotal,210);
+assert.equal(a.lines[0].split.cgst,5);assert.equal(a.lines[0].split.sgst,5);
+let b=ex([{qty:1,unitPrice:118,taxInclusive:true,taxRule:rule(18)}],{supplyType:'inter_state'});
+assert.equal(b.taxableSubtotal,100);assert.equal(b.gstTotal,18);assert.equal(b.grandTotal,118);assert.equal(b.lines[0].split.igst,18);
+let c=ex([{qty:1,unitPrice:50,taxRule:rule(0,'exempt')},{qty:1,unitPrice:100,taxRule:rule(5)}]);
+assert.equal(c.grandTotal,155);assert.equal(c.gstTotal,5);
+let d=ex([{qty:1,unitPrice:100,taxRule:rule(5)}],{delivery:{amount:20,taxRule:rule(18)}});
+assert.equal(d.grandTotal,128.6);assert.equal(d.gstTotal,8.6);
+assert.throws(()=>ex([{qty:1,unitPrice:100}]),/Verified HSN/);
+assert.throws(()=>ex([{qty:1,unitPrice:100,taxRule:{...rule(5),verified:false}}]),/Verified HSN/);
+assert.throws(()=>ex([{qty:1,unitPrice:100,taxRule:{...rule(5),liability:null}}]),/liability/);
+assert.throws(()=>ex([{qty:1,unitPrice:100,taxRule:rule(5)}],{delivery:{amount:20}}),/Delivery GST treatment/);
+console.log('PASS: 8 GST engine QA scenarios');
