@@ -161,6 +161,36 @@ jobs:
               print(f'{p}: {p.stat().st_size} bytes sha256={hashlib.sha256(p.read_bytes()).hexdigest()}')
           print('Release AAB is NOT verified signed; no Play upload authorized.')
           PY
+      - name: Record immutable build provenance for QA review
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, os
+          outputs = [
+              *Path('app/build/outputs/apk/qa/debug').glob('*.apk'),
+              *Path('app/build/outputs/bundle/productionRelease').glob('*.aab'),
+          ]
+          assert len(outputs) == 2, f'Unexpected Android artifact count: {outputs}'
+          manifest = Path('app/build/outputs/partner-home-build-provenance.txt')
+          manifest.parent.mkdir(parents=True, exist_ok=True)
+          lines = [
+              'DBest Partner Home isolated QA build — NOT a signed Play release',
+              f"commit={os.environ['GITHUB_SHA']}",
+              f"run_id={os.environ['GITHUB_RUN_ID']}",
+              f"run_attempt={os.environ['GITHUB_RUN_ATTEMPT']}",
+          ]
+          for p in sorted(outputs):
+              digest = hashlib.sha256(p.read_bytes()).hexdigest()
+              lines.append(f'sha256={digest} bytes={p.stat().st_size} path={p}')
+          manifest.write_text('\\n'.join(lines) + '\\n')
+          print(manifest.read_text())
+          PY
+      - name: Upload build provenance alongside QA artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: partner-home-build-provenance
+          path: partner-android-app/app/build/outputs/partner-home-build-provenance.txt
+          retention-days: 3
       - name: Publish separate-install QA APK (not a Play release)
         uses: actions/upload-artifact@v4
         with:
