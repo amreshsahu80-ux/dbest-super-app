@@ -16,11 +16,13 @@
       if(!line.taxRule||!line.taxRule.verified||!line.taxRule.hsnSac||!line.taxRule.effectiveFrom)
         throw Error('Verified HSN/SAC tax rule required for '+(line.name||'line '+i));
       var rule=line.taxRule;
+      if(!input.orderDate)throw Error('Order date required for effective tax rule');
       if(rule.effectiveTo&&input.orderDate&&input.orderDate>rule.effectiveTo)throw Error('Expired tax rule');
       if(input.orderDate&&input.orderDate<rule.effectiveFrom)throw Error('Tax rule not yet effective');
       if(!['taxable','exempt','nil','non_gst'].includes(rule.treatment))throw Error('Invalid tax treatment');
       var pct=rule.treatment==='taxable'?rate(rule.gstRate):0;
       if(rule.treatment==='taxable'&&rule.gstRate==null)throw Error('GST rate missing');
+      if(rule.liability!=='vendor'&&rule.liability!=='platform'&&rule.liability!=='review_required')throw Error('Tax remittance liability must be specified');
       var inclusive=!!line.taxInclusive;
       var taxable=rule.treatment==='taxable'?(inclusive?money(amount/(1+pct/100)):amount):amount;
       var gst=rule.treatment==='taxable'?money(inclusive?amount-taxable:taxable*pct/100):0;
