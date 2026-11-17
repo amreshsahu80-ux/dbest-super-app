@@ -363,6 +363,9 @@ public final class MainActivity extends ComponentActivity {
                 }
             }
             @Override public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest req) {
+                // Only top-level navigation may launch external apps. Embedded payment,
+                // authentication and support frames must never trigger ACTION_VIEW.
+                if (!req.isForMainFrame()) return false;
                 return route(req.getUrl());
             }
             @Override public boolean shouldOverrideUrlLoading(WebView v, String url) {
