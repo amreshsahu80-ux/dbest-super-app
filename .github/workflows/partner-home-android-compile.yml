@@ -182,7 +182,7 @@ jobs:
           for p in sorted(outputs):
               digest = hashlib.sha256(p.read_bytes()).hexdigest()
               lines.append(f'sha256={digest} bytes={p.stat().st_size} path={p}')
-          manifest.write_text('\\n'.join(lines) + '\\n')
+          manifest.write_text('\n'.join(lines) + '\n')
           print(manifest.read_text())
           PY
       - name: Upload build provenance alongside QA artifacts
