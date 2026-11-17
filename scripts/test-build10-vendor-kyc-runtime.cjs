@@ -47,5 +47,12 @@ const docs=DOCS.map(docType=>({docType,file:{name:docType+'.pdf',type:'applicati
  await assert.rejects(h.upload('vendor','test-session',[docs[0],docs[0]]),/kyc_documents_invalid_or_duplicate/);
  await assert.rejects(h.upload('vendor','test-session',[{docType:'pan',file:{name:'x.exe',type:'application/octet-stream',size:10}}]),/kyc_file_type_invalid_pan/);
  assert.equal(h.requests.length,0,'preflight failures must not upload');
+ h=harness('complete');
+ await assert.rejects(h.upload('vendor','test-session',[...docs.slice(0,4),{docType:'bank_proof',file:{name:'bad.exe',type:'application/octet-stream',size:10}}]),/kyc_file_type_invalid_bank_proof/);
+ assert.equal(h.requests.length,0,'invalid final document must prevent all earlier writes');
+ h=harness('complete');
+ await assert.rejects(h.upload('vendor','test-session',[...docs.slice(0,4),{docType:'bank_proof',file:{name:'huge.pdf',type:'application/pdf',size:8*1024*1024+1}}]),/file_too_large/);
+ assert.equal(h.requests.length,0,'oversized final document must prevent all earlier writes');
+
  console.log('PASS: authenticated upload, persisted list, incomplete KYC rejection, preflight fail-closed (offline)');
 })().catch(e=>{console.error(e);process.exitCode=1});
