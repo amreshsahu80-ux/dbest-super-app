@@ -227,12 +227,16 @@ public final class MainActivity extends ComponentActivity {
         LinearLayout titleRow = row();
         titleRow.setPadding(dp(4), 0, dp(4), 0);
         TextView roleTitle = txt(title, 18, NAVY, true);
-        roleTitle.setSingleLine(true);
+        // Allow the role name to wrap on narrow screens or large accessibility fonts.
+        roleTitle.setMaxLines(2);
         roleTitle.setEllipsize(android.text.TextUtils.TruncateAt.END);
         titleRow.addView(roleTitle, new LinearLayout.LayoutParams(0, -2, 1));
         spaceWidth(titleRow, 6);
         TextView ready = txt("• DBest Partner", 10, color, true);
         ready.setSingleLine(true);
+        // The decorative badge must not squeeze the actual role name off screen.
+        ready.setMaxWidth(dp(100));
+        ready.setEllipsize(android.text.TextUtils.TruncateAt.END);
         ready.setGravity(Gravity.RIGHT | Gravity.CENTER_VERTICAL);
         titleRow.addView(ready, new LinearLayout.LayoutParams(-2, -2));
         card.addView(titleRow);
