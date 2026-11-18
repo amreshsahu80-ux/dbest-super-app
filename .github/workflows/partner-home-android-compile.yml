@@ -194,6 +194,26 @@ jobs:
               print(f'{p}: {p.stat().st_size} bytes sha256={hashlib.sha256(p.read_bytes()).hexdigest()}')
           print('Release AAB is NOT verified signed; no Play upload authorized.')
           PY
+      - name: Verify packaged Android identities and QA install isolation
+        run: |
+          set -euo pipefail
+          sdk="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
+          test -n "$sdk"
+          aapt="$(find "$sdk/build-tools" -type f -name aapt | sort -V | tail -n 1)"
+          test -x "$aapt"
+          for flavor in production qa; do
+            apk="$(find "app/build/outputs/apk/$flavor/debug" -maxdepth 1 -name '*.apk' -print -quit)"
+            test -n "$apk"
+            badging="$("$aapt" dump badging "$apk")"
+            expected="com.dbest4u.partner"
+            version="1.0.6"
+            if [ "$flavor" = qa ]; then
+              expected="$expected.qa"
+              version="$version-qa"
+            fi
+            printf '%s\n' "$badging" | grep -F "package: name='$expected' versionCode='10' versionName='$version'"
+            printf '%s\n' "$badging" | grep -F "launchable-activity: name='com.dbest4u.partner.MainActivity'"
+          done
       - name: Record immutable build provenance for QA review
         run: |
           python3 - <<'PY'
