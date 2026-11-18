@@ -14,7 +14,7 @@ jobs:
           node-version: '22'
       - name: Verify isolated Partner release identity
         run: |
-          node -e "const fs=require('fs');const g=fs.readFileSync('partner-android-app/app/build.gradle','utf8');for(const v of ['com.dbest4u.partner','versionCode 10',\"versionName '1.0.6'\"])if(!g.includes(v))throw Error('Missing '+v);console.log('Native Partner release identity passed')"
+          node -e "const fs=require('fs');const g=fs.readFileSync('partner-android-app/app/build.gradle','utf8');for(const v of ['com.dbest4u.partner','versionCode 11',\"versionName '1.0.7'\"])if(!g.includes(v))throw Error('Missing '+v);console.log('Native Partner release identity passed')"
       - name: Note separately gated website onboarding QA
         run: echo 'Shared website onboarding/KYC scripts excluded from this isolated Android release; validate separately before production.'
   android-build10-signed:
@@ -34,10 +34,10 @@ jobs:
       - name: Check release identity
         run: |
           grep -Fq "applicationId 'com.dbest4u.partner'" app/build.gradle
-          grep -Fq 'versionCode 10' app/build.gradle
-          grep -Fq "versionName '1.0.6'" app/build.gradle
+          grep -Fq 'versionCode 11' app/build.gradle
+          grep -Fq "versionName '1.0.7'" app/build.gradle
       - name: Compile isolated release candidate
-        run: gradle :app:assembleRelease :app:bundleRelease --no-daemon
+        run: gradle :app:assembleProductionRelease :app:bundleProductionRelease --no-daemon
       - name: Verify signing credentials are provisioned
         env:
           UPLOAD_KEY_B64: ${{ secrets.DBEST_PARTNER_UPLOAD_KEY_B64 }}
@@ -72,11 +72,11 @@ jobs:
           KEY_FILE="$(mktemp --suffix=.p12)"
           trap 'rm -f "$KEY_FILE"' EXIT
           printf '%s' "$UPLOAD_KEY_B64" | base64 --decode > "$KEY_FILE"
-          jarsigner -keystore "$KEY_FILE" -storetype PKCS12 -storepass:env UPLOAD_KEY_PASSWORD -keypass:env UPLOAD_KEY_PASSWORD app/build/outputs/bundle/release/app-release.aab "$UPLOAD_KEY_ALIAS"
-          jarsigner -verify -strict app/build/outputs/bundle/release/app-release.aab
+          jarsigner -keystore "$KEY_FILE" -storetype PKCS12 -storepass:env UPLOAD_KEY_PASSWORD -keypass:env UPLOAD_KEY_PASSWORD app/build/outputs/bundle/productionRelease/app-production-release.aab "$UPLOAD_KEY_ALIAS"
+          jarsigner -verify -strict app/build/outputs/bundle/productionRelease/app-production-release.aab
       - name: Validate release bundle and launcher reference
         run: |
-          test -s app/build/outputs/bundle/release/app-release.aab
+          test -s app/build/outputs/bundle/productionRelease/app-production-release.aab
           grep -Fq 'android:icon="@drawable/dbest_brand"' app/src/main/AndroidManifest.xml
           grep -Fq 'android:roundIcon="@drawable/dbest_brand"' app/src/main/AndroidManifest.xml
           test ! -e app/src/main/res/drawable/partner_launcher.xml
@@ -84,12 +84,12 @@ jobs:
           ! grep -R -E '@drawable/(partner_launcher|partner_symbol)' app/src/main
           test -s app/src/main/res/drawable-nodpi/dbest_brand.png
           file app/src/main/res/drawable-nodpi/dbest_brand.png | grep -q 'PNG image data'
-          jarsigner -verify -strict app/build/outputs/bundle/release/app-release.aab
+          jarsigner -verify -strict app/build/outputs/bundle/productionRelease/app-production-release.aab
       - name: Keep signed candidate private
         uses: actions/upload-artifact@v4
         with:
           name: partner-build10-signed-aab-and-unsigned-apk
           path: |
-            partner-android-app/app/build/outputs/bundle/release/*.aab
-            partner-android-app/app/build/outputs/apk/release/*.apk
+            partner-android-app/app/build/outputs/bundle/productionRelease/*.aab
+            partner-android-app/app/build/outputs/apk/production/release/*.apk
           retention-days: 1
