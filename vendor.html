@@ -129,7 +129,7 @@ async function loadVendorCategories(){
   const r=await fetch(BASE+'/functions/v1/vendor-settlement-live',{method:'POST',cache:'no-store',headers:{...headers(),Authorization:'Bearer '+KEY},body:JSON.stringify({action:'public_categories'})});
   const d=await r.json();if(!r.ok||d.ok!==true||!Array.isArray(d.categories))throw new Error('category_registry_unavailable');
   const options=[new Option('Select your business category','')];
-  for(const c of d.categories){if(c?.active===false)continue;const key=String(c?.key||'').trim(),label=String(c?.label||'').trim();if(!/^[a-z][a-z0-9_]{0,59}$/.test(key)||!label||vendorCategoryKeys.has(key))continue;vendorCategoryKeys.add(key);options.push(new Option(label,key))}
+  for(const c of d.categories){if(c?.active===false||c?.enabled===false||String(c?.status||'').toLowerCase()==='inactive')continue;const key=String(c?.key||'').trim(),label=String(c?.label||'').trim();if(!/^[a-z][a-z0-9_]{0,59}$/.test(key)||!label||vendorCategoryKeys.has(key))continue;vendorCategoryKeys.add(key);options.push(new Option(label,key))}
   if(!vendorCategoryKeys.size)throw new Error('No business categories configured');
   select.replaceChildren(...options);select.value=vendorCategoryKeys.has(previous)?previous:'';select.disabled=false;status.textContent='Select your business category.';
  }catch(e){vendorCategoryKeys.clear();select.replaceChildren(new Option('Categories unavailable',''));status.textContent='Could not load business categories. Tap Reload categories to retry.'}
