@@ -19,7 +19,22 @@ async function render(){
  function bind(){document.querySelectorAll('[data-cat-form]').forEach(form=>{form.onsubmit=async e=>{e.preventDefault();const key=form.getAttribute('data-cat-form'),f=new FormData(form);try{await call('owner_save_category',{key,label:String(f.get('label')||'').trim(),marginPercent:Number(f.get('margin'))});window.toast?.('Category updated.');render()}catch(err){window.toast?.('Could not update category: '+err.message)}}});document.querySelectorAll('[data-cat-delete]').forEach(btn=>{btn.onclick=async()=>{const key=btn.getAttribute('data-cat-delete');if(Number(btn.getAttribute('data-vendor-count')||0)>0){window.toast?.('Reassign existing vendors before deleting this category.');return;}if(!confirm('Delete this Marketplace category? Historical orders will remain intact and existing vendors on this category will use the 9% fallback until reassigned.'))return;try{const d=await call('owner_delete_category',{key});window.toast?.(`Category deleted. ${Number(d.affectedVendors||0)} vendor(s) may use fallback margin.`);render()}catch(err){window.toast?.('Could not delete category: '+err.message)}}})}
 }
 window.ownerMarketplaceCategoryControl=render;
-function install(){if(!isOwner())return;const root=document.querySelector('.sectionContent.owner55');if(!root||document.getElementById('dbestOwnerMarketplaceCategoryGroup'))return;const host=root.querySelector('.owner55Groups')||root;const g=document.createElement('div');g.className='owner55Group';g.id='dbestOwnerMarketplaceCategoryGroup';g.innerHTML='<div class="owner55GroupHead"><div><b>Marketplace Commercial Controls</b><small>Add/delete Marketplace categories and set Vendor margin percentages.</small></div></div><div class="owner55Grid"><button class="owner55Action" id="dbestOwnerMarketplaceCategoryBtn"><span>🛍️</span><b>Marketplace Categories & Margins</b><small>Add, edit or delete categories and control the DBest margin for each.</small></button></div>';host.prepend(g);g.querySelector('#dbestOwnerMarketplaceCategoryBtn').onclick=render}
-[250,700,1500,3000].forEach(ms=>setTimeout(install,ms));new MutationObserver(()=>{clearTimeout(window.__dbestMarketplaceCatInstall);window.__dbestMarketplaceCatInstall=setTimeout(install,80)}).observe(document.body,{childList:true,subtree:true});
+function install(){
+ const existing=document.getElementById('dbestOwnerMarketplaceCategoryBtn');
+ if(!isOwner()){if(existing)existing.closest('#dbestOwnerMarketplaceCategoryGroup')?.remove();return;}
+ if(existing)return;
+ const root=document.querySelector('.sectionContent.owner55')||
+   document.querySelector('.owner55Groups')||
+   document.querySelector('.sectionContent.ownerMasterPage');
+ const host=root?.querySelector('.owner55Groups')||root;
+ // Owner layouts differ across releases. Provide a reliable owner-only entry
+ // even when the older owner55 section container is absent.
+ const g=document.createElement('div');g.id='dbestOwnerMarketplaceCategoryGroup';
+ if(host){g.className='owner55Group';g.innerHTML='<div class="owner55GroupHead"><div><b>Marketplace Commercial Controls</b><small>Manage business categories and vendor margins.</small></div></div><div class="owner55Grid"><button type="button" class="owner55Action" id="dbestOwnerMarketplaceCategoryBtn"><span>🛍️</span><b>Marketplace Categories & Margins</b><small>Add or edit categories without an app update.</small></button></div>';host.prepend(g)}
+ else {g.style.cssText='position:fixed;right:14px;bottom:85px;z-index:2147483000';g.innerHTML='<button type="button" id="dbestOwnerMarketplaceCategoryBtn" style="padding:12px 16px;border:0;border-radius:12px;background:#173c87;color:white;font-weight:700;box-shadow:0 4px 16px #0004">🛍️ Manage Business Categories</button>';document.body.appendChild(g)}
+ g.querySelector('button').addEventListener('click',render);
+}
+[250,700,1500,3000].forEach(ms=>setTimeout(install,ms));
+new MutationObserver(()=>{clearTimeout(window.__dbestMarketplaceCatInstall);window.__dbestMarketplaceCatInstall=setTimeout(install,100)}).observe(document.body,{childList:true,subtree:true});
 window.DBEST_OWNER_MARKETPLACE_CATEGORIES={version:VERSION,open:render,refresh:install};
 })();
