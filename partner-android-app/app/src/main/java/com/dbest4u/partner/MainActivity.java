@@ -209,7 +209,9 @@ public final class MainActivity extends ComponentActivity {
         ImageView image = new ImageView(this);
         image.setScaleType(ImageView.ScaleType.CENTER_CROP);
         image.setImageResource(photoResource);
-        image.setContentDescription(title + " partner services photograph");
+        // Decorative image: the actionable card already announces the role and action.
+        // Do not create a duplicate TalkBack stop before the workspace buttons.
+        image.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         photoFrame.addView(image, new FrameLayout.LayoutParams(-1, -1));
         TextView overlay = txt("  " + category + "  ", 10, Color.WHITE, true);
         overlay.setPadding(dp(7), dp(4), dp(7), dp(4));
