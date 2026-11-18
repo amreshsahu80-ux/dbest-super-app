@@ -223,12 +223,12 @@ jobs:
             test -n "$apk"
             badging="$("$aapt" dump badging "$apk")"
             expected="com.dbest4u.partner"
-            version="1.0.6"
+            version="1.0.7"
             if [ "$flavor" = qa ]; then
               expected="$expected.qa"
               version="$version-qa"
             fi
-            printf '%s\n' "$badging" | grep -F "package: name='$expected' versionCode='10' versionName='$version'"
+            printf '%s\n' "$badging" | grep -F "package: name='$expected' versionCode='11' versionName='$version'"
             printf '%s\n' "$badging" | grep -F "launchable-activity: name='com.dbest4u.partner.MainActivity'"
           done
       - name: Record immutable build provenance for QA review
