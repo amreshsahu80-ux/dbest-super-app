@@ -44,6 +44,19 @@ jobs:
           assert 'dp(48)' in header, 'Workspace header must retain 48dp touch targets'
           assert 'browserTitle' in header and 'setSingleLine(true)' in header, 'Workspace title must truncate on narrow screens'
           PY
+      - name: Regression-check Home scroll and stale focus reset
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          src = Path('app/src/main/java/com/dbest4u/partner/MainActivity.java').read_text()
+          home = src.split('private void showHome() {', 1)[1].split('private void openTrustedPushTarget(', 1)[0]
+          assert 'homeScreen.setVisibility(View.VISIBLE);' in home, 'Home must become visible before resetting scroll'
+          assert 'landingScroll.post(() -> {' in home, 'Reset scroll after layout, not before'
+          assert 'if (!showingBrowser && homeScreen == landingScroll)' in home, 'Delayed reset must not interfere with a new workspace'
+          assert 'landingScroll.clearFocus();' in home, 'Clear stale WebView/card focus before scrolling'
+          assert 'landingScroll.scrollTo(0, 0);' in home, 'Returning Home must reset to top'
+          assert home.index('landingScroll.clearFocus();') < home.index('landingScroll.scrollTo(0, 0);'), 'Clear focus before resetting scroll'
+          PY
       - name: Regression-check notification floater separation and opt-in safety
         run: |
           python3 - <<'PY'
