@@ -97,6 +97,8 @@ jobs:
           assert 'if (showingBrowser && url != null && url.equals(v.getUrl())' in src and '&& browserLoading != null) browserLoading.setVisibility(View.VISIBLE);' in src, 'Progress must be scoped to the active workspace URL and never overlay native home'
           assert 'card.setContentDescription(title + " partner card. Open workspace");' in src, 'Role card needs accessible action label'
           assert 'photoFrame.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);' in src, 'Decorative photo and category ribbon must not create duplicate TalkBack stops'
+          assert 'ready.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);' in src, 'Decorative partner badge must not create an extra TalkBack stop'
+          assert 'image.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);' in src, 'Role photos must remain decorative for screen readers'
           assert 'join.setOnClickListener(v -> openPortal(title + " · Join", joinPath));' in src, 'Join must keep its distinct route'
           assert 'onWorkspaceSelected(canonicalRole)' in src, 'Push role must remain canonical'
           assert 'resetWorkspaceHistoryOnLoad = true;' in src, 'Role switch must reset previous workspace history'
