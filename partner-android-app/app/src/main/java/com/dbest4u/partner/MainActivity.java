@@ -112,7 +112,7 @@ public final class MainActivity extends ComponentActivity {
         scroll.setFillViewport(true);
         scroll.setClipToPadding(false);
         LinearLayout page = column();
-        // Reserve space for the 40dp notification control and its 12dp bottom margin.
+        // Reserve space for the 48dp notification control and its 12dp bottom margin.
         // Scrolling to the bottom must never put legal/footer text under the overlay.
         page.setPadding(dp(16), dp(8), dp(16), dp(84));
         scroll.addView(page);
@@ -679,7 +679,12 @@ public final class MainActivity extends ComponentActivity {
         b.setTextSize(13);
         b.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         b.setTextColor(textColor);
-        b.setBackground(rounded(bg, 14));
+        // Preserve visible touch and keyboard-focus feedback with the custom rounded shape.
+        int feedback = Color.alpha(textColor) == 0 ? 0x22000000
+                : (textColor == Color.WHITE ? 0x44FFFFFF : 0x22000000);
+        b.setBackground(new android.graphics.drawable.RippleDrawable(
+                android.content.res.ColorStateList.valueOf(feedback),
+                rounded(bg, 14), rounded(Color.WHITE, 14)));
         b.setMinimumHeight(0);
         b.setMinHeight(0);
         b.setPadding(dp(6), 0, dp(6), 0);
