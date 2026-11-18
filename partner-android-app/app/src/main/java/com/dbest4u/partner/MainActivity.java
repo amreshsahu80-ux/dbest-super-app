@@ -24,6 +24,7 @@ import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -39,7 +40,10 @@ import androidx.core.view.WindowInsetsCompat;
 
 public final class MainActivity extends ComponentActivity {
     private static final String ORIGIN = "https://dbest4u.com";
-    private static final int FILE_REQUEST = 1201;
+    // Keep document-picker request codes separate from location permission (1202)
+    // and push-notification permission requests.
+    private static final int FILE_REQUEST = 1301;
+    private static final int FILE_REQUEST_MAX = 1350;
     private static final int LOCATION_REQUEST = 1202;
     private static final int NAVY = 0xFF10264B;
     private static final int BLUE = 0xFF1760FF;
@@ -51,10 +55,17 @@ public final class MainActivity extends ComponentActivity {
     private LinearLayout browserShell;
     private WebView webView;
     private TextView browserTitle;
+    private ProgressBar browserLoading;
     private ValueCallback<Uri[]> fileCallback;
+    private int nextFileRequestCode = FILE_REQUEST;
+    private int activeFileRequestCode = -1;
     private GeolocationPermissions.Callback locationCallback;
     private String locationOrigin;
+    // Keep the Android permission request reserved until its result arrives,
+    // even if the originating workspace is closed in the meantime.
+    private boolean locationPermissionRequestInFlight;
     private boolean showingBrowser;
+    private boolean resetWorkspaceHistoryOnLoad;
     private String currentRole = "";
 
     @Override public void onCreate(Bundle state) {
@@ -87,7 +98,7 @@ public final class MainActivity extends ComponentActivity {
             @Override public void handleOnBackPressed() {
                 if (!showingBrowser) {
                     finish();
-                } else if (webView.canGoBack()) {
+                } else if (!resetWorkspaceHistoryOnLoad && webView.canGoBack()) {
                     webView.goBack();
                 } else {
                     showHome();
@@ -101,7 +112,9 @@ public final class MainActivity extends ComponentActivity {
         scroll.setFillViewport(true);
         scroll.setClipToPadding(false);
         LinearLayout page = column();
-        page.setPadding(dp(16), dp(11), dp(16), dp(25));
+        // Reserve space for the 48dp notification control and its 12dp bottom margin.
+        // Scrolling to the bottom must never put legal/footer text under the overlay.
+        page.setPadding(dp(16), dp(8), dp(16), dp(84));
         scroll.addView(page);
 
         // Genuine DBest logo, bundled locally so the first screen never waits for network images.
@@ -110,7 +123,7 @@ public final class MainActivity extends ComponentActivity {
         logo.setImageResource(R.drawable.dbest_brand);
         logo.setAdjustViewBounds(true);
         logo.setScaleType(ImageView.ScaleType.FIT_CENTER);
-        brand.addView(logo, new LinearLayout.LayoutParams(dp(150), dp(62)));
+        brand.addView(logo, new LinearLayout.LayoutParams(dp(130), dp(52)));
         View empty = new View(this);
         brand.addView(empty, new LinearLayout.LayoutParams(0, 1, 1));
         TextView partner = txt("PARTNER\nNETWORK", 11, BLUE, true);
@@ -121,44 +134,44 @@ public final class MainActivity extends ComponentActivity {
         privacyMenu.setContentDescription("Account & Privacy");
         privacyMenu.setTextSize(23);
         privacyMenu.setOnClickListener(v -> showAccountSettings());
-        brand.addView(privacyMenu, new LinearLayout.LayoutParams(dp(44), dp(48)));
+        brand.addView(privacyMenu, new LinearLayout.LayoutParams(dp(48), dp(48)));
         page.addView(brand);
-        space(page, 12);
+        space(page, 8);
 
         LinearLayout hero = column();
-        hero.setPadding(dp(19), dp(17), dp(19), dp(18));
+        hero.setPadding(dp(16), dp(13), dp(16), dp(14));
         GradientDrawable heroShape = new GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 new int[]{0xFF102F68, 0xFF1760FF, 0xFF6D52EF});
-        heroShape.setCornerRadius(dp(22));
+        heroShape.setCornerRadius(dp(18));
         hero.setBackground(heroShape);
         hero.addView(txt("ONE PARTNER NETWORK", 10, 0xFFE6EDFF, true));
         space(hero, 8);
-        hero.addView(txt("Your work. Your growth.", 25, Color.WHITE, true));
+        hero.addView(txt("Your work. Your growth.", 22, Color.WHITE, true));
         space(hero, 6);
         TextView caption = txt("Orders, trips and service jobs—one dedicated DBest app.", 12, 0xFFF0F3FF, false);
         caption.setLineSpacing(dp(2), 1);
         hero.addView(caption);
         page.addView(hero);
-        space(page, 20);
+        space(page, 14);
 
-        page.addView(txt("Choose your workspace", 22, NAVY, true));
+        page.addView(txt("Choose your workspace", 20, NAVY, true));
         space(page, 4);
         page.addView(txt("Real opportunities. Secure access to your existing partner account.", 12, 0xFF627189, false));
-        space(page, 13);
+        space(page, 9);
 
         page.addView(roleCard(
                 "Vendor", "GROCERY · RESTAURANT · PHARMACY",
                 "Manage store, orders, catalog and earnings",
                 0xFF0B987F, R.drawable.partner_vendor,
                 "/Vendor", "/partner?type=Vendor"));
-        space(page, 13);
+        space(page, 10);
         page.addView(roleCard(
                 "Vaahak", "CAB · DELIVERY · TRANSPORT",
                 "Manage rides, deliveries and trip earnings",
                 0xFF3465F5, R.drawable.partner_vaahak,
                 "/vaahak", "/partner?type=Vaahak"));
-        space(page, 13);
+        space(page, 10);
         page.addView(roleCard(
                 "Service Partner", "REPAIRS · HOME SERVICES",
                 "Receive service requests and manage jobs",
@@ -176,7 +189,7 @@ public final class MainActivity extends ComponentActivity {
         // Account deletion stays accessible via the Account & Privacy menu,
         // not as a prominent button on the Partner home screen.
         space(page, 18);
-        TextView legal = txt("DBest Partner • Canary candidate", 11, 0xFF8B98AB, false);
+        TextView legal = txt("DBest Partner • Secure partner access", 11, 0xFF8B98AB, false);
         legal.setGravity(Gravity.CENTER);
         page.addView(legal);
         return scroll;
@@ -186,52 +199,83 @@ public final class MainActivity extends ComponentActivity {
     private View roleCard(String title, String category, String summary, int color,
                           int photoResource, String loginPath, String joinPath) {
         LinearLayout card = column();
-        card.setPadding(dp(10), dp(10), dp(10), dp(13));
+        card.setPadding(dp(10), dp(10), dp(10), dp(10));
         card.setBackground(bordered(Color.WHITE, 0xFFE3E8F0, 20));
         card.setElevation(dp(2));
 
         FrameLayout photoFrame = new FrameLayout(this);
         photoFrame.setBackground(rounded(0xFFEAF0F8, 15));
         photoFrame.setClipToOutline(true);
+        // The image and category ribbon are decorative: the card and its buttons
+        // already announce the role and available actions to TalkBack.
+        photoFrame.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
         ImageView image = new ImageView(this);
         image.setScaleType(ImageView.ScaleType.CENTER_CROP);
         image.setImageResource(photoResource);
-        image.setContentDescription(title + " partner services photograph");
+        // Decorative image: the actionable card already announces the role and action.
+        // Do not create a duplicate TalkBack stop before the workspace buttons.
+        image.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         photoFrame.addView(image, new FrameLayout.LayoutParams(-1, -1));
         TextView overlay = txt("  " + category + "  ", 10, Color.WHITE, true);
         overlay.setPadding(dp(7), dp(4), dp(7), dp(4));
+        overlay.setSingleLine(true);
+        overlay.setEllipsize(android.text.TextUtils.TruncateAt.END);
         overlay.setBackground(rounded(0xD3101F3A, 9));
-        FrameLayout.LayoutParams overlayParams = new FrameLayout.LayoutParams(-2, -2, Gravity.TOP | Gravity.LEFT);
+        FrameLayout.LayoutParams overlayParams = new FrameLayout.LayoutParams(-1, -2, Gravity.TOP | Gravity.LEFT);
         overlayParams.leftMargin = dp(9);
+        overlayParams.rightMargin = dp(9);
         overlayParams.topMargin = dp(9);
         photoFrame.addView(overlay, overlayParams);
-        card.addView(photoFrame, new LinearLayout.LayoutParams(-1, dp(151)));
+        card.addView(photoFrame, new LinearLayout.LayoutParams(-1, dp(68)));
 
-        space(card, 11);
+        space(card, 8);
         LinearLayout titleRow = row();
         titleRow.setPadding(dp(4), 0, dp(4), 0);
-        titleRow.addView(txt(title, 20, NAVY, true));
-        View gap = new View(this);
-        titleRow.addView(gap, new LinearLayout.LayoutParams(0, 1, 1));
+        TextView roleTitle = txt(title, 18, NAVY, true);
+        // Allow the role name to wrap on narrow screens or large accessibility fonts.
+        roleTitle.setMaxLines(2);
+        roleTitle.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        titleRow.addView(roleTitle, new LinearLayout.LayoutParams(0, -2, 1));
+        spaceWidth(titleRow, 6);
         TextView ready = txt("• DBest Partner", 10, color, true);
-        ready.setGravity(Gravity.RIGHT);
-        titleRow.addView(ready);
+        ready.setSingleLine(true);
+        // The card already announces the partner role; avoid a redundant badge stop.
+        ready.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        // The decorative badge must not squeeze the actual role name off screen.
+        ready.setMaxWidth(dp(100));
+        ready.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        ready.setGravity(Gravity.RIGHT | Gravity.CENTER_VERTICAL);
+        titleRow.addView(ready, new LinearLayout.LayoutParams(-2, -2));
         card.addView(titleRow);
         space(card, 4);
         TextView desc = txt(summary, 12, 0xFF657187, false);
         desc.setPadding(dp(4), 0, dp(4), 0);
         card.addView(desc);
-        space(card, 12);
+        space(card, 8);
 
         LinearLayout actions = row();
         Button workspace = button("Open workspace", Color.WHITE, color);
+        // Keep the 48dp action row compact on narrow screens and large font settings.
+        // TalkBack still receives the complete action from contentDescription.
+        workspace.setSingleLine(true);
+        workspace.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        workspace.setContentDescription("Open " + title + " workspace");
         workspace.setOnClickListener(v -> openPortal(title, loginPath));
-        actions.addView(workspace, new LinearLayout.LayoutParams(0, dp(46), 1.5f));
+        actions.addView(workspace, new LinearLayout.LayoutParams(0, dp(48), 1.5f));
         spaceWidth(actions, 8);
         Button join = button("Join", color, tint(color));
+        join.setSingleLine(true);
+        join.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        join.setContentDescription("Join as " + title);
         join.setOnClickListener(v -> openPortal(title + " · Join", joinPath));
-        actions.addView(join, new LinearLayout.LayoutParams(0, dp(46), 0.72f));
+        actions.addView(join, new LinearLayout.LayoutParams(0, dp(48), 0.72f));
         card.addView(actions);
+        // Make the image/title area actionable without changing the separate Join action.
+        // Child buttons retain their own click handlers and routes.
+        card.setClickable(true);
+        card.setFocusable(true);
+        card.setContentDescription(title + " partner card. Open workspace");
+        card.setOnClickListener(v -> openPortal(title, loginPath));
         return card;
     }
 
@@ -239,37 +283,44 @@ public final class MainActivity extends ComponentActivity {
         LinearLayout shell = column();
         shell.setBackgroundColor(Color.WHITE);
         LinearLayout bar = row();
-        bar.setPadding(dp(10), dp(7), dp(10), dp(7));
+        bar.setPadding(dp(4), dp(3), dp(4), dp(3));
         bar.setBackgroundColor(Color.WHITE);
         Button back = button("‹", NAVY, 0xFFF0F4FB);
-        back.setTextSize(28);
+        back.setTextSize(24);
+        back.setContentDescription("Back");
         back.setOnClickListener(v -> {
-            if (webView.canGoBack()) webView.goBack();
+            if (!resetWorkspaceHistoryOnLoad && webView.canGoBack()) webView.goBack();
             else showHome();
         });
         bar.addView(back, new LinearLayout.LayoutParams(dp(48), dp(48)));
-        browserTitle = txt("DBest Partner", 16, NAVY, true);
+        browserTitle = txt("DBest Partner", 13, NAVY, true);
         browserTitle.setGravity(Gravity.CENTER_VERTICAL);
-        browserTitle.setPadding(dp(10), 0, 0, 0);
+        browserTitle.setSingleLine(true);
+        browserTitle.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        browserTitle.setPadding(dp(4), 0, dp(4), 0);
         bar.addView(browserTitle, new LinearLayout.LayoutParams(0, dp(48), 1));
         // Explicit action inside the selected Vendor, Vaahak or Service
         // Partner workspace. No user token is uploaded without consent.
-        Button linkAccount = button("🔔 Link", Color.WHITE, BLUE);
+        Button linkAccount = button("Link", Color.WHITE, BLUE);
+        linkAccount.setTextSize(11);
+        linkAccount.setContentDescription("Link signed-in partner account to notifications");
         linkAccount.setOnClickListener(v -> {
             if (partnerTestPush != null) partnerTestPush.connectAccount();
         });
-        bar.addView(linkAccount, new LinearLayout.LayoutParams(dp(88), dp(46)));
-        spaceWidth(bar, dp(6));
-        Button home = button("Home", BLUE, 0xFFEAF0FF);
+        bar.addView(linkAccount, new LinearLayout.LayoutParams(dp(52), dp(48)));
+        spaceWidth(bar, dp(4));
+        Button home = button("⌂", BLUE, 0xFFEAF0FF);
+        home.setTextSize(23);
+        home.setContentDescription("Partner home");
         home.setOnClickListener(v -> showHome());
-        bar.addView(home, new LinearLayout.LayoutParams(dp(78), dp(46)));
+        bar.addView(home, new LinearLayout.LayoutParams(dp(48), dp(48)));
         // All Partner roles use the same privacy menu; never show
         // account-deletion copy inside the public-facing workspace header.
         Button privacy = button("⋮", NAVY, 0xFFF0F4FB);
         privacy.setTextSize(23);
         privacy.setContentDescription("Account & Privacy");
         privacy.setOnClickListener(v -> showAccountSettings());
-        bar.addView(privacy, new LinearLayout.LayoutParams(dp(44), dp(46)));
+        bar.addView(privacy, new LinearLayout.LayoutParams(dp(48), dp(48)));
         shell.addView(bar);
 
         webView = new WebView(this);
@@ -286,14 +337,52 @@ public final class MainActivity extends ComponentActivity {
         if (android.os.Build.VERSION.SDK_INT >= 26) s.setSafeBrowsingEnabled(true);
 
         webView.setWebViewClient(new WebViewClient() {
+            @Override public void onPageStarted(WebView v, String url, android.graphics.Bitmap favicon) {
+                // Show progress for in-portal navigation and redirects, not only the first workspace open.
+                // Never expose a loading overlay on the native home screen.
+                // A late start event from an abandoned role must not revive the loading bar.
+                if (showingBrowser && url != null && url.equals(v.getUrl())
+                        && browserLoading != null) browserLoading.setVisibility(View.VISIBLE);
+            }
             @Override public void onPageFinished(WebView v, String url) {
-                if (partnerTestPush != null && isDbest(Uri.parse(url))) {
+                // WebView may finish an older navigation after a different role has opened.
+                // Only the currently displayed main-frame URL may clear history, change
+                // the header, or dismiss the new workspace's progress indicator.
+                if (!showingBrowser || url == null || !url.equals(v.getUrl())) return;
+                if (resetWorkspaceHistoryOnLoad && showingBrowser) {
+                    v.clearHistory();
+                    resetWorkspaceHistoryOnLoad = false;
+                }
+                if (browserLoading != null) browserLoading.setVisibility(View.GONE);
+                // A Join flow may redirect to the signed-in workspace. Reflect the
+                // actual destination instead of retaining a stale "Join" title.
+                Uri loaded = Uri.parse(url);
+                if (isDbest(loaded) && browserTitle != null && currentRole != null) {
+                    String path = loaded.getPath() == null ? "" : loaded.getPath().toLowerCase(java.util.Locale.ROOT);
+                    String role = currentRole.replace(" · Join", "");
+                    boolean workspace = ("Vaahak".equals(role) && path.equals("/vaahak"))
+                            || ("Vendor".equals(role) && path.equals("/vendor"))
+                            || ("Service Partner".equals(role) && path.equals("/servicepartnerdashboard"));
+                    if (workspace) browserTitle.setText(role + " · Workspace");
+                }
+                if (showingBrowser && partnerTestPush != null && isDbest(Uri.parse(url))) {
+                    final String completedUrl = url;
+                    final String completedRole = currentRole;
                     v.postDelayed(() -> {
-                        if (partnerTestPush != null) partnerTestPush.onPortalPageLoaded();
+                        // A delayed callback from a previous role must not update push
+                        // state after Home navigation or a subsequent workspace switch.
+                        if (showingBrowser && partnerTestPush != null
+                                && java.util.Objects.equals(completedRole, currentRole)
+                                && completedUrl.equals(v.getUrl())) {
+                            partnerTestPush.onPortalPageLoaded();
+                        }
                     }, 500);
                 }
             }
             @Override public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest req) {
+                // Only top-level navigation may launch external apps. Embedded payment,
+                // authentication and support frames must never trigger ACTION_VIEW.
+                if (!req.isForMainFrame()) return false;
                 return route(req.getUrl());
             }
             @Override public boolean shouldOverrideUrlLoading(WebView v, String url) {
@@ -301,15 +390,21 @@ public final class MainActivity extends ComponentActivity {
             }
             @Override public void onReceivedError(WebView v, WebResourceRequest req,
                                                    android.webkit.WebResourceError error) {
-                if (req.isForMainFrame())
+                // Ignore a late main-frame failure from a previous workspace or redirect.
+                // It must not hide the current role's progress or show a false error.
+                if (req.isForMainFrame() && showingBrowser
+                        && req.getUrl() != null && req.getUrl().toString().equals(v.getUrl())) {
+                    if (browserLoading != null) browserLoading.setVisibility(View.GONE);
                     Toast.makeText(MainActivity.this,
                             "Unable to load partner portal. Check your connection.", Toast.LENGTH_SHORT).show();
+                }
             }
         });
         webView.setWebChromeClient(new WebChromeClient() {
             @Override public void onGeolocationPermissionsShowPrompt(
                     String origin, GeolocationPermissions.Callback callback) {
-                if (!isDbest(Uri.parse(origin))) {
+                if (!showingBrowser || origin == null || !isDbest(Uri.parse(origin))
+                        || locationPermissionRequestInFlight) {
                     callback.invoke(origin, false, false);
                     return;
                 }
@@ -319,6 +414,7 @@ public final class MainActivity extends ComponentActivity {
                 } else {
                     locationOrigin = origin;
                     locationCallback = callback;
+                    locationPermissionRequestInFlight = true;
                     ActivityCompat.requestPermissions(MainActivity.this,
                             new String[]{Manifest.permission.ACCESS_FINE_LOCATION,
                                     Manifest.permission.ACCESS_COARSE_LOCATION}, LOCATION_REQUEST);
@@ -326,29 +422,49 @@ public final class MainActivity extends ComponentActivity {
             }
             @Override public boolean onShowFileChooser(WebView v,
                     ValueCallback<Uri[]> callback, FileChooserParams params) {
-                if (fileCallback != null) fileCallback.onReceiveValue(null);
+                // A delayed chooser request must not launch over Home or another
+                // role. Only the visible trusted workspace may request files.
+                String activeUrl = v.getUrl();
+                if (!showingBrowser || activeUrl == null || !isDbest(Uri.parse(activeUrl))) {
+                    callback.onReceiveValue(null);
+                    return true;
+                }
+                cancelPendingFileChooser();
                 fileCallback = callback;
+                // Give each picker launch a distinct request code. An old picker result
+                // must not be delivered to a new role's pending chooser callback.
+                int requestCode = nextFileRequestCode;
+                nextFileRequestCode = nextFileRequestCode >= FILE_REQUEST_MAX
+                        ? FILE_REQUEST : nextFileRequestCode + 1;
+                activeFileRequestCode = requestCode;
                 try {
-                    startActivityForResult(params.createIntent(), FILE_REQUEST);
+                    startActivityForResult(params.createIntent(), requestCode);
                     return true;
                 } catch (ActivityNotFoundException e) {
-                    fileCallback = null;
-                    callback.onReceiveValue(null);
+                    cancelPendingFileChooser();
                     return true;
                 }
             }
         });
         webView.setDownloadListener((url, agent, disposition, mime, length) -> {
+            if (!showingBrowser || url == null) return;
             Uri u = Uri.parse(url);
             if (isHttp(u)) openExternal(u);
             else Toast.makeText(this, "Download link is not supported.", Toast.LENGTH_SHORT).show();
         });
+        browserLoading = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
+        browserLoading.setIndeterminate(true);
+        browserLoading.setContentDescription("Loading partner workspace");
+        browserLoading.setVisibility(View.GONE);
+        shell.addView(browserLoading, new LinearLayout.LayoutParams(-1, dp(3)));
         shell.addView(webView, new LinearLayout.LayoutParams(-1, 0, 1));
         return shell;
     }
 
     private boolean route(Uri url) {
-        if (url == null) return true;
+        // A hidden workspace can still emit a delayed navigation after Home.
+        // Never launch an external application or navigate the hidden portal from it.
+        if (!showingBrowser || url == null) return true;
         String scheme = url.getScheme();
         if ("about".equalsIgnoreCase(scheme)) return false;
         if (isDbest(url)) return false;
@@ -364,7 +480,7 @@ public final class MainActivity extends ComponentActivity {
     }
 
     private boolean isDbest(Uri u) {
-        if (u == null || !"https".equalsIgnoreCase(u.getScheme())) return false;
+        if (u == null || !"https".equalsIgnoreCase(u.getScheme()) || (u.getPort() != -1 && u.getPort() != 443)) return false;
         String host = u.getHost();
         return host != null && (host.equalsIgnoreCase("dbest4u.com")
                 || host.equalsIgnoreCase("www.dbest4u.com"));
@@ -416,19 +532,53 @@ public final class MainActivity extends ComponentActivity {
 
     private void openPortal(String name, String route) {
         if (!route.startsWith("/") || route.startsWith("//")) return;
-        if (partnerTestPush != null) partnerTestPush.onWorkspaceSelected(name);
-        currentRole = name;
+        // Keep the notification account role canonical even when the UI opens Join.
+        // A display suffix must never become a push subscription role.
+        String canonicalRole = name.endsWith(" · Join")
+                ? name.substring(0, name.length() - " · Join".length()) : name;
+        // Cancel any chooser from the previous role before the WebView changes context.
+        // A late document-picker result must never be delivered to another workspace.
+        cancelPendingFileChooser();
+        cancelPendingLocationPrompt();
+        if (partnerTestPush != null) partnerTestPush.onWorkspaceSelected(canonicalRole);
+        currentRole = canonicalRole;
         browserTitle.setText(name);
         showingBrowser = true;
         homeScreen.setVisibility(View.GONE);
         browserShell.setVisibility(View.VISIBLE);
         if (partnerTestPush != null) partnerTestPush.setHomeVisible(false);
+        if (browserLoading != null) browserLoading.setVisibility(View.VISIBLE);
+        // A different role must not inherit the previous workspace back stack.
+        // Clear old entries once the new main frame finishes loading.
+        resetWorkspaceHistoryOnLoad = true;
         webView.loadUrl(ORIGIN + route);
     }
 
     private void showHome() {
+        cancelPendingFileChooser();
+        cancelPendingLocationPrompt();
         showingBrowser = false;
+        // A pending WebView callback from a previous workspace must not leave
+        // stale progress or clear the next workspace's navigation history.
+        resetWorkspaceHistoryOnLoad = false;
+        if (browserLoading != null) browserLoading.setVisibility(View.GONE);
         homeScreen.setVisibility(View.VISIBLE);
+        // Returning from a workspace must show the role choices, not a stale
+        // footer position left behind by an earlier visit to the landing page.
+        if (homeScreen instanceof ScrollView) {
+            ScrollView landingScroll = (ScrollView) homeScreen;
+            // Reset after the visible screen is laid out; an immediate scrollTo
+            // can be overridden by focus restoration when returning from WebView.
+            landingScroll.post(() -> {
+                if (!showingBrowser && homeScreen == landingScroll) {
+                    // WebView can leave focus on an off-screen role button. Clear
+                    // stale focus before resetting the landing position so Android
+                    // does not immediately scroll back to the previous card.
+                    landingScroll.clearFocus();
+                    landingScroll.scrollTo(0, 0);
+                }
+            });
+        }
         browserShell.setVisibility(View.GONE);
         if (partnerTestPush != null) partnerTestPush.setHomeVisible(true);
     }
@@ -466,26 +616,55 @@ public final class MainActivity extends ComponentActivity {
             partnerTestPush.onPermissionResult(granted);
             return;
         }
-        if (code == LOCATION_REQUEST && locationCallback != null) {
-            boolean ok = false;
-            for (int r : results) if (r == PackageManager.PERMISSION_GRANTED) ok = true;
-            locationCallback.invoke(locationOrigin, ok, false);
+        if (code == LOCATION_REQUEST) {
+            locationPermissionRequestInFlight = false;
+            GeolocationPermissions.Callback pending = locationCallback;
+            String origin = locationOrigin;
             locationCallback = null;
             locationOrigin = null;
+            if (pending != null && showingBrowser) {
+                boolean ok = false;
+                for (int r : results) if (r == PackageManager.PERMISSION_GRANTED) ok = true;
+                pending.invoke(origin, ok, false);
+            }
+        }
+    }
+
+    // A location prompt belongs to the workspace that requested it. A late
+    // Android permission result must not grant location to a different role.
+    private void cancelPendingLocationPrompt() {
+        if (locationCallback != null) {
+            GeolocationPermissions.Callback pending = locationCallback;
+            String origin = locationOrigin;
+            locationCallback = null;
+            locationOrigin = null;
+            pending.invoke(origin, false, false);
+        }
+    }
+
+    private void cancelPendingFileChooser() {
+        activeFileRequestCode = -1;
+        if (fileCallback != null) {
+            ValueCallback<Uri[]> pending = fileCallback;
+            fileCallback = null;
+            pending.onReceiveValue(null);
         }
     }
 
     @Override protected void onActivityResult(int code, int resultCode, Intent data) {
         super.onActivityResult(code, resultCode, data);
-        if (code == FILE_REQUEST && fileCallback != null) {
-            fileCallback.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(resultCode, data));
+        if (code == activeFileRequestCode && fileCallback != null) {
+            ValueCallback<Uri[]> pending = fileCallback;
             fileCallback = null;
+            activeFileRequestCode = -1;
+            pending.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(resultCode, data));
         }
     }
 
     @Override protected void onDestroy() {
         if (partnerTestPush != null) partnerTestPush.shutdown();
-        if (fileCallback != null) fileCallback.onReceiveValue(null);
+        cancelPendingLocationPrompt();
+        cancelPendingFileChooser();
         if (webView != null) webView.destroy();
         super.onDestroy();
     }
@@ -517,7 +696,12 @@ public final class MainActivity extends ComponentActivity {
         b.setTextSize(13);
         b.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         b.setTextColor(textColor);
-        b.setBackground(rounded(bg, 14));
+        // Preserve visible touch and keyboard-focus feedback with the custom rounded shape.
+        int feedback = Color.alpha(textColor) == 0 ? 0x22000000
+                : (textColor == Color.WHITE ? 0x44FFFFFF : 0x22000000);
+        b.setBackground(new android.graphics.drawable.RippleDrawable(
+                android.content.res.ColorStateList.valueOf(feedback),
+                rounded(bg, 14), rounded(Color.WHITE, 14)));
         b.setMinimumHeight(0);
         b.setMinHeight(0);
         b.setPadding(dp(6), 0, dp(6), 0);
