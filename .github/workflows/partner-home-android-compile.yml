@@ -29,7 +29,7 @@ jobs:
       - name: Verify Partner identity and compact controls
         run: |
           grep -Fq "applicationId 'com.dbest4u.partner'" app/build.gradle
-          grep -Fq 'versionCode 10' app/build.gradle
+          grep -Fq 'versionCode 11' app/build.gradle
           grep -Fq 'Gravity.BOTTOM|Gravity.LEFT' app/src/main/java/com/dbest4u/partner/PartnerPushTestController.java
           grep -Fq 'Partner notifications off. Tap for settings' app/src/main/java/com/dbest4u/partner/PartnerPushTestController.java
       - name: Verify compact workspace navigation has accessible touch targets
