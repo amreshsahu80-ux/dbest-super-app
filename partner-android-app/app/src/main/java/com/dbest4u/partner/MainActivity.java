@@ -239,6 +239,8 @@ public final class MainActivity extends ComponentActivity {
         spaceWidth(titleRow, 6);
         TextView ready = txt("• DBest Partner", 10, color, true);
         ready.setSingleLine(true);
+        // The card already announces the partner role; avoid a redundant badge stop.
+        ready.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         // The decorative badge must not squeeze the actual role name off screen.
         ready.setMaxWidth(dp(100));
         ready.setEllipsize(android.text.TextUtils.TruncateAt.END);
