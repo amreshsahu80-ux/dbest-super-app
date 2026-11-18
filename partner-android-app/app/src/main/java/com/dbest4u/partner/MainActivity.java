@@ -430,6 +430,7 @@ public final class MainActivity extends ComponentActivity {
             }
         });
         webView.setDownloadListener((url, agent, disposition, mime, length) -> {
+            if (!showingBrowser || url == null) return;
             Uri u = Uri.parse(url);
             if (isHttp(u)) openExternal(u);
             else Toast.makeText(this, "Download link is not supported.", Toast.LENGTH_SHORT).show();
@@ -444,7 +445,9 @@ public final class MainActivity extends ComponentActivity {
     }
 
     private boolean route(Uri url) {
-        if (url == null) return true;
+        // A hidden workspace can still emit a delayed navigation after Home.
+        // Never launch an external application or navigate the hidden portal from it.
+        if (!showingBrowser || url == null) return true;
         String scheme = url.getScheme();
         if ("about".equalsIgnoreCase(scheme)) return false;
         if (isDbest(url)) return false;
