@@ -5,9 +5,19 @@ on:
       - fix/build10-standalone-vendor-kyc-20261117
     paths:
       - 'vendor.html'
+      - 'partner-kyc-registration-upload-v2.js'
+      - 'tests/marketplace-vendor-visibility-fixture.cjs'
       - 'scripts/test-build10-vendor-*.cjs'
       - '.github/workflows/build10-vendor-isolated-static.yml'
   workflow_dispatch:
+  pull_request:
+    branches:
+      - fix/partner-build10-onboarding-release-20261114
+    paths:
+      - 'vendor.html'
+      - 'partner-kyc-registration-upload-v2.js'
+      - 'scripts/test-build10-vendor-*.cjs'
+      - 'tests/marketplace-vendor-visibility-fixture.cjs'
 jobs:
   vendor-static:
     runs-on: ubuntu-latest
@@ -24,3 +34,6 @@ jobs:
         run: node scripts/test-build10-vendor-category-gps-static.cjs
       - name: Verify authenticated KYC upload persistence and fail-closed behavior offline
         run: node scripts/test-build10-vendor-kyc-runtime.cjs
+
+      - name: Verify marketplace category and GPS exclusion fixture offline
+        run: node tests/marketplace-vendor-visibility-fixture.cjs
