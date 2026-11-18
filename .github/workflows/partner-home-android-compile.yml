@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - feat/partner-home-compact-ui-20261115
+      - release/partner-postbuild10-consolidation-20261118
   pull_request:
     branches:
       - release/partner-build10-isolated-20261114
