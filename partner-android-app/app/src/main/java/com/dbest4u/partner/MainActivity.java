@@ -255,11 +255,17 @@ public final class MainActivity extends ComponentActivity {
 
         LinearLayout actions = row();
         Button workspace = button("Open workspace", Color.WHITE, color);
+        // Keep the 48dp action row compact on narrow screens and large font settings.
+        // TalkBack still receives the complete action from contentDescription.
+        workspace.setSingleLine(true);
+        workspace.setEllipsize(android.text.TextUtils.TruncateAt.END);
         workspace.setContentDescription("Open " + title + " workspace");
         workspace.setOnClickListener(v -> openPortal(title, loginPath));
         actions.addView(workspace, new LinearLayout.LayoutParams(0, dp(48), 1.5f));
         spaceWidth(actions, 8);
         Button join = button("Join", color, tint(color));
+        join.setSingleLine(true);
+        join.setEllipsize(android.text.TextUtils.TruncateAt.END);
         join.setContentDescription("Join as " + title);
         join.setOnClickListener(v -> openPortal(title + " · Join", joinPath));
         actions.addView(join, new LinearLayout.LayoutParams(0, dp(48), 0.72f));
