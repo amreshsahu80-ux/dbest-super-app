@@ -1,0 +1,62 @@
+name: Partner Build 10 separate-install UI QA APK
+on:
+  push:
+    branches: ['fix/partner-build10-onboarding-release-20261114']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  ui-qa:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: partner-android-app
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+      - name: Prepare temporary separate-install UI-only package
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path('app/build.gradle')
+          s=p.read_text()
+          assert "applicationId 'com.dbest4u.partner'" in s
+          assert "versionCode 10" in s
+          p.write_text(s.replace("applicationId 'com.dbest4u.partner'","applicationId 'com.dbest4u.partner.qa'").replace("versionName '1.0.6'","versionName '1.0.6-qa'"))
+          p=Path('app/google-services.json')
+          d=json.loads(p.read_text())
+          c=next(c for c in d['client'] if c['client_info']['android_client_info']['package_name']=='com.dbest4u.partner')
+          c['client_info']['android_client_info']['package_name']='com.dbest4u.partner.qa'
+          p.write_text(json.dumps(d))
+          p=Path('app/src/main/AndroidManifest.xml')
+          s=p.read_text()
+          p.write_text(s.replace('android:label="DBest Partner"','android:label="DBest Partner QA"'))
+          PY
+      - name: Compile debug-signed separate install
+        run: gradle :app:assembleDebug --no-daemon
+      - name: Verify package and APK signature
+        run: |
+          set -eu
+          apk=app/build/outputs/apk/debug/app-debug.apk
+          test -s "$apk"
+          sdk="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
+          aapt="$(find "$sdk/build-tools" -type f -name aapt | sort -V | tail -n 1)"
+          apksigner="$(find "$sdk/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          "$aapt" dump badging "$apk" | grep -F "package: name='com.dbest4u.partner.qa' versionCode='10' versionName='1.0.6-qa'"
+          "$apksigner" verify "$apk"
+          sha256sum "$apk"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dbest-partner-build10-separate-install-ui-qa-apk
+          path: partner-android-app/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 3
+          if-no-files-found: error
