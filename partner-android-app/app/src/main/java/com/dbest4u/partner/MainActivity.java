@@ -206,6 +206,9 @@ public final class MainActivity extends ComponentActivity {
         FrameLayout photoFrame = new FrameLayout(this);
         photoFrame.setBackground(rounded(0xFFEAF0F8, 15));
         photoFrame.setClipToOutline(true);
+        // The image and category ribbon are decorative: the card and its buttons
+        // already announce the role and available actions to TalkBack.
+        photoFrame.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
         ImageView image = new ImageView(this);
         image.setScaleType(ImageView.ScaleType.CENTER_CROP);
         image.setImageResource(photoResource);
