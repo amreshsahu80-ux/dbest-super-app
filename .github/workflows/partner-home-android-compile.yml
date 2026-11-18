@@ -45,6 +45,20 @@ jobs:
           assert 'dp(48)' in header, 'Workspace header must retain 48dp touch targets'
           assert 'browserTitle' in header and 'setSingleLine(true)' in header, 'Workspace title must truncate on narrow screens'
           PY
+      - name: Regression-check compact role action labels on narrow screens
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          src = Path('app/src/main/java/com/dbest4u/partner/MainActivity.java').read_text()
+          card = src.split('private View roleCard(', 1)[1].split('private LinearLayout makeBrowser()', 1)[0]
+          for control in ('workspace', 'join'):
+              assert f'{control}.setSingleLine(true);' in card, f'{control} label must not wrap'
+              assert f'{control}.setEllipsize(android.text.TextUtils.TruncateAt.END);' in card, f'{control} label must truncate gracefully'
+          assert 'workspace.setContentDescription("Open " + title + " workspace");' in card, 'Workspace TalkBack label must remain complete'
+          assert 'join.setContentDescription("Join as " + title);' in card, 'Join TalkBack label must remain complete'
+          assert 'roleTitle.setMaxLines(2);' in card, 'Role title must allow accessibility font wrapping'
+          print('PASS: compact action labels and complete accessible role names')
+          PY
       - name: Regression-check Home scroll and stale focus reset
         run: |
           python3 - <<'PY'
