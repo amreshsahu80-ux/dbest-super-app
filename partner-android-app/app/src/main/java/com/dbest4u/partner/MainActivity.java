@@ -565,6 +565,10 @@ public final class MainActivity extends ComponentActivity {
             // can be overridden by focus restoration when returning from WebView.
             landingScroll.post(() -> {
                 if (!showingBrowser && homeScreen == landingScroll) {
+                    // WebView can leave focus on an off-screen role button. Clear
+                    // stale focus before resetting the landing position so Android
+                    // does not immediately scroll back to the previous card.
+                    landingScroll.clearFocus();
                     landingScroll.scrollTo(0, 0);
                 }
             });
