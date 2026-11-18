@@ -37,7 +37,11 @@ assert.match(upload,/vh\.id!=='regForm'/);
 
 // Explicit category choice avoids silently registering an electronics/retail shop as grocery.
 const vendorPortal=fs.readFileSync('vendor.html','utf8');
-assert.match(vendorPortal,/<select name="type" required><option value="" disabled selected>Select your business category<\/option>/);
+assert.match(vendorPortal,/<select name="type" required disabled><option value="" selected>Select your business category<\/option>/);
+assert.match(vendorPortal,/action:\s*'public_categories'/);
+assert.match(vendorPortal,/vendorCategoryKeys\.has\(/);
+assert.match(vendorPortal,/category_registry_unavailable/);
+assert.match(vendorPortal,/vendorCategoryRetry/);
 for(const category of ['grocery','restaurant','medicine','fashion','electronics','other']) {
   assert.match(vendorPortal,new RegExp('<option value="'+category+'">'));
 }
