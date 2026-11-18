@@ -42,9 +42,9 @@ assert.match(vendorPortal,/action:\s*'public_categories'/);
 assert.match(vendorPortal,/vendorCategoryKeys\.has\(/);
 assert.match(vendorPortal,/category_registry_unavailable/);
 assert.match(vendorPortal,/vendorCategoryRetry/);
-for(const category of ['grocery','restaurant','medicine','fashion','electronics','other']) {
-  assert.match(vendorPortal,new RegExp('<option value="'+category+'">'));
-}
+assert.match(vendorPortal,/for\(const c of d\.categories\)/);
+assert.match(vendorPortal,/select\.replaceChildren\(\.\.\.options\)/);
+assert.match(vendorPortal,/vendorCategoryKeys\.has\(previous\)/);
 
 // Missing GPS must not be interpreted as valid zero coordinates in vendor discovery readiness.
 assert.match(vendorPortal,/vendor\.lat!==null&&vendor\.lat!==undefined&&String\(vendor\.lat\)\.trim\(\)!==''/);
