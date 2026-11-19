@@ -98,7 +98,7 @@ Deno.serve(async(req:Request)=>{
   }
 
   if(action==='vendor_dashboard'){
-   const v=await vendorSession();if(!v)return json({error:'vendor_session_invalid'},401);const {data:orders}=await sb.from('marketplace_orders_live').select('*').eq('vendor_id',v.id).order('created_at',{ascending:false}).limit(100);const {data:catalog}=await sb.from('marketplace_catalog_live').select('*').eq('vendor_id',v.id).order('updated_at',{ascending:false});const {pin_hash,...safe}=v;return json({ok:true,vendor:safe,orders:orders||[],catalog:catalog||[]});
+   const v=await vendorSession();if(!v)return json({error:'vendor_session_invalid'},401);const [{data:orders,error:ordersError},{data:catalog,error:catalogError}]=await Promise.all([sb.from('marketplace_orders_live').select('*').eq('vendor_id',v.id).order('created_at',{ascending:false}).limit(100),sb.from('marketplace_catalog_live').select('*').eq('vendor_id',v.id).order('updated_at',{ascending:false})]);if(ordersError||catalogError)return json({error:'vendor_dashboard_unavailable'},503);const {pin_hash,...safe}=v;return json({ok:true,vendor:safe,orders:orders||[],catalog:catalog||[]});
   }
 
   if(action==='vendor_set_location'){
