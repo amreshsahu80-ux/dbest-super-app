@@ -581,6 +581,10 @@ public final class MainActivity extends ComponentActivity {
                 }
             });
         }
+        // Stop abandoned portal loads before hiding the WebView. Otherwise a slow
+        // workspace redirect can keep running behind the native landing screen.
+        // Keep cookies and WebView state intact for the next authenticated visit.
+        if (webView != null) webView.stopLoading();
         browserShell.setVisibility(View.GONE);
         if (partnerTestPush != null) partnerTestPush.setHomeVisible(true);
     }
