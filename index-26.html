@@ -3958,7 +3958,7 @@ async async function placeMarketOrder(e,type){
     const address=String(f.get('address')||'').trim();
     const pin=String(f.get('pin')||'').trim();
     if(!address)return toast('Please enter the delivery address.');
-    if(!/^\\d{6}$/.test(pin))return toast('Please enter a valid 6-digit delivery PIN code.');
+    if(!/^\d{6}$/.test(pin))return toast('Please enter a valid 6-digit delivery PIN code.');
   }
   if(cartNeedsPrescription(type)&&!form.elements.prescription?.files?.length)return toast('Please attach the required prescription.');
   const payment=String(f.get('payment')||'payu');
