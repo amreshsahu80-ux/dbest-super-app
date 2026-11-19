@@ -3957,8 +3957,12 @@ async async function placeMarketOrder(e,type){
   });
   x.order=x.meta.order;x.paymentStage=x.meta.paymentStage;save();
   if(payment==="payu")return marketPaymentScreen(x.id,type);
-  if(type!=="digital")createVaahakJobsForOrder(x.id);
-  commerceCarts[type]=[];save();marketOrderStatus(x.id);
+  commerceCarts[type]=[];save();
+  if(type!=="digital"){
+    try{createVaahakJobsForOrder(x.id)}
+    catch(dispatchError){console.error('Marketplace delivery dispatch setup failed for order '+x.id,dispatchError)}
+  }
+  marketOrderStatus(x.id);
   } catch(error) {
     toast('Order could not be created. Please try again.');
     console.error('Marketplace order submission failed',error);
