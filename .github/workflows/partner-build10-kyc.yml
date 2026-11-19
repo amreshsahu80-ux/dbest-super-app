@@ -7,6 +7,7 @@ on:
   pull_request:
     branches:
       - release/partner-build10-isolated-20261114
+      - release/partner-postbuild10-consolidation-20261118
   workflow_dispatch:
 jobs:
   kyc-static:
@@ -78,6 +79,18 @@ jobs:
           printf '%s' "$UPLOAD_KEY_B64" | base64 --decode > "$KEY_FILE"
           jarsigner -keystore "$KEY_FILE" -storetype PKCS12 -storepass:env UPLOAD_KEY_PASSWORD -keypass:env UPLOAD_KEY_PASSWORD app/build/outputs/bundle/productionRelease/app-production-release.aab "$UPLOAD_KEY_ALIAS"
           jarsigner -verify -strict app/build/outputs/bundle/productionRelease/app-production-release.aab
+      - name: Verify signed AAB certificate matches existing Play upload identity
+        env:
+          EXPECTED_SHA256: ${{ secrets.DBEST_PARTNER_UPLOAD_CERT_SHA256 }}
+        run: |
+          set -euo pipefail
+          BUNDLE="app/build/outputs/bundle/productionRelease/app-production-release.aab"
+          test -s "$BUNDLE"
+          test -n "$EXPECTED_SHA256" || { echo "::error::Missing verified Play upload certificate SHA256"; exit 1; }
+          jarsigner -verify -strict "$BUNDLE"
+          BUNDLE_SHA256="$(keytool -printcert -jarfile "$BUNDLE" | sed -n 's/^[[:space:]]*SHA256: //p' | head -n 1)"
+          test -n "$BUNDLE_SHA256" || { echo "::error::Cannot extract signed AAB certificate"; exit 1; }
+          test "${BUNDLE_SHA256^^}" = "${EXPECTED_SHA256^^}" || { echo "::error::Signed AAB certificate does not match Play upload certificate"; exit 1; }
       - name: Validate release bundle and launcher reference
         run: |
           test -s app/build/outputs/bundle/productionRelease/app-production-release.aab
