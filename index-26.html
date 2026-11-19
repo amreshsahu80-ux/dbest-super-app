@@ -3954,6 +3954,13 @@ async async function placeMarketOrder(e,type){
   let f=new FormData(form),t=marketTotals(type),cart=marketCart(type);
   if(!cart.length)return toast('Your cart is empty.');
   if(cart.some(r=>{const p=marketProduct(r.id);return !p||p.type!==type||!catalogueLive(p)||!Number.isInteger(Number(r.qty))||Number(r.qty)<1||Number(r.qty)>Number(p.stock||0)}))return toast('An item is unavailable or its quantity exceeds stock. Please review your cart.');
+  if(type!=='digital'){
+    const address=String(f.get('address')||'').trim();
+    const pin=String(f.get('pin')||'').trim();
+    if(!address)return toast('Please enter the delivery address.');
+    if(!/^\\d{6}$/.test(pin))return toast('Please enter a valid 6-digit delivery PIN code.');
+  }
+  if(cartNeedsPrescription(type)&&!form.elements.prescription?.files?.length)return toast('Please attach the required prescription.');
   const payment=String(f.get('payment')||'payu');
   if(!((payment==='payu'&&commerceConfig.payu)||(payment==='cod'&&commerceConfig.cod&&type!=='digital')))return toast('Please select an available payment method.');
   form.dataset.dbestOrderSubmitting='1';
