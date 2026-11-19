@@ -153,7 +153,7 @@ public final class MainActivity extends ComponentActivity {
         caption.setLineSpacing(dp(2), 1);
         hero.addView(caption);
         page.addView(hero);
-        space(page, 14);
+        space(page, 10);
 
         page.addView(txt("Choose your workspace", 20, NAVY, true));
         space(page, 4);
@@ -165,7 +165,7 @@ public final class MainActivity extends ComponentActivity {
                 "Manage store, orders, catalog and earnings",
                 0xFF0B987F, R.drawable.partner_vendor,
                 "/Vendor", "/partner?type=Vendor"));
-        space(page, 10);
+        space(page, 8);
         page.addView(roleCard(
                 "Vaahak", "CAB · DELIVERY · TRANSPORT",
                 "Manage rides, deliveries and trip earnings",
@@ -177,7 +177,7 @@ public final class MainActivity extends ComponentActivity {
                 "Receive service requests and manage jobs",
                 0xFFB84888, R.drawable.partner_service,
                 "/ServicePartnerDashboard", "/partner?type=Service%20Partner"));
-        space(page, 19);
+        space(page, 12);
 
         LinearLayout footer = column();
         footer.setPadding(dp(14), dp(12), dp(14), dp(12));
@@ -199,7 +199,7 @@ public final class MainActivity extends ComponentActivity {
     private View roleCard(String title, String category, String summary, int color,
                           int photoResource, String loginPath, String joinPath) {
         LinearLayout card = column();
-        card.setPadding(dp(10), dp(10), dp(10), dp(10));
+        card.setPadding(dp(10), dp(8), dp(10), dp(8));
         card.setBackground(bordered(Color.WHITE, 0xFFE3E8F0, 20));
         card.setElevation(dp(2));
 
@@ -226,7 +226,9 @@ public final class MainActivity extends ComponentActivity {
         overlayParams.rightMargin = dp(9);
         overlayParams.topMargin = dp(9);
         photoFrame.addView(overlay, overlayParams);
-        card.addView(photoFrame, new LinearLayout.LayoutParams(-1, dp(68)));
+        // Compact preview keeps all three role actions closer to the first viewport.
+        // Images remain decorative; 48dp action targets are unchanged.
+        card.addView(photoFrame, new LinearLayout.LayoutParams(-1, dp(56)));
 
         space(card, 8);
         LinearLayout titleRow = row();
