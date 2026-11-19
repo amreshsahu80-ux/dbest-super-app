@@ -157,7 +157,7 @@ Deno.serve(async(req:Request)=>{
    if(!await ownerOk())return json({error:'owner_session_invalid'},401);const vendorId=String(b.vendorId||'').trim(),approve=!!b.approve;if(!vendorId)return json({error:'vendor_id_required'},400);const patch:any={owner_approval:approve?'Approved':'Rejected',active:approve,updated_at:new Date().toISOString()};if(approve){patch.agreement_status='Fully Signed';patch.operational_hold=false}const {data,error}=await sb.from('marketplace_vendors_live').update(patch).eq('id',vendorId).select('id,name,mobile,owner_approval,active,agreement_status,operational_hold').maybeSingle();if(error)return json({error:'owner_vendor_approval_unavailable'},503);if(!data)return json({error:'vendor_not_found'},404);/* Owner approval is not WhatsApp consent; retain existing preferences until separately verified. */return json({ok:true,vendor:data,ownerOverride:approve});
   }
   if(action==='public_catalog'){
-   const d=await publicCatalog(b.marketType?String(b.marketType):undefined,b.vendorId?String(b.vendorId):undefined);return json({ok:true,...d});
+   try{const d=await publicCatalog(b.marketType?String(b.marketType):undefined,b.vendorId?String(b.vendorId):undefined);return json({ok:true,...d})}catch(e){console.error('public_catalog_query_failed',e);return json({error:'public_catalog_unavailable'},503)}
   }
   return json({error:'unknown_action'},400);
  }catch(e){console.error(e);return json({error:'unexpected_error',detail:String((e as any)?.message||e)},500)}
