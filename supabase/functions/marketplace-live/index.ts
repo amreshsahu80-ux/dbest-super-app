@@ -72,11 +72,11 @@ Deno.serve(async(req:Request)=>{
   }
 
   if(action==='register_vendor'){
-   const name=String(b.name||'').trim(),ownerName=String(b.ownerName||'').trim(),mobile=digits(b.mobile),email=String(b.email||'').trim().toLowerCase(),pin=String(b.pin||'').trim(),type=String(b.type||'').trim().toLowerCase(),address=String(b.address||'').trim(),city=String(b.city||'').trim(),pincode=digits(b.pincode).slice(0,10);
+   const name=String(b.name||'').trim(),ownerName=String(b.ownerName||'').trim(),mobile=digits(b.mobile),email=String(b.email||'').trim().toLowerCase(),pin=String(b.pin||'').trim(),type=String(b.type??''),address=String(b.address||'').trim(),city=String(b.city||'').trim(),pincode=digits(b.pincode).slice(0,10);
    if(name.length<2||mobile.length<10||!email.includes('@')||!/^\d{4,8}$/.test(pin)||address.length<4||city.length<2)return json({error:'required_fields_missing'},400);
    const {data:categoryConfig,error:categoryError}=await sb.from('app_settings').select('value').eq('key','marketplace_categories').maybeSingle();
    if(categoryError)return json({error:'category_registry_unavailable'},503);
-   if(!/^[a-z][a-z0-9_]{0,59}$/.test(type)||!Array.isArray(categoryConfig?.value?.categories)||!categoryConfig.value.categories.some((c:any)=>c?.active!==false&&c?.key===type))return json({error:'inactive_or_unknown_vendor_category'},400);
+   if(!/^[a-z][a-z0-9_]{0,59}$/.test(type)||!Array.isArray(categoryConfig?.value?.categories)||!categoryConfig.value.categories.some((c:any)=>c?.key===type&&c?.active!==false&&c?.enabled!==false&&c?.is_active!==false&&['','active','enabled','published','live'].includes(String(c?.status??'').trim().toLowerCase())))return json({error:'inactive_or_unknown_vendor_category'},400);
    const {data:dup}=await sb.from('marketplace_vendors_live').select('id').or(`mobile.eq.${mobile},email.eq.${email}`).limit(1);if((dup||[]).length)return json({error:'vendor_already_registered'},409);
    let leaderId:string|null=null,launchId:string|null=null;
    const leaderToken=String(b.leaderOnboardToken||'').trim();
