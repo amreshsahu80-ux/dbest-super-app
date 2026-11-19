@@ -34,7 +34,7 @@ jobs:
           grep -Fq 'versionCode 11' app/build.gradle
           grep -Fq 'Gravity.BOTTOM|Gravity.LEFT' app/src/main/java/com/dbest4u/partner/PartnerPushTestController.java
           grep -Fq 'Partner notifications off. Tap for settings' app/src/main/java/com/dbest4u/partner/PartnerPushTestController.java
-      - name: Verify compact workspace navigation has accessible touch targets
+      - name: Regression-test abandoned WebView navigation on Home\n        run: python3 tests/test_home_abandoned_navigation.py\n      - name: Verify compact workspace navigation has accessible touch targets
         run: |
           python3 - <<'PY'
           from pathlib import Path
