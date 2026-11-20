@@ -138,6 +138,9 @@ module.exports = async function handler(req,res){
     const totalAmount=Math.round((productSubtotal+deliveryFee+taxAmount)*100)/100;
     if(totalAmount<=0) return send(res,400,{ok:false,error:'invalid_order_total'});
 
+    // Quote uses the same authoritative catalogue pricing as order creation.
+    // It never writes an order or sends notifications.
+    if(b.quoteOnly===true) return send(res,200,{ok:true,quoteOnly:true,pricing:{subtotal:productSubtotal,delivery:deliveryFee,tax:taxAmount,total:totalAmount},items});
     const address=clean(b.address,500),pin=clean(b.pin,20),slot=clean(b.slot,100);
     if(!address || !pin) return send(res,400,{ok:false,error:'delivery_address_required'});
     const loc=b.liveLocation&&typeof b.liveLocation==='object'?b.liveLocation:{};
