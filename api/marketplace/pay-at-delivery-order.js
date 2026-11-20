@@ -181,7 +181,14 @@ module.exports = async function handler(req,res){
         delivery_fee:childDelivery,child_sequence:i+1
       }});
     }
-    const voiceRows=await sb('marketplace_orders_live?master_order_id=eq.'+encodeURIComponent(masterId)+'&select=id');for(const row of voiceRows||[]){await triggerVendorVoice(row.id);await triggerVendorMail(row.id);await triggerVendorWhatsApp(row.id);}
+    // Notification services are best-effort and must never keep the customer
+    // waiting indefinitely after the order has been committed.
+    const voiceRows=await sb('marketplace_orders_live?master_order_id=eq.'+encodeURIComponent(masterId)+'&select=id');
+    const notificationTasks=(voiceRows||[]).map(async row=>{
+      const work=Promise.allSettled([triggerVendorVoice(row.id),triggerVendorMail(row.id),triggerVendorWhatsApp(row.id)]);
+      await Promise.race([work,new Promise(resolve=>setTimeout(resolve,2500))]);
+    });
+    await Promise.allSettled(notificationTasks);
     const finalRows=await sb('marketplace_master_orders_live?id=eq.'+encodeURIComponent(masterId)+'&select=id,parent_tx_id,total_amount,payment_method,payment_status,status,child_order_count&limit=1');
     return send(res,200,{ok:true,order:finalRows&&finalRows[0]?finalRows[0]:{id:masterId,total_amount:totalAmount,payment_status:'Pending',status:'Confirmed - Payment Due at Delivery'},message:'Order confirmed. Payment is due online at delivery.'});
   }catch(e){
