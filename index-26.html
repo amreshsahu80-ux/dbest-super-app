@@ -3955,11 +3955,33 @@ document.addEventListener("click",function(e){
   const rows=marketCart(type),row=rows.find(r=>String(r.id)===String(id));
   const current=Number(row?.qty||0),next=Math.max(0,Math.min(stock,current+delta));
   if(current===next)return explain(delta>0?"Maximum available stock reached.":"Quantity already zero.");
+  // Update the clicked card in place. Replacing the entire marketplace after
+  // each tap detached adjacent touch targets on mobile and interrupted fast taps.
   if(row)row.qty=next;else rows.push({id,qty:next});
   commerceCarts[type]=rows.filter(r=>Number(r.qty)>0);
-  try{save()}catch(err){console.warn("[DBest cart] Persistence error",err);try{localStorage.setItem("d2_commerce_carts",JSON.stringify(commerceCarts))}catch(storageError){console.warn("[DBest cart] Fallback persistence error",storageError)}}
-  openMarketplace(type);
-  toast(delta>0?"Added to cart":"Cart quantity updated");
+  try{save()}catch(err){console.warn("[DBest cart] Persistence error",err);}
+  const card=button.closest(".productCard");
+  const body=card?.querySelector(".productBody");
+  if(body){
+    const existing=body.querySelector(".qtyControl, .addCartBtn");
+    if(existing){
+      const replacement=document.createElement("div");
+      if(next>0){
+        replacement.className="qtyControl";
+        const minus=document.createElement("button");minus.type="button";minus.textContent="−";minus.dataset.marketAction="qty";minus.dataset.marketType=type;minus.dataset.marketId=id;minus.dataset.marketDelta="-1";minus.setAttribute("aria-label","Remove one "+product.name);
+        const count=document.createElement("b");count.textContent=String(next);
+        const plus=document.createElement("button");plus.type="button";plus.textContent="+";plus.dataset.marketAction="qty";plus.dataset.marketType=type;plus.dataset.marketId=id;plus.dataset.marketDelta="1";plus.setAttribute("aria-label","Add one "+product.name);
+        replacement.append(minus,count,plus);
+      }else{
+        const add=document.createElement("button");add.type="button";add.className="addCartBtn";add.textContent="+ Add to Cart";add.dataset.marketAction="add";add.dataset.marketType=type;add.dataset.marketId=id;
+        replacement.append(add);
+      }
+      existing.replaceWith(next>0?replacement:replacement.firstElementChild);
+    }
+  }
+  const cartPill=document.querySelector(".shopToolbar .cartPill");
+  if(cartPill)cartPill.textContent="🛒 Cart ("+marketCartCount(type)+")";
+  toast(delta>0?product.name+" added to cart":"Cart quantity updated");
  }catch(err){console.error("[DBest cart] Click handler failed",err);explain("Cart could not update. Please retry.");}
 },true);
 function marketTotals(type){
