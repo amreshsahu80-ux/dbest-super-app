@@ -116,14 +116,14 @@ module.exports = async function handler(req,res){
     if(!requestedIds.length) return send(res,400,{ok:false,error:'cart_items_required'});
 
     const or=requestedIds.map(x=>'id.eq.'+encodeURIComponent(x)).join(',');
-    const products=await sb('marketplace_catalog_live?or=('+or+')&active=eq.true&select=id,vendor_id,market_type,name,price,stock,active');
+    const products=await sb('marketplace_catalog_live?or=('+or+')&active=eq.true&select=id,vendor_id,market_type,name,price,offer_percent,stock,active');
     const byId=new Map((products||[]).map(p=>[String(p.id),p]));
     const items=[];
     for(const r of rawItems){
       const pid=clean(r&&r.id,100),p=byId.get(pid),qty=Math.max(1,Math.min(50,Math.floor(num(r&&r.qty)||1)));
       if(!p || String(p.market_type)!==marketType) return send(res,409,{ok:false,error:'catalog_item_unavailable',itemId:pid});
       if(num(p.stock)<qty) return send(res,409,{ok:false,error:'insufficient_stock',itemId:pid});
-      items.push({id:pid,name:String(p.name||pid),qty,price:num(p.price),vendorId:String(p.vendor_id||'')});
+      const offer=Math.max(0,Math.min(100,num(p.offer_percent)));\n      const effectivePrice=Math.round(num(p.price)*(100-offer))/100;\n      items.push({id:pid,name:String(p.name||pid),qty,price:effectivePrice,basePrice:num(p.price),offerPercent:offer,vendorId:String(p.vendor_id||'')});
     }
     const vendorIds=[...new Set(items.map(x=>x.vendorId).filter(Boolean))];
     if(!vendorIds.length) return send(res,409,{ok:false,error:'vendor_missing'});
