@@ -32,7 +32,14 @@ WITH registry AS (
       AND c->>'enabled' IS DISTINCT FROM 'false'
       AND c->>'is_active' IS DISTINCT FROM 'false'
       AND lower(COALESCE(c->>'status','')) IN ('','active','enabled','published','live')
-    ) eligible) = 1 AS electronics_enabled
+    ) eligible) = 1
+    AND (SELECT COUNT(*) FROM public.app_settings s
+         CROSS JOIN LATERAL jsonb_array_elements(
+           CASE WHEN jsonb_typeof(s.value::jsonb->'categories') = 'array'
+             THEN s.value::jsonb->'categories' ELSE '[]'::jsonb END
+         ) c
+         WHERE s.key = 'marketplace_categories' AND c->>'key' = 'electronics') = 1
+    AS electronics_enabled
 ), candidate AS (
   SELECT v.*, r.electronics_enabled,
     (v.type = 'other'
