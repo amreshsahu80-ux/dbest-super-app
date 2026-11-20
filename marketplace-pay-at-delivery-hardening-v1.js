@@ -43,7 +43,13 @@ async function secureConfirm(e){
   const t=marketTotals(type),items=cart.map(r=>{const p=marketProduct(r.id);return{id:r.id,qty:Number(r.qty)||1,name:p?.name||r.id,price:Number(p?.price||0),vendorId:p?.vendorId||''}});
   const btn=form?.querySelector('button.btn');const old=btn?.textContent||'Confirm Order';if(btn){btn.disabled=true;btn.textContent='Confirming securely…'}
   try{
-    const request={marketType:type,items,address,pin,slot,liveLocation:loc(),deliveryFee:Number(t.delivery||0),taxAmount:Number(t.tax||0)};
+    const cartSignature=JSON.stringify({type,items:items.map(x=>({id:x.id,qty:x.qty})),address,pin,slot});
+    let refState={};try{refState=JSON.parse(sessionStorage.getItem('dbest_pad_checkout_ref')||'{}')}catch(_){}
+    if(refState.signature!==cartSignature){
+      refState={signature:cartSignature,ref:'PAD_'+(crypto.randomUUID?crypto.randomUUID().replace(/-/g,''):String(Date.now())+Math.random().toString(36).slice(2))};
+      sessionStorage.setItem('dbest_pad_checkout_ref',JSON.stringify(refState));
+    }
+    const request={marketType:type,items,address,pin,slot,clientOrderRef:refState.ref,liveLocation:loc(),deliveryFee:Number(t.delivery||0),taxAmount:Number(t.tax||0)};
     // Reconcile displayed cart prices against authoritative server catalogue prices
     // BEFORE any order is created. A changed total requires explicit second confirmation.
     const quote=await post({...request,quoteOnly:true});
@@ -64,7 +70,7 @@ async function secureConfirm(e){
     const d=await post(request);
     const order=d.order||{},amount=Number(order.total_amount||t.total||0),x=addTx(session.id,`Marketplace - ${marketTitle(type)}`,`${marketTitle(type)} Order`,amount,'Order Confirmed / Payment Due at Delivery','',{source:'DBest Multi-Vendor Marketplace',flow:'marketplace',marketType:type,paymentStage:'Payment Due at Delivery',masterOrderId:order.id||'',centralOrderPersisted:true,order:{type,items,subtotal:Number(t.subtotal||0),delivery:Number(t.delivery||0),tax:Number(t.tax||0),total:amount,address,pin,slot,paymentMethod:'pay_at_delivery_online',paymentStatus:'pending',stage:1,masterOrderId:order.id||'',liveLocation:loc()}});
     x.order=x.meta.order;x.paymentStage='Payment Due at Delivery';x.meta.masterOrderId=order.id||'';x.meta.marketplaceMasterOrderId=order.id||'';x.meta.paymentStatus='pending';x.paymentMethod='Online Payment at Delivery';
-    try{commerceCarts[type]=[]}catch(_){}try{save()}catch(_){}
+    try{commerceCarts[type]=[]}catch(_){}try{save()}catch(_){}try{sessionStorage.removeItem('dbest_pad_checkout_ref')}catch(_){}
     if(typeof window.DBEST_PAY_AT_DELIVERY?.success==='function')window.DBEST_PAY_AT_DELIVERY.success(x.id,amount);else say('Order confirmed. Payment is due online at delivery.');
   }catch(err){console.error('[DBest PAD hardening]',err);say(String(err?.message||'Order could not be confirmed. Please try again.'))}
   finally{if(btn){btn.disabled=false;if(!form?.dataset?.dbestConfirmedQuote)btn.textContent=old}}
