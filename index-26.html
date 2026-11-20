@@ -3930,6 +3930,29 @@ function openMarketplace(type="grocery",category=null,vendor=null){marketState.t
 function marketProductCard(p){let v=marketVendor(p.vendorId),discount=Number(p.offer||0);return `<div class="productCard"><div class="productImage"><img src="${esc(p.image||"")}" alt="${esc(p.name)}" onerror="this.style.display='none'"></div><div class="productBody"><b>${esc(p.name)}</b><small>${esc(p.unit||"")} • ${esc(p.category||"")}</small><span class="vendorName">${esc(v?.name||"DBest Vendor")}</span>${discount?`<span class="offerTag">${discount}% OFF</span>`:""}${p.rx?`<span class="rxTag">Rx Required</span>`:""}<div class="productPrice"><strong>₹${Number(p.price||0)}</strong>${Number(p.mrp||0)>Number(p.price||0)?`<del>₹${Number(p.mrp)}</del>`:""}</div><small class="${Number(p.stock||0)>0?"stockOk":""}">${Number(p.stock||0)>0?`${Number(p.stock)} available`:"Out of stock"}</small>${marketCart(p.type).some(x=>String(x.id)===String(p.id))?`<div class="qtyControl"><button type="button" aria-label="Remove one ${esc(p.name)}" onclick="marketQty(\'${p.type}\',\'${p.id}\',-1,true)">−</button><b>${marketCart(p.type).find(x=>String(x.id)===String(p.id))?.qty||0}</b><button type="button" aria-label="Add one ${esc(p.name)}" onclick="marketQty(\'${p.type}\',\'${p.id}\',1,true)">+</button></div>`:`<button class="addCartBtn" onclick="marketAdd(\'${p.type}\',\'${p.id}\')">+ Add to Cart</button>`}</div></div>`}
 function marketAdd(type,id){let p=marketProduct(id);if(!p||p.type!==type||!catalogueLive(p)||Number(p.stock||0)<=0)return;let cart=marketCart(type),row=cart.find(x=>String(x.id)===String(id));if(row)row.qty=Math.min(Number(p.stock),Number(row.qty||0)+1);else cart.push({id,qty:1});commerceCarts[type]=cart;save();toast(p.name+" added");openMarketplace(type)}
 function marketQty(type,id,delta,fromCatalogue=false){let cart=marketCart(type),row=cart.find(x=>String(x.id)===String(id)),p=marketProduct(id);if(!row||!p)return;const stock=Math.max(0,Number(p.stock||0));row.qty=Math.max(0,Math.min(stock,Number(row.qty||0)+delta));commerceCarts[type]=cart.filter(x=>x.qty>0);save();if(fromCatalogue)openMarketplace(type);else marketCartScreen(type)}
+
+// One authoritative product-card event path. No inline handlers or competing
+// wrappers. All changes use the existing cart state and stock/approval rules.
+document.addEventListener("click",function(e){
+ const button=e.target.closest("button[data-market-action]");
+ if(!button||!button.closest(".productCard"))return;
+ e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
+ if(button.disabled)return;
+ const type=button.dataset.marketType,id=button.dataset.marketId;
+ const product=marketProduct(id),vendor=product&&marketVendor(product.vendorId);
+ if(!product||product.type!==type||!catalogueLive(product)||!vendor||Number(product.stock||0)<=0)return;
+ const delta=button.dataset.marketAction==="add"?1:Number(button.dataset.marketDelta||0);
+ if(delta!==1&&delta!==-1)return;
+ const rows=marketCart(type),row=rows.find(r=>String(r.id)===String(id));
+ const current=Number(row?.qty||0),next=Math.max(0,Math.min(Number(product.stock||0),current+delta));
+ if(current===next)return;
+ button.disabled=true;
+ if(button.dataset.marketAction==="add")button.innerHTML='<span class="dbestSpin"></span> Adding…';
+ if(row)row.qty=next;else rows.push({id,qty:next});
+ commerceCarts[type]=rows.filter(r=>Number(r.qty)>0);
+ try{save()}catch(err){console.warn("Cart local persistence failed",err);try{localStorage.setItem("d2_commerce_carts",JSON.stringify(commerceCarts))}catch(_){}}
+ openMarketplace(type);
+},true);
 function marketTotals(type){
   const subtotal=marketCart(type).reduce((sum,row)=>{
     const product=marketProduct(row.id);
