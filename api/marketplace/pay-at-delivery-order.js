@@ -116,14 +116,16 @@ module.exports = async function handler(req,res){
     if(!requestedIds.length) return send(res,400,{ok:false,error:'cart_items_required'});
 
     const or=requestedIds.map(x=>'id.eq.'+encodeURIComponent(x)).join(',');
-    const products=await sb('marketplace_catalog_live?or=('+or+')&active=eq.true&select=id,vendor_id,market_type,name,price,stock,active');
+    const products=await sb('marketplace_catalog_live?or=('+or+')&active=eq.true&select=id,vendor_id,market_type,name,price,offer_percent,stock,active');
     const byId=new Map((products||[]).map(p=>[String(p.id),p]));
     const items=[];
     for(const r of rawItems){
       const pid=clean(r&&r.id,100),p=byId.get(pid),qty=Math.max(1,Math.min(50,Math.floor(num(r&&r.qty)||1)));
       if(!p || String(p.market_type)!==marketType) return send(res,409,{ok:false,error:'catalog_item_unavailable',itemId:pid});
       if(num(p.stock)<qty) return send(res,409,{ok:false,error:'insufficient_stock',itemId:pid});
-      items.push({id:pid,name:String(p.name||pid),qty,price:num(p.price),vendorId:String(p.vendor_id||'')});
+      const offer=Math.max(0,Math.min(100,num(p.offer_percent)));
+      const effectivePrice=Math.round(num(p.price)*(100-offer))/100;
+      items.push({id:pid,name:String(p.name||pid),qty,price:effectivePrice,basePrice:num(p.price),offerPercent:offer,vendorId:String(p.vendor_id||'')});
     }
     const vendorIds=[...new Set(items.map(x=>x.vendorId).filter(Boolean))];
     if(!vendorIds.length) return send(res,409,{ok:false,error:'vendor_missing'});
@@ -138,13 +140,22 @@ module.exports = async function handler(req,res){
     const totalAmount=Math.round((productSubtotal+deliveryFee+taxAmount)*100)/100;
     if(totalAmount<=0) return send(res,400,{ok:false,error:'invalid_order_total'});
 
+    // Quote uses the same authoritative catalogue pricing as order creation.
+    // It never writes an order or sends notifications.
+    if(b.quoteOnly===true) return send(res,200,{ok:true,quoteOnly:true,pricing:{subtotal:productSubtotal,delivery:deliveryFee,tax:taxAmount,total:totalAmount},items});
     const address=clean(b.address,500),pin=clean(b.pin,20),slot=clean(b.slot,100);
     if(!address || !pin) return send(res,400,{ok:false,error:'delivery_address_required'});
     const loc=b.liveLocation&&typeof b.liveLocation==='object'?b.liveLocation:{};
     const lat=Number.isFinite(Number(loc.lat))?Number(loc.lat):null;
     const lng=Number.isFinite(Number(loc.lng))?Number(loc.lng):null;
+    const clientRef=clean(b.clientOrderRef,90);
+    if(clientRef && !/^PAD_[a-zA-Z0-9_-]{12,80}$/.test(clientRef))return send(res,400,{ok:false,error:'invalid_order_reference'});
+    const parentRef=clientRef||id('PAD_');
+    if(clientRef){
+      const existing=await sb('marketplace_master_orders_live?parent_tx_id=eq.'+encodeURIComponent(clientRef)+'&customer_member_id=eq.'+encodeURIComponent(memberId)+'&select=id,parent_tx_id,total_amount,payment_method,payment_status,status,child_order_count&limit=1');
+      if(existing?.length)return send(res,200,{ok:true,alreadyCreated:true,order:existing[0],message:'Existing order confirmed; no duplicate created.'});
+    }
     const masterId=id('DBP');
-    const parentRef=id('PAD_');
     const groups=new Map();
     for(const x of items){if(!groups.has(x.vendorId))groups.set(x.vendorId,[]);groups.get(x.vendorId).push(x)}
     const groupEntries=[...groups.entries()];
@@ -176,7 +187,14 @@ module.exports = async function handler(req,res){
         delivery_fee:childDelivery,child_sequence:i+1
       }});
     }
-    const voiceRows=await sb('marketplace_orders_live?master_order_id=eq.'+encodeURIComponent(masterId)+'&select=id');for(const row of voiceRows||[]){await triggerVendorVoice(row.id);await triggerVendorMail(row.id);await triggerVendorWhatsApp(row.id);}
+    // Notification services are best-effort and must never keep the customer
+    // waiting indefinitely after the order has been committed.
+    const voiceRows=await sb('marketplace_orders_live?master_order_id=eq.'+encodeURIComponent(masterId)+'&select=id');
+    const notificationTasks=(voiceRows||[]).map(async row=>{
+      const work=Promise.allSettled([triggerVendorVoice(row.id),triggerVendorMail(row.id),triggerVendorWhatsApp(row.id)]);
+      await Promise.race([work,new Promise(resolve=>setTimeout(resolve,2500))]);
+    });
+    await Promise.allSettled(notificationTasks);
     const finalRows=await sb('marketplace_master_orders_live?id=eq.'+encodeURIComponent(masterId)+'&select=id,parent_tx_id,total_amount,payment_method,payment_status,status,child_order_count&limit=1');
     return send(res,200,{ok:true,order:finalRows&&finalRows[0]?finalRows[0]:{id:masterId,total_amount:totalAmount,payment_status:'Pending',status:'Confirmed - Payment Due at Delivery'},message:'Order confirmed. Payment is due online at delivery.'});
   }catch(e){
