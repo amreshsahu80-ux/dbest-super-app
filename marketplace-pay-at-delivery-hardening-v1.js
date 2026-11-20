@@ -43,13 +43,31 @@ async function secureConfirm(e){
   const t=marketTotals(type),items=cart.map(r=>{const p=marketProduct(r.id);return{id:r.id,qty:Number(r.qty)||1,name:p?.name||r.id,price:Number(p?.price||0),vendorId:p?.vendorId||''}});
   const btn=form?.querySelector('button.btn');const old=btn?.textContent||'Confirm Order';if(btn){btn.disabled=true;btn.textContent='Confirming securely…'}
   try{
-    const d=await post({marketType:type,items,address,pin,slot,liveLocation:loc(),deliveryFee:Number(t.delivery||0),taxAmount:Number(t.tax||0)});
+    const request={marketType:type,items,address,pin,slot,liveLocation:loc(),deliveryFee:Number(t.delivery||0),taxAmount:Number(t.tax||0)};
+    // Reconcile displayed cart prices against authoritative server catalogue prices
+    // BEFORE any order is created. A changed total requires explicit second confirmation.
+    const quote=await post({...request,quoteOnly:true});
+    const pricing=quote.pricing||{};
+    const authoritative=Number(pricing.total);
+    if(!Number.isFinite(authoritative)||authoritative<=0)throw Error('Server pricing unavailable. Order was not created.');
+    const displayed=Number(t.total||0);
+    const previous=String(form.dataset.dbestConfirmedQuote||'');
+    const quoteKey=JSON.stringify({type,items:quote.items,address,pin,slot,pricing});
+    if(Math.abs(authoritative-displayed)>0.009 && previous!==quoteKey){
+      form.dataset.dbestConfirmedQuote=quoteKey;
+      let box=form.querySelector('#dbestAuthoritativeQuote');
+      if(!box){box=document.createElement('div');box.id='dbestAuthoritativeQuote';box.className='notice';box.style.margin='12px 0';form.querySelector('.serviceFormGrid')?.prepend(box)}
+      box.innerHTML='<b>Updated final amount — please review before ordering</b><div>Items: ₹'+Number(pricing.subtotal||0).toFixed(2)+'</div><div>Delivery: ₹'+Number(pricing.delivery||0).toFixed(2)+'</div><div>Tax: ₹'+Number(pricing.tax||0).toFixed(2)+'</div><div><b>Final payable: ₹'+authoritative.toFixed(2)+'</b></div><small>The server catalogue price differs from the cart estimate (₹'+displayed.toFixed(2)+'). No order has been placed. Tap Confirm Updated Amount to accept.</small>';
+      if(btn)btn.textContent='Confirm Updated Amount • ₹'+authoritative.toFixed(2);
+      return false;
+    }
+    const d=await post(request);
     const order=d.order||{},amount=Number(order.total_amount||t.total||0),x=addTx(session.id,`Marketplace - ${marketTitle(type)}`,`${marketTitle(type)} Order`,amount,'Order Confirmed / Payment Due at Delivery','',{source:'DBest Multi-Vendor Marketplace',flow:'marketplace',marketType:type,paymentStage:'Payment Due at Delivery',masterOrderId:order.id||'',centralOrderPersisted:true,order:{type,items,subtotal:Number(t.subtotal||0),delivery:Number(t.delivery||0),tax:Number(t.tax||0),total:amount,address,pin,slot,paymentMethod:'pay_at_delivery_online',paymentStatus:'pending',stage:1,masterOrderId:order.id||'',liveLocation:loc()}});
     x.order=x.meta.order;x.paymentStage='Payment Due at Delivery';x.meta.masterOrderId=order.id||'';x.meta.marketplaceMasterOrderId=order.id||'';x.meta.paymentStatus='pending';x.paymentMethod='Online Payment at Delivery';
     try{commerceCarts[type]=[]}catch(_){}try{save()}catch(_){}
     if(typeof window.DBEST_PAY_AT_DELIVERY?.success==='function')window.DBEST_PAY_AT_DELIVERY.success(x.id,amount);else say('Order confirmed. Payment is due online at delivery.');
   }catch(err){console.error('[DBest PAD hardening]',err);say(String(err?.message||'Order could not be confirmed. Please try again.'))}
-  finally{if(btn){btn.disabled=false;btn.textContent=old}}
+  finally{if(btn){btn.disabled=false;if(!form?.dataset?.dbestConfirmedQuote)btn.textContent=old}}
   return false;
 }
 function patch(){
