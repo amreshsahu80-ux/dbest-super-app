@@ -2163,9 +2163,9 @@ if(u&&["starter","guest","promoter","prime","leader"].includes(session.role)){
 }else{
   ms.classList.remove("show");
   mw.textContent="";
-}let a=services.filter(s=>serviceVisible(s[0])&&(s[1]+" "+s[4]+" "+s[5].join(" ")).toLowerCase().includes(q));let ph=$("publicHero");
+}let a=services.filter(s=>serviceVisible(s[0])&&String(s[1]||"")+" "+String(s[4]||"")+" "+(Array.isArray(s[5])?s[5].join(" "):"")).filter(s=>(String(s[1]||"")+" "+String(s[4]||"")+" "+(Array.isArray(s[5])?s[5].join(" "):"")).toLowerCase().includes(q));let ph=$("publicHero");
 if(ph) ph.style.display = session.role==="visitor" ? "" : "none";
-$("grid").className="grid "+(view==="side"?"side":"");$("grid").innerHTML=a.length?a.map(renderTile).join(""):`<div class="notice" style="grid-column:1/-1">No services are currently visible. Please check Owner section visibility settings.</div>`;try{initTileVideos()}catch(mediaError){console.warn("DBest tile media initialization failed",mediaError)}$("tv").classList.toggle("on",view==="tile");$("sv").classList.toggle("on",view==="side")}
+$("grid").className="grid "+(view==="side"?"side":"");$("grid").innerHTML=a.length?a.map(s=>{try{return renderTile(s)}catch(err){console.warn("Service media fallback",s[0],err);return `<button class="tile" onclick="openService(\'${String(s[0]).replace(/[^a-z0-9_-]/gi,"")}\')" style="padding:20px;min-height:140px"><b>${esc(s[2]||"🧩")} ${esc(s[1]||"Service")}</b><p>${esc(s[4]||"")}</p></button>`}}).join(""):`<div class="notice" style="grid-column:1/-1">No services are currently visible. Please check Owner section visibility settings.</div>`;try{initTileVideos()}catch(mediaError){console.warn("DBest tile media initialization failed",mediaError)}$("tv").classList.toggle("on",view==="tile");$("sv").classList.toggle("on",view==="side")}
 function account(){
   if(session.role!=="visitor"){
     let u=me();
