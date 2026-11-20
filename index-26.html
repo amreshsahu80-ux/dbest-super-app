@@ -3999,7 +3999,7 @@ function marketCardAction(button){
   }
   const cartPill=document.querySelector(".shopToolbar .cartPill");
   if(cartPill)cartPill.textContent="🛒 Cart ("+marketCartCount(type)+")";
-  marketCartProbe("Cart updated: "+product.name+" / qty "+next+((ownerDirectVendor(vendor)||agreementFullySigned(vendor.agreement))?"":" | Vendor signature pending; checkout blocked"));
+  marketCartProbe("Cart updated: "+product.name+" / qty "+next+((ownerDirectVendor(vendor)||agreementFullySigned(vendor.agreement))?"":" | Cart updated; final eligibility verified at checkout"));
   toast(delta>0?product.name+" added to cart":"Cart quantity updated");
  }catch(err){console.error("[DBest cart] Click handler failed",err);explain("Cart could not update. Please retry.");}
  return false;
