@@ -19,8 +19,8 @@ ORDER BY id;
 -- Evaluate the exact guarded correction as a projection, without writing anything.
 -- Review existing values, eligibility, and expected after-values side by side.
 WITH registry AS (
-  SELECT EXISTS (
-    SELECT 1
+  SELECT (SELECT COUNT(*)
+    FROM (SELECT 1
     FROM public.app_settings s
     CROSS JOIN LATERAL jsonb_array_elements(
       CASE WHEN jsonb_typeof(s.value::jsonb->'categories') = 'array'
@@ -32,7 +32,7 @@ WITH registry AS (
       AND c->>'enabled' IS DISTINCT FROM 'false'
       AND c->>'is_active' IS DISTINCT FROM 'false'
       AND lower(COALESCE(c->>'status','')) IN ('','active','enabled','published','live')
-  ) AS electronics_enabled
+    ) eligible) = 1 AS electronics_enabled
 ), candidate AS (
   SELECT v.*, r.electronics_enabled,
     (v.type = 'other'
@@ -40,7 +40,11 @@ WITH registry AS (
       AND v.active IS TRUE
       AND v.agreement_status = 'Fully Signed'
       AND v.operational_hold IS FALSE
-      AND r.electronics_enabled) AS correction_eligible
+      AND r.electronics_enabled
+      AND COALESCE(v.profile_meta::jsonb->>'business_category','') IN ('','other','electronics')
+      AND NOT EXISTS (SELECT 1 FROM public.marketplace_catalog_live i
+                      WHERE i.vendor_id = v.id AND i.market_type NOT IN ('other','electronics'))
+    ) AS correction_eligible
   FROM public.marketplace_vendors_live v CROSS JOIN registry r
   WHERE v.id = 'VND8597199'
 )
