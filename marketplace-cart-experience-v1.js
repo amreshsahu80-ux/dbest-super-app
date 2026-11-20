@@ -1,6 +1,13 @@
 (function(){
 'use strict';
 const style=document.createElement('style');style.textContent=`
+.marketHubGrid{gap:12px!important;grid-template-columns:repeat(2,minmax(0,1fr))!important}
+.marketHubCard{min-height:166px!important;padding:18px 15px!important;border-radius:22px!important;text-align:left!important;display:flex!important;flex-direction:column!important;align-items:flex-start!important;justify-content:flex-start!important;gap:7px!important;box-shadow:0 9px 24px rgba(18,42,85,.12)!important;transition:transform .16s ease,box-shadow .16s ease!important}
+.marketHubCard:active{transform:scale(.98)!important}
+.marketHubCard span{font-size:32px!important;line-height:1.1!important;margin-bottom:3px!important}
+.marketHubCard b{font-size:19px!important;line-height:1.2!important;letter-spacing:-.3px!important}
+.marketHubCard small{font-size:12px!important;line-height:1.4!important;opacity:.92!important;display:-webkit-box!important;-webkit-line-clamp:2!important;-webkit-box-orient:vertical!important;overflow:hidden!important}
+@media(min-width:650px){.marketHubGrid{grid-template-columns:repeat(3,minmax(0,1fr))!important}}
 .dbestCartDock{position:fixed;left:12px;right:12px;bottom:12px;z-index:75;background:#132c64;color:white;border-radius:16px;box-shadow:0 10px 35px #101d3860;padding:12px 15px;display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:850px;margin:auto}
 .dbestCartDock button{background:#fff;color:#153a83;border:0;border-radius:12px;padding:11px 16px;font-weight:800}
 .dbestCartDock small{display:block;opacity:.85}.shopPage:has(.productGrid){padding-bottom:100px!important}
