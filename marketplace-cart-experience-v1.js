@@ -72,6 +72,13 @@ function start(){
  // functions in index-26.html. Do not intercept product clicks here.
  const originalCheckout=window.marketCheckout;
  if(typeof originalCheckout==='function')window.marketCheckout=function(){const r=originalCheckout.apply(this,arguments);checkout();return r};
+ // Product-card additions use marketCardAction rather than marketAdd/marketQty.
+ // Listen to those actions as well, so the sticky dock updates immediately.
+ document.addEventListener('click',function(e){
+   const button=e.target?.closest?.('.productCard button[data-market-action]');
+   if(button)requestAnimationFrame(update);
+ },true);
+ document.addEventListener('dbest:cart-updated',update);
  const originalQty=window.marketQty;
  if(typeof originalQty==='function')window.marketQty=function(){const r=originalQty.apply(this,arguments);update();return r};
  new MutationObserver(records=>{if(records.some(r=>Array.from(r.addedNodes).some(n=>n.nodeType===1&&n.id!=='dbestCartDock'&&!n.closest?.('#dbestCartDock'))))update()}).observe(document.body,{childList:true,subtree:true});
