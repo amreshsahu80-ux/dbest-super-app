@@ -155,7 +155,9 @@ public final class MainActivity extends ComponentActivity {
         page.addView(hero);
         space(page, 10);
 
-        page.addView(txt("Choose your workspace", 20, NAVY, true));
+        TextView workspaceHeading = txt("Choose your workspace", 20, NAVY, true);
+        ViewCompat.setAccessibilityHeading(workspaceHeading, true);
+        page.addView(workspaceHeading);
         space(page, 4);
         page.addView(txt("Real opportunities. Secure access to your existing partner account.", 12, 0xFF627189, false));
         space(page, 9);
@@ -236,6 +238,7 @@ public final class MainActivity extends ComponentActivity {
         TextView roleTitle = txt(title, 18, NAVY, true);
         // Allow the role name to wrap on narrow screens or large accessibility fonts.
         roleTitle.setMaxLines(2);
+        ViewCompat.setAccessibilityHeading(roleTitle, true);
         roleTitle.setEllipsize(android.text.TextUtils.TruncateAt.END);
         titleRow.addView(roleTitle, new LinearLayout.LayoutParams(0, -2, 1));
         spaceWidth(titleRow, 6);
