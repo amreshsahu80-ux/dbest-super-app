@@ -3942,15 +3942,11 @@ function marketQty(type,id,delta,fromCatalogue=false){let cart=marketCart(type),
 // wrappers. All changes use the existing cart state and stock/approval rules.
 // Isolated-preview mobile cart event probe: reports every tap even if product validation fails.
 function marketCartProbe(message){
- let panel=document.getElementById("dbestCartProbe");
- if(!panel){panel=document.createElement("div");panel.id="dbestCartProbe";panel.setAttribute("role","status");panel.style.cssText="position:fixed;bottom:12px;left:12px;right:12px;z-index:2147483647;background:#132743;color:white;padding:12px;border-radius:12px;font:13px system-ui;box-shadow:0 4px 20px #0005";document.body.appendChild(panel);}
- panel.textContent="CART DIAGNOSTIC: "+message;
+ // Diagnostics must never overlay checkout actions or intercept touch events.
+ console.debug("[DBest cart]",message);
+ const stale=document.getElementById("dbestCartProbe");
+ if(stale)stale.remove();
 }
-document.addEventListener("pointerdown",function(e){
- const target=e.target instanceof Element?e.target:e.target?.parentElement;
- const b=target?.closest(".productCard button[data-market-action]");
- if(b)marketCartProbe("Tap detected: "+(b.dataset.marketId||"missing ID")+" / "+(b.dataset.marketAction||"missing action"));
-},true);
 function marketCardAction(button){
  if(!button||button.disabled)return false;
  const type=button.dataset.marketType,id=button.dataset.marketId;
