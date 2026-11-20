@@ -2163,7 +2163,7 @@ if(u&&["starter","guest","promoter","prime","leader"].includes(session.role)){
 }else{
   ms.classList.remove("show");
   mw.textContent="";
-}let a=initialOwnerSyncDone?services.filter(s=>serviceVisible(s[0])&&(s[1]+" "+s[4]+" "+s[5].join(" ")).toLowerCase().includes(q)):[];let ph=$("publicHero");
+}let a=services.filter(s=>serviceVisible(s[0])&&(s[1]+" "+s[4]+" "+s[5].join(" ")).toLowerCase().includes(q));let ph=$("publicHero");
 if(ph) ph.style.display = session.role==="visitor" ? "" : "none";
 $("grid").className="grid "+(view==="side"?"side":"");$("grid").innerHTML=a.map(renderTile).join("");initTileVideos();$("tv").classList.toggle("on",view==="tile");$("sv").classList.toggle("on",view==="side")}
 function account(){
@@ -3752,7 +3752,7 @@ async function syncOwnerMasterConfig(silent=false){
     initialOwnerSyncDone=true;
     if(!silent){try{toast("Owner changes synced")}catch(e){}}
     render();
-  }catch(e){initialOwnerSyncDone=true;console.warn("DBest Owner sync failed",e);if(!silent)try{toast("Owner sync unavailable - showing last local settings")}catch(_){}}
+  }catch(e){initialOwnerSyncDone=true;console.warn("DBest Owner sync failed",e);try{render()}catch(renderError){console.warn("DBest fallback service render failed",renderError)}if(!silent)try{toast("Owner sync unavailable - showing last local settings")}catch(_){}}
   finally{ownerSyncBusy=false;}
 }
 window.syncOwnerMasterConfig=syncOwnerMasterConfig;
