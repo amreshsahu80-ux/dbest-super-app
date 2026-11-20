@@ -136,7 +136,11 @@ Deno.serve(async(req:Request)=>{
   }
 
   if(action==='vendor_catalog_delete'){
-   const v=await vendorSession();if(!v)return json({error:'vendor_session_invalid'},401);if(v.owner_approval!=='Approved'||v.active!==true||v.operational_hold===true)return json({error:v.operational_hold?'vendor_operational_hold':'vendor_not_approved'},409);const itemId=String(b.id||'').trim();if(!itemId)return json({error:'catalog_item_required'},400);const {data,error}=await sb.from('marketplace_catalog_live').delete().eq('id',itemId).eq('vendor_id',v.id).select('id').maybeSingle();if(error)throw error;if(!data)return json({error:'catalog_item_not_owned_or_missing'},404);return json({ok:true,id:data.id});
+   const v=await vendorSession();if(!v)return json({error:'vendor_session_invalid'},401);
+   // Apply the same persisted-category integrity guard as catalogue save.
+   // Deletion must not silently operate on a vendor awaiting Owner category review.
+   const storedBusinessCategory=String(v.profile_meta?.business_category??'').trim();
+   if(storedBusinessCategory&&storedBusinessCategory!==String(v.type??''))return json({error:'vendor_category_mismatch_requires_owner_review'},409);if(v.owner_approval!=='Approved'||v.active!==true||v.operational_hold===true)return json({error:v.operational_hold?'vendor_operational_hold':'vendor_not_approved'},409);const itemId=String(b.id||'').trim();if(!itemId)return json({error:'catalog_item_required'},400);const {data,error}=await sb.from('marketplace_catalog_live').delete().eq('id',itemId).eq('vendor_id',v.id).select('id').maybeSingle();if(error)throw error;if(!data)return json({error:'catalog_item_not_owned_or_missing'},404);return json({ok:true,id:data.id});
   }
 
   if(action==='create_order'){
