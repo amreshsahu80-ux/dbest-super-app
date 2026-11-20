@@ -3974,6 +3974,7 @@ function marketCardAction(button){
   if(row)row.qty=next;else rows.push({id,qty:next});
   commerceCarts[type]=rows.filter(r=>Number(r.qty)>0);
   try{save()}catch(err){console.warn("[DBest cart] Persistence error",err);}
+  document.dispatchEvent(new CustomEvent("dbest:cart-updated",{detail:{type}}));
   const card=button.closest(".productCard");
   const body=card?.querySelector(".productBody");
   if(body){
