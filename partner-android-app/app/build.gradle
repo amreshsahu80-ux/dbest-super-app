@@ -1,0 +1,31 @@
+// RELEASE CANDIDATE ONLY. Requires Google Play upload signing and on-device QA.\n// Before any Play upload, verify versionCode with Play Console and use its authorized signing path.
+plugins { id 'com.android.application'; id 'com.google.gms.google-services' }
+
+android {
+    namespace 'com.dbest4u.partner'
+    compileSdk 36
+    buildFeatures { buildConfig true }
+    defaultConfig {
+        applicationId 'com.dbest4u.partner'
+        minSdk 24
+        targetSdk 36
+        versionCode 10
+        versionName '1.0.6'
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation 'androidx.activity:activity:1.11.0'
+    implementation 'androidx.core:core:1.17.0'
+    implementation platform('com.google.firebase:firebase-bom:35.1.0')
+    implementation 'com.google.firebase:firebase-messaging'
+}
