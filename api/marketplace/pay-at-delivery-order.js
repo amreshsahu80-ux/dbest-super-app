@@ -123,7 +123,9 @@ module.exports = async function handler(req,res){
       const pid=clean(r&&r.id,100),p=byId.get(pid),qty=Math.max(1,Math.min(50,Math.floor(num(r&&r.qty)||1)));
       if(!p || String(p.market_type)!==marketType) return send(res,409,{ok:false,error:'catalog_item_unavailable',itemId:pid});
       if(num(p.stock)<qty) return send(res,409,{ok:false,error:'insufficient_stock',itemId:pid});
-      const offer=Math.max(0,Math.min(100,num(p.offer_percent)));\n      const effectivePrice=Math.round(num(p.price)*(100-offer))/100;\n      items.push({id:pid,name:String(p.name||pid),qty,price:effectivePrice,basePrice:num(p.price),offerPercent:offer,vendorId:String(p.vendor_id||'')});
+      const offer=Math.max(0,Math.min(100,num(p.offer_percent)));
+      const effectivePrice=Math.round(num(p.price)*(100-offer))/100;
+      items.push({id:pid,name:String(p.name||pid),qty,price:effectivePrice,basePrice:num(p.price),offerPercent:offer,vendorId:String(p.vendor_id||'')});
     }
     const vendorIds=[...new Set(items.map(x=>x.vendorId).filter(Boolean))];
     if(!vendorIds.length) return send(res,409,{ok:false,error:'vendor_missing'});
