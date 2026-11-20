@@ -148,8 +148,14 @@ module.exports = async function handler(req,res){
     const loc=b.liveLocation&&typeof b.liveLocation==='object'?b.liveLocation:{};
     const lat=Number.isFinite(Number(loc.lat))?Number(loc.lat):null;
     const lng=Number.isFinite(Number(loc.lng))?Number(loc.lng):null;
+    const clientRef=clean(b.clientOrderRef,90);
+    if(clientRef && !/^PAD_[a-zA-Z0-9_-]{12,80}$/.test(clientRef))return send(res,400,{ok:false,error:'invalid_order_reference'});
+    const parentRef=clientRef||id('PAD_');
+    if(clientRef){
+      const existing=await sb('marketplace_master_orders_live?parent_tx_id=eq.'+encodeURIComponent(clientRef)+'&customer_member_id=eq.'+encodeURIComponent(memberId)+'&select=id,parent_tx_id,total_amount,payment_method,payment_status,status,child_order_count&limit=1');
+      if(existing?.length)return send(res,200,{ok:true,alreadyCreated:true,order:existing[0],message:'Existing order confirmed; no duplicate created.'});
+    }
     const masterId=id('DBP');
-    const parentRef=id('PAD_');
     const groups=new Map();
     for(const x of items){if(!groups.has(x.vendorId))groups.set(x.vendorId,[]);groups.get(x.vendorId).push(x)}
     const groupEntries=[...groups.entries()];
