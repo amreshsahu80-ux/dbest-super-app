@@ -66,7 +66,10 @@ jobs:
           printf '%s' "$UPLOAD_KEY_B64" | base64 --decode > "$KEY_FILE"
           ACTUAL_SHA256="$(keytool -list -v -keystore "$KEY_FILE" -storetype PKCS12 -storepass "$UPLOAD_KEY_PASSWORD" -alias "$UPLOAD_KEY_ALIAS" | sed -n 's/^[[:space:]]*SHA256: //p' | head -n 1)"
           test -n "$ACTUAL_SHA256" || { echo "::error::Unable to read signing certificate"; exit 1; }
-          test "${ACTUAL_SHA256^^}" = "${EXPECTED_SHA256^^}" || { echo "::error::Upload certificate fingerprint mismatch"; exit 1; }
+          NORMALIZED_EXPECTED="$(printf '%s' "$EXPECTED_SHA256" | tr -d ':[:space:]' | tr '[:lower:]' '[:upper:]')"
+          [[ "$NORMALIZED_EXPECTED" =~ ^[0-9A-F]{64}$ ]] || { echo "::error::Expected Play upload SHA256 must contain exactly 64 hexadecimal digits"; exit 1; }
+          NORMALIZED_ACTUAL="$(printf '%s' "$ACTUAL_SHA256" | tr -d ':[:space:]' | tr '[:lower:]' '[:upper:]')"
+          test "$NORMALIZED_ACTUAL" = "$NORMALIZED_EXPECTED" || { echo "::error::Upload certificate fingerprint mismatch"; exit 1; }
       - name: Sign release AAB with existing upload key
         env:
           UPLOAD_KEY_B64: ${{ secrets.DBEST_PARTNER_UPLOAD_KEY_B64 }}
@@ -90,7 +93,10 @@ jobs:
           jarsigner -verify -strict "$BUNDLE"
           BUNDLE_SHA256="$(keytool -printcert -jarfile "$BUNDLE" | sed -n 's/^[[:space:]]*SHA256: //p' | head -n 1)"
           test -n "$BUNDLE_SHA256" || { echo "::error::Cannot extract signed AAB certificate"; exit 1; }
-          test "${BUNDLE_SHA256^^}" = "${EXPECTED_SHA256^^}" || { echo "::error::Signed AAB certificate does not match Play upload certificate"; exit 1; }
+          NORMALIZED_EXPECTED="$(printf '%s' "$EXPECTED_SHA256" | tr -d ':[:space:]' | tr '[:lower:]' '[:upper:]')"
+          [[ "$NORMALIZED_EXPECTED" =~ ^[0-9A-F]{64}$ ]] || { echo "::error::Expected Play upload SHA256 must contain exactly 64 hexadecimal digits"; exit 1; }
+          NORMALIZED_BUNDLE="$(printf '%s' "$BUNDLE_SHA256" | tr -d ':[:space:]' | tr '[:lower:]' '[:upper:]')"
+          test "$NORMALIZED_BUNDLE" = "$NORMALIZED_EXPECTED" || { echo "::error::Signed AAB certificate does not match Play upload certificate"; exit 1; }
       - name: Validate release bundle and launcher reference
         run: |
           test -s app/build/outputs/bundle/productionRelease/app-production-release.aab
