@@ -32,13 +32,16 @@ function total(type){try{return marketTotals(type)}catch(_){return {total:0,subt
 function money(v){return '₹'+Number(v||0).toLocaleString('en-IN',{maximumFractionDigits:2})}
 function escText(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function dock(){
- let old=document.getElementById('dbestCartDock'),grid=document.querySelector('.shopPage .productGrid');
- if(!grid){old?.remove();return}
+ const old=document.getElementById('dbestCartDock');
+ const grid=document.querySelector('.shopPage .productGrid');
+ if(!grid){if(old)old.remove();return}
  const type=getType(),rows=cart(type),count=rows.reduce((a,r)=>a+Number(r.qty||0),0);
- if(!count){old?.remove();return}
- if(!old){old=document.createElement('div');old.id='dbestCartDock';old.className='dbestCartDock';document.body.appendChild(old)}
- old.innerHTML='<div><strong>'+count+' item'+(count===1?'':'s')+' • '+money(total(type).total)+'</strong><small>'+escText(rows.slice(-2).map(r=>{let p=product(r.id);return (p?.name||'Item')+' × '+r.qty}).join(' · '))+'</small></div><button type="button" id="dbestViewCart">View Cart →</button>';
- old.querySelector('button').onclick=()=>window.marketCartScreen(type);
+ if(!count){if(old)old.remove();return}
+ let el=old;
+ if(!el){el=document.createElement('div');el.id='dbestCartDock';el.className='dbestCartDock';document.body.appendChild(el)}
+ const html='<div><strong>'+count+' item'+(count===1?'':'s')+' • '+money(total(type).total)+'</strong><small>'+escText(rows.slice(-2).map(r=>{let p=product(r.id);return (p?.name||'Item')+' × '+r.qty}).join(' · '))+'</small></div><button type="button" id="dbestViewCart">View Cart →</button>';
+ // Do not rewrite unchanged HTML: that caused a self-triggering MutationObserver loop.
+ if(el.dataset.snapshot!==html){el.dataset.snapshot=html;el.innerHTML=html;el.querySelector('button').onclick=()=>window.marketCartScreen(type)}
 }
 function checkout(){
  const form=document.querySelector('.checkoutCard');if(!form)return;
@@ -67,30 +70,21 @@ function update(){if(queued)return;queued=true;requestAnimationFrame(()=>{queued
 function start(){
  const originalAdd=window.marketAdd;
  if(typeof originalAdd==='function')window.marketAdd=function(type,id){
-   const buttons=Array.from(document.querySelectorAll('.productCard .addCartBtn')).filter(b=>(b.getAttribute('onclick')||'').includes("'"+id+"'"));
-   const button=buttons[0],before=cart(type).find(r=>String(r.id)===String(id))?.qty||0;
-   if(button){button.disabled=true;button.classList.add('dbestCartBusy');button.innerHTML='<span aria-hidden="true" class="dbestSpin"></span> Adding…'}
-   let result;
-   try{result=originalAdd.apply(this,arguments)}
-   catch(e){console.error('Marketplace cart update failed',e);if(button){button.disabled=false;button.classList.remove('dbestCartBusy');button.textContent='+ Add to Cart'}return}
+   const button=Array.from(document.querySelectorAll('.productCard .addCartBtn')).find(b=>(b.getAttribute('onclick')||'').includes("'"+id+"'"));
+   if(button){button.disabled=true;button.classList.add('dbestCartBusy');button.innerHTML='<span class="dbestSpin"></span> Adding…'}
+   try{return originalAdd.apply(this,arguments)}
    finally{
-     setTimeout(()=>{
-       const after=cart(type).find(r=>String(r.id)===String(id))?.qty||0;
-       document.querySelectorAll('.productCard .addCartBtn').forEach(b=>{
-         if(!/Adding…/.test(b.textContent||''))return;
-         b.disabled=false;b.classList.remove('dbestCartBusy');b.textContent='+ Add to Cart';
-       });
-       if(after>before&&typeof window.openMarketplace==='function'&&document.querySelector('.shopPage .productGrid'))window.openMarketplace(type);
-       update();
-     },180);
+     // Core marketAdd synchronously saves and rerenders the catalogue.
+     // No second rerender, no artificial delay and no stale disabled button.
+     update();
+     if(button&&button.isConnected){button.disabled=false;button.classList.remove('dbestCartBusy');button.textContent='+ Add to Cart'}
    }
-   return result;
  };
  const originalCheckout=window.marketCheckout;
  if(typeof originalCheckout==='function')window.marketCheckout=function(){const r=originalCheckout.apply(this,arguments);checkout();return r};
  const originalQty=window.marketQty;
  if(typeof originalQty==='function')window.marketQty=function(){const r=originalQty.apply(this,arguments);update();return r};
- new MutationObserver(records=>{if(records.some(r=>r.addedNodes.length))update()}).observe(document.body,{childList:true,subtree:true});
+ new MutationObserver(records=>{if(records.some(r=>Array.from(r.addedNodes).some(n=>n.nodeType===1&&n.id!=='dbestCartDock'&&!n.closest?.('#dbestCartDock'))))update()}).observe(document.body,{childList:true,subtree:true});
  update();
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
