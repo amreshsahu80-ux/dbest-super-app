@@ -51,7 +51,8 @@ WITH registry AS (
       AND COALESCE(v.profile_meta::jsonb->>'business_category','') IN ('','other','electronics')
       -- Changing the vendor alone cannot make legacy 'other' catalogue rows
       -- discoverable through an Electronics-only public_catalog query.
-      -- Include NULL market_type as non-Electronics: SQL <> would silently skip NULL.\n      -- Fail closed until those rows have a separately reviewed migration plan.
+      -- Include NULL market_type as non-Electronics: SQL <> would silently skip NULL.
+      -- Fail closed until those rows have a separately reviewed migration plan.
       AND NOT EXISTS (SELECT 1 FROM public.marketplace_catalog_live i
                       WHERE i.vendor_id = v.id AND i.market_type IS DISTINCT FROM 'electronics')
     ) AS correction_eligible
@@ -61,7 +62,9 @@ WITH registry AS (
 SELECT id, name, type AS current_type, owner_approval, active,
        agreement_status, operational_hold, electronics_enabled, correction_eligible,
        (SELECT COUNT(*) FROM public.marketplace_catalog_live i
-        WHERE i.vendor_id = candidate.id AND i.market_type = 'other') AS legacy_other_catalogue_rows,\n       (SELECT COUNT(*) FROM public.marketplace_catalog_live i\n        WHERE i.vendor_id = candidate.id AND i.market_type IS NULL) AS null_category_catalogue_rows,
+        WHERE i.vendor_id = candidate.id AND i.market_type = 'other') AS legacy_other_catalogue_rows,
+       (SELECT COUNT(*) FROM public.marketplace_catalog_live i
+        WHERE i.vendor_id = candidate.id AND i.market_type IS NULL) AS null_category_catalogue_rows,
        (SELECT COUNT(*) FROM public.marketplace_catalog_live i
         WHERE i.vendor_id = candidate.id AND i.market_type = 'electronics') AS electronics_catalogue_rows,
        CASE WHEN correction_eligible THEN 'electronics' ELSE type END AS proposed_type,
