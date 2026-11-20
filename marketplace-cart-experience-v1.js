@@ -7,7 +7,7 @@ const style=document.createElement('style');style.textContent=`
 .dbestCheckoutItems{border:1px solid #dfe7f4;border-radius:14px;padding:12px;margin:12px 0;background:#f8faff}
 .dbestCheckoutRow{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid #dfe7f4}
 .dbestCheckoutRow:last-child{border:0}.dbestCheckoutRow b{font-size:13px}.dbestCheckoutRow small{display:block;color:#637188}
-.dbestCheckoutRow .qtyControl{flex-shrink:0}.dbestCartBusy{opacity:.65;pointer-events:none}
+.dbestCheckoutRow .qtyControl{flex-shrink:0}.dbestCartBusy{opacity:.72;pointer-events:none}.dbestSpin{display:inline-block;width:14px;height:14px;border:2px solid #7c9fd3;border-top-color:#174b9e;border-radius:50%;animation:dbestSpin .55s linear infinite;vertical-align:middle;margin-right:6px}@keyframes dbestSpin{to{transform:rotate(360deg)}}
 `;document.head.appendChild(style);
 function getType(){try{return marketState.type||'restaurant'}catch(_){return 'restaurant'}}
 function cart(type){try{return marketCart(type)||[]}catch(_){return []}}
@@ -51,9 +51,24 @@ function update(){if(queued)return;queued=true;requestAnimationFrame(()=>{queued
 function start(){
  const originalAdd=window.marketAdd;
  if(typeof originalAdd==='function')window.marketAdd=function(type,id){
-   const button=Array.from(document.querySelectorAll('.productCard .addCartBtn')).find(b=>(b.getAttribute('onclick')||'').includes(id));
-   if(button){button.disabled=true;button.classList.add('dbestCartBusy');button.textContent='◌ Adding…'}
-   try{return originalAdd.apply(this,arguments)}finally{setTimeout(update,80)}
+   const buttons=Array.from(document.querySelectorAll('.productCard .addCartBtn')).filter(b=>(b.getAttribute('onclick')||'').includes("'"+id+"'"));
+   const button=buttons[0],before=cart(type).find(r=>String(r.id)===String(id))?.qty||0;
+   if(button){button.disabled=true;button.classList.add('dbestCartBusy');button.innerHTML='<span aria-hidden="true" class="dbestSpin"></span> Adding…'}
+   let result;
+   try{result=originalAdd.apply(this,arguments)}
+   catch(e){console.error('Marketplace cart update failed',e);if(button){button.disabled=false;button.classList.remove('dbestCartBusy');button.textContent='+ Add to Cart'}return}
+   finally{
+     setTimeout(()=>{
+       const after=cart(type).find(r=>String(r.id)===String(id))?.qty||0;
+       document.querySelectorAll('.productCard .addCartBtn').forEach(b=>{
+         if(!/Adding…/.test(b.textContent||''))return;
+         b.disabled=false;b.classList.remove('dbestCartBusy');b.textContent='+ Add to Cart';
+       });
+       if(after>before&&typeof window.openMarketplace==='function'&&document.querySelector('.shopPage .productGrid'))window.openMarketplace(type);
+       update();
+     },180);
+   }
+   return result;
  };
  const originalCheckout=window.marketCheckout;
  if(typeof originalCheckout==='function')window.marketCheckout=function(){const r=originalCheckout.apply(this,arguments);checkout();return r};
