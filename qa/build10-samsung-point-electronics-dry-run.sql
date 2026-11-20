@@ -51,9 +51,9 @@ WITH registry AS (
       AND COALESCE(v.profile_meta::jsonb->>'business_category','') IN ('','other','electronics')
       -- Changing the vendor alone cannot make legacy 'other' catalogue rows
       -- discoverable through an Electronics-only public_catalog query.
-      -- Fail closed until those rows have a separately reviewed migration plan.
+      -- Include NULL market_type as non-Electronics: SQL <> would silently skip NULL.\n      -- Fail closed until those rows have a separately reviewed migration plan.
       AND NOT EXISTS (SELECT 1 FROM public.marketplace_catalog_live i
-                      WHERE i.vendor_id = v.id AND i.market_type <> 'electronics')
+                      WHERE i.vendor_id = v.id AND i.market_type IS DISTINCT FROM 'electronics')
     ) AS correction_eligible
   FROM public.marketplace_vendors_live v CROSS JOIN registry r
   WHERE v.id = 'VND8597199'
@@ -61,7 +61,7 @@ WITH registry AS (
 SELECT id, name, type AS current_type, owner_approval, active,
        agreement_status, operational_hold, electronics_enabled, correction_eligible,
        (SELECT COUNT(*) FROM public.marketplace_catalog_live i
-        WHERE i.vendor_id = candidate.id AND i.market_type = 'other') AS legacy_other_catalogue_rows,
+        WHERE i.vendor_id = candidate.id AND i.market_type = 'other') AS legacy_other_catalogue_rows,\n       (SELECT COUNT(*) FROM public.marketplace_catalog_live i\n        WHERE i.vendor_id = candidate.id AND i.market_type IS NULL) AS null_category_catalogue_rows,
        (SELECT COUNT(*) FROM public.marketplace_catalog_live i
         WHERE i.vendor_id = candidate.id AND i.market_type = 'electronics') AS electronics_catalogue_rows,
        CASE WHEN correction_eligible THEN 'electronics' ELSE type END AS proposed_type,
@@ -74,5 +74,5 @@ FROM candidate;
 
 -- Post-approval QA (not executed here): verify public_catalog({marketType:'electronics'})
 -- returns this Vendor's active in-stock items, and Main App Electronics discovery renders.
--- Existing 'other' catalogue rows block eligibility: owner correction alone is
+-- Existing 'other' or NULL-category catalogue rows block eligibility: owner correction alone is
 -- insufficient for Main App Electronics discovery. No rows are changed here.
