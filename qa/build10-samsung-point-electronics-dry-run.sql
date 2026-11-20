@@ -48,6 +48,8 @@ WITH registry AS (
       AND v.agreement_status = 'Fully Signed'
       AND v.operational_hold IS FALSE
       AND r.electronics_enabled
+      -- jsonb_set requires an object; reject malformed legacy metadata rather than erroring.
+      AND (v.profile_meta IS NULL OR jsonb_typeof(v.profile_meta::jsonb) = 'object')
       AND COALESCE(v.profile_meta::jsonb->>'business_category','') IN ('','other','electronics')
       -- Changing the vendor alone cannot make legacy 'other' catalogue rows
       -- discoverable through an Electronics-only public_catalog query.
@@ -69,6 +71,8 @@ SELECT id, name, type AS current_type, owner_approval, active,
         WHERE i.vendor_id = candidate.id AND i.market_type = 'electronics') AS electronics_catalogue_rows,
        CASE WHEN correction_eligible THEN 'electronics' ELSE type END AS proposed_type,
        profile_meta AS current_profile_meta,
+       CASE WHEN profile_meta IS NULL OR jsonb_typeof(profile_meta::jsonb) = 'object'
+         THEN 'valid_object_or_null' ELSE 'invalid_non_object' END AS profile_meta_shape,
        CASE WHEN correction_eligible
          THEN jsonb_set(COALESCE(profile_meta::jsonb,'{}'::jsonb),
                         '{business_category}', '"electronics"'::jsonb, true)
