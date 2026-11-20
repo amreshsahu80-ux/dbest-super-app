@@ -3934,24 +3934,33 @@ function marketQty(type,id,delta,fromCatalogue=false){let cart=marketCart(type),
 // One authoritative product-card event path. No inline handlers or competing
 // wrappers. All changes use the existing cart state and stock/approval rules.
 document.addEventListener("click",function(e){
- const button=e.target.closest("button[data-market-action]");
+ const target=e.target instanceof Element?e.target:e.target?.parentElement;
+ const button=target?.closest("button[data-market-action]");
  if(!button||!button.closest(".productCard"))return;
  e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
  if(button.disabled)return;
  const type=button.dataset.marketType,id=button.dataset.marketId;
- const product=marketProduct(id),vendor=product&&marketVendor(product.vendorId);
- if(!product||product.type!==type||!catalogueLive(product)||!vendor||Number(product.stock||0)<=0)return;
- const delta=button.dataset.marketAction==="add"?1:Number(button.dataset.marketDelta||0);
- if(delta!==1&&delta!==-1)return;
- const rows=marketCart(type),row=rows.find(r=>String(r.id)===String(id));
- const current=Number(row?.qty||0),next=Math.max(0,Math.min(Number(product.stock||0),current+delta));
- if(current===next)return;
- button.disabled=true;
- if(button.dataset.marketAction==="add")button.innerHTML='<span class="dbestSpin"></span> Adding…';
- if(row)row.qty=next;else rows.push({id,qty:next});
- commerceCarts[type]=rows.filter(r=>Number(r.qty)>0);
- try{save()}catch(err){console.warn("Cart local persistence failed",err);try{localStorage.setItem("d2_commerce_carts",JSON.stringify(commerceCarts))}catch(_){}}
- openMarketplace(type);
+ const explain=message=>{console.warn("[DBest cart]",message,{type,id});toast(message)};
+ try{
+  const product=marketProduct(id),vendor=product&&marketVendor(product.vendorId);
+  if(!product)return explain("Product unavailable. Please refresh the catalogue.");
+  if(product.type!==type)return explain("Product category mismatch. Please refresh.");
+  if(!vendor)return explain("Vendor details unavailable. Please try again later.");
+  if(!catalogueLive(product))return explain("This product is awaiting approval or vendor activation.");
+  const stock=Number(product.stock||0);
+  if(stock<=0)return explain("This product is out of stock.");
+  const action=button.dataset.marketAction;
+  const delta=action==="add"?1:Number(button.dataset.marketDelta||0);
+  if(delta!==1&&delta!==-1)return explain("Invalid cart action.");
+  const rows=marketCart(type),row=rows.find(r=>String(r.id)===String(id));
+  const current=Number(row?.qty||0),next=Math.max(0,Math.min(stock,current+delta));
+  if(current===next)return explain(delta>0?"Maximum available stock reached.":"Quantity already zero.");
+  if(row)row.qty=next;else rows.push({id,qty:next});
+  commerceCarts[type]=rows.filter(r=>Number(r.qty)>0);
+  try{save()}catch(err){console.warn("[DBest cart] Persistence error",err);try{localStorage.setItem("d2_commerce_carts",JSON.stringify(commerceCarts))}catch(storageError){console.warn("[DBest cart] Fallback persistence error",storageError)}}
+  openMarketplace(type);
+  toast(delta>0?"Added to cart":"Cart quantity updated");
+ }catch(err){console.error("[DBest cart] Click handler failed",err);explain("Cart could not update. Please retry.");}
 },true);
 function marketTotals(type){
   const subtotal=marketCart(type).reduce((sum,row)=>{
