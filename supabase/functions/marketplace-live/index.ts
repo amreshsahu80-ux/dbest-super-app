@@ -75,8 +75,8 @@ Deno.serve(async(req:Request)=>{
    const name=String(b.name||'').trim(),ownerName=String(b.ownerName||'').trim(),mobile=digits(b.mobile),email=String(b.email||'').trim().toLowerCase(),pin=String(b.pin||'').trim(),type=String(b.type??''),address=String(b.address||'').trim(),city=String(b.city||'').trim(),pincode=digits(b.pincode).slice(0,10);
    if(name.length<2||mobile.length<10||!email.includes('@')||!/^\d{4,8}$/.test(pin)||address.length<4||city.length<2)return json({error:'required_fields_missing'},400);
    const {data:categoryConfig,error:categoryError}=await sb.from('app_settings').select('value').eq('key','marketplace_categories').maybeSingle();
-   if(categoryError)return json({error:'category_registry_unavailable'},503);
-   if(!/^[a-z][a-z0-9_]{0,59}$/.test(type)||!Array.isArray(categoryConfig?.value?.categories)||!categoryConfig.value.categories.some((c:any)=>c?.key===type&&c?.active!==false&&c?.enabled!==false&&c?.is_active!==false&&['','active','enabled','published','live'].includes(String(c?.status??'').trim().toLowerCase())))return json({error:'inactive_or_unknown_vendor_category'},400);
+   if(categoryError||!Array.isArray(categoryConfig?.value?.categories))return json({error:'category_registry_unavailable'},503);
+   if(!/^[a-z][a-z0-9_]{0,59}$/.test(type)||!categoryConfig.value.categories.some((c:any)=>c?.key===type&&c?.active!==false&&c?.enabled!==false&&c?.is_active!==false&&['','active','enabled','published','live'].includes(String(c?.status??'').trim().toLowerCase())))return json({error:'inactive_or_unknown_vendor_category'},400);
    const [{data:mobileDup,error:mobileDupError},{data:emailDup,error:emailDupError}]=await Promise.all([sb.from('marketplace_vendors_live').select('id').eq('mobile',mobile).limit(1),sb.from('marketplace_vendors_live').select('id').eq('email',email).limit(1)]);if(mobileDupError||emailDupError)return json({error:'vendor_duplicate_check_unavailable'},503);if((mobileDup||[]).length||(emailDup||[]).length)return json({error:'vendor_already_registered'},409);
    let leaderId:string|null=null,launchId:string|null=null;
    const leaderToken=String(b.leaderOnboardToken||'').trim();
