@@ -35,4 +35,21 @@ assert 'new LinearLayout.LayoutParams(0, dp(48)' in card, "Keep 48dp action targ
 assert 'back.setContentDescription("Back");' in browser
 assert 'home.setContentDescription("Partner home");' in browser
 assert 'home.setOnClickListener(v -> showHome());' in browser
+
+# Compact native landing: footer must remain clear of the independent floating
+# notification control, including when the user scrolls to the bottom.
+assert 'page.setPadding(dp(16), dp(8), dp(16), dp(84));' in home, \
+    "Reserve footer clearance for floating notification control"
+assert 'card.addView(photoFrame, new LinearLayout.LayoutParams(-1, dp(56)));' in card, \
+    "Keep role preview compact without shrinking accessible action buttons"
+assert 'privacyMenu.setContentDescription("Account & Privacy");' in home
+assert 'privacyMenu.setOnClickListener(v -> showAccountSettings());' in home
+assert 'bar.setPadding(dp(4), dp(3), dp(4), dp(3));' in browser, \
+    "Keep browser toolbar compact"
+assert 'bar.addView(back, new LinearLayout.LayoutParams(dp(48), dp(48)));' in browser
+assert 'bar.addView(home, new LinearLayout.LayoutParams(dp(48), dp(48)));' in browser
+assert 'linkAccount.setContentDescription("Link signed-in partner account to notifications");' in browser
+assert 'bar.addView(linkAccount, new LinearLayout.LayoutParams(dp(52), dp(48)));' in browser
+assert 'privacy.setContentDescription("Account & Privacy");' in browser
+
 print("PASS: three distinct role routes, Join targets, accessible actions and workspace navigation")
