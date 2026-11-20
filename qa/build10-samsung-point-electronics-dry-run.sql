@@ -11,6 +11,17 @@ SELECT key, value
 FROM public.app_settings
 WHERE key = 'marketplace_categories';
 
+-- Inspect registry storage shape before trusting the Electronics eligibility flag.
+-- A top-level array, malformed JSON, or differently named category keys require
+-- an explicit registry contract review; never infer approval from a missing key.
+SELECT key, jsonb_typeof(value::jsonb) AS registry_root_shape,
+       jsonb_typeof(value::jsonb->'categories') AS categories_shape,
+       CASE WHEN jsonb_typeof(value::jsonb->'categories') = 'array'
+            THEN jsonb_array_length(value::jsonb->'categories') ELSE NULL END
+         AS nested_category_count
+FROM public.app_settings
+WHERE key = 'marketplace_categories';
+
 SELECT id, vendor_id, market_type, name, active, stock
 FROM public.marketplace_catalog_live
 WHERE vendor_id = 'VND8597199'
