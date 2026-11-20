@@ -17,7 +17,7 @@ const style=document.createElement('style');style.textContent=`
 .marketHubCard b{font-size:19px!important;line-height:1.2!important;letter-spacing:-.3px!important}
 .marketHubCard small{font-size:12px!important;line-height:1.4!important;opacity:.92!important;display:-webkit-box!important;-webkit-line-clamp:2!important;-webkit-box-orient:vertical!important;overflow:hidden!important}
 @media(min-width:650px){.marketHubGrid{grid-template-columns:repeat(3,minmax(0,1fr))!important}}
-.dbestCartDock{position:fixed;left:12px;right:12px;bottom:12px;z-index:75;background:#132c64;color:white;border-radius:16px;box-shadow:0 10px 35px #101d3860;padding:12px 15px;display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:850px;margin:auto}
+.dbestCartDock{position:fixed!important;left:12px;right:12px;bottom:max(12px,env(safe-area-inset-bottom))!important;z-index:2147483000!important;background:#132c64;color:white;border-radius:16px;box-shadow:0 10px 35px #101d3860;padding:12px 15px;display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:850px;margin:auto}
 .dbestCartDock button{background:#fff;color:#153a83;border:0;border-radius:12px;padding:11px 16px;font-weight:800}
 .dbestCartDock small{display:block;opacity:.85}.shopPage:has(.productGrid){padding-bottom:100px!important}
 .dbestCheckoutItems{border:1px solid #dfe7f4;border-radius:14px;padding:12px;margin:12px 0;background:#f8faff}
@@ -33,12 +33,13 @@ function money(v){return '₹'+Number(v||0).toLocaleString('en-IN',{maximumFract
 function escText(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function dock(){
  const old=document.getElementById('dbestCartDock');
- const grid=document.querySelector('.shopPage .productGrid');
- if(!grid){if(old)old.remove();return}
+ const onCatalogue=!!document.querySelector('.shopPage .productCard');
+ const onCheckout=!!document.querySelector('.checkoutCard');
+ if(!onCatalogue||onCheckout){if(old)old.remove();return}
  const type=getType(),rows=cart(type),count=rows.reduce((a,r)=>a+Number(r.qty||0),0);
  if(!count){if(old)old.remove();return}
  let el=old;
- if(!el){el=document.createElement('div');el.id='dbestCartDock';el.className='dbestCartDock';document.body.appendChild(el)}
+ if(!el){el=document.createElement('div');el.id='dbestCartDock';el.className='dbestCartDock';el.setAttribute('role','region');el.setAttribute('aria-label','Shopping cart');document.body.appendChild(el)}
  const html='<div><strong>'+count+' item'+(count===1?'':'s')+' • '+money(total(type).total)+'</strong><small>'+escText(rows.slice(-2).map(r=>{let p=product(r.id);return (p?.name||'Item')+' × '+r.qty}).join(' · '))+'</small></div><button type="button" id="dbestViewCart">View Cart →</button>';
  // Do not rewrite unchanged HTML: that caused a self-triggering MutationObserver loop.
  if(el.dataset.snapshot!==html){el.dataset.snapshot=html;el.innerHTML=html;el.querySelector('button').onclick=()=>window.marketCartScreen(type)}
