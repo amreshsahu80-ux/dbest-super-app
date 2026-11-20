@@ -52,4 +52,9 @@ assert 'linkAccount.setContentDescription("Link signed-in partner account to not
 assert 'bar.addView(linkAccount, new LinearLayout.LayoutParams(dp(52), dp(48)));' in browser
 assert 'privacy.setContentDescription("Account & Privacy");' in browser
 
-print("PASS: three distinct role routes, Join targets, accessible actions and workspace navigation")
+assert 'ViewCompat.setAccessibilityHeading(workspaceHeading, true);' in home, \
+    "Workspace section should be a screen-reader heading"
+assert 'ViewCompat.setAccessibilityHeading(roleTitle, true);' in card, \
+    "Each role title should be a screen-reader heading"
+
+print("PASS: three distinct role routes, Join targets, headings, accessible actions and workspace navigation")
