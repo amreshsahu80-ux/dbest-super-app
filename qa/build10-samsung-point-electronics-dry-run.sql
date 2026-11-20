@@ -73,6 +73,16 @@ SELECT id, name, type AS current_type, owner_approval, active,
         WHERE i.vendor_id = candidate.id
           AND i.market_type IS NOT NULL
           AND i.market_type NOT IN ('other','electronics')) AS other_category_catalogue_rows,
+       -- This is a catalogue-level proxy, not proof that public_catalog or the Main App renders it.
+       (SELECT COUNT(*) FROM public.marketplace_catalog_live i
+        WHERE i.vendor_id = candidate.id
+          AND i.market_type = 'electronics'
+          AND i.active IS TRUE AND i.stock > 0) AS active_in_stock_electronics_rows,
+       (SELECT COUNT(*) FROM public.marketplace_catalog_live i
+        WHERE i.vendor_id = candidate.id
+          AND i.market_type = 'electronics'
+          AND (i.active IS DISTINCT FROM TRUE OR i.stock IS NULL OR i.stock <= 0))
+         AS inactive_or_unstocked_electronics_rows,
        (SELECT COUNT(*) FROM public.marketplace_catalog_live i
         WHERE i.vendor_id = candidate.id) AS total_catalogue_rows,
        CASE WHEN correction_eligible THEN 'electronics' ELSE type END AS proposed_type,
