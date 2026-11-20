@@ -160,5 +160,5 @@ Deno.serve(async(req:Request)=>{
    try{const d=await publicCatalog(b.marketType?String(b.marketType):undefined,b.vendorId?String(b.vendorId):undefined);return json({ok:true,...d})}catch(e){console.error('public_catalog_query_failed',e);return json({error:'public_catalog_unavailable'},503)}
   }
   return json({error:'unknown_action'},400);
- }catch(e){console.error(e);return json({error:'unexpected_error',detail:String((e as any)?.message||e)},500)}
+ }catch(e){console.error(e);return json({error:'unexpected_error'},500)}
 });
