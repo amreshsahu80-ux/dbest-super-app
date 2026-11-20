@@ -22,7 +22,9 @@ jobs:
           [[ "$expected" =~ ^[0-9A-F]{64}$ ]]
           test "$(normalize "$colon")" = "$expected"
           test "$(normalize "  $colon  ")" = "$expected"
-          for invalid in '' '1234' 'zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz'; do
+          test "$(normalize "$(printf '%s' "$colon" | tr '[:lower:]' '[:upper:]')")" = "$expected"
+          test "$(normalize "  $plain\n")" = "$expected"
+          for invalid in '' '1234' 'zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz' "${plain}0" "${plain%?}"; do
             value="$(normalize "$invalid")"
             if [[ "$value" =~ ^[0-9A-F]{64}$ ]]; then
               echo "::error::Invalid certificate fingerprint was accepted"
