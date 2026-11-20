@@ -23,7 +23,7 @@ jobs:
           test "$(normalize "$colon")" = "$expected"
           test "$(normalize "  $colon  ")" = "$expected"
           test "$(normalize "$(printf '%s' "$colon" | tr '[:lower:]' '[:upper:]')")" = "$expected"
-          test "$(normalize "  $plain\n")" = "$expected"
+          test "$(normalize "$(printf '  %s\n' "$plain")")" = "$expected"
           for invalid in '' '1234' 'zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz' "${plain}0" "${plain%?}"; do
             value="$(normalize "$invalid")"
             if [[ "$value" =~ ^[0-9A-F]{64}$ ]]; then
