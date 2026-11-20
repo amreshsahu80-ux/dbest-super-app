@@ -1,7 +1,16 @@
 (function(){
 'use strict';
 const style=document.createElement('style');style.textContent=`
-.marketHubGrid{gap:12px!important;grid-template-columns:repeat(2,minmax(0,1fr))!important}
+.marketHubGrid{gap:12px!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;align-items:stretch!important}
+.marketHubCard{height:148px!important;min-height:148px!important;max-height:148px!important;position:relative!important;padding:14px!important;justify-content:flex-end!important;overflow:hidden!important;background:linear-gradient(135deg,#ffffff,#edf4ff)!important;color:#19385e!important;border:1px solid #dce6f5!important;box-shadow:0 5px 16px #153c7020!important}
+.marketHubCard:nth-child(2){background:linear-gradient(135deg,#fff,#fff0e8)!important}
+.marketHubCard:nth-child(3){background:linear-gradient(135deg,#fff,#f3efff)!important}
+.marketHubCard:nth-child(4){background:linear-gradient(135deg,#fff,#e9f9f3)!important}
+.marketHubCard:nth-child(5){background:linear-gradient(135deg,#fff,#eaf2ff)!important}
+.marketHubCard span{position:absolute!important;right:12px!important;top:10px!important;font-size:35px!important;opacity:.9!important}
+.marketHubCard b{font-size:17px!important;margin:0!important;max-width:75%!important}
+.marketHubCard small{font-size:11px!important;line-height:1.25!important;color:#64748b!important;opacity:1!important;max-width:100%!important;-webkit-line-clamp:2!important}
+
 .marketHubCard{min-height:166px!important;padding:18px 15px!important;border-radius:22px!important;text-align:left!important;display:flex!important;flex-direction:column!important;align-items:flex-start!important;justify-content:flex-start!important;gap:7px!important;box-shadow:0 9px 24px rgba(18,42,85,.12)!important;transition:transform .16s ease,box-shadow .16s ease!important}
 .marketHubCard:active{transform:scale(.98)!important}
 .marketHubCard span{font-size:32px!important;line-height:1.1!important;margin-bottom:3px!important}
