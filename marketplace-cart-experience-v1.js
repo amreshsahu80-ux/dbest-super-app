@@ -33,7 +33,7 @@ function money(v){return '₹'+Number(v||0).toLocaleString('en-IN',{maximumFract
 function escText(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function dock(){
  const old=document.getElementById('dbestCartDock');
- const onCatalogue=!!document.querySelector('.shopPage .productCard');
+ const onCatalogue=!!document.querySelector('.shopPage .productGrid .productCard') && !document.querySelector('.shopPage .cartList, .shopPage .orderSummary');
  const onCheckout=!!document.querySelector('.checkoutCard');
  if(!onCatalogue||onCheckout){if(old)old.remove();return}
  const type=getType(),rows=cart(type),count=rows.reduce((a,r)=>a+Number(r.qty||0),0);
