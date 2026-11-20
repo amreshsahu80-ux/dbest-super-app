@@ -69,6 +69,12 @@ SELECT id, name, type AS current_type, owner_approval, active,
         WHERE i.vendor_id = candidate.id AND i.market_type IS NULL) AS null_category_catalogue_rows,
        (SELECT COUNT(*) FROM public.marketplace_catalog_live i
         WHERE i.vendor_id = candidate.id AND i.market_type = 'electronics') AS electronics_catalogue_rows,
+       (SELECT COUNT(*) FROM public.marketplace_catalog_live i
+        WHERE i.vendor_id = candidate.id
+          AND i.market_type IS NOT NULL
+          AND i.market_type NOT IN ('other','electronics')) AS other_category_catalogue_rows,
+       (SELECT COUNT(*) FROM public.marketplace_catalog_live i
+        WHERE i.vendor_id = candidate.id) AS total_catalogue_rows,
        CASE WHEN correction_eligible THEN 'electronics' ELSE type END AS proposed_type,
        profile_meta AS current_profile_meta,
        CASE WHEN profile_meta IS NULL OR jsonb_typeof(profile_meta::jsonb) = 'object'
