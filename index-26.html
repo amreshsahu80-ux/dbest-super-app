@@ -3933,12 +3933,25 @@ function marketQty(type,id,delta,fromCatalogue=false){let cart=marketCart(type),
 
 // One authoritative product-card event path. No inline handlers or competing
 // wrappers. All changes use the existing cart state and stock/approval rules.
+// Isolated-preview mobile cart event probe: reports every tap even if product validation fails.
+function marketCartProbe(message){
+ let panel=document.getElementById("dbestCartProbe");
+ if(!panel){panel=document.createElement("div");panel.id="dbestCartProbe";panel.setAttribute("role","status");panel.style.cssText="position:fixed;bottom:12px;left:12px;right:12px;z-index:2147483647;background:#132743;color:white;padding:12px;border-radius:12px;font:13px system-ui;box-shadow:0 4px 20px #0005";document.body.appendChild(panel);}
+ panel.textContent="CART DIAGNOSTIC: "+message;
+}
+document.addEventListener("pointerdown",function(e){
+ const target=e.target instanceof Element?e.target:e.target?.parentElement;
+ const b=target?.closest(".productCard button[data-market-action]");
+ if(b)marketCartProbe("Tap detected: "+(b.dataset.marketId||"missing ID")+" / "+(b.dataset.marketAction||"missing action"));
+},true);
 function marketCardAction(button){
  if(!button||button.disabled)return false;
  const type=button.dataset.marketType,id=button.dataset.marketId;
+ marketCartProbe("Handler entered: "+id+" / "+type);
  const explain=message=>{console.warn("[DBest cart]",message,{type,id});toast(message)};
  try{
   const product=marketProduct(id),vendor=product&&marketVendor(product.vendorId);
+  marketCartProbe("Lookup: "+(product?product.name:"PRODUCT NOT FOUND")+" / "+(vendor?"vendor found":"vendor missing"));
   if(!product)return explain("Product unavailable. Please refresh the catalogue.");
   if(product.type!==type)return explain("Product category mismatch. Please refresh.");
   if(!vendor)return explain("Vendor details unavailable. Please try again later.");
@@ -3977,6 +3990,7 @@ function marketCardAction(button){
   }
   const cartPill=document.querySelector(".shopToolbar .cartPill");
   if(cartPill)cartPill.textContent="🛒 Cart ("+marketCartCount(type)+")";
+  marketCartProbe("Cart updated: "+product.name+" / qty "+next);
   toast(delta>0?product.name+" added to cart":"Cart quantity updated");
  }catch(err){console.error("[DBest cart] Click handler failed",err);explain("Cart could not update. Please retry.");}
  return false;
