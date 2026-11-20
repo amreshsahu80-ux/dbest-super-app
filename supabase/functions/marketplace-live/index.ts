@@ -106,8 +106,10 @@ Deno.serve(async(req:Request)=>{
 
   if(action==='vendor_set_location'){
    const v=await vendorSession();if(!v)return json({error:'vendor_session_invalid'},401);
-   const lat=Number(b.lat),lng=Number(b.lng),accuracy=Number(b.accuracy||0);
-   if(!Number.isFinite(lat)||!Number.isFinite(lng)||Math.abs(lat)>90||Math.abs(lng)>180)return json({error:'invalid_location'},400);
+   const lat=Number(b.lat),lng=Number(b.lng),accuracy=Number(b.accuracy??0);
+   /* Missing/null/blank coordinates must not silently become (0,0). */
+   if(!finite(b.lat)||!finite(b.lng)||!Number.isFinite(lat)||!Number.isFinite(lng)||Math.abs(lat)>90||Math.abs(lng)>180)return json({error:'invalid_location'},400);
+   if(!Number.isFinite(accuracy)||accuracy<0)return json({error:'invalid_location_accuracy'},400);
    const now=new Date().toISOString();
    const meta={...(v.profile_meta||{}),locationSource:'Vendor Dashboard GPS',locationAccuracyM:Number.isFinite(accuracy)?accuracy:null,locationSetAt:now};
    const {data,error}=await sb.from('marketplace_vendors_live').update({lat,lng,location_updated_at:now,profile_meta:meta,updated_at:now}).eq('id',v.id).select('id,name,type,city,lat,lng,location_updated_at,owner_approval,active,agreement_status,operational_hold').maybeSingle();
