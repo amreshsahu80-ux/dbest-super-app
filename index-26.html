@@ -3948,19 +3948,21 @@ function marketCardAction(button){
  if(!button||button.disabled)return false;
  const type=button.dataset.marketType,id=button.dataset.marketId;
  marketCartProbe("Handler entered: "+id+" / "+type);
- const explain=message=>{console.warn("[DBest cart]",message,{type,id});toast(message)};
+ const explain=message=>{console.warn("[DBest cart]",message,{type,id});marketCartProbe("BLOCKED: "+message+" | product ID "+id);toast(message)};
  try{
   const product=marketProduct(id),vendor=product&&marketVendor(product.vendorId);
   marketCartProbe("Lookup: "+(product?product.name:"PRODUCT NOT FOUND")+" / "+(vendor?"vendor found":"vendor missing"));
   if(!product)return explain("Product unavailable. Please refresh the catalogue.");
   if(product.type!==type)return explain("Product category mismatch. Please refresh.");
   if(!vendor)return explain("Vendor details unavailable. Please try again later.");
-  if(!catalogueLive(product))return explain("This product is awaiting approval or vendor activation.");
+  if(!catalogueLive(product))return explain("Product approval="+product.approvalStatus+", owner="+product.ownerApproved+", vendor approval="+vendor.ownerApproval+", signed="+agreementFullySigned(vendor.agreement));
   const stock=Number(product.stock||0);
   if(stock<=0)return explain("This product is out of stock.");
   const action=button.dataset.marketAction;
   const delta=action==="add"?1:Number(button.dataset.marketDelta||0);
   if(delta!==1&&delta!==-1)return explain("Invalid cart action.");
+  const duplicates=commerceConfig.products.filter(p=>String(p.id)===String(id));
+  if(duplicates.length>1)return explain("Duplicate product ID detected ("+duplicates.length+" products): "+duplicates.map(p=>p.name).join(", "));
   const rows=marketCart(type),row=rows.find(r=>String(r.id)===String(id));
   const current=Number(row?.qty||0),next=Math.max(0,Math.min(stock,current+delta));
   if(current===next)return explain(delta>0?"Maximum available stock reached.":"Quantity already zero.");
