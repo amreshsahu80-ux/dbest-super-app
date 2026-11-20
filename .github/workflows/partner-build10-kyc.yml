@@ -1,4 +1,4 @@
-name: Partner Build 10 isolated KYC checks
+name: Partner Build 11 isolated KYC and signed release checks
 on:
   push:
     branches:
@@ -22,7 +22,7 @@ jobs:
           node -e "const fs=require('fs');const g=fs.readFileSync('partner-android-app/app/build.gradle','utf8');for(const v of ['com.dbest4u.partner','versionCode 11',\"versionName '1.0.7'\"])if(!g.includes(v))throw Error('Missing '+v);console.log('Native Partner release identity passed')"
       - name: Note separately gated website onboarding QA
         run: echo 'Shared website onboarding/KYC scripts excluded from this isolated Android release; validate separately before production.'
-  android-build10-signed:
+  android-build11-signed:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -111,8 +111,7 @@ jobs:
       - name: Keep signed candidate private
         uses: actions/upload-artifact@v4
         with:
-          name: partner-build10-signed-aab-and-unsigned-apk
+          name: partner-build11-signed-aab
           path: |
             partner-android-app/app/build/outputs/bundle/productionRelease/*.aab
-            partner-android-app/app/build/outputs/apk/production/release/*.apk
           retention-days: 1
