@@ -4027,7 +4027,7 @@ async function placeMarketOrder(e,type){
   let f=new FormData(form),t=marketTotals(type),cart=marketCart(type);
   if(!cart.length)return toast('Your cart is empty.');
   const unsignedVendor=cartAgreementBlock(type);if(unsignedVendor)return toast(unsignedVendor+' agreement signing is pending. Order cannot be placed.');
-  if(cart.some(r=>{const p=marketProduct(r.id);return !p||p.type!==type||!catalogueLive(p)||!Number.isInteger(Number(r.qty))||Number(r.qty)<1||Number(r.qty)>Number(p.stock||0)}))return toast('An item is unavailable or its quantity exceeds stock. Please review your cart.');
+  if(cart.some(r=>{const p=marketProduct(r.id);return !p||p.type!==type||!catalogueLive(p)&&!catalogueCartEligible(p)||!Number.isInteger(Number(r.qty))||Number(r.qty)<1||Number(r.qty)>Number(p.stock||0)}))return toast('An item is unavailable or its quantity exceeds stock. Please review your cart.');
   if(type!=='digital'){
     const address=String(f.get('address')||'').trim();
     const pin=String(f.get('pin')||'').trim();
