@@ -3883,9 +3883,9 @@ reconcileLegacyOwnerDirectVendor();
 function ownerDirectVendor(v){return !!(v&&v.ownerDirectOnboarded===true&&v.ownerApproval==="Approved")}
 function vendorLive(v){return !!(v&&v.active!==false&&v.ownerApproval==="Approved"&&(ownerDirectVendor(v)||agreementFullySigned(v.agreement)))}
 function catalogueLive(p){let v=marketVendor(p.vendorId);return !!(p&&p.active!==false&&p.approvalStatus==="Approved"&&p.ownerApproved===true&&vendorLive(v))}
-// Cart selection is reversible; agreement signatures remain mandatory at order submission.
+// Checkout permits explicitly Owner-direct-approved vendors or fully signed, approved vendors.
 function catalogueCartEligible(p){const v=p&&marketVendor(p.vendorId);return !!(p&&p.active!==false&&p.approvalStatus==="Approved"&&p.ownerApproved===true&&v&&v.active!==false&&v.ownerApproval==="Approved")}
-function cartAgreementBlock(type){for(const r of marketCart(type)){const p=marketProduct(r.id),v=p&&marketVendor(p.vendorId);if(!p||!v||!(ownerDirectVendor(v)||agreementFullySigned(v.agreement)))return v?.name||p?.name||"Vendor";}return ""}
+function cartAgreementBlock(type){for(const r of marketCart(type)){const p=marketProduct(r.id),v=p&&marketVendor(p.vendorId);if(!p||!catalogueLive(p)||!v||!vendorLive(v))return v?.name||p?.name||"Vendor";}return ""}
 
 function partnerStageHtml(p){
   let s=[
