@@ -68,18 +68,32 @@ function refreshCheckout(){checkout()}
 let queued=false;
 function update(){if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;dock();if(document.querySelector('.checkoutCard')&&!document.getElementById('dbestCheckoutItems'))checkout()})}
 function start(){
- const originalAdd=window.marketAdd;
- if(typeof originalAdd==='function')window.marketAdd=function(type,id){
-   const button=Array.from(document.querySelectorAll('.productCard .addCartBtn')).find(b=>(b.getAttribute('onclick')||'').includes("'"+id+"'"));
-   if(button){button.disabled=true;button.classList.add('dbestCartBusy');button.innerHTML='<span class="dbestSpin"></span> Adding…'}
-   try{return originalAdd.apply(this,arguments)}
-   finally{
-     // Core marketAdd synchronously saves and rerenders the catalogue.
-     // No second rerender, no artificial delay and no stale disabled button.
-     update();
-     if(button&&button.isConnected){button.disabled=false;button.classList.remove('dbestCartBusy');button.textContent='+ Add to Cart'}
-   }
- };
+ // Capture product-card taps before inline/legacy handlers to prevent duplicate
+ // handlers and ensure one synchronous cart mutation per tap.
+ document.addEventListener('click',function(e){
+   const button=e.target.closest('button');
+   const card=button&&button.closest('.productCard');
+   if(!card)return;
+   const raw=button.getAttribute('onclick')||'';
+   const add=raw.match(/^marketAdd\(['"]([^'"]+)['"],['"]([^'"]+)['"]\)/);
+   const qty=raw.match(/^marketQty\(['"]([^'"]+)['"],['"]([^'"]+)['"],\s*(-?\d+),\s*true\)/);
+   if(!add&&!qty)return;
+   e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
+   if(button.disabled)return;
+   const type=(add||qty)[1],id=(add||qty)[2],delta=add?1:Number(qty[3]);
+   const p=product(id);
+   if(!p||String(p.type)!==type||p.active===false||p.approvalStatus!=='Approved'||p.ownerApproved!==true||!vendorLive(marketVendor(p.vendorId)))return;
+   const rows=cart(type),row=rows.find(r=>String(r.id)===String(id));
+   const previous=Number(row?.qty||0),next=Math.max(0,Math.min(Number(p.stock||0),previous+delta));
+   if(next===previous)return;
+   button.disabled=true;button.classList.add('dbestCartBusy');
+   if(add)button.innerHTML='<span class="dbestSpin"></span> Adding…';
+   if(row)row.qty=next;else if(next>0)rows.push({id,qty:next});
+   commerceCarts[type]=rows.filter(r=>Number(r.qty)>0);
+   save();
+   window.openMarketplace(type);
+   update();
+ },true);
  const originalCheckout=window.marketCheckout;
  if(typeof originalCheckout==='function')window.marketCheckout=function(){const r=originalCheckout.apply(this,arguments);checkout();return r};
  const originalQty=window.marketQty;
