@@ -135,8 +135,21 @@ module.exports = async function handler(req,res){
     if(vendorIds.some(v=>!allowed.has(v))) return send(res,409,{ok:false,error:'vendor_not_available'});
 
     const productSubtotal=Math.round(items.reduce((a,x)=>a+x.price*x.qty,0)*100)/100;
-    const deliveryFee=Math.max(0,Math.min(1000,Math.round(num(b.deliveryFee)*100)/100));
-    const taxAmount=Math.max(0,Math.min(productSubtotal,Math.round(num(b.taxAmount)*100)/100));
+    // Never treat unverified client charges as authoritative.
+    // Until verified road-distance and per-product GST metadata are available,
+    // fail closed rather than silently create a zero-fee or wrongly taxed order.
+    const {deliveryQuote,productTax}=require('./pricing-rules');
+    const verifiedRoadKm=Number(b.verifiedRoadDistanceKm);
+    // Client supplied distance is not proof: the server must resolve it using
+    // trusted vendor coordinates and a configured routing service.
+    if(!process.env.DBEST_MARKETPLACE_ROAD_DISTANCE_PROVIDER)
+      return send(res,503,{ok:false,error:'delivery_pricing_configuration_required',message:'Delivery distance verification is not configured. No order was created.'});
+    if(!Array.isArray(products)||products.some(p=>p.gst_rate_percent==null||typeof p.tax_inclusive!=='boolean'))
+      return send(res,503,{ok:false,error:'product_gst_configuration_required',message:'Product GST classification is incomplete. No order was created.'});
+    // Road distance integration must be server-verified before enabling.
+    return send(res,503,{ok:false,error:'server_verified_route_required',message:'Verified vendor-to-customer routing is not connected. No order was created.'});
+    const deliveryFee=deliveryQuote({marketType,subtotal:productSubtotal,roadDistanceKm:verifiedRoadKm}).fee;
+    const taxAmount=Math.round(items.reduce((sum,x)=>sum+productTax({unitPrice:x.price,qty:x.qty,gstRatePercent:x.gstRatePercent,taxInclusive:x.taxInclusive}).tax,0)*100)/100;
     const totalAmount=Math.round((productSubtotal+deliveryFee+taxAmount)*100)/100;
     if(totalAmount<=0) return send(res,400,{ok:false,error:'invalid_order_total'});
 
