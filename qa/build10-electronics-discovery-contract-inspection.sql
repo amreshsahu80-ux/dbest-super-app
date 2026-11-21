@@ -86,6 +86,27 @@ WHERE n.nspname = 'public'
        OR p.proname ILIKE '%category%')
 ORDER BY p.proname, identity_arguments;
 
+-- Discover whether public catalogue/category views depend on vendor/catalogue
+-- tables. A view name alone is not evidence that the Main App reads that table.
+-- This is a dependency map, not an execution of the discovery query.
+SELECT DISTINCT source_ns.nspname AS source_schema,
+       source.relname AS source_relation,
+       dependent_ns.nspname AS dependent_schema,
+       dependent.relname AS dependent_view,
+       dependent.relkind AS dependent_kind
+FROM pg_catalog.pg_rewrite rewrite_rule
+JOIN pg_catalog.pg_class dependent ON dependent.oid = rewrite_rule.ev_class
+JOIN pg_catalog.pg_namespace dependent_ns ON dependent_ns.oid = dependent.relnamespace
+JOIN pg_catalog.pg_depend dependency ON dependency.objid = rewrite_rule.oid
+JOIN pg_catalog.pg_class source ON source.oid = dependency.refobjid
+JOIN pg_catalog.pg_namespace source_ns ON source_ns.oid = source.relnamespace
+WHERE dependent.relkind IN ('v', 'm')
+  AND dependent_ns.nspname = 'public'
+  AND source_ns.nspname = 'public'
+  AND source.relname IN ('marketplace_vendors_live', 'marketplace_catalog_live', 'app_settings')
+  AND source.oid <> dependent.oid
+ORDER BY source_relation, dependent_view;
+
 -- Acceptance must separately demonstrate (1) an active registry Electronics key,
 -- (2) Samsung Point VND8597199 approved/signed/active with persisted Electronics,
 -- (3) eligible active in-stock catalogue items, (4) the actual deployed public
