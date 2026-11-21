@@ -31,5 +31,17 @@ async function scenario(rows,initial){
   assert.notEqual(blocked.validity,'','disabled Electronics must not be accepted');
   const dup=await scenario([{key:'Electronics'},{key:' electronics '}],'Electronics');
   assert.match(dup.validity,/could not be verified/i,'duplicate active keys must fail closed');
+  const inactive=await scenario([{key:'Electronics',status:'archived'},{key:'Grocery',active:true}],'Electronics');
+  assert.notEqual(inactive.validity,'','archived Electronics must not be accepted');
+  const stringDisabled=await scenario([{key:'Electronics',enabled:'false'},{key:'Grocery',active:true}],'Electronics');
+  assert.notEqual(stringDisabled.validity,'','string-disabled Electronics must not be accepted');
+  const selectable=await scenario([{key:'Electronics',active:true},{key:'Grocery',active:true}],'');
+  assert.equal(selectable.validity,'Choose a business category','blank selection must remain invalid');
+  selectable.value='Electronics';
+  selectable.onChange();
+  assert.equal(selectable.validity,'','valid Electronics selection must clear validation');
+  selectable.value='UnregisteredCategory';
+  selectable.onChange();
+  assert.notEqual(selectable.validity,'','unregistered category must fail validation');
   console.log('Build 10 category registry runtime smoke: PASS');
 })().catch(e=>{console.error(e);process.exitCode=1;});
