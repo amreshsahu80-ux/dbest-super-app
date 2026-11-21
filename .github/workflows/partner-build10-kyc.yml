@@ -15,6 +15,8 @@ on:
       - 'owner-control-deployment-build10.html'
       - 'owner-live-onboarding.html'
       - 'scripts/test-partner-build10-kyc*.cjs'
+      - 'scripts/test-partner-build10-category-registry.cjs'
+      - 'vendor-dynamic-categories-v1.js'
       - 'partner-android-app/**'
       - '.github/workflows/partner-build10-kyc.yml'
   workflow_dispatch:
@@ -33,6 +35,8 @@ jobs:
           node scripts/test-partner-build10-kyc-behavior.cjs
           node scripts/test-partner-build10-safe-replacement.cjs
           node scripts/test-partner-build10-serialized-replacement.cjs
+      - name: Verify authoritative vendor category selector contract
+        run: node scripts/test-partner-build10-category-registry.cjs
   android-build10-unsigned:
     runs-on: ubuntu-latest
     defaults:
