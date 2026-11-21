@@ -1,0 +1,523 @@
+{
+  "auditDate": "2026-10-31",
+  "basis": "Hotel Outreach Master + Rate History; numeric rate groups through 2026-10-31",
+  "sourceGroupCounts": {
+    "PRESENT": 249,
+    "IDENTITY_MISMATCH_IN_PREVIEW": 2,
+    "DUPLICATED_MASTER_ID": 4,
+    "MISSING_ID": 19,
+    "SAFE_NEW": 41
+  },
+  "previewPropertiesBefore": 258,
+  "previewPropertiesAfter": 299,
+  "stagedCount": 41,
+  "stagedProperties": [
+    {
+      "id": "DBEST-REPL-20261029-1645-17",
+      "name": "Wyt Hotels Rameswaram",
+      "city": "Rameswaram",
+      "rateLines": 8,
+      "review": "PRICE_PENDING",
+      "lastReceived": "2026-10-30"
+    },
+    {
+      "id": "DBEST-REPL-20261028-302",
+      "name": "Hotel Vbrance",
+      "city": "Puri",
+      "rateLines": 8,
+      "review": "PRICE_PENDING",
+      "lastReceived": "2026-10-30"
+    },
+    {
+      "id": "DBEST-NEW-20261030-0455-017",
+      "name": "Elixir Cliff",
+      "city": "Varkala",
+      "rateLines": 8,
+      "review": "PRICE_PENDING",
+      "lastReceived": "2026-10-30"
+    },
+    {
+      "id": "DBEST-REPL-20261029-506",
+      "name": "Howard Johnson Roopnagar Udaipur",
+      "city": "Udaipur",
+      "rateLines": 8,
+      "review": "PRICE_PENDING",
+      "lastReceived": "2026-10-30"
+    },
+    {
+      "id": "DBEST-REPL-20261029-504",
+      "name": "Bhairavgarh Palace",
+      "city": "Udaipur",
+      "rateLines": 12,
+      "review": "PRICE_PENDING",
+      "lastReceived": "2026-10-30"
+    },
+    {
+      "id": "DBEST-NEW-20261029-2254-017",
+      "name": "Club Central Hotel",
+      "city": "Bolpur",
+      "rateLines": 6,
+      "review": "PRICE_PENDING",
+      "lastReceived": "2026-10-30"
+    },
+    {
+      "id": "DBEST-NEW-20261030-0645-006",
+      "name": "The Ocean Pearl",
+      "city": "Mangaluru",
+      "rateLines": 3,
+      "review": "PRICE_PENDING",
+      "lastReceived": "2026-10-30"
+    },
+    {
+      "id": "DBEST-NEW-20261030-0050-001",
+      "name": "Hotel Nirvana Guwahati",
+      "city": "Guwahati",
+      "rateLines": 8,
+      "review": "PRICE_PENDING",
+      "lastReceived": "2026-10-30"
+    },
+    {
+      "id": "DBEST-NEW-20261030-0455-002",
+      "name": "S Cross Munroe Island Resort",
+      "city": "Munroe Island",
+      "rateLines": 3,
+      "review": "PRICE_PENDING",
+      "lastReceived": "2026-10-30"
+    },
+    {
+      "id": "DBEST-NEW-20261030-0852-002",
+      "name": "Merlis Hotel Coimbatore",
+      "city": "Coimbatore",
+      "rateLines": 8,
+      "review": "PRICE_PENDING",
+      "lastReceived": "2026-10-30"
+    },
+    {
+      "id": "DBEST-REPL-20261027-111",
+      "name": "Malabar Ocean Front Resort & Spa",
+      "city": "Nileshwar",
+      "rateLines": 24,
+      "review": "PRICE_PENDING",
+      "lastReceived": "2026-10-30"
+    },
+    {
+      "id": "DBEST-NEW-20261029-1854-006",
+      "name": "Hotel Royal Court Madurai",
+      "city": "Madurai",
+      "rateLines": 2,
+      "review": "PRICE_PENDING",
+      "lastReceived": "2026-10-30"
+    },
+    {
+      "id": "DBEST-NEW-20261030-0645-011",
+      "name": "The President Hotel Hubli",
+      "city": "Hubli",
+      "rateLines": 16,
+      "review": "PRICE_PENDING",
+      "lastReceived": "2026-10-30"
+    },
+    {
+      "id": "DBEST-NEW-20261030-0852-013",
+      "name": "Ekaa Agra",
+      "city": "Agra",
+      "rateLines": 12,
+      "review": "PRICE_PENDING",
+      "lastReceived": "2026-10-30"
+    },
+    {
+      "id": "DBEST-NEW-20261030-1249-001",
+      "name": "Hampi's Feathers Resort",
+      "city": "Hosapete",
+      "rateLines": 8,
+      "review": "PRICE_PENDING",
+      "lastReceived": "2026-10-30"
+    },
+    {
+      "id": "DBEST-NEW-20261030-0852-010",
+      "name": "O by Tamara Coimbatore",
+      "city": "Coimbatore",
+      "rateLines": 8,
+      "review": "PRICE_PENDING",
+      "lastReceived": "2026-10-30"
+    },
+    {
+      "id": "DBEST-REPL-20261029-543",
+      "name": "The Grand Asansol",
+      "city": "Asansol",
+      "rateLines": 6,
+      "review": "PRICE_PENDING",
+      "lastReceived": "2026-10-30"
+    },
+    {
+      "id": "DBEST-NEW-20261030-0250-017",
+      "name": "Flutter Hotels & Resorts Lansdowne",
+      "city": "Lansdowne",
+      "rateLines": 56,
+      "review": "PRICE_PENDING",
+      "lastReceived": "2026-10-30"
+    },
+    {
+      "id": "DBEST-NEW-20261030-1249-020",
+      "name": "The Sawai Heritage",
+      "city": "Sawai Madhopur",
+      "rateLines": 8,
+      "review": "PRICE_PENDING",
+      "lastReceived": "2026-10-30"
+    },
+    {
+      "id": "DBEST-NEW-20261030-1249-007",
+      "name": "The Sagar Hotel",
+      "city": "Bikaner",
+      "rateLines": 2,
+      "review": "PRICE_PENDING",
+      "lastReceived": "2026-10-30"
+    },
+    {
+      "id": "DBEST-NEW-20261030-1249-019",
+      "name": "Hotel Ranthambhore Palace",
+      "city": "Sawai Madhopur",
+      "rateLines": 16,
+      "review": "PRICE_PENDING",
+      "lastReceived": "2026-10-30"
+    },
+    {
+      "id": "DBEST-NEW-20261030-1249-008",
+      "name": "Jaisan Haveli",
+      "city": "Jaisalmer",
+      "rateLines": 16,
+      "review": "PRICE_PENDING",
+      "lastReceived": "2026-10-30"
+    },
+    {
+      "id": "DBEST-NEW-20261030-0250-020",
+      "name": "LaHermitage Resort Lansdowne",
+      "city": "Lansdowne",
+      "rateLines": 48,
+      "review": "PRICE_PENDING",
+      "lastReceived": "2026-10-30"
+    },
+    {
+      "id": "DBEST-NEW-20261030-0645-001",
+      "name": "The Amar Mahal Udaipur",
+      "city": "Udaipur",
+      "rateLines": 3,
+      "review": "PRICE_PENDING",
+      "lastReceived": "2026-10-30"
+    },
+    {
+      "id": "DBEST-NEW-20261030-1450-019",
+      "name": "Heritage Resort Hampi",
+      "city": "Hampi",
+      "rateLines": 14,
+      "review": "PRICE_PENDING",
+      "lastReceived": "2026-10-30"
+    },
+    {
+      "id": "DBEST-NEW-20261029-1854-009",
+      "name": "Hotel Diamond Kumbakonam",
+      "city": "Kumbakonam",
+      "rateLines": 6,
+      "review": "PRICE_PENDING",
+      "lastReceived": "2026-10-30"
+    },
+    {
+      "id": "DBEST-REPL-20261028-475",
+      "name": "Hotel Pradeep Varanasi",
+      "city": "Varanasi",
+      "rateLines": 6,
+      "review": "PRICE_PENDING",
+      "lastReceived": "2026-10-30"
+    },
+    {
+      "id": "DBEST-NEW-20261030-0645-007",
+      "name": "The Sea View",
+      "city": "Mangaluru",
+      "rateLines": 9,
+      "review": "PRICE_PENDING",
+      "lastReceived": "2026-10-30"
+    },
+    {
+      "id": "DBEST-NEW-20261030-1649-017",
+      "name": "PSR Coral Resorts",
+      "city": "Rameswaram",
+      "rateLines": 8,
+      "review": "PRICE_PENDING",
+      "lastReceived": "2026-10-30"
+    },
+    {
+      "id": "DBEST-NEW-20261030-1450-008",
+      "name": "La Pateng",
+      "city": "Shillong",
+      "rateLines": 8,
+      "review": "PRICE_PENDING",
+      "lastReceived": "2026-10-30"
+    },
+    {
+      "id": "DBEST-NEW-20261030-1846-003",
+      "name": "Holiday Home Resort Kodaikanal",
+      "city": "Kodaikanal",
+      "rateLines": 6,
+      "review": "PRICE_PENDING",
+      "lastReceived": "2026-10-30"
+    },
+    {
+      "id": "DBEST-NEW-20261030-1450-011",
+      "name": "Gokarna Samudra Beach Resort",
+      "city": "Gokarna",
+      "rateLines": 23,
+      "review": "PRICE_PENDING",
+      "lastReceived": "2026-10-30"
+    },
+    {
+      "id": "DBEST-NEW-20261030-2245-010",
+      "name": "The Balkrishna Palace",
+      "city": "Jeypore",
+      "rateLines": 27,
+      "review": "PRICE_PENDING",
+      "lastReceived": "2026-10-31"
+    },
+    {
+      "id": "DBEST-NEW-20261030-0455-013",
+      "name": "Triveny Camelot Resort & Spa",
+      "city": "Alappuzha",
+      "rateLines": 9,
+      "review": "PRICE_PENDING",
+      "lastReceived": "2026-10-31"
+    },
+    {
+      "id": "DBEST-NEW-20261030-2052-013",
+      "name": "Blueberry Inn Shillong",
+      "city": "Shillong",
+      "rateLines": 10,
+      "review": "PRICE_PENDING",
+      "lastReceived": "2026-10-31"
+    },
+    {
+      "id": "DBEST-NEW-20261031-0257-001",
+      "name": "The Highland Park Manali",
+      "city": "Manali",
+      "rateLines": 24,
+      "review": "PRICE_PENDING",
+      "lastReceived": "2026-10-31"
+    },
+    {
+      "id": "DBEST-NEW-20261031-0046-012",
+      "name": "Fortview Suites",
+      "city": "Kasaragod",
+      "rateLines": 11,
+      "review": "PRICE_PENDING",
+      "lastReceived": "2026-10-31"
+    },
+    {
+      "id": "DBEST-NEW-20261030-1846-007",
+      "name": "The Godavari Hotel Gokarna",
+      "city": "Gokarna",
+      "rateLines": 12,
+      "review": "PRICE_PENDING",
+      "lastReceived": "2026-10-31"
+    },
+    {
+      "id": "DBEST-NEW-20261031-0257-014",
+      "name": "Hotel Regency Aizawl",
+      "city": "Aizawl",
+      "rateLines": 18,
+      "review": "PRICE_PENDING",
+      "lastReceived": "2026-10-31"
+    },
+    {
+      "id": "DBEST-NEW-20261031-0257-009",
+      "name": "Sangai Continental Imphal",
+      "city": "Imphal",
+      "rateLines": 36,
+      "review": "PRICE_PENDING",
+      "lastReceived": "2026-10-31"
+    },
+    {
+      "id": "DBEST-NEW-20261031-0046-008",
+      "name": "White Ibis Hotel",
+      "city": "Sivasagar",
+      "rateLines": 18,
+      "review": "PRICE_PENDING",
+      "lastReceived": "2026-10-31"
+    }
+  ],
+  "heldForIdentityReview": [
+    {
+      "id": "HIST-001",
+      "name": "Silver Sand Village Resort, Havelock",
+      "reason": "IDENTITY_MISMATCH_IN_PREVIEW",
+      "previewHotel": "Silver Sand Village Resort",
+      "rows": 20
+    },
+    {
+      "id": "DBEST-REPL-20261024-297",
+      "name": "Regenta Resort MARS Valley View Shoghi Shimla",
+      "reason": "DUPLICATED_MASTER_ID",
+      "previewHotel": "Regenta Resort MARS Valley View Shoghi Shimla",
+      "rows": 64
+    },
+    {
+      "id": "DBEST-REPL-20261024-303",
+      "name": "Regenta Central Mewargarh Udaipur",
+      "reason": "DUPLICATED_MASTER_ID",
+      "previewHotel": "Regenta Central Mewargarh Udaipur",
+      "rows": 42
+    },
+    {
+      "id": "DBEST-REPL-20261027-134",
+      "name": "Thengal Manor",
+      "reason": "IDENTITY_MISMATCH_IN_PREVIEW",
+      "previewHotel": "Heritage North East Kaziranga Golf Resort",
+      "rows": 12
+    },
+    {
+      "id": "DBEST-REPL-20261029-585",
+      "name": "Umed Bhawan Palace Kota",
+      "reason": "DUPLICATED_MASTER_ID",
+      "previewHotel": "Umed Bhawan Palace Kota",
+      "rows": 8
+    },
+    {
+      "id": "",
+      "name": "MM Legacy",
+      "reason": "MISSING_ID",
+      "previewHotel": "",
+      "rows": 2
+    },
+    {
+      "id": "",
+      "name": "Alps Residency",
+      "reason": "MISSING_ID",
+      "previewHotel": "",
+      "rows": 2
+    },
+    {
+      "id": "",
+      "name": "ASR Parklane",
+      "reason": "MISSING_ID",
+      "previewHotel": "",
+      "rows": 2
+    },
+    {
+      "id": "",
+      "name": "The Mayberry",
+      "reason": "MISSING_ID",
+      "previewHotel": "",
+      "rows": 2
+    },
+    {
+      "id": "",
+      "name": "Grand Ashok",
+      "reason": "MISSING_ID",
+      "previewHotel": "",
+      "rows": 2
+    },
+    {
+      "id": "",
+      "name": "Chola Dynasty",
+      "reason": "MISSING_ID",
+      "previewHotel": "",
+      "rows": 2
+    },
+    {
+      "id": "",
+      "name": "Maryland Suites",
+      "reason": "MISSING_ID",
+      "previewHotel": "",
+      "rows": 2
+    },
+    {
+      "id": "",
+      "name": "Bliss - Casa Mila",
+      "reason": "MISSING_ID",
+      "previewHotel": "",
+      "rows": 3
+    },
+    {
+      "id": "",
+      "name": "Bliss - Giriya",
+      "reason": "MISSING_ID",
+      "previewHotel": "",
+      "rows": 2
+    },
+    {
+      "id": "",
+      "name": "Eastern Gate - Port Blair",
+      "reason": "MISSING_ID",
+      "previewHotel": "",
+      "rows": 3
+    },
+    {
+      "id": "",
+      "name": "Arina Island Resort - Havelock",
+      "reason": "MISSING_ID",
+      "previewHotel": "",
+      "rows": 4
+    },
+    {
+      "id": "",
+      "name": "Villa Luca by Elixir",
+      "reason": "MISSING_ID",
+      "previewHotel": "",
+      "rows": 6
+    },
+    {
+      "id": "",
+      "name": "Villa Sasha by Elixir",
+      "reason": "MISSING_ID",
+      "previewHotel": "",
+      "rows": 4
+    },
+    {
+      "id": "",
+      "name": "Elixir Beach Villa",
+      "reason": "MISSING_ID",
+      "previewHotel": "",
+      "rows": 6
+    },
+    {
+      "id": "",
+      "name": "Ramada Encore by Wyndham Udaipur",
+      "reason": "MISSING_ID",
+      "previewHotel": "",
+      "rows": 12
+    },
+    {
+      "id": "",
+      "name": "Wyndham Garden Udaipur",
+      "reason": "MISSING_ID",
+      "previewHotel": "",
+      "rows": 12
+    },
+    {
+      "id": "DBEST-REPL-20261029-594",
+      "name": "Hotel Golden Lagoon Amritsar",
+      "reason": "DUPLICATED_MASTER_ID",
+      "previewHotel": "",
+      "rows": 20
+    },
+    {
+      "id": "",
+      "name": "Lilac GVR (property identity unverified)",
+      "reason": "MISSING_ID",
+      "previewHotel": "",
+      "rows": 20
+    },
+    {
+      "id": "",
+      "name": "Ranthambhore Tiger Village",
+      "reason": "MISSING_ID",
+      "previewHotel": "",
+      "rows": 6
+    },
+    {
+      "id": "",
+      "name": "LaTigre Resort Corbett",
+      "reason": "MISSING_ID",
+      "previewHotel": "",
+      "rows": 48
+    }
+  ],
+  "customerSellingPricesForStaged": "NOT_COMPUTED_OR_PUBLISHED",
+  "mainLiveAppTouched": false
+}

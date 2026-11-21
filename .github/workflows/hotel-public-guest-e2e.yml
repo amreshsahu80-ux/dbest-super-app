@@ -1,0 +1,130 @@
+name: DBest Public Hotel Guest End-to-End Smoke
+on:
+  push:
+    branches:
+      - feat/hotel-rate-compare-isolated-20261027
+    paths:
+      - '.github/workflows/hotel-public-guest-e2e.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  live-public-guest-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify guest page and real public quote API respond without Vercel login
+        run: |
+          node - <<'NODE'
+          const origin='https://dbest-hotel-guest-public-preview.vercel.app';
+          (async()=>{
+           const page=await fetch(origin+'/',{signal:AbortSignal.timeout(12000)});
+           const html=await page.text();
+           console.log('GUEST_PAGE',JSON.stringify({status:page.status,type:page.headers.get('content-type'),
+             hasSearch:html.includes('Search hotels'),hasDbest:html.includes('DBest Special Rate')}));
+           const left=html.indexOf('const STATIC_HOTELS=');
+           const right=html.indexOf(';\n',left);
+           const hotels=left>=0&&right>left?JSON.parse(html.slice(left+'const STATIC_HOTELS='.length,right)):[];
+           const staged=hotels.filter(h=>h.tariffStatus==='RECEIVED_PENDING_VALIDATION');
+           console.log('GUEST_CATALOG_31OCT',JSON.stringify({total:hotels.length,staged:staged.length,
+             whiteIbis:hotels.some(h=>h.name==='White Ibis Hotel'),
+             blueberry:hotels.some(h=>h.name==='Blueberry Inn Shillong'),
+             priceSafety:staged.every(h=>h.contractedSellingReference===null)}));
+           if(!page.ok||!html.includes('Search hotels')||hotels.length!==299||
+             staged.length!==41||!staged.every(h=>h.contractedSellingReference===null))process.exitCode=1;
+           for(const path of ['/api/hotel-coverage','/api/hotel-fx']){
+            const r=await fetch(origin+path,{signal:AbortSignal.timeout(12000)});
+            const raw=await r.text();let data;
+            try{data=JSON.parse(raw)}catch{data={notJson:true,prefix:raw.slice(0,75)}}
+            console.log('GUEST_API',JSON.stringify({path,http:r.status,type:r.headers.get('content-type'),
+             status:data.status,count:data.count,base:data.base,date:data.date,rate:data.rates?.INR,notJson:data.notJson}));
+            if(!r.ok||!r.headers.get('content-type')?.includes('application/json'))process.exitCode=1;
+           }
+           const url=new URL('/api/hotel-public-google',origin);
+           for(const [k,v] of Object.entries({hotelId:'HOTEL-NANDAN-GHY',checkIn:'2026-11-15',checkOut:'2026-11-16',adults:'2',rooms:'1'}))url.searchParams.set(k,v);
+           const r=await fetch(url,{signal:AbortSignal.timeout(45000)});
+           const raw=await r.text();let data;
+           try{data=JSON.parse(raw)}catch{data={notJson:true,prefix:raw.slice(0,100)}}
+           console.log('GUEST_OTA_E2E',JSON.stringify({http:r.status,type:r.headers.get('content-type'),
+             status:data.status,live:data.live,stay:data.stay,providers:data.providers?.map(p=>({provider:p.provider,
+             price:p.pricePerNight,currency:p.currency})),notJson:data.notJson,preview:data.prefix}));
+           if(!r.ok||!data.live||!Array.isArray(data.providers)||data.providers.length===0)process.exitCode=1;
+          })().catch(e=>{console.error('GUEST_E2E_FAILED',String(e));process.exitCode=1});
+          NODE
+
+      - name: Install browser for real mobile-size UI check
+        run: |
+          mkdir -p .hotel-guest-browser-test
+          echo '{"name":"dbest-guest-mobile-smoke","private":true,"version":"1.0.0"}' > .hotel-guest-browser-test/package.json
+          npm install --prefix .hotel-guest-browser-test --no-save --no-audit --no-fund @sparticuz/chromium@153.0.0 puppeteer-core@25.16.0
+          test -f .hotel-guest-browser-test/node_modules/@sparticuz/chromium/package.json
+      - name: Verify honest DBest Advantage with hidden-by-default lower offers on mobile
+        run: |
+          node - <<'NODE'
+          const localRequire=require('node:module').createRequire(require('node:path').resolve('.hotel-guest-browser-test/package.json'));
+          const puppeteer=localRequire('puppeteer-core');
+          const chromiumModule=localRequire('@sparticuz/chromium');
+          const chromium=chromiumModule.default||chromiumModule;
+          (async()=>{
+            const browser=await puppeteer.launch({
+              executablePath:await chromium.executablePath(),
+              args:[...chromium.args,'--disable-http2','--disable-dev-shm-usage'],headless:true
+            });
+            try{
+              const page=await browser.newPage();
+              await page.setViewport({width:390,height:844,isMobile:true});
+              const pageErrors=[];
+              page.on('pageerror',err=>pageErrors.push(String(err.message).slice(0,140)));
+              const r=await page.goto('https://dbest-hotel-guest-public-preview.vercel.app/',{waitUntil:'domcontentloaded',timeout:23000});
+              if(!r||r.status()!==200)throw Error('PAGE_NOT_200');
+              await page.evaluate(()=>{
+                document.querySelector('#destination').value='Hotel Nandan';
+                document.querySelector('#checkIn').value='2026-11-15';
+                document.querySelector('#checkOut').value='2026-11-16';
+                document.querySelector('#guests').value='2:1';
+                document.querySelector('#searchForm').requestSubmit();
+              });
+              await page.waitForFunction(()=>{
+                const card=document.querySelector('.hotel');
+                return !!card&&card.innerText.includes('Some verified OTA prices are lower than DBest')&&
+                  !!card.querySelector('.all-ota');
+              },{timeout:55000,polling:500});
+              const card=await page.$eval('.hotel',node=>({
+                photoLoaded:!!node.querySelector('img')?.naturalWidth,
+                title:node.querySelector('h3')?.innerText,
+                details:node.innerText.slice(0,1200),
+                allOpen:node.querySelector('details.all-ota')?.open,
+                higherFeature:node.querySelector('.dbest-advantage')!==null
+              }));
+              await page.$eval('details.all-ota summary',summary=>summary.click());
+              const revealed=await page.$eval('details.all-ota',node=>({open:node.open,details:node.innerText.slice(0,1200)}));
+              const good=card.title==='Hotel Nandan'&&card.details.includes('₹4,961.25')&&
+                card.allOpen===false&&!card.higherFeature&&revealed.open&&revealed.details.includes('US$')&&
+                pageErrors.length===0;
+              console.log('GUEST_MOBILE_ADVANTAGE_VERIFIED',JSON.stringify({
+                good,photo:card.photoLoaded,card:card.details.slice(-650),allRevealed:revealed.open,
+                verifiedQuotesInReveal:revealed.details.includes('US$'),pageErrors
+              }));
+              if(!good)throw Error('MISLEADING_COMPARISON_OR_MOBILE_RENDER_FAILED');
+              await page.evaluate(()=>{
+                document.querySelector('#destination').value='White Ibis Hotel';
+                document.querySelector('#searchForm').requestSubmit();
+              });
+              await page.waitForFunction(()=>{
+                const card=document.querySelector('.hotel');
+                return !!card&&card.querySelector('h3')?.innerText==='White Ibis Hotel';
+              },{timeout:15000});
+              const newHotel=await page.$eval('.hotel',node=>({
+                name:node.querySelector('h3')?.innerText,
+                text:node.innerText.slice(0,800)
+              }));
+              console.log('GUEST_STAGED_HOTEL_SEARCH',JSON.stringify({
+                property:newHotel.name,received:newHotel.text.includes('DBest tariff received'),
+                pricePending:newHotel.text.includes('Stay-specific price pending validation')
+              }));
+              if(!newHotel.text.includes('DBest tariff received')||
+                 !newHotel.text.includes('Stay-specific price pending validation'))
+                throw Error('STAGED_PROPERTY_MISLABELLED');
+            }finally{await browser.close()}
+          })().catch(e=>{console.error('GUEST_MOBILE_E2E_FAILED',String(e));process.exitCode=1});
+          NODE

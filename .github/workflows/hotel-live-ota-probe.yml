@@ -1,0 +1,48 @@
+name: Hotel OTA Live One-Property Diagnostic (isolated)
+on:
+  push:
+    branches:
+      - feat/hotel-rate-compare-isolated-20261027
+    paths:
+      - 'tests/hotel-live-ota-probe.cjs'
+      - 'hotel-review/google-hotels-browser.cjs'
+      - '.github/workflows/hotel-live-ota-probe.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  run-single-source-read:
+    name: One Hotel Nandan date-matched public OTA probe
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+      - name: Install isolated browser dependencies
+        run: |
+          mkdir -p .hotel-ota-probe
+          cp hotel-review/google-hotels-browser.cjs tests/hotel-live-ota-probe.cjs .hotel-ota-probe/
+          npm install --prefix .hotel-ota-probe --no-save --no-audit --no-fund @sparticuz/chromium@153.0.0 puppeteer-core@25.16.0
+      - name: Check one live Nandan stay and log status (no bypass or bulk scan)
+        run: node .hotel-ota-probe/hotel-live-ota-probe.cjs
+      - name: Probe isolated Vercel customer endpoint for same one hotel and dates
+        run: |
+          node - <<'NODE'
+          const u=new URL('https://dbest-hotel-review-preview-7twaf7jut-db-est.vercel.app/api/hotel-public-google');
+          for(const [k,v] of Object.entries({hotelId:'HOTEL-NANDAN-GHY',checkIn:'2026-11-15',checkOut:'2026-11-16',adults:'2',rooms:'1'}))u.searchParams.set(k,v);
+          (async()=>{
+            try {
+              const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),30000);
+              let r;try{r=await fetch(u,{signal:controller.signal})}finally{clearTimeout(timer)}
+              const body=await r.text();let value;
+              try{value=JSON.parse(body)}catch{value={nonJson:true,preview:body.slice(0,80)}}
+              console.log('DBEST_VERCEL_CUSTOMER_API_PROBE',JSON.stringify({
+                http:r.status,contentType:r.headers.get('content-type'),status:value.status,
+                live:value.live,providers:Array.isArray(value.providers)?value.providers.map(x=>({name:x.provider,price:x.pricePerNight,currency:x.currency})):null,
+                diagnostic:value.diagnostic||null,nonJson:value.nonJson||false,preview:value.preview||null
+              }));
+            }catch(e){console.log('DBEST_VERCEL_CUSTOMER_API_PROBE',JSON.stringify({requestError:e.name,message:String(e.message).slice(0,150)}))}
+          })();
+          NODE
