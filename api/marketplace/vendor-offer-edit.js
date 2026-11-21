@@ -30,7 +30,7 @@ module.exports=async function handler(req,res){
   const offer=offers[0];
   if(!offer)return reply(res,404,{ok:false,error:'offer_not_found'});
   let next;
-  try{next=updateOffer({actorVendorId:vendorId,offer,patch:req.body?.patch});}
+  try{next=updateOffer({actorVendorId:vendorId,offer,patch:req.body?.patch,vendor});}
   catch(e){return reply(res,400,{ok:false,error:e.message});}
   const allowed=['price_inclusive_gst','mrp','stock','active','vendor_image_url','vendor_image_review_status'];
   const updates=Object.fromEntries(allowed.filter(k=>next[k]!==offer[k]).map(k=>[k,next[k]]));
