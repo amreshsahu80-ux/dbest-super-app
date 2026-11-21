@@ -1,0 +1,13 @@
+'use strict';
+const assert=require('node:assert/strict');
+const {updateVendorImage,effectiveImage}=require('../api/marketplace/vendor-offer-image');
+const offer={vendor_id:'vendor-A',master_product_id:'atta-5kg'};
+const pending=updateVendorImage({actorVendorId:'vendor-A',offer,requestedImageUrl:'https://images.example.com/atta.jpg'});
+assert.equal(pending.vendor_image_review_status,'pending_review');
+assert.equal(effectiveImage({masterImageUrl:'https://dbest.example/master.jpg',vendorImageUrl:pending.vendor_image_url,vendorImageReviewStatus:pending.vendor_image_review_status}),'https://dbest.example/master.jpg');
+assert.equal(effectiveImage({masterImageUrl:'https://dbest.example/master.jpg',vendorImageUrl:pending.vendor_image_url,vendorImageReviewStatus:'approved'}),pending.vendor_image_url);
+assert.throws(()=>updateVendorImage({actorVendorId:'vendor-B',offer,requestedImageUrl:'https://images.example.com/x.jpg'}),/vendor_offer_forbidden/);
+assert.throws(()=>updateVendorImage({actorVendorId:'vendor-A',offer,requestedImageUrl:'http://images.example.com/x.jpg'}),/invalid_vendor_image/);
+assert.throws(()=>updateVendorImage({actorVendorId:'vendor-A',offer,requestedImageUrl:'https://localhost/x.jpg'}),/invalid_vendor_image/);
+assert.equal(updateVendorImage({actorVendorId:'vendor-A',offer,requestedImageUrl:null}).vendor_image_review_status,'none');
+console.log('Vendor offer image isolation: 7 assertions passed');
