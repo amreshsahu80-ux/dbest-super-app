@@ -30,7 +30,11 @@ ORDER BY id;
 -- Evaluate the exact guarded correction as a projection, without writing anything.
 -- Review existing values, eligibility, and expected after-values side by side.
 WITH registry AS (
-  SELECT (SELECT COUNT(*)
+  SELECT (SELECT COUNT(*) FROM public.app_settings WHERE key = 'marketplace_categories') = 1
+    AND (SELECT COUNT(*) FROM public.app_settings WHERE key = 'marketplace_categories'
+         AND jsonb_typeof(value::jsonb) = 'object'
+         AND jsonb_typeof(value::jsonb->'categories') = 'array') = 1
+    AND (SELECT COUNT(*)
     FROM (SELECT 1
     FROM public.app_settings s
     CROSS JOIN LATERAL jsonb_array_elements(
@@ -39,7 +43,9 @@ WITH registry AS (
     ) c
     WHERE s.key = 'marketplace_categories'
       AND lower(trim(c->>'key')) = 'electronics'
-      -- Normalize registry keys as the client does (trim/case-fold); duplicate\n      -- Electronics aliases must still fail closed, including inactive duplicates.\n      -- Match the client-side fail-closed activation contract: unknown values
+      -- Normalize registry keys as the client does (trim/case-fold); duplicate
+      -- Electronics aliases must still fail closed, including inactive duplicates.
+      -- Match the client-side fail-closed activation contract: unknown values
       -- (including 'pending') cannot authorize a category correction.
       AND (NULLIF(trim(c->>'active'),'') IS NULL OR lower(trim(c->>'active')) IN ('true','1','yes','active','enabled','published','live'))
       AND (NULLIF(trim(c->>'enabled'),'') IS NULL OR lower(trim(c->>'enabled')) IN ('true','1','yes','active','enabled','published','live'))
