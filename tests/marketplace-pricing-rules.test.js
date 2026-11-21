@@ -1,0 +1,14 @@
+'use strict';
+const assert=require('node:assert/strict');
+const {deliveryQuote,productTax}=require('../api/marketplace/pricing-rules');
+assert.equal(deliveryQuote({marketType:'restaurant',subtotal:820,roadDistanceKm:7}).fee,20);
+assert.equal(deliveryQuote({marketType:'restaurant',subtotal:200,roadDistanceKm:3}).fee,30);
+assert.equal(deliveryQuote({marketType:'medicine',subtotal:250,roadDistanceKm:5}).fee,0);
+assert.equal(deliveryQuote({marketType:'grocery',subtotal:1000,roadDistanceKm:7}).fee,30);
+assert.equal(deliveryQuote({marketType:'grocery',subtotal:900,roadDistanceKm:0.5}).fee,15);
+assert.throws(()=>deliveryQuote({marketType:'restaurant',subtotal:300}),/verified_road_distance_required/);
+assert.equal(productTax({unitPrice:118,qty:1,gstRatePercent:18,taxInclusive:true}).tax,18);
+assert.equal(productTax({unitPrice:100,qty:1,gstRatePercent:18,taxInclusive:false}).gross,118);
+assert.equal(productTax({unitPrice:100,qty:1,gstRatePercent:0,taxInclusive:true}).tax,0);
+assert.throws(()=>productTax({unitPrice:100,qty:1,gstRatePercent:18}),/tax_inclusive_flag_required/);
+console.log('DBest Marketplace pricing rules: 10 assertions passed');

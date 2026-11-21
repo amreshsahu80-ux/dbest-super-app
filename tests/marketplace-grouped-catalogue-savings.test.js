@@ -1,0 +1,14 @@
+'use strict';
+const assert=require('node:assert/strict');
+const {groupedCatalogue}=require('../api/marketplace/grouped-catalogue');
+const vendor={id:'v1',name:'Shop One',active:true,owner_approval:'Approved',operational_hold:false};
+const offer={vendor_id:'v1',master_product_id:'p1',price_inclusive_gst:850,mrp:999,stock:3,active:true};
+const master={id:'p1',name:'Example Item',brand:'Example',status:'approved',image_url:null,specifications:{mrp_verified:true,verified_mrp_inr:1000}};
+let result=groupedCatalogue({masters:[master],offers:[offer],vendors:[vendor]});
+assert.equal(result[0].offers[0].mrp,1000);
+assert.equal(result[0].offers[0].savingsAmount,150);
+assert.equal(result[0].offers[0].discountPercent,15);
+result=groupedCatalogue({masters:[{...master,specifications:{}}],offers:[offer],vendors:[vendor]});
+assert.equal(result[0].offers[0].mrp,null);
+assert.equal(result[0].offers[0].discountPercent,null);
+console.log('Grouped catalogue verified-MRP savings tests passed');

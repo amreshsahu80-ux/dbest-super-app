@@ -1,0 +1,10 @@
+'use strict';
+const assert=require('node:assert/strict');
+const {preflight,preflightBatch}=require('../api/marketplace/master-catalogue-import-preflight');
+const row={category:'electronics',name:'Example Charger',brand:'Example',barcode_gtin:'12345678',mrp_inr:'999',mrp_verified:'true',image_url:'https://example.org/image.jpg',image_rights_verified:'true'};
+assert.deepEqual(preflight(row),{ok:true,errors:[],status:'draft'});
+assert.equal(preflight({...row,mrp_verified:'false'}).ok,false);
+assert.equal(preflight({...row,image_rights_verified:'false'}).ok,false);
+assert.equal(preflight({...row,category:'medicine'}).ok,false);
+assert.equal(preflightBatch([row,row])[1].errors.includes('duplicate_barcode_in_batch'),true);
+console.log('Master catalogue staging preflight tests passed');

@@ -1,0 +1,66 @@
+name: Marketplace isolated catalogue tests
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'api/marketplace/vendor-*.js'
+      - 'api/marketplace/owner-*.js'
+      - 'tests/marketplace-vendor-*.test.js'
+      - 'tests/marketplace-owner-*.test.js'
+      - '.github/workflows/marketplace-catalogue-tests.yml'
+permissions:
+  contents: read
+jobs:
+  catalogue:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate isolated Owner Console compliance panel syntax
+        run: node --check owner-marketplace-vendor-enforcement-isolated.js
+      - name: Validate authenticated vendor list API syntax
+        run: node --check api/marketplace/owner-vendor-list.js
+      - name: Validate owner vendor enforcement API syntax
+        run: node --check api/marketplace/owner-vendor-enforcement.js
+      - name: Validate owner vendor image review syntax
+        run: node --check api/marketplace/owner-vendor-image-review.js
+      - name: Validate authenticated owner product review syntax
+        run: node --check api/marketplace/owner-product-review.js
+      - name: Validate authenticated vendor offer editor syntax
+        run: node --check api/marketplace/vendor-offer-edit.js
+      - name: Validate authenticated submissions API syntax
+        run: node --check api/marketplace/vendor-product-submissions.js
+      - name: Vendor product auto-match policy
+        run: node tests/marketplace-vendor-product-auto-match.test.js
+      - name: Verified MRP vendor pricing tests
+        run: node tests/marketplace-vendor-offer-pricing.test.js
+      - name: Vendor verified-MRP offer API mocked tests
+        run: node tests/marketplace-vendor-offer-pricing-api.test.js
+      - name: Vendor offer activation guard mocked API
+        run: node tests/marketplace-vendor-offer-activation-api.test.js
+      - name: Owner vendor listing mocked API
+        run: node tests/marketplace-owner-vendor-list-api.test.js
+      - name: Owner vendor enforcement mocked API
+        run: node tests/marketplace-owner-vendor-enforcement-api.test.js
+      - name: Owner vendor enforcement rules
+        run: node tests/marketplace-vendor-enforcement.test.js
+      - name: Vendor upload validation
+        run: node tests/marketplace-vendor-product-validation.test.js
+      - name: Vendor image ownership
+        run: node tests/marketplace-vendor-offer-image.test.js
+      - name: Vendor offer ownership
+        run: node tests/marketplace-vendor-offer-rules.test.js
+      - name: Owner draft import API mocked tests
+        run: node tests/marketplace-owner-master-catalogue-draft-import-api.test.js
+      - name: Master catalogue CSV parser
+        run: node tests/marketplace-master-catalogue-csv-parser.test.js
+      - name: Owner catalogue dry-run preflight API
+        run: node tests/marketplace-owner-master-catalogue-preflight-api.test.js
+      - name: Master catalogue CSV staging preflight
+        run: node tests/marketplace-master-catalogue-import-preflight.test.js
+      - name: Customer verified-MRP savings
+        run: node tests/marketplace-grouped-catalogue-savings.test.js
+      - name: Shared product multi-vendor grouping
+        run: node tests/marketplace-grouped-catalogue.test.js
