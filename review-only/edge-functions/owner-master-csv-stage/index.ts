@@ -17,6 +17,19 @@ Deno.serve(async req=>{
  if(!["GET","POST"].includes(req.method))return reply({error:"method_not_allowed"},405);
  const token=req.headers.get("x-dbest-owner-token")?.trim();
  if(!token)return reply({error:"owner_session_required"},401);
+ if(req.method==="GET"&&new URL(req.url).searchParams.get("mode")==="mapping"){
+  const url=Deno.env.get("SUPABASE_URL"),key=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if(!url||!key)return reply({error:"server_not_configured"},503);
+  const sb=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}});
+  const {data:owner,error:authError}=await sb.rpc("validate_owner_session",{p_token:token});
+  if(authError||!owner)return reply({error:"owner_session_invalid"},401);
+  const {data:rows,error}=await sb.from("dbest_vendor_master_mapping_isolated")
+   .select("vendor_id,vendor_category,master_product_id,product_name,product_category").limit(500);
+  if(error)return reply({error:"mapping_unavailable"},500);
+  const counts:Record<string,number>={};
+  for(const row of rows||[])counts[row.vendor_category]=(counts[row.vendor_category]||0)+1;
+  return reply({ok:true,mode:"automatic_category_mapping",mappedPairs:(rows||[]).length,byCategory:counts,rows:rows||[],customerPublished:false});
+ }
  if(req.method==="GET"){
   const url=Deno.env.get("SUPABASE_URL"),key=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if(!url||!key)return reply({error:"server_not_configured"},503);
