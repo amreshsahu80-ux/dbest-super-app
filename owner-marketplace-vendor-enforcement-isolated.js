@@ -28,13 +28,13 @@ function render(root,vendors){
   box.append(title,state,reason);
   for(const action of ['suspend','reinstate','terminate']){
    const btn=document.createElement('button');btn.type='button';btn.textContent=action[0].toUpperCase()+action.slice(1);
-   btn.disabled=action==='reinstate'?(!v.active||!v.operational_hold):(!v.active&&action==='suspend');
+   btn.disabled=action==='reinstate'?(!v.active||v.owner_approval!=='Approved'||!v.operational_hold):(!v.active||v.operational_hold);
    btn.addEventListener('click',async()=>{
     const why=reason.value.trim();
     if(action!=='reinstate'&&why.length<10){window.alert('Enter a reason of at least 10 characters');return;}
     if(!window.confirm('Confirm '+action+' for '+String(v.name||v.id)+'?'))return;
     btn.disabled=true;
-    try{await enforce(String(v.id),action,why);state.textContent='Action completed: '+action+'. Refresh the vendor list.';}
+    try{await enforce(String(v.id),action,why);await open();}
     catch(e){window.alert(e.message);}
     finally{btn.disabled=false;}
    });
