@@ -16,6 +16,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Validate owner vendor image review syntax
+        run: node --check api/marketplace/owner-vendor-image-review.js
       - name: Validate authenticated owner product review syntax
         run: node --check api/marketplace/owner-product-review.js
       - name: Validate authenticated vendor offer editor syntax
