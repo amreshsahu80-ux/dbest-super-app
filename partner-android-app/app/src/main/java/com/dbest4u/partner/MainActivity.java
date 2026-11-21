@@ -314,6 +314,17 @@ public final class MainActivity extends ComponentActivity {
         });
         bar.addView(linkAccount, new LinearLayout.LayoutParams(dp(52), dp(48)));
         spaceWidth(bar, dp(4));
+        // The home-screen floating toggle is hidden over the portal to avoid
+        // overlapping the existing WhatsApp widget. Keep the same settings
+        // reachable from a fixed 48dp control in the workspace toolbar.
+        Button notifications = button("🔔", NAVY, 0xFFF0F4FB);
+        notifications.setTextSize(18);
+        notifications.setContentDescription("Partner notification on/off settings");
+        notifications.setOnClickListener(v -> {
+            if (partnerTestPush != null) partnerTestPush.openSettings();
+        });
+        bar.addView(notifications, new LinearLayout.LayoutParams(dp(48), dp(48)));
+        spaceWidth(bar, dp(4));
         Button home = button("⌂", BLUE, 0xFFEAF0FF);
         home.setTextSize(23);
         home.setContentDescription("Partner home");
