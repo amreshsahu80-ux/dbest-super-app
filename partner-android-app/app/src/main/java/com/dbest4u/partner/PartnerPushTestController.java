@@ -52,6 +52,9 @@ public final class PartnerPushTestController {
         control.setOnClickListener(v->tap());
         refresh();
     }
+    /** Open the same consent-aware settings from the compact workspace header. */
+    public void openSettings() { tap(); }
+
     public void setHomeVisible(boolean show) {
         control.setVisibility(show ? View.VISIBLE : View.GONE);
     }
