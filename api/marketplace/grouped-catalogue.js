@@ -1,6 +1,7 @@
 'use strict';
 // Present a master product once, with independently priced vendor offers.
 const {customerOfferView}=require('./vendor-offer-rules');
+const {calculateOffer}=require('./vendor-offer-pricing');
 function groupedCatalogue({masters=[],offers=[],vendors=[]}={}){
  const masterById=new Map(masters.map(m=>[m.id,m]));
  const vendorById=new Map(vendors.map(v=>[v.id,v]));
@@ -13,9 +14,15 @@ function groupedCatalogue({masters=[],offers=[],vendors=[]}={}){
   if(!grouped.has(master.id))grouped.set(master.id,{
    productId:master.id,name:master.name,brand:master.brand,
    commonImageUrl:master.image_url||null,offers:[]});
+  const verifiedMrp=master.specifications?.mrp_verified===true?Number(master.specifications.verified_mrp_inr):null;
+  let savings=null;
+  if(Number.isFinite(verifiedMrp)&&verifiedMrp>0&&view.priceInclusiveGst<=verifiedMrp){
+   const computed=calculateOffer({mrp:verifiedMrp,sellingPrice:view.priceInclusiveGst});
+   savings={mrp:verifiedMrp,amount:Math.round((verifiedMrp-view.priceInclusiveGst)*100)/100,discountPercent:computed.discountPercent};
+  }
   grouped.get(master.id).offers.push({
    vendorId:view.vendorId,vendorName:view.vendorName,
-   priceInclusiveGst:view.priceInclusiveGst,mrp:view.mrp,stock:view.stock,
+   priceInclusiveGst:view.priceInclusiveGst,mrp:savings?.mrp??null,savingsAmount:savings?.amount??null,discountPercent:savings?.discountPercent??null,stock:view.stock,
    imageUrl:view.imageUrl});
  }
  return [...grouped.values()].map(group=>({
