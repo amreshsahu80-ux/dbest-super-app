@@ -1,0 +1,12 @@
+'use strict';
+const assert=require('node:assert/strict');
+const {parseCsv}=require('../api/marketplace/master-catalogue-csv-parser');
+let rows=parseCsv('name,brand,category\r\n"USB-C Charger, 20W","Acme ""Plus""",electronics\r\n');
+assert.equal(rows.length,1);
+assert.equal(rows[0].name,'USB-C Charger, 20W');
+assert.equal(rows[0].brand,'Acme "Plus"');
+assert.throws(()=>parseCsv('name,name\na,b'),/invalid_csv_headers/);
+assert.throws(()=>parseCsv('name,brand\n"unterminated,b'),/unterminated_csv_quote/);
+assert.throws(()=>parseCsv('name,brand\na'),/csv_column_count/);
+assert.throws(()=>parseCsv('name,brand\na,b\nc,d',{maxRows:1}),/csv_row_limit/);
+console.log('Owner catalogue CSV parser tests passed');
