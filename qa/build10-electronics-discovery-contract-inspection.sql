@@ -107,6 +107,24 @@ WHERE dependent.relkind IN ('v', 'm')
   AND source.oid <> dependent.oid
 ORDER BY source_relation, dependent_view;
 
+
+-- View security context matters: ordinary PostgreSQL views can evaluate source
+-- table permissions/RLS as the view owner, whereas security_invoker views use
+-- the calling role. Inspect view options and ownership before interpreting RLS.
+-- This is metadata-only and does not evaluate the view or expose vendor records.
+SELECT n.nspname AS schema_name, c.relname AS view_name,
+       c.relkind AS view_kind,
+       pg_get_userbyid(c.relowner) AS view_owner,
+       COALESCE('security_invoker=true' = ANY(c.reloptions), FALSE) AS security_invoker,
+       COALESCE('security_barrier=true' = ANY(c.reloptions), FALSE) AS security_barrier,
+       c.reloptions AS view_options
+FROM pg_catalog.pg_class c
+JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+WHERE n.nspname = 'public'
+  AND c.relkind IN ('v', 'm')
+  AND (c.relname ILIKE '%catalog%' OR c.relname ILIKE '%categor%')
+ORDER BY c.relname;
+
 -- Acceptance must separately demonstrate (1) an active registry Electronics key,
 -- (2) Samsung Point VND8597199 approved/signed/active with persisted Electronics,
 -- (3) eligible active in-stock catalogue items, (4) the actual deployed public
