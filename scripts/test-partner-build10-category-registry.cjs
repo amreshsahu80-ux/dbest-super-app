@@ -9,10 +9,11 @@ assert.match(source, /action:'public_categories'/, 'categories must originate fr
 assert.match(source, /category_registry_config_unavailable/, 'missing registry config must fail closed');
 assert.match(source, /category_registry_invalid/, 'invalid registry response must fail closed');
 assert.match(source, /category_registry_duplicate_keys/, 'duplicate active keys must fail closed');
-assert.equal((source.match(/'inactive','archived','deleted','suspended'/g)||[]).length, 3, 'all three registry activity flags must reject inactive and archived values');
-assert.match(source, /filtered\.map\(x=>x\.key\.trim\(\)\.toLowerCase\(\)\)/, 'duplicate check must use active normalized keys');
+assert.match(source, /validFlag\(x\.active\)&&validFlag\(x\.enabled\)&&validFlag\(x\.is_active\)/, 'all three activation flags must use the fail-closed validator');
+assert.match(source, /\['active','enabled','published','live'\]\.includes\(String\(x\.status\)/, 'status must accept only known active values');
+assert.match(source, /const keys=filtered\.map\(x=>x\.key\.trim\(\)\.toLowerCase\(\)\)/, 'duplicate check must use active normalized keys');
 assert.match(source, /key:x\.key\.trim\(\)/, 'selected values must be canonical trimmed keys');
-assert.match(source, /category_registry_duplicate_keys[\s\S]*?const normalized=filtered\.map/, 'normalization must follow duplicate rejection');
+assert.match(source, /const keys=filtered\.map[\s\S]*?new Set\(keys\)\.size!==keys\.length[\s\S]*?category_registry_duplicate_keys[\s\S]*?const normalized=filtered\.map/, 'normalization must follow duplicate rejection');
 assert.match(source, /setCustomValidity\('Choose an active business category'\)/, 'unknown selection must block submission');
 assert.match(source, /generation\+\+;cache=null;loading=null/, 'refresh must invalidate stale cache');
 assert.doesNotMatch(source, /localStorage\.setItem\(|sessionStorage\.setItem\(/, 'registry selector must not persist unaudited client categories');
