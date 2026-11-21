@@ -8,7 +8,7 @@ function owner(){try{return window.session?.role==='owner'||session?.role==='own
 async function enforce(vendorId,action,reason){
  if(!owner()||!token())throw Error('Owner authentication required');
  const r=await fetch('/api/marketplace/owner-vendor-enforcement',{method:'POST',cache:'no-store',
- headers:{'Content-Type':'application/json','x-dbest-admin-token':token()},
+ headers:{'Content-Type':'application/json','x-dbest-owner-token':token()},
  body:JSON.stringify({vendorId,action,reason})});
  const d=await r.json().catch(()=>({}));
  if(!r.ok||!d.ok)throw Error(d.error||'Enforcement failed');
