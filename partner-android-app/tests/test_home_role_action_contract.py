@@ -22,9 +22,9 @@ class PartnerHomeActionContract(unittest.TestCase):
         home = SOURCE.split("private View roleCard(", 1)[0]
         for role, workspace, join in expected:
             with self.subTest(role=role):
-                pattern = (r'roleCard\\(\\s*"' + re.escape(role) +
+                pattern = (r'roleCard\(\s*"' + re.escape(role) +
                            r'".*?"' + re.escape(workspace) +
-                           r'",\\s*"' + re.escape(join) + r'"\\)')
+                           r'",\s*"' + re.escape(join) + r'"\)')
                 self.assertRegex(home, re.compile(pattern, re.S))
         self.assertEqual(home.count("page.addView(roleCard("), 3)
 
@@ -36,8 +36,8 @@ class PartnerHomeActionContract(unittest.TestCase):
         self.assertIn('card.setOnClickListener(v -> openPortal(title, loginPath))', card)
         self.assertIn('workspace.setContentDescription("Open " + title + " workspace")', card)
         self.assertIn('join.setContentDescription("Join as " + title)', card)
-        self.assertRegex(card, r'actions.addView\\(workspace, new LinearLayout.LayoutParams\\(0, dp\\(48\\),')
-        self.assertRegex(card, r'actions.addView\\(join, new LinearLayout.LayoutParams\\(0, dp\\(48\\),')
+        self.assertRegex(card, r'actions.addView\(workspace, new LinearLayout.LayoutParams\(0, dp\(48\),')
+        self.assertRegex(card, r'actions.addView\(join, new LinearLayout.LayoutParams\(0, dp\(48\),')
 
     def test_native_workspace_controls_remain_accessible(self):
         toolbar = SOURCE.split("private LinearLayout makeBrowser(", 1)[1].split(
