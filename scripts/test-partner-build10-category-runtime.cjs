@@ -15,7 +15,7 @@ function selector(initial){
 }
 async function scenario(rows,initial){
   const s=selector(initial),scheduled=[];
-  const document={documentElement:{},querySelectorAll:()=>[s],createElement:()=>option()};
+  const document={documentElement:{},querySelectorAll:()=>[s],createElement:()=>option(),addEventListener(type,fn){if(type==='submit')s.onSubmit=fn;}};
   const context={window:{DBEST_RUNTIME_CONFIG:{supabaseUrl:'https://example.invalid',supabasePublishableKey:'public-test-key'}},
     document,console:{warn(){}},setTimeout(fn){scheduled.push(fn);return scheduled.length;},
     clearTimeout(){},MutationObserver:class{observe(){}},
@@ -64,5 +64,7 @@ async function scenario(rows,initial){
   selectable.value='UnregisteredCategory';
   selectable.onChange();
   assert.notEqual(selectable.validity,'','unregistered category must fail validation');
+  let prevented=false;selectable.value='UnregisteredCategory';selectable.onSubmit({target:{querySelectorAll:()=>[selectable]},preventDefault(){prevented=true;}});assert.equal(prevented,true,'unregistered category must block form submission');
+  prevented=false;selectable.value='Electronics';selectable.onSubmit({target:{querySelectorAll:()=>[selectable]},preventDefault(){prevented=true;}});assert.equal(prevented,false,'active category must permit form submission');
   console.log('Build 10 category registry runtime smoke: PASS');
 })().catch(e=>{console.error(e);process.exitCode=1;});
