@@ -13,10 +13,13 @@ alter table public.dbest_vendor_enforcement_audit enable row level security;
 revoke all on public.dbest_vendor_enforcement_audit from anon,authenticated;
 grant select,insert on public.dbest_vendor_enforcement_audit to service_role;
 -- No deletion of vendor/order data. Termination is irreversible via this API.
-create or replace function public.dbest_enforce_vendor(
+create schema if not exists dbest_internal;
+revoke all on schema dbest_internal from public,anon,authenticated;
+grant usage on schema dbest_internal to service_role;
+create or replace function dbest_internal.dbest_enforce_vendor(
  p_token_hash text,p_vendor_id text,p_action text,p_reason text
 ) returns jsonb language plpgsql security definer
-set search_path = public
+set search_path = ''
 as $$
 declare v_admin text; v_vendor public.marketplace_vendors_live%rowtype;
 begin
@@ -43,5 +46,5 @@ begin
  values(p_vendor_id,v_admin,p_action,coalesce(p_reason,''),v_vendor.active,v_vendor.operational_hold);
  return jsonb_build_object('ok',true,'vendorId',p_vendor_id,'action',p_action);
 end $$;
-revoke all on function public.dbest_enforce_vendor(text,text,text,text) from public,anon,authenticated;
-grant execute on function public.dbest_enforce_vendor(text,text,text,text) to service_role;
+revoke all on function dbest_internal.dbest_enforce_vendor(text,text,text,text) from public,anon,authenticated;
+grant execute on function dbest_internal.dbest_enforce_vendor(text,text,text,text) to service_role;
