@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <meta name="theme-color" content="#122b59">
+  <title>DBest AI Saathi — Isolated Pilot</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <div class="environment-bar"><span class="environment-dot"></span> ISOLATED DEVELOPMENT PILOT <span class="bar-divider">•</span> No live DBest services connected</div>
+  <div class="layout">
+    <header class="topbar">
+      <a href="/" class="brand" aria-label="AI Saathi demo home">
+        <span class="brand-mark">D<span>✦</span></span>
+        <span><strong>DBest AI Saathi</strong><small>One assistant. Three workspaces.</small></span>
+      </a>
+      <div class="header-side"><span class="outline-badge">SIMULATION ONLY</span><span class="header-dot" title="Sandbox mode"></span></div>
+    </header>
+    <main>
+      <section class="hero">
+        <div class="eyebrow">THE FUTURE OF DBEST SERVICE</div>
+        <h1>Ask. Discover. Get things done.</h1>
+        <p>Explore how an AI assistant could help customers, partners and the DBest owner—all in a completely isolated environment.</p>
+      </section>
+      <section class="workspace" aria-label="Choose demonstration workspace">
+        <div class="workspace-heading"><h2>Choose your workspace</h2><span>Role previews use fabricated examples only</span></div>
+        <div class="roles" role="group" aria-label="Demo personas">
+          <button type="button" class="role active" data-role="customer" aria-pressed="true"><span class="role-icon">◉</span><span><b>Customer</b><small>Travel, services &amp; support</small></span></button>
+          <button type="button" class="role" data-role="partner" aria-pressed="false"><span class="role-icon">▣</span><span><b>Partner</b><small>Jobs, orders &amp; guidance</small></span></button>
+          <button type="button" class="role" data-role="owner" aria-pressed="false"><span class="role-icon">✧</span><span><b>Owner</b><small>Reports, checks &amp; decisions</small></span></button>
+        </div>
+      </section>
+      <div class="content-grid">
+        <section class="chat-card" aria-label="AI Saathi demonstration">
+          <div class="chat-header"><div class="assistant-avatar">✦</div><div><h2>AI Saathi <span id="roleLabel">for Customers</span></h2><p><span class="online-dot"></span> Demo assistant · No real account access</p></div><button id="reset" class="reset" type="button">Reset chat</button></div>
+          <div class="conversation" id="conversation" role="log" aria-live="polite" aria-relevant="additions text"></div>
+          <div class="quick-area"><div class="quick-label">TRY A QUESTION</div><div id="suggestions" class="quick-list"></div></div>
+          <form id="chatForm" class="composer">
+            <label class="sr-only" for="message">Your message</label>
+            <input id="message" autocomplete="off" maxlength="500" placeholder="Ask AI Saathi something..." required>
+            <button id="send" type="submit">Send <span aria-hidden="true">↗</span></button>
+          </form>
+          <p class="notice">Demo responses only. Do not enter passwords, OTPs, card numbers, Aadhaar, PAN or medical details.</p>
+        </section>
+        <aside class="side-panel">
+          <div class="side-card">
+            <div class="side-top"><span class="small-icon">◎</span><strong>Environment integrity</strong></div>
+            <div class="safe-row"><span>Deployment</span><strong>Independent preview</strong></div>
+            <div class="safe-row"><span>Customer records</span><strong>Not connected</strong></div>
+            <div class="safe-row"><span>Payments &amp; wallets</span><strong>Disabled</strong></div>
+            <div class="safe-row"><span>Production actions</span><strong>Blocked</strong></div>
+            <div class="safe-row"><span>Conversation storage</span><strong>Disabled</strong></div>
+          </div>
+          <div class="side-card accent">
+            <div class="side-top"><span class="small-icon">↗</span><strong>What's coming next</strong></div>
+            <p>Once reviewed, this interface can be connected to approved DBest read-only services, followed by authenticated workflows with explicit confirmation.</p>
+            <ul><li>Hotel, cab and marketplace assistance</li><li>Partner jobs and order guidance</li><li>Owner analytics and exception summaries</li></ul>
+          </div>
+          <p class="aside-footer">This is a usability and integration pilot—not an authenticated AI agent and not a production application.</p>
+        </aside>
+      </div>
+    </main>
+    <footer>DBest AI Saathi • Independent development pilot • Not connected to dbest4u.com operations</footer>
+  </div>
+</body>
+</html>
