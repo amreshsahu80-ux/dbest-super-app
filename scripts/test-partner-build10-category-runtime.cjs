@@ -13,13 +13,13 @@ function selector(initial){
     appendChild(o){this.options.push(o);if(o.selected)this.value=o.value;},
     set innerHTML(v){this.options=[];this.value='';}};
 }
-async function scenario(rows,initial){
+async function scenario(rows,initial,fetchOverride){
   const s=selector(initial),scheduled=[];
   const document={documentElement:{},querySelectorAll:()=>[s],createElement:()=>option(),addEventListener(type,fn){if(type==='submit')s.onSubmit=fn;}};
   const context={window:{DBEST_RUNTIME_CONFIG:{supabaseUrl:'https://example.invalid',supabasePublishableKey:'public-test-key'}},
     document,console:{warn(){}},setTimeout(fn){scheduled.push(fn);return scheduled.length;},
     clearTimeout(){},MutationObserver:class{observe(){}},
-    fetch:async()=>({ok:true,json:async()=>({categories:rows})})};
+    fetch:fetchOverride|| (async()=>({ok:true,json:async()=>({categories:rows})}))};
   vm.runInNewContext(source,context,{timeout:1000});
   await scheduled[0]();return s;
 }
@@ -27,6 +27,10 @@ async function scenario(rows,initial){
   const s=await scenario([{key:'Electronics',label:'Electronics',active:true}], ' electronics ');
   assert.equal(s.value,'Electronics','legacy category must restore canonical registry key');
   assert.equal(s.validity,'','restored valid category must clear validation error');
+  const registryFailure=await scenario([], 'Electronics', async()=>({ok:false,json:async()=>({error:'registry_offline'})}));
+  assert.match(registryFailure.validity,/could not be verified/i,'registry HTTP errors must block Electronics registration');
+  const malformedRegistry=await scenario([], 'Electronics', async()=>({ok:true,json:async()=>({categories:{Electronics:true}})}));
+  assert.match(malformedRegistry.validity,/could not be verified/i,'malformed category payload must block registration');
   const blocked=await scenario([{key:'Electronics',active:false},{key:'Grocery',active:true}],'Electronics');
   assert.notEqual(blocked.validity,'','disabled Electronics must not be accepted');
   const dup=await scenario([{key:'Electronics'},{key:' electronics '}],'Electronics');
