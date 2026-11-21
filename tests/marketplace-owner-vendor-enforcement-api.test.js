@@ -7,7 +7,7 @@ const handler=require('../api/marketplace/owner-vendor-enforcement');
 async function invoke({method='POST',token='a'.repeat(32),body={vendorId:'QA_VENDOR',action:'suspend',reason:'Repeated policy violation'},fetchImpl}={}){
  global.fetch=fetchImpl|| (async()=>({ok:true,json:async()=>({ok:true,vendorId:'QA_VENDOR',action:body.action})}));
  const res={statusCode:200,headers:{},setHeader(k,v){this.headers[k]=v;},status(s){this.statusCode=s;return this;},json(v){this.body=v;return this;}};
- await handler({method,headers:{'x-dbest-admin-token':token},body},res);
+ await handler({method,headers:{'x-dbest-owner-token':token},body},res);
  return res;
 }
 (async()=>{
@@ -25,8 +25,7 @@ async function invoke({method='POST',token='a'.repeat(32),body={vendorId:'QA_VEN
  const payload=JSON.parse(sent.opts.body);
  assert.equal(payload.p_vendor_id,'QA_VENDOR');
  assert.equal(payload.p_action,'suspend');
- assert.equal(payload.p_token_hash.length,64);
- assert.notEqual(payload.p_token_hash,'a'.repeat(32));
+ assert.equal(payload.p_owner_token,'a'.repeat(32));
  r=await invoke({fetchImpl:async()=>({ok:false,status:400})});
  assert.equal(r.statusCode,400);
  r=await invoke({fetchImpl:async()=>({ok:false,status:404})});
