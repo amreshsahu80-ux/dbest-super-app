@@ -29,6 +29,13 @@ module.exports=async function handler(req,res){
   const offers=await db('dbest_vendor_product_offers?id=eq.'+offerId+'&vendor_id=eq.'+encodeURIComponent(vendorId)+'&select=*&limit=1');
   const offer=offers[0];
   if(!offer)return reply(res,404,{ok:false,error:'offer_not_found'});
+  // Never activate an offer tied to a draft, suspended or synthetic QA master.
+  if(req.body?.patch?.active===true){
+   const masters=await db('dbest_master_products?id=eq.'+encodeURIComponent(offer.master_product_id)+'&select=id,status,specifications&limit=1');
+   const master=masters[0];
+   if(!master||master.status!=='approved'||master.specifications?.test_only===true)
+    return reply(res,409,{ok:false,error:'master_product_not_publishable'});
+  }
   let next;
   try{next=updateOffer({actorVendorId:vendorId,offer,patch:req.body?.patch,vendor});}
   catch(e){return reply(res,400,{ok:false,error:e.message});}
