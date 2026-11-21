@@ -25,6 +25,23 @@ WHERE schemaname NOT IN ('pg_catalog', 'information_schema')
   AND (viewname ILIKE '%catalog%' OR viewname ILIKE '%categor%')
 ORDER BY schemaname, viewname;
 
+
+-- Materialized views are absent from pg_views; inspect them separately to avoid
+-- falsely concluding that no cached catalogue/category projection exists.
+SELECT schemaname, matviewname, definition, ispopulated
+FROM pg_catalog.pg_matviews
+WHERE schemaname NOT IN ('pg_catalog', 'information_schema')
+  AND (matviewname ILIKE '%catalog%' OR matviewname ILIKE '%categor%')
+ORDER BY schemaname, matviewname;
+
+-- Read the RLS policy definitions governing discovery source tables.
+-- This does not test effective permissions for the Main App's runtime role.
+SELECT schemaname, tablename, policyname, roles, cmd, qual, with_check
+FROM pg_catalog.pg_policies
+WHERE schemaname = 'public'
+  AND tablename IN ('marketplace_vendors_live', 'marketplace_catalog_live', 'app_settings')
+ORDER BY tablename, policyname;
+
 -- Inspect only schema contracts for the vendor/catalogue join and registry fields.
 SELECT table_schema, table_name, column_name, data_type, is_nullable
 FROM information_schema.columns
