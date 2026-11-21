@@ -1,9 +1,9 @@
 'use strict';
 const assert=require('node:assert/strict');
-const handler=require('../api/marketplace/owner-vendor-enforcement');
 const oldFetch=global.fetch;
 const oldKey=process.env.SUPABASE_SERVICE_ROLE_KEY;
 process.env.SUPABASE_SERVICE_ROLE_KEY='qa-service-key';
+const handler=require('../api/marketplace/owner-vendor-enforcement');
 async function invoke({method='POST',token='a'.repeat(32),body={vendorId:'QA_VENDOR',action:'suspend',reason:'Repeated policy violation'},fetchImpl}={}){
  global.fetch=fetchImpl|| (async()=>({ok:true,json:async()=>({ok:true,vendorId:'QA_VENDOR',action:body.action})}));
  const res={statusCode:200,headers:{},setHeader(k,v){this.headers[k]=v;},status(s){this.statusCode=s;return this;},json(v){this.body=v;return this;}};
