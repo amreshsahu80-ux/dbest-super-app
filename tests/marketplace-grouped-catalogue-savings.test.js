@@ -9,6 +9,5 @@ assert.equal(result[0].offers[0].mrp,1000);
 assert.equal(result[0].offers[0].savingsAmount,150);
 assert.equal(result[0].offers[0].discountPercent,15);
 result=groupedCatalogue({masters:[{...master,specifications:{}}],offers:[offer],vendors:[vendor]});
-assert.equal(result[0].offers[0].mrp,null);
-assert.equal(result[0].offers[0].discountPercent,null);
+assert.equal(result.length,0,'unverified MRP products must not appear in customer catalogue');
 console.log('Grouped catalogue verified-MRP savings tests passed');
