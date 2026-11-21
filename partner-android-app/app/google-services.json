@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "905212518251",
+    "project_id": "dbest-mobile-notifications",
+    "storage_bucket": "dbest-mobile-notifications.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:905212518251:android:e1495ab16baf8cedd7b62e",
+        "android_client_info": {
+          "package_name": "com.dbest4u.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBOG9xwkXJ6uhnyP9cu_fLc-t_BUMiaZWg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:905212518251:android:9822685eac7c65f8d7b62e",
+        "android_client_info": {
+          "package_name": "com.dbest4u.partner"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBOG9xwkXJ6uhnyP9cu_fLc-t_BUMiaZWg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
