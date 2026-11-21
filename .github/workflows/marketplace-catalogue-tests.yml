@@ -36,6 +36,8 @@ jobs:
         run: node tests/marketplace-vendor-product-auto-match.test.js
       - name: Verified MRP vendor pricing tests
         run: node tests/marketplace-vendor-offer-pricing.test.js
+      - name: Vendor verified-MRP offer API mocked tests
+        run: node tests/marketplace-vendor-offer-pricing-api.test.js
       - name: Vendor offer activation guard mocked API
         run: node tests/marketplace-vendor-offer-activation-api.test.js
       - name: Owner vendor listing mocked API
