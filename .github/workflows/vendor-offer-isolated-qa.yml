@@ -3,7 +3,9 @@ on:
   pull_request:
     paths:
       - 'lib/vendor-offer-*.js'
+      - 'lib/owner-master-csv-isolated.js'
       - 'qa/vendor-offer-*.test.js'
+      - 'qa/owner-master-csv-isolated.test.js'
       - '.github/workflows/vendor-offer-isolated-qa.yml'
   push:
     branches:
@@ -18,4 +20,4 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: node --test qa/vendor-offer-pricing-isolated.test.js qa/vendor-offer-owner-review-isolated.test.js qa/vendor-offer-customer-projection-isolated.test.js
+      - run: node --test qa/vendor-offer-pricing-isolated.test.js qa/vendor-offer-owner-review-isolated.test.js qa/vendor-offer-customer-projection-isolated.test.js qa/owner-master-csv-isolated.test.js
