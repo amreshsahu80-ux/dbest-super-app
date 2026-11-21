@@ -52,6 +52,8 @@ jobs:
         run: node tests/marketplace-vendor-offer-image.test.js
       - name: Vendor offer ownership
         run: node tests/marketplace-vendor-offer-rules.test.js
+      - name: Owner catalogue dry-run preflight API
+        run: node tests/marketplace-owner-master-catalogue-preflight-api.test.js
       - name: Master catalogue CSV staging preflight
         run: node tests/marketplace-master-catalogue-import-preflight.test.js
       - name: Customer verified-MRP savings
