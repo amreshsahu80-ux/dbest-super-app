@@ -9,6 +9,7 @@ assert.match(source, /action:'public_categories'/, 'categories must originate fr
 assert.match(source, /category_registry_config_unavailable/, 'missing registry config must fail closed');
 assert.match(source, /category_registry_invalid/, 'invalid registry response must fail closed');
 assert.match(source, /category_registry_duplicate_keys/, 'duplicate active keys must fail closed');
+assert.equal((source.match(/'inactive','archived','deleted','suspended'/g)||[]).length, 3, 'all three registry activity flags must reject inactive and archived values');
 assert.match(source, /filtered\.map\(x=>x\.key\.trim\(\)\.toLowerCase\(\)\)/, 'duplicate check must use active normalized keys');
 assert.match(source, /key:x\.key\.trim\(\)/, 'selected values must be canonical trimmed keys');
 assert.match(source, /category_registry_duplicate_keys[\s\S]*?const normalized=filtered\.map/, 'normalization must follow duplicate rejection');
