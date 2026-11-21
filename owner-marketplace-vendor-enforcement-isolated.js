@@ -43,5 +43,29 @@ function render(root,vendors){
   root.append(box);
  });
 }
-window.DBEST_MARKETPLACE_VENDOR_ENFORCEMENT={render};
+async function open(){
+ if(!owner()||!token())throw Error('Owner authentication required');
+ if(typeof window.sectionScreen!=='function')throw Error('Owner screen unavailable');
+ const top=typeof window.sectionTopBar==='function'?window.sectionTopBar('Vendor Compliance','Suspend, reinstate or terminate vendors','owner()'):'<h2>Vendor Compliance</h2>';
+ window.sectionScreen(top+'<div class="sectionContent ownerMasterPage"><div id="dbestVendorEnforcementPanel" class="ownerPanelCard">Loading vendors…</div></div>');
+ const root=document.getElementById('dbestVendorEnforcementPanel');
+ const response=await fetch('/api/marketplace/owner-vendor-list',{headers:{'x-dbest-owner-token':token()},cache:'no-store'});
+ const data=await response.json().catch(()=>({}));
+ if(!response.ok||!data.ok){root.textContent='Unable to load vendors: '+(data.error||response.status);return;}
+ render(root,data.vendors);
+}
+function install(){
+ if(!owner()||!token())return;
+ const root=document.querySelector('.sectionContent.owner55');
+ if(!root||document.getElementById('dbestVendorEnforcementEntry'))return;
+ const host=root.querySelector('.owner55Groups')||root;
+ const group=document.createElement('div');group.className='owner55Group';group.id='dbestVendorEnforcementEntry';
+ const head=document.createElement('div');head.className='owner55GroupHead';head.textContent='Vendor Compliance';
+ const grid=document.createElement('div');grid.className='owner55Grid';
+ const button=document.createElement('button');button.type='button';button.className='owner55Action';button.textContent='Vendor Suspension & Termination';button.onclick=()=>open().catch(e=>window.alert(e.message));
+ grid.append(button);group.append(head,grid);host.prepend(group);
+}
+[300,1000,2500].forEach(ms=>setTimeout(install,ms));
+new MutationObserver(()=>{clearTimeout(window.__dbestVendorComplianceInstall);window.__dbestVendorComplianceInstall=setTimeout(install,120)}).observe(document.body,{childList:true,subtree:true});
+window.DBEST_MARKETPLACE_VENDOR_ENFORCEMENT={render,open,install};
 })();
