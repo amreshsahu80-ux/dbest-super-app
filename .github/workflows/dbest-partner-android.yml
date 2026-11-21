@@ -6,6 +6,7 @@ on:
     branches:
       - 'feat/dbest-partner-android-pilot-20261029'
       - 'feat/dbest-partner-fcm-account-binding-20261102'
+      - 'qa/partner-fcm-deletion-build-candidate-20261110'
     paths:
       - 'partner-android-app/**'
       - '.github/workflows/dbest-partner-android.yml'
@@ -29,6 +30,12 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.13'
+      - name: Check public Reviewer sign-in is absent
+        run: |
+          if grep -R -n -E 'Google Play reviewer sign-in|openServiceReviewerPortal|REVIEW_HOST|REVIEW_URL' app/src/main/java; then
+            echo "::error::Customer-facing Play Reviewer entry must not ship in Partner app"
+            exit 1
+          fi
       - name: Build partner debug APK and unsigned release AAB
         run: gradle :app:assembleDebug :app:bundleRelease
       - name: Upload installable debug APK
