@@ -52,6 +52,40 @@ WHERE table_schema = 'public'
                       'operational_hold','key','value')
 ORDER BY table_name, ordinal_position;
 
+
+-- Runtime exposure audit: policy definitions alone cannot show whether RLS is
+-- enabled/forced or whether the anonymous/authenticated roles have SELECT.
+-- These are metadata checks only, not proof that a user can see Samsung Point.
+SELECT n.nspname AS schema_name, c.relname AS relation_name,
+       c.relkind AS relation_kind, c.relrowsecurity AS rls_enabled,
+       c.relforcerowsecurity AS rls_forced,
+       CASE WHEN to_regrole('anon') IS NOT NULL
+            THEN has_table_privilege('anon', c.oid, 'SELECT') ELSE NULL END AS anon_select,
+       CASE WHEN to_regrole('authenticated') IS NOT NULL
+            THEN has_table_privilege('authenticated', c.oid, 'SELECT') ELSE NULL END AS authenticated_select
+FROM pg_catalog.pg_class c
+JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+WHERE n.nspname = 'public'
+  AND c.relname IN ('marketplace_vendors_live', 'marketplace_catalog_live', 'app_settings')
+ORDER BY c.relname;
+
+-- Function execution grants for catalogue/category RPCs; privileges do not
+-- bypass row policies, and SECURITY DEFINER functions require separate review.
+SELECT n.nspname AS schema_name, p.proname AS function_name,
+       pg_get_function_identity_arguments(p.oid) AS identity_arguments,
+       p.prosecdef AS security_definer,
+       CASE WHEN to_regrole('anon') IS NOT NULL
+            THEN has_function_privilege('anon', p.oid, 'EXECUTE') ELSE NULL END AS anon_execute,
+       CASE WHEN to_regrole('authenticated') IS NOT NULL
+            THEN has_function_privilege('authenticated', p.oid, 'EXECUTE') ELSE NULL END AS authenticated_execute
+FROM pg_catalog.pg_proc p
+JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
+WHERE n.nspname = 'public'
+  AND (p.proname ILIKE '%public_catalog%'
+       OR p.proname ILIKE '%marketplace%catalog%'
+       OR p.proname ILIKE '%category%')
+ORDER BY p.proname, identity_arguments;
+
 -- Acceptance must separately demonstrate (1) an active registry Electronics key,
 -- (2) Samsung Point VND8597199 approved/signed/active with persisted Electronics,
 -- (3) eligible active in-stock catalogue items, (4) the actual deployed public
