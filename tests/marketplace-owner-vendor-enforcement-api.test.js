@@ -21,7 +21,7 @@ async function invoke({method='POST',token='a'.repeat(32),body={vendorId:'QA_VEN
  let sent;
  r=await invoke({fetchImpl:async(url,opts)=>{sent={url,opts};return {ok:true,json:async()=>({ok:true,vendorId:'QA_VENDOR',action:'suspend'})}}});
  assert.equal(r.statusCode,200);
- assert.match(sent.url,/\/rest\/v1\/rpc\/dbest_enforce_vendor$/);
+ assert.match(sent.url,/\/rest\/v1\/rpc\/dbest_enforce_vendor_owner$/);
  const payload=JSON.parse(sent.opts.body);
  assert.equal(payload.p_vendor_id,'QA_VENDOR');
  assert.equal(payload.p_action,'suspend');
