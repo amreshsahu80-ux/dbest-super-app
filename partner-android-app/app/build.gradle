@@ -9,8 +9,19 @@ android {
         applicationId 'com.dbest4u.partner'
         minSdk 24
         targetSdk 36
-        versionCode 10
-        versionName '1.0.6'
+        versionCode 11
+        versionName '1.0.7'
+    }
+    // QA-only build: installs alongside the Play-distributed Partner app.
+    // Never change the production applicationId or release signing identity.
+    flavorDimensions 'distribution'
+    productFlavors {
+        production { dimension 'distribution' }
+        qa {
+            dimension 'distribution'
+            applicationIdSuffix '.qa'
+            versionNameSuffix '-qa'
+        }
     }
     buildTypes {
         release {

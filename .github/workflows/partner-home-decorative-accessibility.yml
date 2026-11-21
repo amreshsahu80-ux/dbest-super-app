@@ -1,0 +1,19 @@
+name: Partner Home decorative accessibility regression
+on:
+  pull_request:
+    paths:
+      - 'partner-android-app/app/src/main/java/com/dbest4u/partner/MainActivity.java'
+      - 'partner-android-app/tests/test_home_decorative_accessibility.py'
+      - '.github/workflows/partner-home-decorative-accessibility.yml'
+  push:
+    paths:
+      - 'partner-android-app/app/src/main/java/com/dbest4u/partner/MainActivity.java'
+      - 'partner-android-app/tests/test_home_decorative_accessibility.py'
+      - '.github/workflows/partner-home-decorative-accessibility.yml'
+jobs:
+  compact-card-a11y:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify compact Partner Home accessibility
+        run: python3 partner-android-app/tests/test_home_decorative_accessibility.py
