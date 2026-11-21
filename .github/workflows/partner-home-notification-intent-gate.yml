@@ -1,0 +1,18 @@
+name: Partner Home notification intent gate
+on:
+  pull_request:
+    paths:
+      - 'partner-android-app/tests/test_home_notification_intent_gate.py'
+      - 'partner-android-app/app/src/main/java/com/dbest4u/partner/MainActivity.java'
+      - '.github/workflows/partner-home-notification-intent-gate.yml'
+  workflow_dispatch:
+jobs:
+  notification-intent-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify notification intent consent and role routes
+        run: python3 partner-android-app/tests/test_home_notification_intent_gate.py
