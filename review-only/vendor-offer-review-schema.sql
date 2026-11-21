@@ -7,9 +7,18 @@ alter table public.dbest_vendor_product_offers
   add column if not exists review_version integer not null default 0,
   add column if not exists reviewed_at timestamptz,
   add column if not exists reviewed_by text;
-alter table public.dbest_vendor_product_offers
-  add constraint dbest_vendor_offer_review_status_check
-  check (review_status in ('draft','pending_review','approved','rejected','suspended'));
+do $
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conrelid='public.dbest_vendor_product_offers'::regclass
+      and conname='dbest_vendor_offer_review_status_check'
+  ) then
+    alter table public.dbest_vendor_product_offers
+      add constraint dbest_vendor_offer_review_status_check
+      check (review_status in ('draft','pending_review','approved','rejected','suspended'));
+  end if;
+end $;
 create table if not exists public.dbest_vendor_offer_review_audit (
   id uuid primary key default gen_random_uuid(),
   offer_id uuid not null references public.dbest_vendor_product_offers(id),
@@ -22,6 +31,8 @@ create table if not exists public.dbest_vendor_offer_review_audit (
   created_at timestamptz not null default now()
 );
 alter table public.dbest_vendor_offer_review_audit enable row level security;
+revoke all on public.dbest_vendor_offer_review_audit from public, anon, authenticated;
+-- No client-side direct audit reads or writes. Service-role endpoint only.
 -- Intentionally NO anon/authenticated policies: audit is private until server Owner auth is verified.
 -- Do not assume active=true means approved; customer visibility must check review_status='approved'.
 commit;
