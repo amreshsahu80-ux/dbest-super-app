@@ -4,7 +4,9 @@ on:
   pull_request:
     paths:
       - 'api/marketplace/vendor-*.js'
+      - 'api/marketplace/owner-*.js'
       - 'tests/marketplace-vendor-*.test.js'
+      - 'tests/marketplace-owner-*.test.js'
       - '.github/workflows/marketplace-catalogue-tests.yml'
 permissions:
   contents: read
@@ -26,6 +28,8 @@ jobs:
         run: node --check api/marketplace/vendor-offer-edit.js
       - name: Validate authenticated submissions API syntax
         run: node --check api/marketplace/vendor-product-submissions.js
+      - name: Owner vendor enforcement mocked API
+        run: node tests/marketplace-owner-vendor-enforcement-api.test.js
       - name: Owner vendor enforcement rules
         run: node tests/marketplace-vendor-enforcement.test.js
       - name: Vendor upload validation
