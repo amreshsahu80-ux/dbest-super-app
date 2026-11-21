@@ -11,7 +11,7 @@ assert.throws(()=>updateOffer({actorVendorId:'v1',offer,patch:{vendor_id:'v2'}})
 assert.throws(()=>updateOffer({actorVendorId:'v1',offer,patch:{price_inclusive_gst:350}}),/price_exceeds_mrp/);
 assert.throws(()=>updateOffer({actorVendorId:'v1',offer,patch:{stock:-1}}),/invalid_stock/);
 assert.throws(()=>updateOffer({actorVendorId:'v1',offer,patch:{active:'true'}}),/invalid_active/);
-const master={id:'p1',name:'Aashirvaad Atta 5 kg',brand:'ITC',image_url:'https://example.com/common.jpg',status:'approved'};
+const master={id:'p1',name:'Aashirvaad Atta 5 kg',brand:'ITC',image_url:'https://example.com/common.jpg',status:'approved',specifications:{mrp_verified:true,verified_mrp_inr:300}};
 const vendor={id:'v1',name:'Vendor One',active:true,owner_approval:'Approved',operational_hold:false};
 assert.equal(customerOfferView({master,offer,vendor}).vendorName,'Vendor One');
 assert.equal(customerOfferView({master,offer:{...offer,vendor_image_url:'https://example.com/vendor.jpg',vendor_image_review_status:'approved'},vendor}).imageUrl,'https://example.com/vendor.jpg');
