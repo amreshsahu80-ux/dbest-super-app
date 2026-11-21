@@ -31,6 +31,23 @@ Deno.serve(async req=>{
  }
  let data:{rows?:Row[]};
  try{data=await req.json()}catch{return reply({error:"invalid_json"},400)}
+ if((data as Record<string,unknown>).action==="review_draft"){
+  const rowId=String((data as Record<string,unknown>).rowId||"");
+  const decision=String((data as Record<string,unknown>).decision||"");
+  if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(rowId)
+     ||!["reviewed","rejected"].includes(decision))return reply({error:"invalid_review_request"},400);
+  const url=Deno.env.get("SUPABASE_URL"),key=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if(!url||!key)return reply({error:"server_not_configured"},503);
+  const sb=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}});
+  const {data:owner,error:authError}=await sb.rpc("validate_owner_session",{p_token:token});
+  if(authError||!owner)return reply({error:"owner_session_invalid"},401);
+  const {data:changed,error}=await sb.from("dbest_master_catalogue_import_staging")
+   .update({status:decision}).eq("id",rowId).eq("imported_by",owner).eq("status","draft")
+   .select("id,status").maybeSingle();
+  if(error)return reply({error:"review_failed"},500);
+  if(!changed)return reply({error:"draft_not_found_or_already_reviewed"},409);
+  return reply({ok:true,rowId:changed.id,status:changed.status,published:0});
+ }
  if(!Array.isArray(data.rows)||data.rows.length<1||data.rows.length>100)return reply({error:"batch_size_must_be_1_to_100"},400);
  const problems=data.rows.map((r,i)=>({row:i+2,errors:check(r)})).filter(x=>x.errors.length);
  if(problems.length)return reply({error:"invalid_rows",problems},422);
