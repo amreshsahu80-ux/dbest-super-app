@@ -28,7 +28,7 @@ async function run(master){
   assert.equal(res.body.error,'master_product_not_publishable');
   assert.equal(calls.some(c=>c.method==='PATCH'),false);
  }
- const {res,calls}=await run({id:masterId,status:'approved',specifications:{test_only:false}});
+ const {res,calls}=await run({id:masterId,status:'approved',specifications:{test_only:false,mrp_verified:true,verified_mrp_inr:150}});
  assert.equal(res.statusCode,200);
  assert.equal(calls.some(c=>c.method==='PATCH'),true);
  console.log('Vendor offer master activation guard tests passed');
