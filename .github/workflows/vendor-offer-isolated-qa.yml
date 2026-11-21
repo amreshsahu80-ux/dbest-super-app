@@ -1,0 +1,21 @@
+name: Vendor offer isolated QA
+on:
+  pull_request:
+    paths:
+      - 'lib/vendor-offer-*.js'
+      - 'qa/vendor-offer-*.test.js'
+      - '.github/workflows/vendor-offer-isolated-qa.yml'
+  push:
+    branches:
+      - feat/vendor-offer-pricing-isolated-20261122
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test qa/vendor-offer-pricing-isolated.test.js qa/vendor-offer-owner-review-isolated.test.js
