@@ -1,0 +1,53 @@
+name: DBest Partner v7 Single-Device QA Payload - No Sends
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - fix/partner-v7-one-device-qa-payload-20261111
+    paths:
+      - qa/native-fcm-qa-single-v7/**
+      - .github/workflows/dbest-partner-v7-one-device-qa-payload.yml
+  pull_request:
+    paths:
+      - qa/native-fcm-qa-single-v7/**
+      - .github/workflows/dbest-partner-v7-one-device-qa-payload.yml
+
+permissions:
+  contents: read
+
+jobs:
+  test-payload:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Verify Android v7 FCM payload contract without sending
+        run: deno run --config qa/native-fcm-qa-single-v7/deno.json qa/native-fcm-qa-single-v7/payload_test.ts
+      - name: Typecheck staged sender and payload
+        run: deno check --config qa/native-fcm-qa-single-v7/deno.json qa/native-fcm-qa-single-v7/index.ts
+      - name: Verify original safety locks and exact-installation authorization remain intact
+        run: |
+          set -eu
+          src=qa/native-fcm-qa-single-v7/index.ts
+          grep -Fq 'DBEST_FCM_QA_SINGLE_ENABLED' "$src"
+          grep -Fq 'DBEST_FCM_QA_SINGLE_INSTALLATION_ID' "$src"
+          grep -Fq 'DBEST_FCM_QA_SINGLE_EXPIRES_AT' "$src"
+          grep -Fq 'approved_offline_vaahak_required' "$src"
+          grep -Fq 'const bucket = "2026-11-11T00:00:00.000Z";' "$src"
+          grep -Fq 'if (!qaEnabled)' "$src"
+          grep -Fq 'x-vaahak-token' "$src"
+          grep -Fq '.eq("installation_id",installationId)' "$src"
+          grep -Fq '.eq("app_id","com.dbest4u.partner")' "$src"
+          grep -Fq '.eq("enabled",true)' "$src"
+          grep -Fq '.eq("permission_status","granted")' "$src"
+          grep -Fq 'general_sender_must_remain_off' "$src"
+          grep -Fq 'test_already_requested_this_window' "$src"
+          grep -Fq 'daily_test_limit_reached' "$src"
+          grep -Fq 'buildOneDeviceVaahakQaPayload(device.fcm_token,attempt.id)' "$src"
+          if grep -Fq 'eventType:"qa_vaahak_one_device"' "$src"; then
+            echo "::error::Legacy payload would be dropped by Partner v7"
+            exit 1
+          fi
+          echo "PASS: QA sending defaults OFF; requires private exact installation, expiration and switch; consent and once-only audit retained"
