@@ -7,7 +7,7 @@ function preflight(row={}){
  const errors=[];
  for(const k of required)if(row[k]===undefined||String(row[k]).trim()==='')errors.push('missing_'+k);
  if(!categories.has(String(row.category||'').trim().toLowerCase()))errors.push('unsupported_category');
- if(!/^\\d{8,14}$/.test(String(row.barcode_gtin||'').trim()))errors.push('invalid_barcode');
+ if(!/^\d{8,14}$/.test(String(row.barcode_gtin||'').trim()))errors.push('invalid_barcode');
  const mrp=Number(row.mrp_inr);
  if(!Number.isFinite(mrp)||mrp<=0)errors.push('invalid_mrp');
  if(String(row.mrp_verified).toLowerCase()!=='true')errors.push('mrp_unverified');
