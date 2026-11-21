@@ -1,0 +1,24 @@
+name: Marketplace isolated catalogue tests
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'api/marketplace/vendor-*.js'
+      - 'tests/marketplace-vendor-*.test.js'
+      - '.github/workflows/marketplace-catalogue-tests.yml'
+permissions:
+  contents: read
+jobs:
+  catalogue:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Vendor upload validation
+        run: node tests/marketplace-vendor-product-validation.test.js
+      - name: Vendor image ownership
+        run: node tests/marketplace-vendor-offer-image.test.js
+      - name: Vendor offer ownership
+        run: node tests/marketplace-vendor-offer-rules.test.js
