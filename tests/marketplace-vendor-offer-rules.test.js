@@ -18,4 +18,9 @@ assert.equal(customerOfferView({master,offer:{...offer,vendor_image_url:'https:/
 assert.equal(customerOfferView({master,offer:{...offer,vendor_image_url:'https://example.com/vendor.jpg',vendor_image_review_status:'pending_review'},vendor}).imageUrl,master.image_url);
 assert.equal(customerOfferView({master,offer:{...offer,stock:0},vendor}),null);
 assert.equal(customerOfferView({master,offer,vendor:{...vendor,operational_hold:true}}),null);
-console.log('Vendor offer rules: 13 assertions passed');
+const approvedImage=updateOffer({actorVendorId:'v1',offer,patch:{vendor_image_url:'https://example.com/new.jpg'},vendor});
+assert.equal(approvedImage.vendor_image_review_status,'approved');
+assert.equal(approvedImage.vendor_image_url,'https://example.com/new.jpg');
+const held=updateOffer({actorVendorId:'v1',offer,patch:{vendor_image_url:'https://example.com/new.jpg'},vendor:{...vendor,operational_hold:true}});
+assert.equal(held.vendor_image_review_status,'pending_review');
+console.log('Vendor offer rules: 16 assertions passed');
