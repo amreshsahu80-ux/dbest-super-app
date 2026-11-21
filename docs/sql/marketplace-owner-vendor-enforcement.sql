@@ -14,14 +14,13 @@ revoke all on public.dbest_vendor_enforcement_audit from anon,authenticated;
 grant select,insert on public.dbest_vendor_enforcement_audit to service_role;
 -- No deletion of vendor/order data. Termination is irreversible via this API.
 create or replace function public.dbest_enforce_vendor(
- p_token_hash text,p_vendor_id text,p_action text,p_reason text
+ p_owner_token text,p_vendor_id text,p_action text,p_reason text
 ) returns jsonb language plpgsql security invoker
 set search_path = ''
 as $$
 declare v_admin text; v_vendor public.marketplace_vendors_live%rowtype;
 begin
- select admin_id into v_admin from public.super_admin_sessions
- where token_hash=p_token_hash and expires_at>now() limit 1;
+ select public.validate_owner_session(p_owner_token) into v_admin;
  if v_admin is null then raise exception 'invalid_owner_session'; end if;
  if p_action not in ('suspend','reinstate','terminate') then raise exception 'invalid_vendor_action'; end if;
  if p_action <> 'reinstate' and length(trim(coalesce(p_reason,'')))<10 then raise exception 'reason_required'; end if;
