@@ -16,6 +16,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Validate authenticated submissions API syntax
+        run: node --check api/marketplace/vendor-product-submissions.js
       - name: Vendor upload validation
         run: node tests/marketplace-vendor-product-validation.test.js
       - name: Vendor image ownership
