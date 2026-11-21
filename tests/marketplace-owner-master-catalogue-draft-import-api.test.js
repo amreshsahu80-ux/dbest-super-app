@@ -28,6 +28,10 @@ async function invoke({enabled=true,token='valid-owner-session-token-123456',row
  let r=await invoke({enabled:false});assert.equal(r.res.code,503);assert.equal(r.calls.length,0);
  r=await invoke({token:'invalid-owner-session-token-12345'});assert.equal(r.res.code,401);assert.equal(r.calls.length,1);
  r=await invoke({rows:[{...good,mrp_verified:'false'}]});assert.equal(r.res.code,422);assert.equal(r.calls.length,1);
+ r=await invoke({csv:'category,name,brand,barcode_gtin,mrp_inr,mrp_verified,image_url,image_rights_verified\n'+'electronics,QA Charger,QA,12345678,999,false,https://example.org/item.jpg,true'});
+ assert.equal(r.res.code,422);assert.equal(r.calls.length,1);
+ r=await invoke({csv:'category,name,brand,barcode_gtin,mrp_inr,mrp_verified,image_url,image_rights_verified\n'+'electronics,QA Charger,QA,12345678,999,true,https://example.org/item.jpg,true'});
+ assert.equal(r.res.code,201);assert.equal(r.res.data.drafts,1);assert.equal(r.calls.length,2);
  r=await invoke();assert.equal(r.res.code,201);assert.equal(r.res.data.drafts,1);assert.equal(r.res.data.published,0);
  assert.equal(r.calls.length,2);assert.ok(r.calls[1].url.endsWith('/dbest_master_catalogue_import_staging'));
  assert.equal(r.calls[1].body[0].status,'draft');
