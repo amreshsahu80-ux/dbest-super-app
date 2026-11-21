@@ -32,8 +32,19 @@ async function refreshDrafts(){
   status.textContent=rows.length+' saved staging rows returned (latest 100). No products published.';
   if(!rows.length)return;
   const table=document.createElement('table'),head=document.createElement('tr');
-  for(const key of ['Product','Category','MRP','Status','Batch']){const th=document.createElement('th');th.textContent=key;head.append(th)}table.append(head);
-  for(const row of rows){const tr=document.createElement('tr');for(const value of [row.payload?.name,row.payload?.category,row.payload?.mrp,row.status,row.batch_id]){const td=document.createElement('td');td.textContent=String(value??'');tr.append(td)}table.append(tr)}
+  for(const key of ['Product','Category','MRP','Status','Batch','Owner review']){const th=document.createElement('th');th.textContent=key;head.append(th)}table.append(head);
+  for(const row of rows){const tr=document.createElement('tr');for(const value of [row.payload?.name,row.payload?.category,row.payload?.mrp,row.status,row.batch_id]){const td=document.createElement('td');td.textContent=String(value??'');tr.append(td)}if(row.status==='draft'){
+   const td=document.createElement('td');
+   for(const [decision,label] of [['reviewed','Mark reviewed'],['rejected','Reject']]){
+    const b=document.createElement('button');b.type='button';b.textContent=label;
+    b.onclick=async()=>{if(!confirm(label+' this draft? This will NOT publish the product.'))return;b.disabled=true;
+     try{const response=await fetch(cfg.supabaseUrl+'/functions/v1/owner-master-csv-stage-isolated',{method:'POST',headers:{apikey:cfg.supabasePublishableKey,Authorization:'Bearer '+cfg.supabasePublishableKey,'x-dbest-owner-token':token,'Content-Type':'application/json'},body:JSON.stringify({action:'review_draft',rowId:row.id,decision})});
+     const result=await response.json();if(!response.ok)throw Error(result.error||'Review failed');await refreshDrafts();
+     }catch(err){status.textContent='Review not saved: '+err.message;b.disabled=false}};
+    td.append(b);
+   }tr.append(td);
+  }else{tr.append(document.createElement('td'))}
+  table.append(tr)}
   host.append(table);
  }catch(err){status.textContent='Unable to load drafts: '+err.message}
 }
