@@ -23,3 +23,12 @@ OTC is not determined from the product name alone. Require licensed pharmacy/ven
 3. Multi-vendor order pricing, GST-inclusive rounding and delivery fee tests.
 4. Existing active orders and vendor data unchanged.
 5. Preview end-to-end QA before any production migration.
+
+## Vendor-created products (approved addition)
+Vendors can (a) select existing DBest master products and create their own offers, (b) submit a new product with brand, category, variant, specifications, GST-inclusive selling price, stock and image rights/source, or (c) bulk-upload via CSV. These are parallel workflows, not mutually exclusive.
+
+New submissions are vendor-owned pending records and must not modify or overwrite master records. Match by barcode/GTIN, brand + manufacturer SKU, and normalized variant attributes; propose duplicates for vendor confirmation. On a verified match, attach a vendor offer to the existing master ID. Otherwise send the new candidate for owner review and approval before customer visibility.
+
+A vendor may edit its own offer price, stock and availability, subject to audit history. Product identity, verified HSN/SAC classification and master images are controlled centrally. Unverified GST or restricted-medicine status blocks checkout or publishing as appropriate; no assumed zero-tax rates. Vendor-uploaded images require rights checks. Bulk imports return row-level success, duplicate, and rejection reports.
+
+Owner console must support approve, reject, request corrections, merge duplicates, suspend, and publish, while preserving vendor attribution and immutable order history. Existing live vendor onboarding and order processing remain unchanged until the isolated implementation passes QA.
