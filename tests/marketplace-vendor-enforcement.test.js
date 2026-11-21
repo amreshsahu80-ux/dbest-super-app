@@ -1,0 +1,17 @@
+'use strict';
+const assert=require('node:assert/strict');
+const {ownerVendorDecision}=require('../api/marketplace/vendor-enforcement-rules');
+const vendor={id:'vendor1',active:true,operational_hold:false};
+const suspended=ownerVendorDecision({actorAdminId:'owner',vendor,action:'suspend',reason:'Repeated misleading product imagery'});
+assert.equal(suspended.changes.operational_hold,true);
+assert.equal(suspended.audit.vendor_id,'vendor1');
+assert.equal(suspended.audit.previous_active,true);
+const terminated=ownerVendorDecision({actorAdminId:'owner',vendor,action:'terminate',reason:'Serious repeated compliance violation'});
+assert.equal(terminated.changes.active,false);
+assert.equal(terminated.changes.operational_hold,true);
+const restored=ownerVendorDecision({actorAdminId:'owner',vendor:{...vendor,operational_hold:true},action:'reinstate'});
+assert.equal(restored.changes.operational_hold,false);
+assert.throws(()=>ownerVendorDecision({actorAdminId:'',vendor,action:'suspend',reason:'Repeated misleading product imagery'}),/owner_session_required/);
+assert.throws(()=>ownerVendorDecision({actorAdminId:'owner',vendor,action:'suspend',reason:'short'}),/reason_required/);
+assert.throws(()=>ownerVendorDecision({actorAdminId:'owner',vendor:{...vendor,terminated_at:'2026-11-21'},action:'reinstate'}),/terminated_vendor_cannot_reinstate/);
+console.log('Vendor enforcement: 9 assertions passed');
