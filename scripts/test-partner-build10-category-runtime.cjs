@@ -35,6 +35,14 @@ async function scenario(rows,initial){
   assert.notEqual(inactive.validity,'','archived Electronics must not be accepted');
   const stringDisabled=await scenario([{key:'Electronics',enabled:'false'},{key:'Grocery',active:true}],'Electronics');
   assert.notEqual(stringDisabled.validity,'','string-disabled Electronics must not be accepted');
+  const suspended=await scenario([{key:'Electronics',status:'suspended'},{key:'Grocery',active:true}],'Electronics');
+  assert.notEqual(suspended.validity,'','suspended Electronics must not be accepted');
+  const isActiveDisabled=await scenario([{key:'Electronics',is_active:'0'},{key:'Grocery',active:true}],'Electronics');
+  assert.notEqual(isActiveDisabled.validity,'','string-zero is_active must not be accepted');
+  const empty=await scenario([],'Electronics');
+  assert.equal(empty.validity,'No active business categories available','empty authoritative registry must fail closed');
+  const spaced=await scenario([{key:' Electronics ',label:'Electronics',active:true}],'electronics');
+  assert.equal(spaced.value,'Electronics','registry key whitespace must normalize before restoring selection');
   const selectable=await scenario([{key:'Electronics',active:true},{key:'Grocery',active:true}],'');
   assert.equal(selectable.validity,'Choose a business category','blank selection must remain invalid');
   selectable.value='Electronics';
