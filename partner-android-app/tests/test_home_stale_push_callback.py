@@ -16,11 +16,15 @@ assert "v.postDelayed(() -> {" in callback
 assert "showingBrowser && partnerTestPush != null" in callback
 assert "java.util.Objects.equals(completedRole, currentRole)" in callback
 assert "completedUrl.equals(v.getUrl())" in callback
-assert "partnerTestPush.onPortalPageLoaded();" in callback
+assert callback.count("partnerTestPush.onPortalPageLoaded();") == 1
 
 # Ensure all three guards are in the same delayed callback before the call.
 delayed = callback.split("v.postDelayed(() -> {", 1)[1]
 guard = delayed.split("partnerTestPush.onPortalPageLoaded();", 1)[0]
+assert "if (showingBrowser && partnerTestPush != null" in guard
+assert "&& java.util.Objects.equals(completedRole, currentRole)" in guard
+assert "&& completedUrl.equals(v.getUrl())) {" in guard
+assert guard.count("if (") == 1, "Push must be guarded by one combined condition"
 for condition in ("showingBrowser", "completedRole, currentRole", "completedUrl.equals(v.getUrl())"):
     assert condition in guard, f"Missing delayed callback guard: {condition}"
 print("PASS: stale WebView callbacks cannot bind push state across Home/role switches")
