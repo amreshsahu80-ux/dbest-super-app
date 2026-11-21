@@ -18,7 +18,7 @@ async function invoke({method='GET',token=validToken,fetchImpl}={}){
  assert.equal(r.res.statusCode,401);assert.equal(r.calls.length,0);
  r=await invoke({fetchImpl:async()=>({ok:true,json:async()=>null})});
  assert.equal(r.res.statusCode,401);assert.equal(r.calls.length,1);
- r=await invoke({fetchImpl:async(url)=>url.includes('validate_owner_session')?{ok:true,json:async()=>'owner@example.invalid'}:{ok:true,json:async()=>[{id:'QA1',name:'Test vendor',active:true,operational_hold:false}]}})});
+ r=await invoke({fetchImpl:async(url)=>url.includes('validate_owner_session')?{ok:true,json:async()=>'owner@example.invalid'}:{ok:true,json:async()=>[{id:'QA1',name:'Test vendor',active:true,operational_hold:false}]}});
  assert.equal(r.res.statusCode,200);assert.equal(r.res.body.vendors.length,1);assert.equal(r.calls.length,2);
  assert.equal(JSON.parse(r.calls[0].opts.body).p_token,validToken);
  assert.match(r.calls[1].url,/marketplace_vendors_live/);
