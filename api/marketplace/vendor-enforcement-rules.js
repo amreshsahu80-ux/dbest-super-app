@@ -7,7 +7,8 @@ function ownerVendorDecision({actorAdminId,vendor,action,reason}){
  if(!vendor||!vendor.id)throw Error('vendor_not_found');
  if(!['suspend','reinstate','terminate'].includes(action))throw Error('invalid_vendor_action');
  if(action!=='reinstate'&&(!reason||String(reason).trim().length<10))throw Error('reason_required');
- if(action==='reinstate'&&vendor.terminated_at)throw Error('terminated_vendor_cannot_reinstate');
+ if(action==='reinstate'&&vendor.active!==true)throw Error('inactive_vendor_cannot_reinstate');
+ if(action==='reinstate'&&vendor.owner_approval!=='Approved')throw Error('unapproved_vendor_cannot_reinstate');
  const changes=action==='reinstate'
   ?{operational_hold:false}
   :action==='suspend'
