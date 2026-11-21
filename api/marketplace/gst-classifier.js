@@ -8,9 +8,9 @@ function resolveGst({product={},registry=[],asOf=new Date().toISOString().slice(
   const hsn=norm(product.hsnSac||product.hsn_sac);
   const barcode=norm(product.barcode||product.gtin);
   const sku=norm(product.sku);
-  const valid=registry.filter(r=>r&&r.reviewed===true&&Number.isFinite(Number(r.ratePercent))&&Number(r.ratePercent)>=0&&Number(r.ratePercent)<=100&&dateOnly(r.effectiveFrom)&&dateOnly(r.effectiveFrom)<=asOf&&(!r.effectiveTo||dateOnly(r.effectiveTo)>=asOf));
+  const valid=registry.filter(r=>r&&r.reviewed===true&&r.ratePercent!==null&&r.ratePercent!==undefined&&Number.isFinite(Number(r.ratePercent))&&Number(r.ratePercent)>=0&&Number(r.ratePercent)<=100&&dateOnly(r.effectiveFrom)&&dateOnly(r.effectiveFrom)<=asOf&&(!r.effectiveTo||dateOnly(r.effectiveTo)>=asOf));
   // Exact identifiers only. Never match fuzzy names for tax decisions.
-  const matches=valid.filter(r=>(hsn&&norm(r.hsnSac)===hsn)||(barcode&&norm(r.barcode)===barcode)||(sku&&norm(r.sku)===sku));
+  const matches=hsn?valid.filter(r=>norm(r.hsnSac)===hsn):barcode?valid.filter(r=>norm(r.barcode)===barcode):sku?valid.filter(r=>norm(r.sku)===sku):[];
   if(!matches.length)return {status:'review_required',reason:'no_verified_tax_classification'};
   const latest=matches.sort((a,b)=>String(b.effectiveFrom).localeCompare(String(a.effectiveFrom)))[0];
   const sameDate=matches.filter(r=>r.effectiveFrom===latest.effectiveFrom);
