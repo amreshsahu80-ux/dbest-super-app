@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const VERSION='20261005-local-smart-search-v9';
+const VERSION='20261112-cab-release-polish-qa';
 const cfg=()=>({...window.DBEST_RUNTIME_CONFIG,...window.DBEST_RUNTIME_SECRETS});
 const RECENT_KEY='dbest_cab_recent_places_v6';
 const IMG={
@@ -122,6 +122,29 @@ body:has(.cab6Page) #dbestServicePartnerQuick,body:has(.cab6Page) .floatingServi
 .cab6Page>.cab6Top.cab6IconNav.cab6HeroNav>button:first-child:after{content:'←';font-size:26px!important}
 .cab6Page>.cab6Top.cab6IconNav.cab6HeroNav>button:last-child:after{content:'⌂';font-size:25px!important}
 .cab6Page>.cab6Wrap{padding-top:6px}
+.cab6Page>.cab6Top.cab6IconNav.cab6HeroNav.cab6InnerNav>button:first-child{width:92px;border-radius:24px;padding:0 10px}
+.cab6Page>.cab6Top.cab6IconNav.cab6HeroNav.cab6InnerNav>button:first-child:after{content:'← Back';font-size:14px!important}
+/* QA navigation fix: keep controls in document flow above Leaflet panes.
+   The previous absolute overlay was hidden beneath the map on mobile. */
+.cab6Page>.cab6Top.cab6IconNav.cab6HeroNav{
+ position:sticky!important;top:0!important;left:auto!important;right:auto!important;
+ z-index:99999!important;display:flex!important;align-items:center!important;
+ justify-content:space-between!important;min-height:58px!important;
+ padding:7px 14px!important;margin:0!important;box-sizing:border-box!important;
+ background:rgba(248,250,255,.97)!important;border-bottom:1px solid #e0e5f1!important;
+ box-shadow:0 3px 14px #1e2a5615!important;pointer-events:auto!important;
+}
+.cab6Page>.cab6Top.cab6IconNav.cab6HeroNav>button{
+ position:relative!important;z-index:2!important;display:grid!important;
+ visibility:visible!important;opacity:1!important;pointer-events:auto!important;
+ width:48px!important;height:44px!important;min-height:44px!important;
+ color:#263566!important;background:#fff!important;
+}
+.cab6Page>.cab6Top.cab6IconNav.cab6HeroNav.cab6InnerNav>button:first-child{
+ width:96px!important;border-radius:24px!important;
+}
+.cab6Page>.cab6Wrap{padding-top:8px!important}
+
 .cab6Search.cab6EntrySheet .cab6Field.pick .cab6PickupNoteRow{margin:5px 0 0}
 .cab6Search.cab6EntrySheet .cab6Field.pick .cab6PickupNoteRow input{width:100%;box-sizing:border-box;min-height:40px;font-size:11px;padding:8px 12px;border:1px solid #d5e8e2;border-left:1px solid #d5e8e2;border-radius:12px;background:#f6fbfa;box-shadow:none;color:#164d43}
 .cab6Search.cab6EntrySheet .cab6Field.pick .cab6PickupNoteRow input:focus{outline:2px solid #a7dccc;outline-offset:1px}
@@ -133,23 +156,81 @@ body:has(.cab6Page) #dbestServicePartnerQuick,body:has(.cab6Page) .floatingServi
 .cab6Suggest .cab6NoNearby{padding:11px 12px;color:#59677c;font-size:11px;line-height:1.4}
 
 `;document.head.appendChild(x)}
-function header(back){return `<div class="cab6Top cab6IconNav cab6HeroNav" role="navigation" aria-label="Cab navigation"><button type="button" aria-label="Back" title="Back" onclick="${back}">Back</button><button type="button" aria-label="Home" title="Home" onclick="backHome()">Home</button></div>`}
+function header(back){
+ const inner=back!=='backHome()';
+ return `<div class="cab6Top cab6IconNav cab6HeroNav${inner?' cab6InnerNav':''}" role="navigation" aria-label="Cab navigation"><button type="button" aria-label="${inner?'Back to previous Cab step':'Back to main platform'}" title="${inner?'Previous Cab step':'Main platform'}" onclick="${back}">Back</button><button type="button" aria-label="${inner?'Cab Home':'Platform Home'}" title="${inner?'Cab Home':'Platform Home'}" onclick="${inner?'DBEST_CAB_SELECTED_UI.goCabHome()':'backHome()'}">Home</button></div>`;
+}
 function screen(body,back='backHome()'){css();destroyMap();sectionScreen(`<div class="cab6Page">${header(back)}<div class="cab6Wrap">${body}</div></div>`)}
 function destroyMap(){try{if(S.map&&S.map.remove)S.map.remove()}catch(e){}try{if(S.entryMap&&S.entryMap.remove)S.entryMap.remove()}catch(e){}S.map=null;S.layer=null;S.entryMap=null}
 function minLocal(){const d=new Date(Date.now()+15*60000);d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,16)}
+function maxLocal(){const d=new Date(Date.now()+90*24*60*60000);d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,16)}
+function validCabSchedule(value){
+ const t=new Date(String(value||'')).getTime();
+ return Number.isFinite(t)&&t>=Date.now()+10*60000&&t<=Date.now()+90*24*60*60000;
+}
+// Preview deployments share the active Supabase endpoint. Never create or
+// pay a real Car Pool request from the public preview hostname.
+function cabQaPreview(){return /\.vercel\.app$/i.test(location.hostname)}
 function recents(){try{return (JSON.parse(localStorage.getItem(RECENT_KEY)||'[]')||[]).slice(0,4)}catch(e){return[]}}
 function saveRecent(v){v=String(v||'').trim();if(!v)return;try{localStorage.setItem(RECENT_KEY,JSON.stringify([v,...recents().filter(x=>x.toLowerCase()!==v.toLowerCase())].slice(0,4)))}catch(e){}}
 function renderRecents(){const h=$('cab6Recents');if(!h)return;const a=recents();h.innerHTML=a.length?a.map(v=>`<button type="button" class="cab6Recent" data-r="${esc(v)}">↻ ${esc(v.split(',')[0]||v)}</button>`).join(''):'<div style="font-size:9px;color:#8a92a4;padding:3px 2px">Your recent destinations will appear here.</div>';qa('[data-r]',h).forEach(b=>b.onclick=()=>{const d=$('cab6D');if(d){d.value=b.dataset.r||'';d.dispatchEvent(new Event('input',{bubbles:true}));d.focus()}})}
 function nearbyWatchdog(){const rail=$('cab6NearbyRail');if(!rail)return;const current=Number(rail.dataset.nearbyRun||0)+1;rail.dataset.nearbyRun=String(current);setTimeout(()=>{if(!rail.isConnected||Number(rail.dataset.nearbyRun)!==current||!rail.querySelector('.cab6Place.loading'))return;rail.innerHTML='<div style="font-size:12px;color:#687386;padding:12px">Still finding nearby destinations…</div>';},15000)}
-function open(){
+function returnToSearch(){open(true)}
+function goCabHome(){
+ // Cab home starts a new booking but keeps accurate GPS pickup if available.
+ S.tripType='oneway';S.mode='ride';S.schedule='now';S.scheduledAt='';
+ S.d=null;S.stops=[];S.route=null;S.nightHalt=false;S.carpoolRequestId='';
+ open(true);
+}
+function open(restore=false){
  S.route=null;
  // Closing/reopening the Cab screen invalidates old GPS callbacks.
  pickupGpsSeq++;
- screen(`<div class="cab6EntryMapWrap"><div id="cab6EntryMap" class="cab6EntryMap"><div class="cab6EntryMapFallback"><div class="cab6EntryMapPin"></div></div></div><div class="cab6EntryMapBadge">Live pickup map</div><button type="button" id="cab6EntryLocate" class="cab6EntryLocate" aria-label="Use current location">◎</button></div><div class="cab6Search cab6EntrySheet"><div class="cab6Spark">✦</div><h1 class="cab6Title">Enter Your Destination</h1><p class="cab6Sub">Choose pickup, destination and ride preference.</p><div class="cab6EntryHandle"></div><div class="cab6EntryHeading"><b>Book Your Ride</b><small>DBest Cab</small></div><div class="cab6Field pick"><input id="cab6P" autocomplete="off" placeholder="My Location / Pickup"><div id="cab6PS" class="cab6Suggest"></div><small id="cab6PickupGpsStatus" role="status" aria-live="polite" style="display:block;padding:6px 4px 0;color:#27664e;font-size:11px">Locating pickup with phone GPS…</small><div class="cab6PickupNoteRow"><input type="text" id="cab6PickupNote" maxlength="160" autocomplete="off" placeholder="Add building, house number or landmark (optional)" aria-label="Additional pickup address details"></div></div><div id="cab6DropWrap" class="cab6Field drop"><input id="cab6D" autocomplete="off" placeholder="Enter destination"><div id="cab6DS" class="cab6Suggest"></div><div class="cab6DestSearchMode"><span id="cab6DestScopeLabel">Nearby destinations · within 500 km of pickup</span><button type="button" id="cab6DestScope" aria-label="Change destination search area">Search all India</button></div></div><div id="cab6Stops" class="cab6Stops"></div><div class="cab6StopBar"><button type="button" id="cab6AddStop" class="cab6AddStop">＋ Add Stop</button></div><div class="cab6TripType"><button type="button" class="on" data-trip="oneway">One Way</button><button type="button" data-trip="roundtrip">2 Way</button><button type="button" data-trip="carpool">Car Pool</button></div><div id="cab6RoundNote" class="cab6RoundNote"><b>Same vehicle for onward + return</b><br>Sedan ₹15/km • SUV ₹18/km • Tolls extra<br><label><input type="checkbox" id="cab6NightHalt"> Night halt: Sedan ₹1,000 / SUV ₹1,500</label></div><div id="cab6PoolBox" class="cab6PoolBox"><div class="cab6PoolNote"><b>Scheduled shared ride</b><br>Request seats on the same route. Co-passenger mobile numbers stay private.</div><div class="cab6PoolGrid"><div class="cab6Field"><select id="cab6PoolSeats"><option value="1">1 Seat</option><option value="2">2 Seats</option><option value="3">3 Seats</option><option value="4">4 Seats</option><option value="5">5 Seats</option></select></div><div class="cab6Field"><select id="cab6PoolVehicle"><option value="Any">Sedan / SUV</option><option value="Sedan">Sedan</option><option value="SUV">SUV</option></select></div></div><div class="cab6Field"><input id="cab6PoolName" placeholder="Passenger name"></div><div class="cab6Field"><input id="cab6PoolMobile" inputmode="numeric" maxlength="10" placeholder="10-digit mobile"></div></div><div class="cab6Tools"><button type="button" class="gps" id="cab6Gps">◎ Current location</button><button type="button" id="cab6Swap">⇅</button></div><div id="cab6Nearby" class="cab6Nearby"><div class="cab6NearbyHead"><b>Popular near you</b><small>Based on your pickup area</small></div><div id="cab6NearbyRail" class="cab6NearbyRail"><div class="cab6Place loading">Finding nearby places…</div></div></div><div class="cab6Quick"><button type="button" data-q="schedule"><span>🗓</span>Schedule Later</button><button type="button" data-q="other"><span>👥</span>Book for Someone Else</button><button type="button" data-q="rental"><span>⏱</span>Hourly Rental</button></div><div id="cab6Schedule" class="cab6Extra"><div class="cab6Field"><input id="cab6At" type="datetime-local" min="${minLocal()}"></div></div><div id="cab6Other" class="cab6Extra"><div class="cab6Field"><input id="cab6Name" placeholder="Rider name"></div><div class="cab6Field"><input id="cab6Mobile" inputmode="numeric" maxlength="10" placeholder="10-digit mobile"></div></div><div id="cab6Rental" class="cab6Extra"><div class="cab6Field"><select id="cab6RentalPkg"><option value="1|10">1 Hour / 10 km</option><option value="2|20" selected>2 Hours / 20 km</option><option value="4|40">4 Hours / 40 km</option><option value="8|80">8 Hours / 80 km</option><option value="12|120">12 Hours / 120 km</option></select></div></div><button type="button" id="cab6Go" class="cab6Go">Search Cabs</button></div>`);
+ screen(`<div class="cab6EntryMapWrap"><div id="cab6EntryMap" class="cab6EntryMap"><div class="cab6EntryMapFallback"><div class="cab6EntryMapPin"></div></div></div><div class="cab6EntryMapBadge">Live pickup map</div><button type="button" id="cab6EntryLocate" class="cab6EntryLocate" aria-label="Use current location">◎</button></div><div class="cab6Search cab6EntrySheet"><div class="cab6Spark">✦</div><h1 class="cab6Title">Enter Your Destination</h1><p class="cab6Sub">Choose pickup, destination and ride preference.</p><div class="cab6EntryHandle"></div><div class="cab6EntryHeading"><b>Book Your Ride</b><small>DBest Cab</small></div><div class="cab6Field pick"><input id="cab6P" autocomplete="off" placeholder="My Location / Pickup"><div id="cab6PS" class="cab6Suggest"></div><small id="cab6PickupGpsStatus" role="status" aria-live="polite" style="display:block;padding:6px 4px 0;color:#27664e;font-size:11px">Locating pickup with phone GPS…</small><div class="cab6PickupNoteRow"><input type="text" id="cab6PickupNote" maxlength="160" autocomplete="off" placeholder="Add building, house number or landmark (optional)" aria-label="Additional pickup address details"></div></div><div id="cab6DropWrap" class="cab6Field drop"><input id="cab6D" autocomplete="off" placeholder="Enter destination"><div id="cab6DS" class="cab6Suggest"></div><div class="cab6DestSearchMode"><span id="cab6DestScopeLabel">Nearby destinations · within 500 km of pickup</span><button type="button" id="cab6DestScope" aria-label="Change destination search area">Search all India</button></div></div><div id="cab6Stops" class="cab6Stops"></div><div class="cab6StopBar"><button type="button" id="cab6AddStop" class="cab6AddStop">＋ Add Stop</button></div><div class="cab6TripType"><button type="button" class="on" data-trip="oneway">One Way</button><button type="button" data-trip="roundtrip">2 Way</button><button type="button" data-trip="carpool">Car Pool</button></div><div id="cab6RoundNote" class="cab6RoundNote"><b>Same vehicle for onward + return</b><br>Sedan ₹15/km • SUV ₹18/km • Tolls extra<br><label><input type="checkbox" id="cab6NightHalt"> Night halt: Sedan ₹1,000 / SUV ₹1,500</label></div><div id="cab6PoolBox" class="cab6PoolBox"><div class="cab6PoolNote"><b>Scheduled shared ride</b><br>Request seats on the same route. Co-passenger mobile numbers stay private.</div><div class="cab6PoolGrid"><div class="cab6Field"><select id="cab6PoolSeats"><option value="1">1 Seat</option><option value="2">2 Seats</option><option value="3">3 Seats</option><option value="4">4 Seats</option><option value="5">5 Seats</option></select></div><div class="cab6Field"><select id="cab6PoolVehicle"><option value="Any">Sedan / SUV</option><option value="Sedan">Sedan</option><option value="SUV">SUV</option></select></div></div><div class="cab6Field"><input id="cab6PoolName" placeholder="Passenger name"></div><div class="cab6Field"><input id="cab6PoolMobile" inputmode="numeric" maxlength="10" placeholder="10-digit mobile"></div></div><div class="cab6Tools"><button type="button" class="gps" id="cab6Gps">◎ Current location</button><button type="button" id="cab6Swap">⇅</button></div><div id="cab6Nearby" class="cab6Nearby"><div class="cab6NearbyHead"><b>Popular near you</b><small>Based on your pickup area</small></div><div id="cab6NearbyRail" class="cab6NearbyRail"><div class="cab6Place loading">Finding nearby places…</div></div></div><div class="cab6Quick"><button type="button" data-q="schedule"><span>🗓</span>Schedule Later</button><button type="button" data-q="other"><span>👥</span>Book for Someone Else</button></div><div id="cab6Schedule" class="cab6Extra"><div class="cab6Field"><input id="cab6At" type="datetime-local" min="${minLocal()}" max="${maxLocal()}"></div></div><div id="cab6Other" class="cab6Extra"><div class="cab6Field"><input id="cab6Name" placeholder="Rider name"></div><div class="cab6Field"><input id="cab6Mobile" inputmode="numeric" maxlength="10" placeholder="10-digit mobile"></div></div><div id="cab6Rental" class="cab6Extra"><div class="cab6Field"><select id="cab6RentalPkg"><option value="1|10">1 Hour / 10 km</option><option value="2|20" selected>2 Hours / 20 km</option><option value="4|40">4 Hours / 40 km</option><option value="8|80">8 Hours / 80 km</option><option value="12|120">12 Hours / 120 km</option></select></div></div><button type="button" id="cab6Go" class="cab6Go">Search Cabs</button></div>`);
  bindSearchPage();
  const noteInput=$('cab6PickupNote');
  if(noteInput){noteInput.value=S.pickupNote||'';noteInput.oninput=()=>{S.pickupNote=noteInput.value.slice(0,160)}}
- nearbyWatchdog();initSearchProvider().catch(()=>{});$('cab6EntryLocate').onclick=()=>useGps(true);useGps(false);renderEntryMap();
+ if(restore){
+  // Restore selected route and trip type without replacing accurate GPS pickup.
+  if(S.p)$('cab6P').value=S.p.label||'';
+  if(S.d)$('cab6D').value=S.d.label||'';
+  qa('[data-trip]').forEach(btn=>btn.classList.toggle('on',btn.dataset.trip===S.tripType));
+  const round=S.tripType==='roundtrip',pool=S.tripType==='carpool';
+  $('cab6RoundNote')?.classList.toggle('show',round);
+  $('cab6PoolBox')?.classList.toggle('show',pool);
+  if($('cab6NightHalt'))$('cab6NightHalt').checked=!!S.nightHalt;
+  if(pool){
+   S.schedule='later';
+   if($('cab6Go'))$('cab6Go').textContent='Find / Create Pool';
+   if($('cab6AddStop'))$('cab6AddStop').parentElement.style.display='none';
+  }
+  if(S.schedule==='later'){
+   $('cab6Schedule')?.classList.add('show');
+   q('[data-q="schedule"]')?.classList.add('on');
+   if($('cab6At'))$('cab6At').value=S.scheduledAt||'';
+  }
+  if(S.rider==='other'){
+   $('cab6Other')?.classList.add('show');
+   q('[data-q="other"]')?.classList.add('on');
+  }
+  if($('cab6PoolSeats'))$('cab6PoolSeats').value=String(S.carpoolSeats||1);
+  if($('cab6PoolVehicle'))$('cab6PoolVehicle').value=S.carpoolVehicle||'Any';
+  if($('cab6PoolName'))$('cab6PoolName').value=S.carpoolName||'';
+  if($('cab6PoolMobile'))$('cab6PoolMobile').value=S.carpoolMobile||'';
+  if($('cab6Name'))$('cab6Name').value=S.riderName||'';
+  if($('cab6Mobile'))$('cab6Mobile').value=S.riderMobile||'';
+  if(!pool&&S.stops?.length){
+   for(const p of S.stops){
+    $('cab6AddStop')?.click();
+    const items=qa('.cab6StopInput');
+    if(items.length)items[items.length-1].value=p.label||'';
+   }
+  }
+  pickupStatus(S.p?'Pickup retained from previous step. Tap ◎ to refresh GPS.':'Choose a pickup or tap ◎ for GPS.');
+  if(S.p&&Number.isFinite(S.p.lat)&&Number.isFinite(S.p.lng))
+   loadNearbyPlaces(S.p.lat,S.p.lng).catch(()=>{});
+ }else useGps(false);
+ nearbyWatchdog();initSearchProvider().catch(()=>{});$('cab6EntryLocate').onclick=()=>useGps(true);renderEntryMap();
 }
 function bindSearchPage(){
  renderRecents();const addStop=$('cab6AddStop');if(addStop)addStop.onclick=()=>{const list=$('cab6Stops'),count=list?.querySelectorAll('.cab6StopRow').length||0;if(count>=3)return say('Maximum 3 stops allowed.');const row=document.createElement('div');row.className='cab6StopRow';row.innerHTML='<div class="cab6Field"><input class="cab6StopInput" autocomplete="off" placeholder="Enter stop '+(count+1)+'"></div><button type="button" class="cab6StopRemove" aria-label="Remove stop">✕</button>';row.querySelector('.cab6StopRemove').onclick=()=>row.remove();list.appendChild(row)};qa('[data-trip]').forEach(btn=>btn.onclick=()=>{qa('[data-trip]').forEach(x=>x.classList.toggle('on',x===btn));S.tripType=btn.dataset.trip||'oneway';const round=S.tripType==='roundtrip',pool=S.tripType==='carpool';$('cab6RoundNote')?.classList.toggle('show',round);$('cab6PoolBox')?.classList.toggle('show',pool);if(round)S.selected='sedan';if(pool){S.mode='ride';S.schedule='later';if($('cab6Go'))$('cab6Go').textContent='Find / Create Pool';const sch=q('[data-q="schedule"]');if(sch)sch.classList.add('on');$('cab6Schedule')?.classList.add('show');if($('cab6Stops'))$('cab6Stops').innerHTML='';if($('cab6AddStop'))$('cab6AddStop').parentElement.style.display='none'}else{if($('cab6Go'))$('cab6Go').textContent='Search Cabs';if($('cab6AddStop'))$('cab6AddStop').parentElement.style.display='';}});const nh=$('cab6NightHalt');if(nh)nh.onchange=e=>S.nightHalt=!!e.target.checked;$('cab6Gps').onclick=()=>useGps(true);$('cab6Swap').onclick=()=>{pickupUserRevision++;pickupGpsSeq++;const a=$('cab6P').value;$('cab6P').value=$('cab6D').value;$('cab6D').value=a;const t=S.p;S.p=S.d;S.d=t};
@@ -175,18 +256,49 @@ function loadScript(src,id){return new Promise((ok,no)=>{const old=$(id);if(old)
 function loadCss(href,id){if($(id))return;const l=document.createElement('link');l.id=id;l.rel='stylesheet';l.href=href;document.head.appendChild(l)}
 async function waitGoogleKey(ms=2200){const end=Date.now()+ms;while(Date.now()<end){const k=String(cfg().googleMapsApiKey||'').trim();if(k)return k;await new Promise(r=>setTimeout(r,120))}return String(cfg().googleMapsApiKey||'').trim()}
 async function initSearchProvider(){
+ if(S.provider==='google'&&window.google?.maps?.Geocoder)return;
  if(searchProviderPromise)return searchProviderPromise;
- searchProviderPromise=(async()=>{const k=await waitGoogleKey();if(k){try{if(!window.google?.maps)await loadScript('https://maps.googleapis.com/maps/api/js?key='+encodeURIComponent(k)+'&libraries=places&v=weekly','cab6-google');if(window.google?.maps){S.provider='google';return}}catch(e){console.warn('DBest Google Places unavailable',e)}}S.provider=String(cfg().supabaseUrl||'').trim()?'supabase':'osm'})();return searchProviderPromise
+ searchProviderPromise=(async()=>{
+  // Runtime keys can arrive after page paint. Waiting is better than presenting
+  // an unrelated village as a precise pickup address.
+  const k=await waitGoogleKey(6500);
+  if(k){
+   try{
+    if(!window.google?.maps?.Geocoder)await loadScript('https://maps.googleapis.com/maps/api/js?key='+encodeURIComponent(k)+'&libraries=places&v=weekly','cab6-google');
+    if(window.google?.maps?.Geocoder){S.provider='google';return}
+   }catch(e){console.warn('DBest Google Maps SDK unavailable',e)}
+  }
+  S.provider=String(cfg().supabaseUrl||'').trim()?'supabase':'osm';
+ })();
+ try{return await searchProviderPromise}
+ finally{if(S.provider!=='google')searchProviderPromise=null}
 }
 async function initLeaflet(){
  if(window.L)return window.L;if(leafletPromise)return leafletPromise;
  loadCss('https://unpkg.com/leaflet@1.9.4/dist/leaflet.css','cab6-leaflet-css');leafletPromise=loadScript('https://unpkg.com/leaflet@1.9.4/dist/leaflet.js','cab6-leaflet').then(()=>window.L);return leafletPromise
 }
+let cabReverseGoogleStatus='not_checked';
+function cabGoogleStatusMessage(){
+ const messages={
+  browser_key_missing:'Google Maps QA key not received',
+  google_sdk_unavailable:'Google Maps SDK not loaded',
+  REQUEST_DENIED:'Google Geocoding access denied',
+  OVER_QUERY_LIMIT:'Google Geocoding quota reached',
+  ZERO_RESULTS:'No mapped Google street address',
+  UNKNOWN_ERROR:'Google Geocoding unavailable',
+  geocoder_error:'Google Geocoding failed',
+  response_timeout:'Google address lookup timed out',
+  ERROR:'Google address service unreachable',
+  INVALID_REQUEST:'Google address request invalid'
+ };
+ return messages[cabReverseGoogleStatus]||'Google address lookup: '+cabReverseGoogleStatus;
+}
 async function reverseGoogle(lat,lng){
+ cabReverseGoogleStatus='checking';
  try{
   // Google Maps credentials arrive asynchronously from the existing
   // DBest runtime config. Do not permanently accept an early fallback.
-  await Promise.race([initSearchProvider(),new Promise(resolve=>setTimeout(resolve,2400))]);
+  await initSearchProvider();
   if(!window.google?.maps?.Geocoder){
    const key=await waitGoogleKey(3500);
    if(key){
@@ -196,24 +308,66 @@ async function reverseGoogle(lat,lng){
     ]);
    }
   }
-  if(!window.google?.maps?.Geocoder)return '';
+  if(!window.google?.maps?.Geocoder){
+   cabReverseGoogleStatus=String(cfg().googleMapsApiKey||'').trim()?'google_sdk_unavailable':'browser_key_missing';
+   return '';
+  }
   S.provider='google';
-  return await new Promise(resolve=>{
-   let done=false;
-   const finish=v=>{if(done)return;done=true;clearTimeout(timer);resolve(v)};
-   const timer=setTimeout(()=>finish(''),6500);
-   new google.maps.Geocoder().geocode({location:{lat,lng}},(rows,status)=>{
-    finish(status==='OK'&&rows?.[0]?.formatted_address?rows[0].formatted_address:'');
-   });
-  });
- }catch(e){console.warn('Pickup Google reverse geocode failed',e);return ''}
+  // Maps JavaScript Geocoder returns a Promise. Earlier callback-based QA
+  // calls sometimes timed out silently, leaving the status at "checking".
+  const outcome=await Promise.race([
+    Promise.resolve().then(()=>new google.maps.Geocoder().geocode({location:{lat,lng},language:'en'}))
+      .then(response=>({response}),error=>({error})),
+    new Promise(resolve=>setTimeout(()=>resolve({timeout:true}),7500))
+  ]);
+  if(outcome.timeout){
+    cabReverseGoogleStatus='response_timeout';
+    return '';
+  }
+  if(outcome.error){
+    const raw=String(outcome.error?.code||outcome.error?.status||outcome.error?.message||outcome.error||'UNKNOWN_ERROR');
+    cabReverseGoogleStatus=['REQUEST_DENIED','OVER_QUERY_LIMIT','ZERO_RESULTS','INVALID_REQUEST','UNKNOWN_ERROR','ERROR']
+      .find(code=>raw.includes(code))||'geocoder_error';
+    console.warn('Google reverse lookup status',cabReverseGoogleStatus);
+    return '';
+  }
+  const rows=outcome.response?.results;
+  if(!Array.isArray(rows)||!rows.length){
+    cabReverseGoogleStatus='ZERO_RESULTS';
+    return '';
+  }
+  cabReverseGoogleStatus='OK';
+  // Prefer mapped road/premise/address over administrative locality.
+  // Retain actual device GPS coordinates for all routing.
+  const score=r=>{
+    const t=Array.isArray(r?.types)?r.types:[];
+    if(t.includes('street_address'))return 100;
+    if(t.includes('premise')||t.includes('subpremise'))return 95;
+    if(t.includes('intersection'))return 90;
+    if(t.includes('route'))return 85;
+    if(t.includes('plus_code'))return 55;
+    if(t.includes('neighborhood')||t.includes('sublocality'))return 35;
+    if(t.includes('locality'))return 20;
+    return 0;
+  };
+  const best=rows.filter(r=>String(r?.formatted_address||'').trim())
+    .sort((a,b)=>score(b)-score(a))[0];
+  return best?.formatted_address||'';
+ }catch(e){cabReverseGoogleStatus='geocoder_error';console.warn('Pickup Google reverse geocode failed',e);return ''}
 }
 async function reverseNominatim(lat,lng){
  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),8500);
  try{
-  const r=await fetch('https://nominatim.openstreetmap.org/reverse?format=jsonv2&addressdetails=1&lat='+encodeURIComponent(lat)+'&lon='+encodeURIComponent(lng),{headers:{Accept:'application/json'},signal:controller.signal});
+  const r=await fetch('https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&addressdetails=1&lat='+encodeURIComponent(lat)+'&lon='+encodeURIComponent(lng),{headers:{Accept:'application/json'},signal:controller.signal});
   if(!r.ok)return '';
-  const j=await r.json();return String(j.display_name||'').trim();
+  const j=await r.json(),a=j?.address||{};
+  const road=String(a.road||a.pedestrian||a.residential||a.footway||'').trim();
+  const locality=String(a.suburb||a.neighbourhood||a.village||a.town||a.city||'').trim();
+  const district=String(a.city_district||a.county||a.state_district||'').trim();
+  const state=String(a.state||'').trim(),postcode=String(a.postcode||'').trim();
+  // Display a mapped road first when one is available; never invent one.
+  const structured=[road,locality,district,state,postcode].filter(Boolean).filter((x,i,all)=>all.indexOf(x)===i);
+  return road&&structured.length?structured.join(', '):String(j.display_name||'').trim();
  }catch(e){console.warn('Pickup OSM reverse geocode failed',e);return ''}finally{clearTimeout(timer)}
 }
 function placePhotoUrl(lat,lng,name){return 'https://maps.googleapis.com/maps/api/streetview?size=360x220&location='+encodeURIComponent(lat+','+lng)+'&fov=80&pitch=0&key='+encodeURIComponent(googleKey())}
@@ -403,8 +557,8 @@ async function useGps(noisy){
      if(S.p&&S.p.lat===lat&&S.p.lng===lng&&S.p.source==='device-gps'){
        S.p.label=label;
        if(input.value===fallback||!input.value.trim())input.value=label;
-       pickupStatus('GPS '+gpsAccuracyText(accuracy)+(googleAddress?' · Google Maps address':label===fallback?' · Address unavailable':' · Address fallback')+
-         (lowAccuracy?' · Confirm pickup manually for accuracy.':' · You can adjust pickup.'),lowAccuracy);
+       pickupStatus('GPS '+gpsAccuracyText(accuracy)+(googleAddress?' · Google road/address':label===fallback?' · '+cabGoogleStatusMessage():' · '+cabGoogleStatusMessage()+' · Approximate address (fallback)')+
+         (lowAccuracy?' · Location may be approximate.':' · Address may differ from actual road.'),lowAccuracy||!googleAddress);
      }
    }catch(e){
      console.warn('Pickup reverse geocoding failed',e);
@@ -431,8 +585,8 @@ async function renderEntryMap(){
  try{if(S.entryMap&&S.entryMap.remove)S.entryMap.remove()}catch(e){}S.entryMap=null;
  try{
    const L=await initLeaflet();if(request!==entryMapSeq||!el.isConnected)return;
-   el.innerHTML='';S.entryMap=L.map(el,{zoomControl:false,attributionControl:false,preferCanvas:true}).setView([pos.lat,pos.lng],14);
-   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(S.entryMap);
+   el.innerHTML='';S.entryMap=L.map(el,{zoomControl:false,attributionControl:true,preferCanvas:true}).setView([pos.lat,pos.lng],14);
+   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'}).addTo(S.entryMap);
    L.circleMarker([pos.lat,pos.lng],{radius:8,weight:4,color:'#fff',fillColor:'#2362ee',fillOpacity:1}).addTo(S.entryMap);
    setTimeout(()=>S.entryMap?.invalidateSize?.(),100);
  }catch(e){console.warn('Entry map failed',e)}
@@ -486,7 +640,7 @@ async function cabGoogleSuggestions(query,origin,nearby){
        const p=s.placePrediction;
        return p?{label:String(p.text?.text||p.mainText?.text||''),
          googlePrediction:p,distanceMeters:Number.isFinite(+p.distanceMeters)?+p.distanceMeters:undefined}:null;
-     }).filter(p=>p&&p.label&&(!nearby||p.distanceMeters==null||p.distanceMeters<=CAB_DESTINATION_NEARBY_KM*1000)).slice(0,8);
+     }).filter(p=>p&&p.label&&(!nearby||(Number.isFinite(p.distanceMeters)&&p.distanceMeters<=CAB_DESTINATION_NEARBY_KM*1000))).slice(0,8);
    }
    // Old Google API offers a location *bias*, not a hard boundary.
    // Suppress predictions lacking trustworthy distance while in local mode.
@@ -631,8 +785,10 @@ function bindSearch(i,b,k){
        (Number.isFinite(x.distanceKm)?' · '+Math.round(x.distanceKm)+' km away':'')+'</small></button>').join('');
      box.classList.add('show');
      qa('button',box).forEach(btn=>btn.onclick=async()=>{
+       if(run!==seq||inp.value.trim()!==term)return;
        const p=await resolvePlace(rows[+btn.dataset.i]);
        if(!p)return say('Could not resolve this location.');
+       if(run!==seq||!inp.isConnected)return;
        if(k==='d'&&!cabDestinationPermitted(p))
          return say('Destination is outside the nearby search area. Tap Search all India for an outstation ride.');
        if(k==='p'){
@@ -660,9 +816,42 @@ function realisticRoadMinutes(km,providerMin){
  const floor=Math.max(2,Math.ceil((k/avgKmph)*60));
  return Math.max(Math.round(raw),floor)
 }
-async function routeOSRM(){const pts=[S.p,...(S.stops||[]),S.d].filter(Boolean),coords=pts.map(x=>`${x.lng},${x.lat}`).join(';');const u=`https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`;const r=await fetch(u,{cache:'no-store'}),j=await r.json(),x=j.routes?.[0];if(!x)throw new Error('No route');const km=x.distance/1000,providerMin=Math.max(1,Math.round(x.duration/60));return{km,min:realisticRoadMinutes(km,providerMin),providerMin,geo:x.geometry?.coordinates||[]}}
+async function routeOSRM(){
+ const round=S.mode!=='rental'&&S.tripType==='roundtrip';
+ const outward=[S.p,...(S.stops||[]),S.d].filter(Boolean);
+ const journey=async points=>{
+  const coords=points.map(x=>`${x.lng},${x.lat}`).join(';');
+  const url=`https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`;
+  const response=await fetch(url,{cache:'no-store'});
+  if(!response.ok)throw new Error('Road route HTTP '+response.status);
+  const json=await response.json(),route=json.routes?.[0];
+  if(json.code!=='Ok'&&json.code!==undefined)throw new Error('Road route '+json.code);
+  if(!route||!Number.isFinite(route.distance)||!Number.isFinite(route.duration)||route.distance<=0)
+   throw new Error('No valid road route');
+  return {km:route.distance/1000,min:Math.max(1,route.duration/60),
+   geo:Array.isArray(route.geometry?.coordinates)?route.geometry.coordinates:[]};
+ };
+ if(!round){
+  const leg=await journey(outward);
+  const providerMin=Math.max(1,Math.round(leg.min));
+  return {km:leg.km,min:realisticRoadMinutes(leg.km,providerMin),
+   providerMin,geo:leg.geo,roundTripRouted:false};
+ }
+ // Asking OSRM to solve P → D → P as one continuous waypoint route can
+ // impose a long U-turn detour. Quote both real road directions independently.
+ // The return travels from D directly back to P; outward stops stay outward.
+ const [onward,back]=await Promise.all([journey(outward),journey([S.d,S.p])]);
+ const km=onward.km+back.km,providerMin=Math.max(1,Math.round(onward.min+back.min));
+ const geo=onward.geo.concat(back.geo.length?back.geo.slice(1):[]);
+ const imbalance=Math.max(onward.km,back.km)/Math.max(.1,Math.min(onward.km,back.km));
+ return {km,min:realisticRoadMinutes(km,providerMin),providerMin,geo,
+  roundTripRouted:true,legs:{outwardKm:onward.km,returnKm:back.km},
+  routeWarning:imbalance>1.5&&Math.abs(onward.km-back.km)>2
+   ?'Road distance differs significantly between the outward and return journeys. Verify before booking.'
+   :''};
+}
 async function continueRide(){
- if(S.tripType==='carpool'){S.schedule='later';if(!S.scheduledAt)return say('Please select Car Pool date and time.');if(!S.carpoolName||S.carpoolMobile.length!==10)return say('Please enter passenger name and 10-digit mobile.');if(S.carpoolVehicle==='Sedan'&&S.carpoolSeats>3)return say('Sedan Car Pool supports up to 3 passenger seats.');}
+ if(S.tripType==='carpool'){S.schedule='later';if(!validCabSchedule(S.scheduledAt))return say('Choose a Car Pool departure at least 10 minutes ahead and within the next 90 days.');if(!S.carpoolName||S.carpoolMobile.length!==10)return say('Please enter passenger name and 10-digit mobile.');if(S.carpoolVehicle==='Sedan'&&S.carpoolSeats>3)return say('Sedan Car Pool supports up to 3 passenger seats.');}
  if(S.schedule==='later'&&!S.scheduledAt)return say('Please select schedule date and time.');if(S.rider==='other'&&(!S.riderName||S.riderMobile.length!==10))return say('Please enter rider name and 10-digit mobile.');
  const b=$('cab6Go');if(b){b.disabled=true;b.textContent='Checking route…'}
  try{if(!S.p)S.p=await geocodeText($('cab6P')?.value);if(S.mode!=='rental'&&!S.d)S.d=await geocodeText($('cab6D')?.value,'d');if(S.mode!=='rental'){const stopTexts=qa('.cab6StopInput').map(x=>String(x.value||'').trim()).filter(Boolean).slice(0,3);S.stops=[];for(const t of stopTexts){const p=await geocodeText(t);if(!p)return say('Please enter a valid stop location.');S.stops.push(p)}}if(!S.p||S.mode!=='rental'&&!S.d)return say(S.mode==='rental'?'Please enter a valid pickup location.':'Please enter valid pickup and destination.');if(S.mode==='rental'){S.route={km:S.rentalKm,min:S.rentalHours*60,geo:[]};return vehicles()}S.route=await routeOSRM();saveRecent(S.d?.label||$('cab6D')?.value);if(S.tripType==='carpool')return createCarpoolRequest();vehicles()}catch(e){console.warn('Cab route error',e);say('Unable to calculate the route. Please try again.')}finally{if(b){b.disabled=false;b.textContent=S.tripType==='carpool'?'Find / Create Pool':'Search Cabs'}}
@@ -689,7 +878,7 @@ function poolStatusScreen(d,mobile){
  const assigned=!!driver?.name||String(poolStatus)==='Assigned'||String(poolStatus)==='In Progress';
  const pin=d.startPin||'';
  const jobStatus=job?.status||'';
- screen(`<div class="cab6PoolSuccess"><div style="display:flex;justify-content:space-between;gap:10px;align-items:start"><div><div style="display:inline-block;padding:5px 8px;border-radius:999px;background:#eef4ff;color:#1f5cf3;font-size:9px;font-weight:900">CAR POOL</div><h2 style="margin-top:8px">${assigned?'Vaahak Assigned':ready?'Pool Ready':'Pool Forming'}</h2></div><span style="padding:6px 9px;border-radius:999px;background:${ready?'#e9f9ef':'#fff6df'};color:${ready?'#17633f':'#8a5b00'};font-size:9px;font-weight:900">${esc(String(poolStatus).toUpperCase())}</span></div><div class="cab6PoolId">${esc(id)}</div><div class="cab6RouteRow"><small>Route</small><b>${esc(S.p?.label||req.pickup||pool.pickup||'')} → ${esc(S.d?.label||req.dropoff||pool.dropoff||'')}</b></div><div class="cab6RouteRow"><small>Schedule</small><b>${esc(time)}</b></div><div class="cab6Meta" style="margin-top:10px"><div><small>Vehicle</small><b>${esc(vehicle)}</b></div><div><small>Seats held</small><b>${held} / ${totalSeats}</b></div><div><small>Paid seats</small><b>${confirmed}</b></div><div><small>Ready from</small><b>${minReady} seats</b></div></div><div class="cab6Fare"><div><small style="color:#858da0;font-size:9px">Per-seat fare</small><strong>₹${perSeat}</strong></div><div style="text-align:right"><small style="color:#858da0;font-size:9px">Your total</small><div style="font-size:20px;font-weight:950;color:#172960">₹${total}</div></div></div>${paid?'<div class="cab6RouteRow"><small>Payment</small><b style="color:#17633f">✓ Razorpay Verified</b></div>':''}${driver?.name?`<div class="cab6RouteRow"><small>Vaahak</small><b>${esc(driver.name)} • ${esc(driver.vehicle||vehicle)}${driver.vehicleNo?' • '+esc(driver.vehicleNo):''}</b></div>`:''}${pin?`<div style="margin:12px 0;padding:13px;border-radius:16px;background:#f2f6ff;text-align:center"><small style="display:block;color:#667085">POOL START PIN</small><b style="font-size:28px;letter-spacing:6px;color:#174da8">${esc(pin)}</b></div>`:''}${jobStatus?`<div class="cab6RouteRow"><small>Ride status</small><b>${esc(jobStatus)}</b></div>`:''}<p style="font-size:10px;color:#68758b;line-height:1.5">${paid?(ready?'Your paid seat is confirmed. The shared Vaahak job is being handled as one pooled ride.':'Your seat is paid and confirmed. DBest is waiting for enough paid seats to make this pool operational.'):'Paying confirms and reserves your seat. Unpaid seat holds are not counted for Vaahak dispatch.'}</p>${paid?'<button type="button" id="cab6PoolRefresh" class="cab6Book">Refresh Pool Status</button>':'<button type="button" id="cab6PoolPay" class="cab6Book">Pay & Confirm Seat • ₹'+total+'</button><button type="button" id="cab6PoolCancel" class="btn soft wide" style="margin-top:8px">Cancel Request</button>'}</div>`,'DBEST_CAB_SELECTED_UI.open()');
+ screen(`<div class="cab6PoolSuccess"><div style="display:flex;justify-content:space-between;gap:10px;align-items:start"><div><div style="display:inline-block;padding:5px 8px;border-radius:999px;background:#eef4ff;color:#1f5cf3;font-size:9px;font-weight:900">CAR POOL</div><h2 style="margin-top:8px">${assigned?'Vaahak Assigned':ready?'Pool Ready':'Pool Forming'}</h2></div><span style="padding:6px 9px;border-radius:999px;background:${ready?'#e9f9ef':'#fff6df'};color:${ready?'#17633f':'#8a5b00'};font-size:9px;font-weight:900">${esc(String(poolStatus).toUpperCase())}</span></div><div class="cab6PoolId">${esc(id)}</div><div class="cab6RouteRow"><small>Route</small><b>${esc(S.p?.label||req.pickup||pool.pickup||'')} → ${esc(S.d?.label||req.dropoff||pool.dropoff||'')}</b></div><div class="cab6RouteRow"><small>Schedule</small><b>${esc(time)}</b></div><div class="cab6Meta" style="margin-top:10px"><div><small>Vehicle</small><b>${esc(vehicle)}</b></div><div><small>Seats held</small><b>${held} / ${totalSeats}</b></div><div><small>Paid seats</small><b>${confirmed}</b></div><div><small>Ready from</small><b>${minReady} seats</b></div></div><div class="cab6Fare"><div><small style="color:#858da0;font-size:9px">Per-seat fare</small><strong>₹${perSeat}</strong></div><div style="text-align:right"><small style="color:#858da0;font-size:9px">Your total</small><div style="font-size:20px;font-weight:950;color:#172960">₹${total}</div></div></div>${paid?'<div class="cab6RouteRow"><small>Payment</small><b style="color:#17633f">✓ Razorpay Verified</b></div>':''}${driver?.name?`<div class="cab6RouteRow"><small>Vaahak</small><b>${esc(driver.name)} • ${esc(driver.vehicle||vehicle)}${driver.vehicleNo?' • '+esc(driver.vehicleNo):''}</b></div>`:''}${pin?`<div style="margin:12px 0;padding:13px;border-radius:16px;background:#f2f6ff;text-align:center"><small style="display:block;color:#667085">POOL START PIN</small><b style="font-size:28px;letter-spacing:6px;color:#174da8">${esc(pin)}</b></div>`:''}${jobStatus?`<div class="cab6RouteRow"><small>Ride status</small><b>${esc(jobStatus)}</b></div>`:''}<p style="font-size:10px;color:#68758b;line-height:1.5">${paid?(ready?'Your paid seat is confirmed. The shared Vaahak job is being handled as one pooled ride.':'Your seat is paid and confirmed. DBest is waiting for enough paid seats to make this pool operational.'):'Paying confirms and reserves your seat. Unpaid seat holds are not counted for Vaahak dispatch.'}</p>${paid?'<button type="button" id="cab6PoolRefresh" class="cab6Book">Refresh Pool Status</button>':'<button type="button" id="cab6PoolPay" class="cab6Book">Pay & Confirm Seat • ₹'+total+'</button><button type="button" id="cab6PoolCancel" class="btn soft wide" style="margin-top:8px">Cancel Request</button>'}</div>`,'DBEST_CAB_SELECTED_UI.returnToSearch()');
  if($('cab6PoolPay'))$('cab6PoolPay').onclick=()=>payCarpoolSeat(id,mobile,total,req.name||S.carpoolName||'DBest Passenger');
  if($('cab6PoolRefresh'))$('cab6PoolRefresh').onclick=()=>refreshCarpool(id,mobile);
  if($('cab6PoolCancel'))$('cab6PoolCancel').onclick=()=>cancelCarpool(id,mobile)
@@ -699,6 +888,7 @@ async function carpoolJson(url,payload){
  if(!r.ok)throw new Error(j.error||j.message||('HTTP '+r.status));return j
 }
 async function payCarpoolSeat(id,mobile,total,name){
+ if(cabQaPreview())return say('QA PREVIEW ONLY: Car Pool payments are disabled. No transaction created.');
  const btn=$('cab6PoolPay');if(btn){btn.disabled=true;btn.textContent='Opening Razorpay…'}
  try{
   const order=await carpoolJson('/api/razorpay/create-order',{kind:'carpool_seat',dbestRef:id,mobile,section:'Cab',sub:'Car Pool'});
@@ -714,6 +904,8 @@ async function payCarpoolSeat(id,mobile,total,name){
  finally{if(btn){btn.disabled=false;btn.textContent='Pay & Confirm Seat • ₹'+total}}
 }
 async function createCarpoolRequest(){
+ if(cabQaPreview())return say('QA PREVIEW ONLY: Car Pool form verified. Real request creation is disabled to protect active customers.');
+ if(!validCabSchedule(S.scheduledAt))return say('Choose a departure within the next 90 days.');
  const b=$('cab6Go');if(b){b.disabled=true;b.textContent='Finding pool…'}
  try{
   const d=await carpoolApi('create',{name:S.carpoolName,mobile:S.carpoolMobile,pickup:pickupDisplayLabel(),dropoff:S.d?.label||'',pickupLat:S.p?.lat,pickupLng:S.p?.lng,dropLat:S.d?.lat,dropLng:S.d?.lng,distanceKm:S.route?.km||0,scheduledAt:S.scheduledAt,seatsRequested:S.carpoolSeats,vehiclePref:S.carpoolVehicle});
@@ -723,6 +915,7 @@ async function createCarpoolRequest(){
  finally{if(b){b.disabled=false;b.textContent='Find / Create Pool'}}
 }
 async function confirmCarpool(id,mobile){
+ if(cabQaPreview())return say('QA PREVIEW ONLY: Confirming Car Pool seats is disabled.');
  try{const d=await carpoolApi('confirm',{id,mobile});d.confirmed=true;poolStatusScreen(d,mobile);say('Your Car Pool seat is confirmed.')}catch(e){const m=String(e.message||'');say(m==='confirmation_expired'?'Seat hold expired. Please create a new Car Pool request.':'Unable to confirm seat. Please retry.')}
 }
 async function refreshCarpool(id,mobile){
@@ -731,9 +924,10 @@ async function refreshCarpool(id,mobile){
 async function cancelCarpool(id,mobile){
  try{await carpoolApi('decline',{id,mobile});try{localStorage.removeItem('dbest_carpool_last')}catch(_){}say('Car Pool request cancelled.');open()}catch(e){say(String(e?.message||'')==='paid_request_refund_required'?'Paid Car Pool cancellation requires a refund workflow. Please contact DBest support.':'Unable to cancel Car Pool request.')}
 }
-function roundRules(){try{const x=JSON.parse(localStorage.getItem('d2_ride_config')||'null'),r=x?.roundTripRules||{};return{sedan:{perKm:Number(r.sedan?.perKm||15),nightHalt:Number(r.sedan?.nightHalt||1000)},suv:{perKm:Number(r.suv?.perKm||18),nightHalt:Number(r.suv?.nightHalt||1500)}}}catch(e){return{sedan:{perKm:15,nightHalt:1000},suv:{perKm:18,nightHalt:1500}}}}function visibleVehicles(){return S.mode==='rental'||S.tripType!=='roundtrip'?VEH:VEH.filter(v=>v.id==='sedan'||v.id==='suv')}function totalKm(){const k=S.route?.km||S.rentalKm;return S.mode!=='rental'&&S.tripType==='roundtrip'?k*2:k}function totalMin(){if(S.mode==='rental')return S.rentalHours*60;const oneWay=realisticRoadMinutes(Number(S.route?.km||0),Number(S.route?.min||1));return S.tripType==='roundtrip'?oneWay*2:oneWay}function fare(v){const k=S.route?.km||S.rentalKm;if(S.mode!=='rental'&&S.tripType==='roundtrip'){const rr=roundRules()[v.id];if(!rr)return 0;return Math.round((k*2)*rr.perKm+(S.nightHalt?rr.nightHalt:0))}return Math.round(Math.max(v.min,v.base+v.km*k)+PLATFORM_FEE)}
-function pickupEta(v){const m={bike:4,auto:5,sedan:6,suv:7};return m[v.id]||6}
-function vehCard(v){const rr=S.tripType==='roundtrip'?roundRules()[v.id]:null;return `<button type="button" class="cab6Veh ${S.selected===v.id?'on':''}" data-v="${v.id}"><span class="photo"><img src="${IMG[v.id]}" alt="${esc(v.name)}" loading="eager"></span><b>${esc(v.name)}${S.tripType==='roundtrip'?'<span style="display:block;font-size:7px;color:#315efb;margin-top:2px">ROUND TRIP</span>':''}</b><small>${v.seats} seat${v.seats>1?'s':''}${rr?' • ₹'+rr.perKm+'/km':''}</small><small style="color:#315efb;font-weight:900;margin-top:2px">~${pickupEta(v)} min away</small><strong>₹${fare(v)}</strong></button>`}
+function roundRules(){try{const x=JSON.parse(localStorage.getItem('d2_ride_config')||'null'),r=x?.roundTripRules||{};return{sedan:{perKm:Number(r.sedan?.perKm||15),nightHalt:Number(r.sedan?.nightHalt||1000)},suv:{perKm:Number(r.suv?.perKm||18),nightHalt:Number(r.suv?.nightHalt||1500)}}}catch(e){return{sedan:{perKm:15,nightHalt:1000},suv:{perKm:18,nightHalt:1500}}}}function visibleVehicles(){return S.mode==='rental'||S.tripType!=='roundtrip'?VEH:VEH.filter(v=>v.id==='sedan'||v.id==='suv')}function totalKm(){const k=S.route?.km||S.rentalKm;return S.mode!=='rental'&&S.tripType==='roundtrip'&&!S.route?.roundTripRouted?k*2:k}function totalMin(){if(S.mode==='rental')return S.rentalHours*60;const routeMin=realisticRoadMinutes(Number(S.route?.km||0),Number(S.route?.min||1));return S.tripType==='roundtrip'&&!S.route?.roundTripRouted?routeMin*2:routeMin}function fare(v){const k=S.route?.km||S.rentalKm;if(S.mode!=='rental'&&S.tripType==='roundtrip'){const rr=roundRules()[v.id];if(!rr)return 0;return Math.round(totalKm()*rr.perKm+(S.nightHalt?rr.nightHalt:0))}return Math.round(Math.max(v.min,v.base+v.km*k)+PLATFORM_FEE)}
+// No confirmed online Vaahak position is available on this quote screen.
+// Never manufacture a pickup ETA from the vehicle type.
+function vehCard(v){const rr=S.tripType==='roundtrip'?roundRules()[v.id]:null;return `<button type="button" class="cab6Veh ${S.selected===v.id?'on':''}" data-v="${v.id}"><span class="photo"><img src="${IMG[v.id]}" alt="${esc(v.name)}" loading="eager"></span><b>${esc(v.name)}${S.tripType==='roundtrip'?'<span style="display:block;font-size:7px;color:#315efb;margin-top:2px">ROUND TRIP</span>':''}</b><small>${v.seats} seat${v.seats>1?'s':''}${rr?' • ₹'+rr.perKm+'/km':''}</small><small style="color:#315efb;font-weight:900;margin-top:2px">Pickup ETA after assignment</small><strong>₹${fare(v)}</strong></button>`}
 function mapBlock(title,id='cab6Map'){return `<div class="cab6MapFrame"><div id="${id}" class="cab6Map"></div><div class="cab6MapShade"></div><div class="cab6RoutePill">${esc(title)}</div></div>`}
 async function renderRealMap(id){
  const el=$(id);if(!el)return;
@@ -745,7 +939,7 @@ async function renderRealMap(id){
 }
 function vehicles(){
  const list=visibleVehicles();if(!list.some(v=>v.id===S.selected))S.selected=list[0]?.id||'sedan';const k=totalKm(),m=totalMin(),title=`${pickupDisplayLabel()||'Pickup'} → ${S.mode==='rental'?'Hourly Rental':S.d?.label||'Destination'}${S.tripType==='roundtrip'?' → Return':''}`;
- screen(`${mapBlock(title)}<div class="cab6Sheet"><div class="cab6SheetHead"><b>Choose a ride</b><small>${S.tripType==='roundtrip'?'Same vehicle • Return included • Tolls extra':'Upfront fare'}</small></div><div class="cab6Meta"><div><small>${S.tripType==='roundtrip'?'Total round-trip distance':'Road distance'}</small><b>${k.toFixed(1)} km</b></div><div><small>${S.tripType==='roundtrip'?'Total driving time':'Travel time'}</small><b>~${m} min</b></div></div><div class="cab6Vehicles">${list.map(vehCard).join('')}</div><button type="button" id="cab6Book" class="cab6Book">Continue with ${esc(list.find(v=>v.id===S.selected)?.name||'Ride')}</button></div>`,'DBEST_CAB_SELECTED_UI.open()');
+ screen(`${mapBlock(title)}<div class="cab6Sheet"><div class="cab6SheetHead"><b>Choose a ride</b><small>${S.tripType==='roundtrip'?'Same vehicle • Return included • Tolls extra':'Upfront fare'}</small></div><div class="cab6Meta"><div><small>${S.tripType==='roundtrip'?'Total round-trip distance':'Road distance'}</small><b>${k.toFixed(1)} km</b></div><div><small>${S.tripType==='roundtrip'?'Total driving time':'Travel time'}</small><b>~${m} min</b></div></div>${S.tripType==='roundtrip'&&S.route?.legs?'<div class="cab6Legs" style="font-size:12px;color:#52627e;margin:12px 4px 4px">Outward: '+S.route.legs.outwardKm.toFixed(1)+' km · Return: '+S.route.legs.returnKm.toFixed(1)+' km'+(S.route.routeWarning?'<div style="font-weight:700;color:#aa5115;margin-top:5px">'+esc(S.route.routeWarning)+'</div>':'')+'</div>':''}<div class="cab6Vehicles">${list.map(vehCard).join('')}</div><button type="button" id="cab6Book" class="cab6Book">Continue with ${esc(list.find(v=>v.id===S.selected)?.name||'Ride')}</button></div>`,'DBEST_CAB_SELECTED_UI.returnToSearch()');
  qa('[data-v]').forEach(b=>b.onclick=()=>{S.selected=b.dataset.v;qa('[data-v]').forEach(x=>x.classList.toggle('on',x===b));$('cab6Book').textContent='Continue with '+(list.find(v=>v.id===S.selected)?.name||'Ride')});$('cab6Book').onclick=()=>confirmRide(S.selected);setTimeout(()=>renderRealMap('cab6Map'),40)
 }
 function confirmRide(id){
@@ -754,6 +948,6 @@ function confirmRide(id){
  $('cab6ConfirmBook').onclick=()=>book(id);setTimeout(()=>renderRealMap('cab6Map'),40)
 }
 function book(id){const pay=q('input[name="cab6pay"]:checked')?.value||'cash';try{if(typeof window.bookRide==='function'){window.rideDraft=window.rideDraft||{};const round=S.mode!=='rental'&&S.tripType==='roundtrip';Object.assign(window.rideDraft,{quotedFare:fare(VEH.find(x=>x.id===id)||{base:0,km:0,min:0}),pickup:pickupDisplayLabel(),pickupInstructions:String(S.pickupNote||'').trim(),pickupCoords:(S.p&&Number.isFinite(S.p.lat)&&Number.isFinite(S.p.lng))?{lat:S.p.lat,lng:S.p.lng,label:pickupDisplayLabel()}:null,stops:(S.stops||[]).map(x=>x?.label||'').filter(Boolean),stopCoords:(S.stops||[]).filter(x=>Number.isFinite(x?.lat)&&Number.isFinite(x?.lng)).map(x=>({lat:x.lat,lng:x.lng,label:x.label||''})),drop:S.mode==='rental'?`${S.rentalHours} Hours / ${S.rentalKm} km`:S.d?.label||'',dropCoords:(S.mode!=='rental'&&S.d&&Number.isFinite(S.d.lat)&&Number.isFinite(S.d.lng))?{lat:S.d.lat,lng:S.d.lng,label:S.d.label||''}:null,distance:round?totalKm():S.route.km,roundTripDistance:round?totalKm():null,estimatedMinutes:round?totalMin():S.route.min,selected:id,schedule:S.schedule,scheduledAt:S.scheduledAt,rider:S.rider,riderName:S.riderName,riderMobile:S.riderMobile,mode:S.mode,bookingType:S.mode==='rental'?'Rental':(round?'Round Trip':'Ride'),tripType:round?'roundtrip':'oneway',roundTrip:round,sameVehicle:round,returnPickup:round?(S.d?.label||''):null,returnDrop:round?pickupDisplayLabel():null,nightHalt:round&&S.nightHalt,tollsExtra:round,rentalHours:S.rentalHours,rentalKm:S.rentalKm});const f=document.createElement('form');f.innerHTML=`<input name="payment" value="${esc(pay)}">`;return window.bookRide({preventDefault(){},target:f},id)}}catch(e){console.warn('Booking handoff failed',e)}say('Ride details are ready. Please retry booking.')}
-const api={version:VERSION,open,vehicles,confirm:confirmRide};
+const api={version:VERSION,open,vehicles,confirm:confirmRide,returnToSearch,goCabHome};
 window.DBEST_CAB_SELECTED_UI=api;window.DBEST_CAB_GOOGLE=api;window.DBEST_CAB_MAPPLS_RENTAL=api;window.DBEST_ACTIVE_CAB_VERSION='SELECTED_REALMAP_V6';window.openRidePlatform=open;css();
 })();
