@@ -1,4 +1,4 @@
-// Isolated staging endpoint. NOT DEPLOYED. Does not publish master products.
+// Isolated staging endpoint. Isolated endpoint; no master publication. Does not publish master products.
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import {createClient} from "npm:@supabase/supabase-js@2";
 const cors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"apikey,authorization,content-type,x-dbest-owner-token","Access-Control-Allow-Methods":"POST,OPTIONS","Content-Type":"application/json"};
@@ -29,12 +29,12 @@ Deno.serve(async req=>{
  if(authError||!owner)return reply({error:"owner_session_invalid"},401);
  const batchId=crypto.randomUUID();
  const inserts=data.rows.map((r,i)=>({
-  batch_id:batchId,row_number:i+2,imported_by:owner,status:"pending_review",
+  batch_id:batchId,row_number:i+2,imported_by:owner,status:"draft",
   payload:{category:r.category.trim(),name:r.name.trim(),brand:String(r.brand||"").trim(),
    mrp:r.mrp,description:r.description.trim(),dimensions:r.dimensions.trim(),
    image_url:r.image_url.trim(),specifications:{description:r.description.trim(),dimensions:r.dimensions.trim()}}
  }));
  const {error}=await sb.from("dbest_master_catalogue_import_staging").insert(inserts);
  if(error){console.error("owner_catalogue_stage_failed",error.code);return reply({error:"staging_failed"},500)}
- return reply({ok:true,batchId,staged:inserts.length,published:0,status:"pending_review"});
+ return reply({ok:true,batchId,staged:inserts.length,published:0,status:"draft"});
 });
