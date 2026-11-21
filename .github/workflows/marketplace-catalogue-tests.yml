@@ -22,3 +22,5 @@ jobs:
         run: node tests/marketplace-vendor-offer-image.test.js
       - name: Vendor offer ownership
         run: node tests/marketplace-vendor-offer-rules.test.js
+      - name: Shared product multi-vendor grouping
+        run: node tests/marketplace-grouped-catalogue.test.js
