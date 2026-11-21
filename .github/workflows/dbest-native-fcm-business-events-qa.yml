@@ -1,0 +1,113 @@
+name: DBest Native FCM Business Events - Isolated QA
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feat/native-fcm-business-event-hooks-qa-20261111
+    paths:
+      - qa/native-fcm-business-events/**
+      - .github/workflows/dbest-native-fcm-business-events-qa.yml
+  pull_request:
+    paths:
+      - qa/native-fcm-business-events/**
+      - .github/workflows/dbest-native-fcm-business-events-qa.yml
+permissions:
+  contents: read
+jobs:
+  ephemeral-postgres-events:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 15
+    env:
+      PGHOST: localhost
+      PGPORT: "5432"
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: postgres
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare PostgreSQL client
+        run: command -v psql || (sudo apt-get -qq update && sudo apt-get -y -qq install postgresql-client)
+      - name: Create synthetic schema only in ephemeral CI database
+        run: psql -v ON_ERROR_STOP=1 -f qa/native-fcm-business-events/tests/01_schema_fixtures.sql
+      - name: Parse inert production-intended trigger function
+        run: |
+          psql -v ON_ERROR_STOP=1 -f qa/native-fcm-business-events/01_inert_trigger_function.sql
+          result="$(psql -At -c "SELECT count(*) FROM pg_trigger WHERE NOT tgisinternal AND tgname LIKE 'trg_dbest_fcm_%'")"
+          [ "$result" = "0" ] || { echo "::error::Inert function accidentally created triggers"; exit 1; }
+      - name: Prove trigger activation refuses absent owner-release guard
+        run: |
+          if psql -v ON_ERROR_STOP=1 -f qa/native-fcm-business-events/02_attach_triggers_after_approval.sql >/tmp/guard.log 2>&1; then
+            echo "::error::Notification activation succeeded without release guard"
+            exit 1
+          fi
+          result="$(psql -At -c "SELECT count(*) FROM pg_trigger WHERE NOT tgisinternal AND tgname LIKE 'trg_dbest_fcm_%'")"
+          [ "$result" = "0" ] || { echo "::error::Activation guard unexpectedly attached triggers"; exit 1; }
+          echo "PASS: Activation is disabled without explicit owner-reviewed session setting"
+      - name: Test synthetic business transitions, targeting, dedupe and rollback
+        run: psql -v ON_ERROR_STOP=1 -f qa/native-fcm-business-events/tests/02_test_transitions.sql
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Export actual trigger-generated events and final source state from temporary PostgreSQL
+        run: |
+          psql -At -v ON_ERROR_STOP=1 -f qa/native-fcm-business-events/tests/03_export_post_trigger_state.sql > /tmp/dbest-native-fcm-e2e-state.json
+          test -s /tmp/dbest-native-fcm-e2e-state.json
+      - name: End-to-end trigger queue to worker decision and Android FCM payload
+        run: |
+          deno run --allow-read=/tmp/dbest-native-fcm-e2e-state.json \
+            --config qa/native-fcm-business-events/edge/native-fcm-events/deno.json \
+            qa/native-fcm-business-events/tests/04_trigger_to_payload_e2e.ts \
+            /tmp/dbest-native-fcm-e2e-state.json
+
+  static-edge-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Typecheck hardened native FCM worker snapshot
+        run: deno check --config qa/native-fcm-business-events/edge/native-fcm-events/deno.json qa/native-fcm-business-events/edge/native-fcm-events/index.ts
+      - name: Test actual worker source revalidation against synthetic business records
+        run: deno test --config qa/native-fcm-business-events/edge/native-fcm-events/deno.json qa/native-fcm-business-events/tests/from_event_test.ts
+      - name: Test Partner data-only versus Member notification payloads and safe deep links
+        run: deno test --config qa/native-fcm-business-events/edge/native-fcm-events/deno.json qa/native-fcm-business-events/tests/payload_test.ts
+      - name: Verify production is not enabled by this branch
+        run: |
+          file=qa/native-fcm-business-events/edge/native-fcm-events/index.ts
+          helper=qa/native-fcm-business-events/edge/native-fcm-events/from-event.ts
+          policy=qa/native-fcm-business-events/edge/native-fcm-events/dispatch-policy.ts
+          grep -q 'offer_expires_at' "$helper"
+          grep -q 'status!=="Assigned"' "$helper"
+          grep -q 'New Order' "$helper"
+          grep -q 'from "./from-event.ts"' "$file"
+          grep -q 'from "./payload.ts"' "$file"
+          grep -q 'from "./dispatch-policy.ts"' "$file"
+          grep -q 'isCurrentRecipient(item,latest)' "$file"
+          grep -q 'selectedForCanary(mode,allowedPairs' "$file"
+          grep -q 'dispatchGate(' "$file"
+          grep -q 'native_fcm_outbox' "$file"
+          grep -q 'DBEST_FCM_SEND_ENABLED' "$file"
+          grep -q 'DBEST_FCM_ROLLOUT_MODE' "$file"
+          grep -q 'DBEST_FCM_CANARY_RECIPIENTS_JSON' "$file"
+          grep -q 'DBEST_FCM_FULL_ROLLOUT_APPROVED' "$file"
+          grep -q 'rollout_mode_off' "$policy"
+          grep -q 'full_rollout_not_approved' "$policy"
+          if grep -R 'ALTER DATABASE\|SET DBEST_FCM_SEND_ENABLED\|CREATE EXTENSION http\|CREATE EXTENSION pg_net' qa/native-fcm-business-events/; then
+            echo "::error::Staged integration must not enable production dispatch"
+            exit 1
+          fi
+          echo "PASS: no live dispatch activation, no external calls in Postgres trigger"
