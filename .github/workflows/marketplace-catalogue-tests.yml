@@ -16,6 +16,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Validate authenticated vendor offer editor syntax
+        run: node --check api/marketplace/vendor-offer-edit.js
       - name: Validate authenticated submissions API syntax
         run: node --check api/marketplace/vendor-product-submissions.js
       - name: Vendor upload validation
