@@ -2,6 +2,7 @@
 // Isolated API: vendor submissions only. Does not publish or alter existing live catalogue.
 const crypto=require('node:crypto');
 const {validateBatch}=require('./vendor-product-validation');
+const {autoMatchDecision}=require('./vendor-product-auto-match-policy');
 const URL_BASE=String(process.env.SUPABASE_URL||'https://ydedmotbacnllkijzmvp.supabase.co').replace(/\/$/,'');
 const KEY=process.env.SUPABASE_SERVICE_ROLE_KEY||process.env.SUPABASE_SERVICE_KEY||process.env.SUPABASE_SECRET_KEY;
 const respond=(res,status,data)=>res.status(status).json(data);
@@ -33,8 +34,13 @@ module.exports=async function handler(req,res){
   const results=validateBatch(rows,{maxRows:100});
   const valid=results.filter(r=>r.ok);
   if(!valid.length)return respond(res,400,{ok:false,error:'no_valid_products',results:results.map(({row,ok,error})=>({row,ok,error}))});
+  // Determine eligibility without publishing. An atomic, server-authorized RPC
+  // is required before any auto-match may activate a vendor offer.
+  const barcodes=[...new Set(valid.map(r=>r.product.barcode).filter(Boolean))];
+  const masters=barcodes.length?await db('dbest_master_products?barcode_gtin=in.('+barcodes.map(encodeURIComponent).join(',')+')&select=id,category,name,brand,barcode_gtin,status,specifications,image_rights_verified,gst_verified_at&limit=1000'):[];
+  const decisions=valid.map(r=>({row:r.row,...autoMatchDecision({vendor,product:r.product,masters})}));
   const batchId=crypto.randomUUID();
   const inserted=await db('dbest_vendor_product_submissions',{method:'POST',body:valid.map(r=>({vendor_id:vendorId,payload:r.product,import_batch_id:batchId,status:'pending_owner_review'}))});
-  return respond(res,201,{ok:true,batchId,accepted:inserted.length,results:results.map(({row,ok,error})=>({row,ok,error:error||null}))});
+  return respond(res,201,{ok:true,batchId,accepted:inserted.length,autoMatchCandidates:decisions.filter(d=>d.eligible).length,publicationPending:true,results:results.map(({row,ok,error})=>({row,ok,error:error||null,match:decisions.find(d=>d.row===row)||null}))});
  }catch(e){console.error('[vendor submissions]',e);return respond(res,500,{ok:false,error:'vendor_submission_failed'})}
 };
