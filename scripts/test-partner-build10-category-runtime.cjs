@@ -47,6 +47,10 @@ async function scenario(rows,initial,fetchOverride){
   assert.equal(empty.validity,'No active business categories available','empty authoritative registry must fail closed');
   const deleted=await scenario([{key:'Electronics',status:'deleted'},{key:'Grocery',active:true}],'Electronics');
   assert.notEqual(deleted.validity,'','deleted Electronics must not be accepted');
+  const softDeleted=await scenario([{key:'Electronics',active:true,deleted_at:'2026-11-20T00:00:00Z'},{key:'Grocery',active:true}],'Electronics');
+  assert.notEqual(softDeleted.validity,'','soft-deleted active Electronics must not be selectable');
+  const archivedAt=await scenario([{key:'Electronics',active:true,archived_at:'2026-11-20T00:00:00Z'},{key:'Grocery',active:true}],'Electronics');
+  assert.notEqual(archivedAt.validity,'','archived active Electronics must not be selectable');
   const mixed=await scenario([{key:'Electronics',active:false},{key:' electronics ',active:true}],'electronics');
   assert.equal(mixed.value,'electronics','disabled duplicate must not block active canonical registry key');
   assert.equal(mixed.validity,'','active category must remain selectable despite disabled historical duplicate');
