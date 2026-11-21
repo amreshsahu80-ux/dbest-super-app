@@ -2,7 +2,7 @@
 // Pure business rules; caller must authenticate session and fetch the offer by ID
 // from the database. Never accept vendor_id from a client payload as identity.
 const {updateVendorImage,effectiveImage}=require('./vendor-offer-image');
-function updateOffer({actorVendorId,offer,patch={}}){
+function updateOffer({actorVendorId,offer,patch={},vendor=null}){
  if(!actorVendorId||!offer||offer.vendor_id!==actorVendorId)throw Error('vendor_offer_forbidden');
  const permitted=new Set(['price_inclusive_gst','mrp','stock','active','vendor_image_url']);
  if(!patch||typeof patch!=='object'||Array.isArray(patch)||Object.keys(patch).some(k=>!permitted.has(k)))throw Error('unsupported_offer_field');
@@ -24,7 +24,7 @@ function updateOffer({actorVendorId,offer,patch={}}){
   if(typeof patch.active!=='boolean')throw Error('invalid_active');
   next.active=patch.active;
  }
- if(Object.hasOwn(patch,'vendor_image_url'))Object.assign(next,updateVendorImage({actorVendorId,offer,requestedImageUrl:patch.vendor_image_url}));
+ if(Object.hasOwn(patch,'vendor_image_url'))Object.assign(next,updateVendorImage({actorVendorId,offer,requestedImageUrl:patch.vendor_image_url,autoApprove:vendor?.id===actorVendorId&&vendor.active===true&&vendor.owner_approval==='Approved'&&vendor.operational_hold!==true}));
  return next;
 }
 function customerOfferView({master,offer,vendor}){
