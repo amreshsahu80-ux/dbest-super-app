@@ -110,5 +110,28 @@ async function scenario(rows,initial,fetchOverride){
     assert.ok(s.options.some(o=>o.value==='Electronics'),'observer must restore registry options after legacy DOM overwrite');
     assert.ok(!s.options.some(o=>o.value==='other'),'legacy static category must not survive authoritative refresh');
   }
+  // Registry recovery must not allow an older in-flight response to restore revoked categories.
+  {
+    const s=selector('Electronics'),scheduled=[];
+    let resolveFirst,requests=0;
+    const document={documentElement:{},querySelectorAll:()=>[s],createElement:()=>option(),
+      addEventListener(type,fn){if(type==='submit')s.onSubmit=fn;}};
+    const window={DBEST_RUNTIME_CONFIG:{supabaseUrl:'https://example.invalid',supabasePublishableKey:'public-test-key'}};
+    const context={window,document,console:{warn(){}},
+      setTimeout(fn){scheduled.push(fn);return scheduled.length;},clearTimeout(){},
+      MutationObserver:class{observe(){}},
+      fetch:()=>{requests++;return requests===1?new Promise(resolve=>{resolveFirst=resolve;}):
+        Promise.resolve({ok:true,json:async()=>({categories:[{key:'Electronics',active:false}]})});}};
+    vm.runInNewContext(source,context,{timeout:1000});
+    const stale=scheduled[0]();
+    await window.DBEST_VENDOR_DYNAMIC_CATEGORIES.refresh();
+    resolveFirst({ok:true,json:async()=>({categories:[{key:'Electronics',active:true}]})});
+    await stale;
+    assert.equal(requests,2,'refresh must fetch new registry while prior request is pending');
+    assert.ok(!s.options.some(o=>o.value==='Electronics'),'stale response must not restore revoked Electronics');
+    let prevented=false;s.value='Electronics';
+    s.onSubmit({target:{querySelectorAll:()=>[s]},preventDefault(){prevented=true;}});
+    assert.equal(prevented,true,'stale response must not authorize Electronics submission');
+  }
   console.log('Build 10 category registry runtime smoke: PASS');
 })().catch(e=>{console.error(e);process.exitCode=1;});
