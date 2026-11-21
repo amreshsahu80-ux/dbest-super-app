@@ -1,6 +1,7 @@
 'use strict';
 // Owner-only dry-run preflight: no database writes and no product publication.
 const {preflightBatch}=require('./master-catalogue-import-preflight');
+const {parseCsv}=require('./master-catalogue-csv-parser');
 const BASE=String(process.env.SUPABASE_URL||'https://ydedmotbacnllkijzmvp.supabase.co').replace(/\/$/,'');
 const KEY=process.env.SUPABASE_SERVICE_ROLE_KEY||process.env.SUPABASE_SERVICE_KEY||process.env.SUPABASE_SECRET_KEY;
 const reply=(res,status,data)=>res.status(status).json(data);
@@ -17,7 +18,11 @@ module.exports=async(req,res)=>{
   if(!auth.ok)return reply(res,503,{ok:false,error:'owner_session_verification_unavailable'});
   const owner=await auth.json();
   if(typeof owner!=='string'||!owner.includes('@'))return reply(res,401,{ok:false,error:'owner_session_invalid'});
-  const rows=req.body?.rows;
+  let rows=req.body?.rows;
+  if(typeof req.body?.csv==='string'){
+   if(rows!==undefined)return reply(res,400,{ok:false,error:'choose_csv_or_rows'});
+   try{rows=parseCsv(req.body.csv)}catch(e){return reply(res,400,{ok:false,error:e.message});}
+  }
   if(!Array.isArray(rows)||rows.length===0||rows.length>1000)
    return reply(res,400,{ok:false,error:'invalid_batch_size'});
   const results=preflightBatch(rows);
