@@ -11,19 +11,28 @@ Deno.serve(async(req:Request)=>{
  let body:Record<string,unknown>;
  try{body=await req.json()}catch{return json({error:"invalid_json"},400)}
  const action=String(body.action||"");
- if(action!=="review_offer")return json({error:"unsupported_action"},400);
+ if(!["review_offer","list_pending"].includes(action))return json({error:"unsupported_action"},400);
  const offerId=String(body.offerId||"");
  const version=body.expectedVersion;
  const decision=String(body.decision||"");
  const reason=String(body.reason||"");
- if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(offerId)
+ if(action==="review_offer" && (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(offerId)
    ||typeof version!=="number"||!Number.isSafeInteger(version)||version<0
    ||!["approve","reject","suspend"].includes(decision)
-   ||reason.length>1000)return json({error:"invalid_input"},400);
+   ||reason.length>1000))return json({error:"invalid_input"},400);
  try{
   const url=Deno.env.get("SUPABASE_URL"),key=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if(!url||!key)return json({error:"server_not_configured"},503);
   const sb=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}});
+  if(action==="list_pending"){
+   const {data:ownerEmail,error:authError}=await sb.rpc("validate_owner_session",{p_token:token});
+   if(authError||!ownerEmail)return json({error:"owner_session_invalid"},401);
+   const {data:offers,error:listError}=await sb.from("dbest_vendor_product_offers")
+    .select("id,vendor_id,master_product_id,price_inclusive_gst,mrp,stock,active,review_status,review_version,created_at")
+    .eq("review_status","pending_review").order("created_at",{ascending:true}).limit(100);
+   if(listError){console.error("vendor_offer_queue_failed",listError.code);return json({error:"queue_unavailable"},500)}
+   return json({ok:true,offers:offers||[]});
+  }
   // Do not accept client isOwner or reviewedBy. RPC verifies token and obtains actor server-side.
   const {data,error}=await sb.rpc("dbest_owner_review_vendor_offer",{
    p_owner_token:token,p_offer_id:offerId,p_expected_version:version,
