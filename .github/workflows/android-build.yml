@@ -7,6 +7,11 @@ on:
       - 'android-app/**'
       - '.github/workflows/android-build.yml'
 
+# Restricted to read access for the build plus commit-status reporting.
+permissions:
+  contents: read
+  statuses: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -24,9 +29,39 @@ jobs:
           gradle-version: '8.13'
       - name: Build release AAB
         run: gradle :app:bundleRelease
+      - name: Explain missing Firebase side-by-side test registration
+        if: ${{ hashFiles('android-app/app/src/debug/google-services.json') == '' }}
+        run: echo 'Register com.dbest4u.app.test in the existing Firebase project and place its google-services.json in android-app/app/src/debug/ before building the side-by-side debug APK.' >> "$GITHUB_STEP_SUMMARY"
+      - name: Build installable Firebase test APK
+        if: ${{ hashFiles('android-app/app/src/debug/google-services.json') != '' }}
+        run: gradle :app:assembleDebug
+      - name: Upload Firebase test APK
+        if: ${{ hashFiles('android-app/app/src/debug/google-services.json') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: dbest-firebase-notification-test-apk
+          path: android-app/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 7
       - name: Upload unsigned AAB
         uses: actions/upload-artifact@v4
         with:
           name: dbest-release-unsigned-aab
           path: android-app/app/build/outputs/bundle/release/app-release.aab
           if-no-files-found: error
+      - name: Report Android build result on commit
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUILD_RESULT: ${{ job.status }}
+        run: |
+          if [ "$BUILD_RESULT" = "success" ]; then
+            state=success
+          else
+            state=failure
+          fi
+          gh api -X POST "repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
+            -f state="$state" \
+            -f context="DBest Android AAB verification" \
+            -f description="Android build: $BUILD_RESULT" \
+            -f target_url="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
