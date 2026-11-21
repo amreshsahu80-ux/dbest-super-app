@@ -18,7 +18,7 @@ create table if not exists public.dbest_vendor_product_offers (
  master_product_id uuid not null references public.dbest_master_products(id),
  price_inclusive_gst numeric(12,2) not null check(price_inclusive_gst>0),
  mrp numeric(12,2),stock integer not null default 0 check(stock>=0),
- active boolean not null default false,created_at timestamptz not null default now(),
+ active boolean not null default false,\n vendor_image_url text,\n vendor_image_review_status text not null default 'none'\n check(vendor_image_review_status in ('none','pending_review','approved','rejected')),\n created_at timestamptz not null default now(),
  updated_at timestamptz not null default now(),
  unique(vendor_id,master_product_id),
  check(mrp is null or mrp>=price_inclusive_gst)
