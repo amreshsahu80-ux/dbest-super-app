@@ -24,6 +24,8 @@ jobs:
         run: node --check api/marketplace/vendor-offer-edit.js
       - name: Validate authenticated submissions API syntax
         run: node --check api/marketplace/vendor-product-submissions.js
+      - name: Owner vendor enforcement rules
+        run: node tests/marketplace-vendor-enforcement.test.js
       - name: Vendor upload validation
         run: node tests/marketplace-vendor-product-validation.test.js
       - name: Vendor image ownership
