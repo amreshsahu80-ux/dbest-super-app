@@ -1,0 +1,23 @@
+name: Partner Home role action contract
+
+on:
+  push:
+    branches:
+      - test/partner-build11-role-action-contract-20261121
+  pull_request:
+    paths:
+      - 'partner-android-app/tests/test_home_role_action_contract.py'
+      - 'partner-android-app/app/src/main/java/com/dbest4u/partner/MainActivity.java'
+      - '.github/workflows/partner-home-role-contract.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  home-role-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate role destinations, independent actions and toolbar accessibility
+        run: python3 -m unittest discover -s partner-android-app/tests -p test_home_role_action_contract.py -v

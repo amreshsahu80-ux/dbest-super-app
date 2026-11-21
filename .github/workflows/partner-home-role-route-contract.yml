@@ -1,0 +1,28 @@
+name: Partner Home role route contract
+
+on:
+  pull_request:
+    paths:
+      - 'partner-android-app/app/src/main/java/com/dbest4u/partner/MainActivity.java'
+      - 'partner-android-app/tests/test_home_role_route_contract.py'
+      - '.github/workflows/partner-home-role-route-contract.yml'
+  push:
+    branches:
+      - 'test/partner-home-role-route-contract-20261120'
+    paths:
+      - 'partner-android-app/app/src/main/java/com/dbest4u/partner/MainActivity.java'
+      - 'partner-android-app/tests/test_home_role_route_contract.py'
+      - '.github/workflows/partner-home-role-route-contract.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  role-route-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check Partner Home role routes and accessible actions
+        run: python3 partner-android-app/tests/test_home_role_route_contract.py

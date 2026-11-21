@@ -1,0 +1,369 @@
+name: Partner home isolated Android compile
+on:
+  push:
+    branches:
+      - feat/partner-home-compact-ui-20261115
+      - release/partner-postbuild10-consolidation-20261118
+  pull_request:
+    branches:
+      - release/partner-build10-isolated-20261114
+      - release/partner-postbuild10-consolidation-20261118
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  android-compile:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: partner-android-app
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+      - name: Verify Partner identity and compact controls
+        run: |
+          grep -Fq "applicationId 'com.dbest4u.partner'" app/build.gradle
+          grep -Fq 'versionCode 11' app/build.gradle
+          grep -Fq 'Gravity.BOTTOM|Gravity.LEFT' app/src/main/java/com/dbest4u/partner/PartnerPushTestController.java
+          grep -Fq 'Partner notifications off. Tap for settings' app/src/main/java/com/dbest4u/partner/PartnerPushTestController.java
+      - name: Regression-test abandoned WebView navigation on Home
+        run: python3 tests/test_home_abandoned_navigation.py
+      - name: Verify compact workspace navigation has accessible touch targets
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          src = Path('app/src/main/java/com/dbest4u/partner/MainActivity.java').read_text()
+          header = src.split('private LinearLayout makeBrowser() {', 1)[1].split('private void showHome()', 1)[0]
+          for label in ('Back', 'Home'):
+              assert label in header, f'Missing {label} workspace navigation'
+          assert 'dp(48)' in header, 'Workspace header must retain 48dp touch targets'
+          assert 'browserTitle' in header and 'setSingleLine(true)' in header, 'Workspace title must truncate on narrow screens'
+          PY
+      - name: Regression-check compact role action labels on narrow screens
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          src = Path('app/src/main/java/com/dbest4u/partner/MainActivity.java').read_text()
+          card = src.split('private View roleCard(', 1)[1].split('private LinearLayout makeBrowser()', 1)[0]
+          for control in ('workspace', 'join'):
+              assert f'{control}.setSingleLine(true);' in card, f'{control} label must not wrap'
+              assert f'{control}.setEllipsize(android.text.TextUtils.TruncateAt.END);' in card, f'{control} label must truncate gracefully'
+          assert 'workspace.setContentDescription("Open " + title + " workspace");' in card, 'Workspace TalkBack label must remain complete'
+          assert 'join.setContentDescription("Join as " + title);' in card, 'Join TalkBack label must remain complete'
+          assert 'roleTitle.setMaxLines(2);' in card, 'Role title must allow accessibility font wrapping'
+          print('PASS: compact action labels and complete accessible role names')
+          PY
+      - name: Regression-check Home scroll and stale focus reset
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          src = Path('app/src/main/java/com/dbest4u/partner/MainActivity.java').read_text()
+          home = src.split('private void showHome() {', 1)[1].split('private void openTrustedPushTarget(', 1)[0]
+          assert 'homeScreen.setVisibility(View.VISIBLE);' in home, 'Home must become visible before resetting scroll'
+          assert 'landingScroll.post(() -> {' in home, 'Reset scroll after layout, not before'
+          assert 'if (!showingBrowser && homeScreen == landingScroll)' in home, 'Delayed reset must not interfere with a new workspace'
+          assert 'landingScroll.clearFocus();' in home, 'Clear stale WebView/card focus before scrolling'
+          assert 'landingScroll.scrollTo(0, 0);' in home, 'Returning Home must reset to top'
+          assert home.index('landingScroll.clearFocus();') < home.index('landingScroll.scrollTo(0, 0);'), 'Clear focus before resetting scroll'
+          PY
+      - name: Regression-check notification floater separation and opt-in safety
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          native = Path('app/src/main/java/com/dbest4u/partner/PartnerPushTestController.java').read_text()
+          main = Path('app/src/main/java/com/dbest4u/partner/MainActivity.java').read_text()
+          assert 'Gravity.BOTTOM|Gravity.LEFT' in native, 'Notification control must remain bottom-left'
+          assert 'dp(48),Gravity.BOTTOM|Gravity.LEFT' in native, 'Notification control must retain 48dp height'
+          assert 'setHomeVisible(boolean show)' in native and 'View.GONE' in native, 'Hide native toggle inside portal to avoid WhatsApp overlay'
+          assert 'partnerTestPush.setHomeVisible(' in main, 'MainActivity must synchronize native toggle visibility'
+          home = main.split('private View makeHome() {', 1)[1].split('private View roleCard(', 1)[0]
+          assert 'page.setPadding(dp(16), dp(8), dp(16), dp(84))' in home, 'Home must reserve bottom safe area for notification floater'
+          assert 'scroll.setClipToPadding(false)' in home, 'Home footer must remain scrollable above native controls'
+          assert 'setContentDescription(active ?' in native, 'Notification toggle must expose ON/OFF accessibility state'
+          assert 'You must separately sign in, tap Link, and consent' in native, 'Enabling local alerts must not silently register an account'
+          PY
+      - name: Verify workspace URL boundary and release identity isolation
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          main = Path('app/src/main/java/com/dbest4u/partner/MainActivity.java').read_text()
+          gradle = Path('app/build.gradle').read_text()
+          assert 'private static final String ORIGIN = "https://dbest4u.com";' in main
+          assert 'if (!route.startsWith("/") || route.startsWith("//")) return;' in main, 'Reject protocol-relative and nonlocal role routes'
+          assert 'webView.loadUrl(ORIGIN + route);' in main, 'Role workspace must load from canonical DBest origin'
+          assert '!"https".equalsIgnoreCase(u.getScheme())' in main, 'Only HTTPS portal URLs may remain in WebView'
+          assert 'u.getPort() != -1 && u.getPort() != 443' in main, 'Reject nonstandard HTTPS ports on trusted portal host'
+          assert 'host.equalsIgnoreCase("dbest4u.com")' in main and 'host.equalsIgnoreCase("www.dbest4u.com")' in main, 'Explicit host allowlist required'
+          assert "applicationId 'com.dbest4u.partner'" in gradle, 'Play application identity must remain unchanged'
+          assert "applicationIdSuffix '.qa'" in gradle, 'QA installs must remain isolated from Play application'
+          assert "production { dimension 'distribution' }" in gradle, 'Production flavor must remain available'
+          PY
+      - name: Regression-check all three Partner home routes and safe navigation
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          src=Path('app/src/main/java/com/dbest4u/partner/MainActivity.java').read_text()
+          expected={
+              'Vendor': ('/Vendor','/partner?type=Vendor'),
+              'Vaahak': ('/vaahak','/partner?type=Vaahak'),
+              'Service Partner': ('/ServicePartnerDashboard','/partner?type=Service%20Partner'),
+          }
+          for role,(workspace,join) in expected.items():
+              assert f'"{workspace}", "{join}"' in src, f'{role}: route regression'
+              assert f'openPortal(title, loginPath)' in src
+              assert f'openPortal(title + " · Join", joinPath)' in src
+              assert f'Open " + title + " workspace' in src
+              assert f'Join as " + title' in src
+          assert 'card.setOnClickListener(v -> openPortal(title, loginPath));' in src, 'Role card surface must open workspace'
+          assert 'onPageStarted(WebView v, String url, android.graphics.Bitmap favicon)' in src, 'Workspace navigation must show progress'
+          assert 'if (showingBrowser && url != null && url.equals(v.getUrl())' in src and '&& browserLoading != null) browserLoading.setVisibility(View.VISIBLE);' in src, 'Progress must be scoped to the active workspace URL and never overlay native home'
+          assert 'card.setContentDescription(title + " partner card. Open workspace");' in src, 'Role card needs accessible action label'
+          assert 'photoFrame.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);' in src, 'Decorative photo and category ribbon must not create duplicate TalkBack stops'
+          assert 'ready.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);' in src, 'Decorative partner badge must not create an extra TalkBack stop'
+          assert 'image.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);' in src, 'Role photos must remain decorative for screen readers'
+          assert 'join.setOnClickListener(v -> openPortal(title + " · Join", joinPath));' in src, 'Join must keep its distinct route'
+          assert 'onWorkspaceSelected(canonicalRole)' in src, 'Push role must remain canonical'
+          assert 'resetWorkspaceHistoryOnLoad = true;' in src, 'Role switch must reset previous workspace history'
+          assert 'if (!showingBrowser || url == null || !url.equals(v.getUrl())) return;' in src, 'Stale page-finished callbacks must not clear new workspace state'
+          home = src.split('private void showHome() {', 1)[1].split('\n    }', 1)[0]
+          assert 'resetWorkspaceHistoryOnLoad = false;' in home, 'Home must cancel pending role history reset'
+          assert 'cancelPendingFileChooser();' in home, 'Home must cancel pending document selection'
+          portal=src.split('private void openPortal(String name, String route) {',1)[1].split('\n    }',1)[0]
+          assert 'cancelPendingFileChooser();' in portal, 'Role changes must cancel pending document selection'
+          assert 'cancelPendingLocationPrompt();' in portal and 'cancelPendingLocationPrompt();' in home, 'Role switch and Home must reject outstanding geolocation prompts'
+          assert 'private boolean locationPermissionRequestInFlight;' in src, 'Location permission request needs in-flight reservation'
+          prompt=src.split('onGeolocationPermissionsShowPrompt(',1)[1].split('onShowFileChooser(',1)[0]
+          assert '|| locationPermissionRequestInFlight' in prompt, 'Second workspace must not claim previous Android permission result'
+          assert 'origin == null || !isDbest(Uri.parse(origin))' in prompt, 'Null geolocation origins must be rejected before URI parsing'
+          assert 'locationPermissionRequestInFlight = true;' in prompt, 'Permission request must reserve result code'
+          # Cancellation must revoke the pending geolocation callback before a stale
+          # Android permission result can be associated with another role.
+          cancel=src.split('private void cancelPendingLocationPrompt() {',1)[1].split('\n    }',1)[0]
+          assert 'locationCallback = null;' in cancel and 'locationOrigin = null;' in cancel, 'Cancellation must clear location callback and origin'
+          assert 'pending.invoke(origin, false, false);' in cancel, 'Cancelled location prompt must be explicitly denied'
+          assert cancel.index('locationCallback = null;') < cancel.index('pending.invoke(origin, false, false);'), 'Clear callback before invoking cancellation'
+          assert 'cancelPendingLocationPrompt();' in src.split('@Override protected void onDestroy()',1)[1], 'Destroy must cancel pending geolocation prompts'
+          permission=src.split('if (code == LOCATION_REQUEST) {',1)[1].split('\n        }',1)[0]
+          assert 'locationPermissionRequestInFlight = false;' in permission, 'Permission result must release reservation even after cancellation'
+          assert 'if (pending != null && showingBrowser)' in permission, 'Stale result must never grant cancelled workspace'
+          assert 'String activeUrl = v.getUrl();' in src and 'activeUrl == null || !isDbest(Uri.parse(activeUrl))' in src, 'File chooser must reject missing or untrusted active URLs without Uri.parse(null)'
+          chooser=src.split('private void cancelPendingFileChooser() {',1)[1].split('\n    }',1)[0]
+          assert 'fileCallback = null;' in chooser and 'pending.onReceiveValue(null);' in chooser, 'Cancel must clear callback before resolving it'
+          # File-picker callbacks must be correlated to their own launch, not a reused request code.
+          assert 'activeFileRequestCode = -1;' in src, 'File picker must track an invalidated request'
+          assert 'nextFileRequestCode' in src, 'File picker must allocate distinct request codes'
+          import re
+          request_codes = {name: int(value) for name, value in re.findall(r'private static final int (FILE_REQUEST|FILE_REQUEST_MAX|LOCATION_REQUEST) = (\d+);', src)}
+          assert request_codes['FILE_REQUEST'] <= request_codes['FILE_REQUEST_MAX'], 'Invalid picker request-code range'
+          assert not request_codes['FILE_REQUEST'] <= request_codes['LOCATION_REQUEST'] <= request_codes['FILE_REQUEST_MAX'], 'File picker request codes must not collide with location permission requests'
+          assert 'if (code == activeFileRequestCode && fileCallback != null)' in src, 'Stale picker results must be ignored'
+          result_handler=src.split('@Override protected void onActivityResult(',1)[1].split('\n    }',1)[0]
+          assert 'activeFileRequestCode = -1;' in result_handler, 'Accepted picker result must invalidate request'
+          assert 'pending.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(resultCode, data));' in result_handler, 'Accepted picker must deliver result'
+          assert 'browserLoading.setVisibility(View.GONE)' in home, 'Home must clear stale loading progress'
+          assert 'req.getUrl() != null && req.getUrl().toString().equals(v.getUrl())' in src, 'Late WebView errors must not interrupt a newer workspace'
+          assert 'v.clearHistory();' in src and 'resetWorkspaceHistoryOnLoad = false;' in src, 'New workspace must clear old back stack after load'
+          assert 'url != null && url.equals(v.getUrl())' in src.split('onPageStarted(WebView v, String url', 1)[1].split('onPageFinished(WebView v, String url', 1)[0], 'Stale page-start must not revive loading indicator'
+          assert 'if (!route.startsWith("/") || route.startsWith("//")) return;' in src
+          assert 'if (isDbest(url)) return false;' in src
+          assert 'if (!req.isForMainFrame()) return false;' in src, 'Embedded payment/auth frames must not launch external apps'
+          assert 'if (partnerTestPush != null) partnerTestPush.setHomeVisible(true);' in src
+          # Guard compact-device layout and the native notification safe area.
+          assert 'page.setPadding(dp(16), dp(8), dp(16), dp(84));' in src, 'Home footer may be obscured'
+          assert 'card.addView(photoFrame, new LinearLayout.LayoutParams(-1, dp(56)));' in src, 'Compact 56dp role-card photo height regressed'
+          assert 'dp(48), 1.5f' in src and 'dp(48), 0.72f' in src, 'Role action proportions regressed'
+          assert 'actions.addView(workspace, new LinearLayout.LayoutParams(0, dp(48), 1.5f));' in src
+          assert 'actions.addView(join, new LinearLayout.LayoutParams(0, dp(48), 0.72f));' in src
+          assert 'brand.addView(privacyMenu, new LinearLayout.LayoutParams(dp(48), dp(48)));' in src, 'Home privacy menu needs 48x48dp touch target'
+          assert 'back.setContentDescription("Back");' in src
+          # Keep all compact workspace-header controls at accessible 48dp height.
+          # Back, Home and Privacy must each meet 48x48dp minimum touch targets.
+          assert src.count('new LinearLayout.LayoutParams(dp(48), dp(48))') >= 3, 'Header navigation touch targets must be at least 48x48dp'
+          assert 'new LinearLayout.LayoutParams(dp(52), dp(48))' in src, 'Notification account-link target regressed'
+          assert 'new LinearLayout.LayoutParams(0, dp(48), 1)' in src
+          assert 'home.setContentDescription("Partner home");' in src
+          assert 'linkAccount.setContentDescription("Link signed-in partner account to notifications");' in src
+          push=Path('app/src/main/java/com/dbest4u/partner/PartnerPushTestController.java').read_text()
+          assert 'Gravity.BOTTOM|Gravity.LEFT' in push, 'Notification toggle gravity changed'
+          assert 'setHomeVisible' in push, 'Notification visibility API missing'
+          assert 'dp(48),Gravity.BOTTOM|Gravity.LEFT' in push, 'Notification toggle must avoid bottom-right WhatsApp floater'
+          print('PASS: role routes, join actions, accessibility, canonical push role and safe navigation')
+          PY
+      - name: Configure isolated QA Firebase client for compilation only
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          path = Path('app/google-services.json')
+          data = json.loads(path.read_text())
+          source = next(c for c in data['client'] if c['client_info']['android_client_info']['package_name'] == 'com.dbest4u.partner')
+          qa = json.loads(json.dumps(source))
+          qa['client_info']['android_client_info']['package_name'] = 'com.dbest4u.partner.qa'
+          data['client'].append(qa)
+          out = Path('app/src/qa/google-services.json')
+          out.parent.mkdir(parents=True, exist_ok=True)
+          out.write_text(json.dumps(data))
+          PY
+      - name: Compile separate-install QA APK and production release AAB without signing
+        run: gradle :app:assembleProductionDebug :app:bundleProductionRelease :app:assembleQaDebug --no-daemon
+      - name: Verify generated APK and unsigned AAB outputs
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib
+          qa=list(Path('app/build/outputs/apk/qa/debug').glob('*.apk'))
+          aab=list(Path('app/build/outputs/bundle/productionRelease').glob('*.aab'))
+          assert len(qa)==1 and qa[0].stat().st_size>100000, f'Expected one nonempty QA APK: {qa}'
+          assert len(aab)==1 and aab[0].stat().st_size>100000, f'Expected one nonempty production AAB: {aab}'
+          for p in qa+aab:
+              print(f'{p}: {p.stat().st_size} bytes sha256={hashlib.sha256(p.read_bytes()).hexdigest()}')
+          print('Release AAB is NOT verified signed; no Play upload authorized.')
+          PY
+      - name: Verify packaged Android identities and QA install isolation
+        run: |
+          set -euo pipefail
+          sdk="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
+          test -n "$sdk"
+          aapt="$(find "$sdk/build-tools" -type f -name aapt | sort -V | tail -n 1)"
+          test -x "$aapt"
+          for flavor in production qa; do
+            apk="$(find "app/build/outputs/apk/$flavor/debug" -maxdepth 1 -name '*.apk' -print -quit)"
+            test -n "$apk"
+            badging="$("$aapt" dump badging "$apk")"
+            expected="com.dbest4u.partner"
+            version="1.0.7"
+            if [ "$flavor" = qa ]; then
+              expected="$expected.qa"
+              version="$version-qa"
+            fi
+            printf '%s\n' "$badging" | grep -F "package: name='$expected' versionCode='11' versionName='$version'"
+            printf '%s\n' "$badging" | grep -F "launchable-activity: name='com.dbest4u.partner.MainActivity'"
+          done
+      - name: Record immutable build provenance for QA review
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, os
+          outputs = [
+              *Path('app/build/outputs/apk/qa/debug').glob('*.apk'),
+              *Path('app/build/outputs/bundle/productionRelease').glob('*.aab'),
+          ]
+          assert len(outputs) == 2, f'Unexpected Android artifact count: {outputs}'
+          manifest = Path('app/build/outputs/partner-home-build-provenance.txt')
+          manifest.parent.mkdir(parents=True, exist_ok=True)
+          lines = [
+              'DBest Partner Home isolated QA build — NOT a signed Play release',
+              f"commit={os.environ['GITHUB_SHA']}",
+              f"run_id={os.environ['GITHUB_RUN_ID']}",
+              f"run_attempt={os.environ['GITHUB_RUN_ATTEMPT']}",
+          ]
+          for p in sorted(outputs):
+              digest = hashlib.sha256(p.read_bytes()).hexdigest()
+              lines.append(f'sha256={digest} bytes={p.stat().st_size} path={p}')
+          manifest.write_text('\n'.join(lines) + '\n')
+          print(manifest.read_text())
+          PY
+      - name: Upload build provenance alongside QA artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: partner-home-build-provenance
+          path: partner-android-app/app/build/outputs/partner-home-build-provenance.txt
+          retention-days: 3
+      - name: Publish separate-install QA APK (not a Play release)
+        uses: actions/upload-artifact@v4
+        with:
+          name: partner-home-qa-separate-app-apk
+          path: partner-android-app/app/build/outputs/apk/qa/debug/*.apk
+          retention-days: 3
+      - name: Publish unsigned production AAB for build inspection only
+        uses: actions/upload-artifact@v4
+        with:
+          name: partner-home-production-UNSIGNED-aab-NOT-FOR-PLAY
+          path: partner-android-app/app/build/outputs/bundle/productionRelease/*.aab
+          retention-days: 3
+
+  android-build11-signed:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: partner-android-app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+      - name: Check release identity
+        run: |
+          grep -Fq "applicationId 'com.dbest4u.partner'" app/build.gradle
+          grep -Fq 'versionCode 11' app/build.gradle
+          grep -Fq "versionName '1.0.7'" app/build.gradle
+      - name: Compile isolated release candidate
+        run: gradle :app:assembleProductionRelease :app:bundleProductionRelease --no-daemon
+      - name: Verify signing credentials are provisioned
+        env:
+          UPLOAD_KEY_B64: ${{ secrets.DBEST_PARTNER_UPLOAD_KEY_B64 }}
+          UPLOAD_KEY_ALIAS: ${{ secrets.DBEST_PARTNER_UPLOAD_KEY_ALIAS }}
+          UPLOAD_KEY_PASSWORD: ${{ secrets.DBEST_PARTNER_UPLOAD_KEY_PASSWORD }}
+        run: |
+          test -n "$UPLOAD_KEY_B64" || { echo "::error::Missing DBEST_PARTNER_UPLOAD_KEY_B64"; exit 1; }
+          test -n "$UPLOAD_KEY_ALIAS" || { echo "::error::Missing DBEST_PARTNER_UPLOAD_KEY_ALIAS"; exit 1; }
+          test -n "$UPLOAD_KEY_PASSWORD" || { echo "::error::Missing DBEST_PARTNER_UPLOAD_KEY_PASSWORD"; exit 1; }
+      - name: Verify existing Play upload certificate fingerprint
+        env:
+          UPLOAD_KEY_B64: ${{ secrets.DBEST_PARTNER_UPLOAD_KEY_B64 }}
+          UPLOAD_KEY_ALIAS: ${{ secrets.DBEST_PARTNER_UPLOAD_KEY_ALIAS }}
+          UPLOAD_KEY_PASSWORD: ${{ secrets.DBEST_PARTNER_UPLOAD_KEY_PASSWORD }}
+          EXPECTED_SHA256: ${{ secrets.DBEST_PARTNER_UPLOAD_CERT_SHA256 }}
+        run: |
+          set -euo pipefail
+          test -n "$EXPECTED_SHA256" || { echo "::error::Missing verified Play upload certificate SHA256"; exit 1; }
+          KEY_FILE="$(mktemp --suffix=.p12)"
+          trap 'rm -f "$KEY_FILE"' EXIT
+          printf '%s' "$UPLOAD_KEY_B64" | base64 --decode > "$KEY_FILE"
+          ACTUAL_SHA256="$(keytool -list -v -keystore "$KEY_FILE" -storetype PKCS12 -storepass "$UPLOAD_KEY_PASSWORD" -alias "$UPLOAD_KEY_ALIAS" | sed -n 's/^[[:space:]]*SHA256: //p' | head -n 1)"
+          test -n "$ACTUAL_SHA256" || { echo "::error::Unable to read signing certificate"; exit 1; }
+          test "${ACTUAL_SHA256^^}" = "${EXPECTED_SHA256^^}" || { echo "::error::Upload certificate fingerprint mismatch"; exit 1; }
+      - name: Sign release AAB with existing upload key
+        env:
+          UPLOAD_KEY_B64: ${{ secrets.DBEST_PARTNER_UPLOAD_KEY_B64 }}
+          UPLOAD_KEY_ALIAS: ${{ secrets.DBEST_PARTNER_UPLOAD_KEY_ALIAS }}
+          UPLOAD_KEY_PASSWORD: ${{ secrets.DBEST_PARTNER_UPLOAD_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          KEY_FILE="$(mktemp --suffix=.p12)"
+          trap 'rm -f "$KEY_FILE"' EXIT
+          printf '%s' "$UPLOAD_KEY_B64" | base64 --decode > "$KEY_FILE"
+          jarsigner -keystore "$KEY_FILE" -storetype PKCS12 -storepass:env UPLOAD_KEY_PASSWORD -keypass:env UPLOAD_KEY_PASSWORD app/build/outputs/bundle/productionRelease/app-production-release.aab "$UPLOAD_KEY_ALIAS"
+          jarsigner -verify -strict app/build/outputs/bundle/productionRelease/app-production-release.aab
+      - name: Validate release bundle and launcher reference
+        run: |
+          test -s app/build/outputs/bundle/productionRelease/app-production-release.aab
+          grep -Fq 'android:icon="@drawable/dbest_brand"' app/src/main/AndroidManifest.xml
+          grep -Fq 'android:roundIcon="@drawable/dbest_brand"' app/src/main/AndroidManifest.xml
+          test ! -e app/src/main/res/drawable/partner_launcher.xml
+          test ! -e app/src/main/res/drawable/partner_symbol.xml
+          ! grep -R -E '@drawable/(partner_launcher|partner_symbol)' app/src/main
+          test -s app/src/main/res/drawable-nodpi/dbest_brand.png
+          file app/src/main/res/drawable-nodpi/dbest_brand.png | grep -q 'PNG image data'
+          jarsigner -verify -strict app/build/outputs/bundle/productionRelease/app-production-release.aab
+      - name: Keep signed candidate private
+        uses: actions/upload-artifact@v4
+        with:
+          name: partner-build10-signed-aab-and-unsigned-apk
+          path: |
+            partner-android-app/app/build/outputs/bundle/productionRelease/*.aab
+            partner-android-app/app/build/outputs/apk/production/release/*.apk
+          retention-days: 1
