@@ -46,6 +46,12 @@ async function scenario(rows,initial){
   const mixed=await scenario([{key:'Electronics',active:false},{key:' electronics ',active:true}],'electronics');
   assert.equal(mixed.value,'electronics','disabled duplicate must not block active canonical registry key');
   assert.equal(mixed.validity,'','active category must remain selectable despite disabled historical duplicate');
+  const pendingFlag=await scenario([{key:'Electronics',active:'pending'},{key:'Grocery',active:true}],'Electronics');
+  assert.notEqual(pendingFlag.validity,'','unknown activation flags must fail closed');
+  const pendingEnabled=await scenario([{key:'Electronics',enabled:'pending'},{key:'Grocery',active:true}],'Electronics');
+  assert.notEqual(pendingEnabled.validity,'','pending enabled flags must not be selectable');
+  const positiveFlag=await scenario([{key:'Electronics',active:'1',enabled:'yes',is_active:true}],'electronics');
+  assert.equal(positiveFlag.value,'Electronics','known affirmative activation flags must remain selectable');
   const disabledByStatus=await scenario([{key:'Electronics',status:'inactive'},{key:'Grocery',active:true}],'Electronics');
   assert.notEqual(disabledByStatus.validity,'','inactive Electronics must not be accepted');
   const spaced=await scenario([{key:' Electronics ',label:'Electronics',active:true}],'electronics');
