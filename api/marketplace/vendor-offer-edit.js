@@ -2,6 +2,7 @@
 // Isolated vendor offer editor. Session identity is derived server-side.
 const crypto=require('node:crypto');
 const {updateOffer}=require('./vendor-offer-rules');
+const {calculateOffer}=require('./vendor-offer-pricing');
 const BASE=String(process.env.SUPABASE_URL||'https://ydedmotbacnllkijzmvp.supabase.co').replace(/\/$/,'');
 const KEY=process.env.SUPABASE_SERVICE_ROLE_KEY||process.env.SUPABASE_SERVICE_KEY||process.env.SUPABASE_SECRET_KEY;
 const reply=(res,status,data)=>res.status(status).json(data);
@@ -29,17 +30,33 @@ module.exports=async function handler(req,res){
   const offers=await db('dbest_vendor_product_offers?id=eq.'+offerId+'&vendor_id=eq.'+encodeURIComponent(vendorId)+'&select=*&limit=1');
   const offer=offers[0];
   if(!offer)return reply(res,404,{ok:false,error:'offer_not_found'});
-  // Never activate an offer tied to a draft, suspended or synthetic QA master.
-  if(req.body?.patch?.active===true){
-   const masters=await db('dbest_master_products?id=eq.'+encodeURIComponent(offer.master_product_id)+'&select=id,status,specifications&limit=1');
-   const master=masters[0];
+  const patch=req.body?.patch;
+  if(!patch||typeof patch!=='object'||Array.isArray(patch))return reply(res,400,{ok:false,error:'invalid_patch'});
+  if(Object.hasOwn(patch,'mrp'))return reply(res,400,{ok:false,error:'master_mrp_read_only'});
+  const pricingRequested=Object.hasOwn(patch,'discount_percent')||Object.hasOwn(patch,'price_inclusive_gst');
+  const masterRows=await db('dbest_master_products?id=eq.'+encodeURIComponent(offer.master_product_id)+'&select=id,status,specifications,verified_mrp&limit=1');
+  const master=masterRows[0];
+  if(patch.active===true&&(!master||master.status!=='approved'||master.specifications?.test_only===true))
+   return reply(res,409,{ok:false,error:'master_product_not_publishable'});
+  let effectivePatch={...patch};
+  if(pricingRequested){
    if(!master||master.status!=='approved'||master.specifications?.test_only===true)
     return reply(res,409,{ok:false,error:'master_product_not_publishable'});
+   // Until a verified MRP is stored on the master, price edits remain blocked.
+   // This avoids treating legacy vendor-entered MRP as authoritative.
+   if(master.verified_mrp===null||master.verified_mrp===undefined)
+    return reply(res,409,{ok:false,error:'verified_master_mrp_required'});
+   try{
+    const computed=calculateOffer({mrp:master.verified_mrp,
+     sellingPrice:patch.price_inclusive_gst,discountPercent:patch.discount_percent});
+    effectivePatch.price_inclusive_gst=computed.priceInclusiveGst;
+    delete effectivePatch.discount_percent;
+   }catch(e){return reply(res,400,{ok:false,error:e.message});}
   }
   let next;
-  try{next=updateOffer({actorVendorId:vendorId,offer,patch:req.body?.patch,vendor});}
+  try{next=updateOffer({actorVendorId:vendorId,offer,patch:effectivePatch,vendor});}
   catch(e){return reply(res,400,{ok:false,error:e.message});}
-  const allowed=['price_inclusive_gst','mrp','stock','active','vendor_image_url','vendor_image_review_status'];
+  const allowed=['price_inclusive_gst','stock','active','vendor_image_url','vendor_image_review_status'];
   const updates=Object.fromEntries(allowed.filter(k=>next[k]!==offer[k]).map(k=>[k,next[k]]));
   if(!Object.keys(updates).length)return reply(res,200,{ok:true,offer});
   updates.updated_at=new Date().toISOString();
