@@ -26,7 +26,8 @@ begin
  if p_action <> 'reinstate' and length(trim(coalesce(p_reason,'')))<10 then raise exception 'reason_required'; end if;
  select * into v_vendor from public.marketplace_vendors_live where id=p_vendor_id for update;
  if not found then raise exception 'vendor_not_found'; end if;
- if p_action='reinstate' and v_vendor.active=false then raise exception 'inactive_vendor_cannot_reinstate'; end if;
+ if p_action='reinstate' and v_vendor.active is distinct from true then raise exception 'inactive_vendor_cannot_reinstate'; end if;
+ if p_action='reinstate' and v_vendor.owner_approval is distinct from 'Approved' then raise exception 'unapproved_vendor_cannot_reinstate'; end if;
  if p_action='suspend' then
   update public.marketplace_vendors_live set operational_hold=true,
    operational_hold_reason=p_reason,operational_hold_at=now(),updated_at=now() where id=p_vendor_id;
