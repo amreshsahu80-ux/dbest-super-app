@@ -36,7 +36,7 @@ module.exports=async function handler(req,res){
   const pricingRequested=Object.hasOwn(patch,'discount_percent')||Object.hasOwn(patch,'price_inclusive_gst');
   const masterRows=await db('dbest_master_products?id=eq.'+encodeURIComponent(offer.master_product_id)+'&select=id,status,specifications&limit=1');
   const master=masterRows[0];
-  if(patch.active===true&&(!master||master.status!=='approved'||master.specifications?.test_only===true))
+  if(patch.active===true&&(!master||master.status!=='approved'||master.specifications?.test_only===true||master.specifications?.mrp_verified!==true||!Number.isFinite(Number(master.specifications?.verified_mrp_inr))||Number(master.specifications.verified_mrp_inr)<=0))
    return reply(res,409,{ok:false,error:'master_product_not_publishable'});
   let effectivePatch={...patch};
   if(pricingRequested){
@@ -55,6 +55,11 @@ module.exports=async function handler(req,res){
     delete effectivePatch.discount_percent;
    }catch(e){return reply(res,400,{ok:false,error:e.message});}
   }
+  // Legacy offer MRP remains constrained by the database. Do not silently
+  // overwrite it; reject until an Owner-controlled migration reconciles it.
+  if(pricingRequested&&offer.mrp!==null&&offer.mrp!==undefined&&
+     Number(effectivePatch.price_inclusive_gst)>Number(offer.mrp))
+   return reply(res,409,{ok:false,error:'legacy_offer_mrp_reconciliation_required'});
   let next;
   try{next=updateOffer({actorVendorId:vendorId,offer,patch:effectivePatch,vendor,verifiedMasterMrp:master?.specifications?.mrp_verified===true?Number(master.specifications.verified_mrp_inr):null});}
   catch(e){return reply(res,400,{ok:false,error:e.message});}
