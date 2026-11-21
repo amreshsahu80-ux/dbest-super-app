@@ -32,6 +32,8 @@ jobs:
         run: node --check api/marketplace/vendor-offer-edit.js
       - name: Validate authenticated submissions API syntax
         run: node --check api/marketplace/vendor-product-submissions.js
+      - name: Vendor product auto-match policy
+        run: node tests/marketplace-vendor-product-auto-match.test.js
       - name: Vendor offer activation guard mocked API
         run: node tests/marketplace-vendor-offer-activation-api.test.js
       - name: Owner vendor listing mocked API
