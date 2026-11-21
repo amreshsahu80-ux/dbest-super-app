@@ -2,7 +2,7 @@
 const test=require('node:test'),assert=require('node:assert/strict');
 const {planReview}=require('../lib/vendor-offer-owner-review-isolated');
 const master={id:'p1',status:'approved'};
-const offer={id:'o1',master_product_id:'p1',review_status:'pending_review',version:2,stock:3,active:true};
+const offer={id:'o1',master_product_id:'p1',review_status:'pending_review',review_version:2,stock:3,active:true};
 const actor={id:'owner1',isOwner:true};
 const args={master,offer,actor,decision:'approve',expectedVersion:2};
 test('approval creates next version and audit',()=>{const r=planReview(args);assert.equal(r.nextStatus,'approved');assert.equal(r.nextVersion,3);assert.equal(r.audit.actor_id,'owner1')});
