@@ -1,7 +1,7 @@
 'use strict';
 const assert=require('node:assert/strict');
 const {groupedCatalogue}=require('../api/marketplace/grouped-catalogue');
-const masters=[{id:'atta',name:'Aashirvaad Atta 5 kg',brand:'ITC',status:'approved',image_url:'https://example.com/common.jpg'}];
+const masters=[{id:'atta',name:'Aashirvaad Atta 5 kg',brand:'ITC',status:'approved',image_url:'https://example.com/common.jpg',specifications:{mrp_verified:true,verified_mrp_inr:300}}];
 const vendors=[
  {id:'a',name:'Shop A',active:true,owner_approval:'Approved',operational_hold:false},
  {id:'b',name:'Shop B',active:true,owner_approval:'Approved',operational_hold:false},
