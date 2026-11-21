@@ -39,10 +39,14 @@ WITH registry AS (
     ) c
     WHERE s.key = 'marketplace_categories'
       AND c->>'key' = 'electronics'
-      AND c->>'active' IS DISTINCT FROM 'false'
-      AND c->>'enabled' IS DISTINCT FROM 'false'
-      AND c->>'is_active' IS DISTINCT FROM 'false'
-      AND lower(COALESCE(c->>'status','')) IN ('','active','enabled','published','live')
+      -- Match the client-side fail-closed activation contract: unknown values
+      -- (including 'pending') cannot authorize a category correction.
+      AND (NULLIF(trim(c->>'active'),'') IS NULL OR lower(trim(c->>'active')) IN ('true','1','yes','active','enabled','published','live'))
+      AND (NULLIF(trim(c->>'enabled'),'') IS NULL OR lower(trim(c->>'enabled')) IN ('true','1','yes','active','enabled','published','live'))
+      AND (NULLIF(trim(c->>'is_active'),'') IS NULL OR lower(trim(c->>'is_active')) IN ('true','1','yes','active','enabled','published','live'))
+      AND (NULLIF(trim(c->>'status'),'') IS NULL OR lower(trim(c->>'status')) IN ('active','enabled','published','live'))
+      AND NULLIF(trim(c->>'deleted_at'),'') IS NULL
+      AND NULLIF(trim(c->>'archived_at'),'') IS NULL
     ) eligible) = 1
     AND (SELECT COUNT(*) FROM public.app_settings s
          CROSS JOIN LATERAL jsonb_array_elements(
