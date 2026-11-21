@@ -7,6 +7,7 @@ import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.Settings;
+import android.widget.FrameLayout;
 import android.webkit.GeolocationPermissions;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
@@ -19,6 +20,9 @@ import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 
 public class MainActivity extends ComponentActivity {
     private static final String HOME = "https://dbest4u.com/";
@@ -31,8 +35,21 @@ public class MainActivity extends ComponentActivity {
 
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        // Android 15+ forces edge-to-edge for target SDK 35+. Keep the web
+        // experience inside the safe area without modifying the live website.
+        FrameLayout root = new FrameLayout(this);
+        root.setBackgroundColor(0xFFFFFFFF);
         webView = new WebView(this);
-        setContentView(webView);
+        root.addView(webView, new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT));
+        ViewCompat.setOnApplyWindowInsetsListener(root, (view, windowInsets) -> {
+            Insets safeArea = windowInsets.getInsets(
+                    WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout());
+            view.setPadding(safeArea.left, safeArea.top, safeArea.right, safeArea.bottom);
+            return windowInsets;
+        });
+        setContentView(root);
 
         WebSettings s = webView.getSettings();
         s.setJavaScriptEnabled(true);
