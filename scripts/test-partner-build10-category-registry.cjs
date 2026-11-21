@@ -16,4 +16,6 @@ assert.match(source, /category_registry_duplicate_keys[\s\S]*?const normalized=f
 assert.match(source, /setCustomValidity\('Choose an active business category'\)/, 'unknown selection must block submission');
 assert.match(source, /generation\+\+;cache=null;loading=null/, 'refresh must invalidate stale cache');
 assert.doesNotMatch(source, /localStorage\.setItem\(|sessionStorage\.setItem\(/, 'registry selector must not persist unaudited client categories');
+assert.match(source, /const matched=current&&rows\.find\(x=>String\(x\.key\)\.toLowerCase\(\)===current\.trim\(\)\.toLowerCase\(\)\)/, 'legacy category selections must resolve to canonical registry keys');
+assert.match(source, /s\.value=String\(matched\.key\)/, 'restored selection must use authoritative key');
 console.log('Build 10 category selector contract: PASS');
