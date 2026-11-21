@@ -23,12 +23,12 @@ class WorkspaceToolbarContract(unittest.TestCase):
             ("privacy", "Account & Privacy"),
         ):
             with self.subTest(action=name):
-                self.assertRegex(browser, rf'bar.addView\\({name}, new LinearLayout.LayoutParams\\(dp\\(48\\), dp\\(48\\)\\)\\)')
+                self.assertIn(f'bar.addView({name}, new LinearLayout.LayoutParams(dp(48), dp(48)))', browser)
                 self.assertIn(f'{name}.setContentDescription("{description}")', browser)
 
     def test_workspace_notification_uses_existing_consent_controller(self):
         self.assertIn("partnerTestPush.openSettings()", MAIN)
-        self.assertRegex(PUSH, r"public void openSettings\\(\\)\\s*\\{\\s*tap\\(\\);\\s*\\}")
+        self.assertIn("public void openSettings() { tap(); }", PUSH)
         self.assertIn("control.setVisibility(show ? View.VISIBLE : View.GONE)", PUSH)
 
     def test_workspace_toolbar_retains_navigation_and_account_linking(self):
