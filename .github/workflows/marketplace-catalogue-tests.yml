@@ -18,6 +18,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Validate isolated Owner Console compliance panel syntax
+        run: node --check owner-marketplace-vendor-enforcement-isolated.js
+      - name: Validate authenticated vendor list API syntax
+        run: node --check api/marketplace/owner-vendor-list.js
       - name: Validate owner vendor enforcement API syntax
         run: node --check api/marketplace/owner-vendor-enforcement.js
       - name: Validate owner vendor image review syntax
