@@ -34,7 +34,7 @@ module.exports=async function handler(req,res){
   if(!patch||typeof patch!=='object'||Array.isArray(patch))return reply(res,400,{ok:false,error:'invalid_patch'});
   if(Object.hasOwn(patch,'mrp'))return reply(res,400,{ok:false,error:'master_mrp_read_only'});
   const pricingRequested=Object.hasOwn(patch,'discount_percent')||Object.hasOwn(patch,'price_inclusive_gst');
-  const masterRows=await db('dbest_master_products?id=eq.'+encodeURIComponent(offer.master_product_id)+'&select=id,status,specifications,verified_mrp&limit=1');
+  const masterRows=await db('dbest_master_products?id=eq.'+encodeURIComponent(offer.master_product_id)+'&select=id,status,specifications&limit=1');
   const master=masterRows[0];
   if(patch.active===true&&(!master||master.status!=='approved'||master.specifications?.test_only===true))
    return reply(res,409,{ok:false,error:'master_product_not_publishable'});
@@ -44,10 +44,10 @@ module.exports=async function handler(req,res){
     return reply(res,409,{ok:false,error:'master_product_not_publishable'});
    // Until a verified MRP is stored on the master, price edits remain blocked.
    // This avoids treating legacy vendor-entered MRP as authoritative.
-   if(master.verified_mrp===null||master.verified_mrp===undefined)
+   if(master.specifications?.mrp_verified!==true||master.specifications?.verified_mrp_inr===null||master.specifications?.verified_mrp_inr===undefined)
     return reply(res,409,{ok:false,error:'verified_master_mrp_required'});
    try{
-    const computed=calculateOffer({mrp:master.verified_mrp,
+    const computed=calculateOffer({mrp:master.specifications.verified_mrp_inr,
      sellingPrice:patch.price_inclusive_gst,discountPercent:patch.discount_percent});
     effectivePatch.price_inclusive_gst=computed.priceInclusiveGst;
     delete effectivePatch.discount_percent;
