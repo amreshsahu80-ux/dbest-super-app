@@ -137,5 +137,27 @@ async function scenario(rows,initial,fetchOverride){
     s.onSubmit({target:{querySelectorAll:()=>[s]},preventDefault(){prevented=true;}});
     assert.equal(prevented,true,'stale response must not authorize Electronics submission');
   }
+  // Returning to a backgrounded tab must recheck Owner category revocations.
+  {
+    const s=selector('Electronics'),scheduled=[],handlers={};
+    let active=true,requests=0;
+    const document={documentElement:{},visibilityState:'hidden',querySelectorAll:()=>[s],createElement:()=>option(),
+      addEventListener(type,fn){handlers[type]=fn;if(type==='submit')s.onSubmit=fn;}};
+    const window={DBEST_RUNTIME_CONFIG:{supabaseUrl:'https://example.invalid',supabasePublishableKey:'public-test-key'}};
+    const context={window,document,console:{warn(){}},
+      setTimeout(fn){scheduled.push(fn);return scheduled.length;},clearTimeout(){},
+      MutationObserver:class{observe(){}},
+      fetch:async()=>{requests++;return {ok:true,json:async()=>({categories:[{key:'Electronics',active}]})};}};
+    vm.runInNewContext(source,context,{timeout:1000});
+    await scheduled[0]();
+    assert.equal(s.value,'Electronics','initial Electronics selection should be valid');
+    active=false;document.visibilityState='visible';
+    handlers.visibilitychange();
+    await new Promise(resolve=>setImmediate(resolve));
+    assert.ok(requests>=2,'returning to tab must re-fetch Owner registry');
+    let prevented=false;s.value='Electronics';
+    s.onSubmit({target:{querySelectorAll:()=>[s]},preventDefault(){prevented=true;}});
+    assert.equal(prevented,true,'Owner-revoked Electronics must not submit after tab return');
+  }
   console.log('Build 10 category registry runtime smoke: PASS');
 })().catch(e=>{console.error(e);process.exitCode=1;});
