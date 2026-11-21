@@ -92,5 +92,23 @@ async function scenario(rows,initial,fetchOverride){
     s.onSubmit({target:{querySelectorAll:()=>[s]},preventDefault(){prevented=true;}});
     assert.equal(prevented,true,'revoked Electronics category must not submit after registry refresh');
   }
+  // A competing legacy script may replace options without changing the select node.
+  // The authoritative registry must restore the options on the next observer pass.
+  {
+    const s=selector('Electronics'),scheduled=[];
+    const document={documentElement:{},querySelectorAll:()=>[s],createElement:()=>option(),
+      addEventListener(type,fn){if(type==='submit')s.onSubmit=fn;}};
+    const context={window:{DBEST_RUNTIME_CONFIG:{supabaseUrl:'https://example.invalid',supabasePublishableKey:'public-test-key'}},
+      document,console:{warn(){}},setTimeout(fn){scheduled.push(fn);return scheduled.length;},clearTimeout(){},
+      MutationObserver:class{observe(){}},fetch:async()=>({ok:true,json:async()=>({categories:[{key:'Electronics',active:true}]})})};
+    vm.runInNewContext(source,context,{timeout:1000});
+    await scheduled[0]();
+    assert.ok(s.options.some(o=>o.value==='Electronics'));
+    const legacy=option();legacy.value='other';legacy.textContent='Other';
+    s.replaceChildren(legacy);s.value='other';
+    await scheduled[1]();
+    assert.ok(s.options.some(o=>o.value==='Electronics'),'observer must restore registry options after legacy DOM overwrite');
+    assert.ok(!s.options.some(o=>o.value==='other'),'legacy static category must not survive authoritative refresh');
+  }
   console.log('Build 10 category registry runtime smoke: PASS');
 })().catch(e=>{console.error(e);process.exitCode=1;});
