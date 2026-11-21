@@ -5,7 +5,8 @@ function isOwner(){try{return typeof session!=='undefined'&&session?.role==='own
 function install(){
  if(!isOwner())return;
  const root=document.querySelector('.sectionContent.owner55');
- if(!root||document.getElementById('dbestOwnerMasterCsvGroup'))return;
+ if(!root)return;
+ if(document.getElementById('dbestOwnerMasterCsvGroup'))return;
  const host=root.querySelector('.owner55Groups')||root;
  const group=document.createElement('div');
  group.id='dbestOwnerMasterCsvGroup';group.className='owner55Group';
@@ -18,6 +19,14 @@ function install(){
   window.location.assign('/review-only/owner-master-csv-review.html');
  };
 }
-[250,700,1500,3000].forEach(ms=>setTimeout(install,ms));
-let timer;new MutationObserver(()=>{clearTimeout(timer);timer=setTimeout(install,100)}).observe(document.body,{childList:true,subtree:true});
+function installFloating(){
+ if(!isOwner()||document.getElementById('dbestCsvOwnerFloating'))return;
+ const b=document.createElement('button');b.id='dbestCsvOwnerFloating';b.type='button';
+ b.textContent='📄 Master CSV Upload';b.setAttribute('aria-label','Upload master product CSV');
+ b.style.cssText='position:fixed;right:12px;bottom:86px;z-index:2147483000;background:#124fa3;color:#fff;border:0;border-radius:12px;padding:13px 16px;font:700 14px system-ui;box-shadow:0 4px 18px #0004;max-width:65vw';
+ b.onclick=()=>{if(!window.DBEST_OWNER_AUTH_BRIDGE?.getOwnerToken?.()){window.toast?.('Secure Owner OTP session missing. Please sign in again.');return}location.assign('/review-only/owner-master-csv-review.html')};
+ document.body.append(b);
+}
+[250,700,1500,3000].forEach(ms=>setTimeout(()=>{install();installFloating()},ms));
+let timer;new MutationObserver(()=>{clearTimeout(timer);timer=setTimeout(()=>{install();installFloating()},100)}).observe(document.body,{childList:true,subtree:true});
 })();
