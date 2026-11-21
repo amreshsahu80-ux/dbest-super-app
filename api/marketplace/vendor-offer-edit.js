@@ -50,6 +50,8 @@ module.exports=async function handler(req,res){
     const computed=calculateOffer({mrp:master.specifications.verified_mrp_inr,
      sellingPrice:patch.price_inclusive_gst,discountPercent:patch.discount_percent});
     effectivePatch.price_inclusive_gst=computed.priceInclusiveGst;
+    // Legacy offer MRP is not authoritative. Keep it unchanged until a
+    // separate Owner-controlled reconciliation migrates existing records.
     delete effectivePatch.discount_percent;
    }catch(e){return reply(res,400,{ok:false,error:e.message});}
   }
