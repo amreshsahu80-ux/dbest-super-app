@@ -38,8 +38,8 @@ WITH registry AS (
         THEN s.value::jsonb->'categories' ELSE '[]'::jsonb END
     ) c
     WHERE s.key = 'marketplace_categories'
-      AND c->>'key' = 'electronics'
-      -- Match the client-side fail-closed activation contract: unknown values
+      AND lower(trim(c->>'key')) = 'electronics'
+      -- Normalize registry keys as the client does (trim/case-fold); duplicate\n      -- Electronics aliases must still fail closed, including inactive duplicates.\n      -- Match the client-side fail-closed activation contract: unknown values
       -- (including 'pending') cannot authorize a category correction.
       AND (NULLIF(trim(c->>'active'),'') IS NULL OR lower(trim(c->>'active')) IN ('true','1','yes','active','enabled','published','live'))
       AND (NULLIF(trim(c->>'enabled'),'') IS NULL OR lower(trim(c->>'enabled')) IN ('true','1','yes','active','enabled','published','live'))
@@ -53,7 +53,7 @@ WITH registry AS (
            CASE WHEN jsonb_typeof(s.value::jsonb->'categories') = 'array'
              THEN s.value::jsonb->'categories' ELSE '[]'::jsonb END
          ) c
-         WHERE s.key = 'marketplace_categories' AND c->>'key' = 'electronics') = 1
+         WHERE s.key = 'marketplace_categories' AND lower(trim(c->>'key')) = 'electronics') = 1
     AS electronics_enabled
 ), candidate AS (
   SELECT v.*, r.electronics_enabled,
