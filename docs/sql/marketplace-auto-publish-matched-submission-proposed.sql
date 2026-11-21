@@ -51,8 +51,94 @@ begin
     or lower(regexp_replace(trim(coalesce(m.brand,'')),'\\s+',' ','g'))<>lower(regexp_replace(trim(coalesce(p->>'brand','')),'\\s+',' ','g')) then
   return jsonb_build_object('ok',false,'reason','product_identity_mismatch');
  end if;
- if (p->>'price')::numeric<=0 or (p->>'stock')::integer<0
-    or (p->>'mrp') is not null and (p->>'mrp')::numeric<(p->>'price')::numeric then
+ if coalesce(p->>'price','') !~ '^[0-9]+(\\.[0-9]+)?
+  return jsonb_build_object('ok',false,'reason','invalid_offer');
+ end if;
+ -- Avoid overwriting another offer or changing an existing vendor's stock.
+ if exists(select 1 from public.dbest_vendor_product_offers
+           where vendor_id=s.vendor_id and master_product_id=m.id) then
+  return jsonb_build_object('ok',false,'reason','existing_offer_requires_review');
+ end if;
+ img:=nullif(p->>'imageUrl','');
+ insert into public.dbest_vendor_product_offers
+  (vendor_id,master_product_id,price_inclusive_gst,mrp,stock,active,
+   vendor_image_url,vendor_image_review_status)
+ values (s.vendor_id,m.id,(p->>'price')::numeric,nullif(p->>'mrp','')::numeric,
+         (p->>'stock')::integer,true,img,
+         case when img is null then 'none' else 'pending_review' end)
+ returning id into offer_id;
+ update public.dbest_vendor_product_submissions
+  set status='approved',matched_master_product_id=m.id,
+      reviewed_by='auto_match_policy',reviewed_at=now()
+  where id=s.id;
+ return jsonb_build_object('ok',true,'submissionId',s.id,
+   'masterProductId',m.id,'offerId',offer_id,'published',true);
+end $$;
+revoke all on function public.dbest_auto_publish_matched_submission(uuid)
+ from public,anon,authenticated;
+grant execute on function public.dbest_auto_publish_matched_submission(uuid)
+ to service_role;
+
+    or coalesce(p->>'stock','') !~ '^[0-9]+
+  return jsonb_build_object('ok',false,'reason','invalid_offer');
+ end if;
+ -- Avoid overwriting another offer or changing an existing vendor's stock.
+ if exists(select 1 from public.dbest_vendor_product_offers
+           where vendor_id=s.vendor_id and master_product_id=m.id) then
+  return jsonb_build_object('ok',false,'reason','existing_offer_requires_review');
+ end if;
+ img:=nullif(p->>'imageUrl','');
+ insert into public.dbest_vendor_product_offers
+  (vendor_id,master_product_id,price_inclusive_gst,mrp,stock,active,
+   vendor_image_url,vendor_image_review_status)
+ values (s.vendor_id,m.id,(p->>'price')::numeric,nullif(p->>'mrp','')::numeric,
+         (p->>'stock')::integer,true,img,
+         case when img is null then 'none' else 'pending_review' end)
+ returning id into offer_id;
+ update public.dbest_vendor_product_submissions
+  set status='approved',matched_master_product_id=m.id,
+      reviewed_by='auto_match_policy',reviewed_at=now()
+  where id=s.id;
+ return jsonb_build_object('ok',true,'submissionId',s.id,
+   'masterProductId',m.id,'offerId',offer_id,'published',true);
+end $$;
+revoke all on function public.dbest_auto_publish_matched_submission(uuid)
+ from public,anon,authenticated;
+grant execute on function public.dbest_auto_publish_matched_submission(uuid)
+ to service_role;
+
+    or (nullif(p->>'mrp','') is not null and (p->>'mrp') !~ '^[0-9]+(\\.[0-9]+)?
+  return jsonb_build_object('ok',false,'reason','invalid_offer');
+ end if;
+ -- Avoid overwriting another offer or changing an existing vendor's stock.
+ if exists(select 1 from public.dbest_vendor_product_offers
+           where vendor_id=s.vendor_id and master_product_id=m.id) then
+  return jsonb_build_object('ok',false,'reason','existing_offer_requires_review');
+ end if;
+ img:=nullif(p->>'imageUrl','');
+ insert into public.dbest_vendor_product_offers
+  (vendor_id,master_product_id,price_inclusive_gst,mrp,stock,active,
+   vendor_image_url,vendor_image_review_status)
+ values (s.vendor_id,m.id,(p->>'price')::numeric,nullif(p->>'mrp','')::numeric,
+         (p->>'stock')::integer,true,img,
+         case when img is null then 'none' else 'pending_review' end)
+ returning id into offer_id;
+ update public.dbest_vendor_product_submissions
+  set status='approved',matched_master_product_id=m.id,
+      reviewed_by='auto_match_policy',reviewed_at=now()
+  where id=s.id;
+ return jsonb_build_object('ok',true,'submissionId',s.id,
+   'masterProductId',m.id,'offerId',offer_id,'published',true);
+end $$;
+revoke all on function public.dbest_auto_publish_matched_submission(uuid)
+ from public,anon,authenticated;
+grant execute on function public.dbest_auto_publish_matched_submission(uuid)
+ to service_role;
+) then
+  return jsonb_build_object('ok',false,'reason','invalid_offer');
+ end if;
+ if (p->>'price')::numeric<=0 or (p->>'stock')::numeric>2147483647
+    or (nullif(p->>'mrp','') is not null and (p->>'mrp')::numeric<(p->>'price')::numeric) then
   return jsonb_build_object('ok',false,'reason','invalid_offer');
  end if;
  -- Avoid overwriting another offer or changing an existing vendor's stock.
