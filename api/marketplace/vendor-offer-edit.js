@@ -56,7 +56,7 @@ module.exports=async function handler(req,res){
    }catch(e){return reply(res,400,{ok:false,error:e.message});}
   }
   let next;
-  try{next=updateOffer({actorVendorId:vendorId,offer,patch:effectivePatch,vendor});}
+  try{next=updateOffer({actorVendorId:vendorId,offer,patch:effectivePatch,vendor,verifiedMasterMrp:master?.specifications?.mrp_verified===true?Number(master.specifications.verified_mrp_inr):null});}
   catch(e){return reply(res,400,{ok:false,error:e.message});}
   const allowed=['price_inclusive_gst','stock','active','vendor_image_url','vendor_image_review_status'];
   const updates=Object.fromEntries(allowed.filter(k=>next[k]!==offer[k]).map(k=>[k,next[k]]));
