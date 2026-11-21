@@ -4,17 +4,14 @@
 const {updateVendorImage,effectiveImage}=require('./vendor-offer-image');
 function updateOffer({actorVendorId,offer,patch={},vendor=null}){
  if(!actorVendorId||!offer||offer.vendor_id!==actorVendorId)throw Error('vendor_offer_forbidden');
- const permitted=new Set(['price_inclusive_gst','mrp','stock','active','vendor_image_url']);
+ const permitted=new Set(['price_inclusive_gst','stock','active','vendor_image_url']);
  if(!patch||typeof patch!=='object'||Array.isArray(patch)||Object.keys(patch).some(k=>!permitted.has(k)))throw Error('unsupported_offer_field');
  const next={...offer};
  if(Object.hasOwn(patch,'price_inclusive_gst')){
   if(typeof patch.price_inclusive_gst!=='number'||!Number.isFinite(patch.price_inclusive_gst)||patch.price_inclusive_gst<=0)throw Error('invalid_price');
   next.price_inclusive_gst=patch.price_inclusive_gst;
  }
- if(Object.hasOwn(patch,'mrp')){
-  if(patch.mrp!==null&&(typeof patch.mrp!=='number'||!Number.isFinite(patch.mrp)||patch.mrp<=0))throw Error('invalid_mrp');
-  next.mrp=patch.mrp;
- }
+
  if(next.mrp!==null&&next.mrp!==undefined&&next.price_inclusive_gst>next.mrp)throw Error('price_exceeds_mrp');
  if(Object.hasOwn(patch,'stock')){
   if(!Number.isSafeInteger(patch.stock)||patch.stock<0)throw Error('invalid_stock');
