@@ -1,0 +1,14 @@
+'use strict';
+const test=require('node:test'),assert=require('node:assert/strict');
+const {planReview}=require('../lib/vendor-offer-owner-review-isolated');
+const master={id:'p1',status:'approved'};
+const offer={id:'o1',master_product_id:'p1',review_status:'pending_review',version:2,stock:3,active:true};
+const actor={id:'owner1',isOwner:true};
+const args={master,offer,actor,decision:'approve',expectedVersion:2};
+test('approval creates next version and audit',()=>{const r=planReview(args);assert.equal(r.nextStatus,'approved');assert.equal(r.nextVersion,3);assert.equal(r.audit.actor_id,'owner1')});
+test('reject non-owner',()=>assert.throws(()=>planReview({...args,actor:{id:'vendor1',isOwner:false}}),/owner_authorization_required/));
+test('reject stale version',()=>assert.throws(()=>planReview({...args,expectedVersion:1}),/stale_review_version/));
+test('reject unapproved master',()=>assert.throws(()=>planReview({...args,master:{...master,status:'draft'}}),/master_not_approved/));
+test('reject inactive or out of stock',()=>assert.throws(()=>planReview({...args,offer:{...offer,active:false}}),/offer_not_sellable/));
+test('reject and suspend require reason',()=>assert.throws(()=>planReview({...args,decision:'reject'}),/review_reason_required/));
+test('duplicate transition rejected',()=>assert.throws(()=>planReview({...args,offer:{...offer,review_status:'approved'}}),/duplicate_review/));
