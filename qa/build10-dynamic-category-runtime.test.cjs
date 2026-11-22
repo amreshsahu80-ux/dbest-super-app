@@ -106,3 +106,24 @@ test('form submission accepts active Electronics registry selection',async()=>{
  assert.equal(prevented,false);
  assert.equal(h.select.validityMessage,'');
 });
+
+test('invalid registry response makes category selector required and blocks submission',async()=>{
+ const h=harness({error:'registry_unavailable'});
+ await h.window.DBEST_VENDOR_DYNAMIC_CATEGORIES.refresh();
+ assert.equal(h.select.required,true);
+ assert.notEqual(h.select.validityMessage,'');
+ let prevented=false;
+ const form={querySelectorAll(q){return q==='select[name="type"]'?[h.select]:[];}};
+ h.listeners['document:submit'][0]({target:form,preventDefault(){prevented=true;}});
+ assert.equal(prevented,true);
+});
+test('empty authoritative registry makes category selector required and blocks submission',async()=>{
+ const h=harness({categories:[]});
+ await h.window.DBEST_VENDOR_DYNAMIC_CATEGORIES.refresh();
+ assert.equal(h.select.required,true);
+ assert.notEqual(h.select.validityMessage,'');
+ let prevented=false;
+ const form={querySelectorAll(q){return q==='select[name="type"]'?[h.select]:[];}};
+ h.listeners['document:submit'][0]({target:form,preventDefault(){prevented=true;}});
+ assert.equal(prevented,true);
+});
