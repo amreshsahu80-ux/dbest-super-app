@@ -688,6 +688,9 @@ public final class MainActivity extends ComponentActivity {
     }
 
     @Override protected void onDestroy() {
+        // Invalidate queued WebView push callbacks before tearing down the controller.
+        workspaceGeneration++;
+        showingBrowser = false;
         if (partnerTestPush != null) partnerTestPush.shutdown();
         cancelPendingLocationPrompt();
         cancelPendingFileChooser();
