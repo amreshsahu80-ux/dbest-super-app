@@ -7,7 +7,8 @@ const path = require('node:path');
 const root = __dirname;
 const files = [
   'build10-samsung-point-electronics-dry-run.sql',
-  'build10-electronics-discovery-contract-inspection.sql'
+  'build10-electronics-discovery-contract-inspection.sql',
+  'build10-electronics-staging-acceptance-gates.sql'
 ];
 function stripCommentsAndStrings(sql) {
   return sql.replace(/--[^\n]*/g, ' ')
