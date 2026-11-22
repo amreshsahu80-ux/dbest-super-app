@@ -83,3 +83,26 @@ test('invalid registry response fails closed rather than retaining stale Electro
  assert.equal(h.select.options.some(o=>o.value==='electronics'),false);
  assert.notEqual(h.select.validityMessage,'');
 });
+
+test('form submission blocks stale Electronics after registry deactivation',async()=>{
+ const h=harness({categories:[{key:'electronics',label:'Electronics',active:true}]});
+ await h.window.DBEST_VENDOR_DYNAMIC_CATEGORIES.refresh();
+ h.select.value='electronics';
+ h.setRegistry({categories:[{key:'electronics',label:'Electronics',active:false}]});
+ await h.window.DBEST_VENDOR_DYNAMIC_CATEGORIES.refresh();
+ let prevented=false;
+ const form={querySelectorAll(q){return q==='select[name="type"]'?[h.select]:[];}};
+ h.listeners['document:submit'][0]({target:form,preventDefault(){prevented=true;}});
+ assert.equal(prevented,true);
+ assert.notEqual(h.select.validityMessage,'');
+});
+test('form submission accepts active Electronics registry selection',async()=>{
+ const h=harness({categories:[{key:'electronics',label:'Electronics',active:true}]});
+ await h.window.DBEST_VENDOR_DYNAMIC_CATEGORIES.refresh();
+ h.select.value='electronics';
+ let prevented=false;
+ const form={querySelectorAll(q){return q==='select[name="type"]'?[h.select]:[];}};
+ h.listeners['document:submit'][0]({target:form,preventDefault(){prevented=true;}});
+ assert.equal(prevented,false);
+ assert.equal(h.select.validityMessage,'');
+});
