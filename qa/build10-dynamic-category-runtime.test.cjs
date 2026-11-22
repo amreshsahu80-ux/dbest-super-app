@@ -9,6 +9,8 @@ function harness(payload){
  const listeners={}; const options=[];
  const select={
    name:'type',dataset:{},required:false,options,selectedIndex:0,
+   set innerHTML(v){if(v===''){this.options.length=0;this._value='';this.selectedIndex=-1;}},
+   appendChild(item){this.options.push(item);if(item.selected)this.value=item.value;return item;},
    _value:'',validityMessage:'',
    get value(){return this._value;},set value(v){this._value=v;this.selectedIndex=this.options.findIndex(o=>o.value===v);},
    setCustomValidity(v){this.validityMessage=v;},
@@ -18,6 +20,7 @@ function harness(payload){
  };
  const document={
    documentElement:{},visibilityState:'hidden',
+   createElement(tag){if(tag!=='option')throw new Error('Unexpected DOM element: '+tag);return {value:'',textContent:'',get text(){return this.textContent;},set text(v){this.textContent=v;},disabled:false,selected:false};},
    querySelectorAll(q){return q==='select[name="type"]'?[select]:[];},
    addEventListener(event,fn){(listeners['document:'+event]??=[]).push(fn);}
  };
