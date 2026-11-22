@@ -35,3 +35,10 @@ print("PASS: stale WebView callbacks cannot bind push state across Home/role swi
 assert "private long workspaceGeneration;" in source
 assert "currentRole = canonicalRole;\n        workspaceGeneration++;" in source
 assert "private void showHome() {\n        workspaceGeneration++;" in source
+
+# Activity teardown must invalidate already queued WebView push callbacks.
+teardown = source.split("@Override protected void onDestroy() {", 1)[1].split("super.onDestroy();", 1)[0]
+assert "workspaceGeneration++;" in teardown
+assert "showingBrowser = false;" in teardown
+assert teardown.index("workspaceGeneration++;") < teardown.index("partnerTestPush.shutdown()")
+assert teardown.index("showingBrowser = false;") < teardown.index("partnerTestPush.shutdown()")
