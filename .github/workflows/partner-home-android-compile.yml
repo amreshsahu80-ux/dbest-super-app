@@ -4,10 +4,12 @@ on:
     branches:
       - feat/partner-home-compact-ui-20261115
       - release/partner-postbuild10-consolidation-20261118
+      - 'fix/partner-build11-*'
   pull_request:
     branches:
       - release/partner-build10-isolated-20261114
       - release/partner-postbuild10-consolidation-20261118
+      - fix/partner-build11-workspace-notification-control-20261121
   workflow_dispatch:
 permissions:
   contents: read
