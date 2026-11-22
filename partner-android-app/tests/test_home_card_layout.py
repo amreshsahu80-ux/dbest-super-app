@@ -27,4 +27,19 @@ assert 'card.addView(photoFrame, new LinearLayout.LayoutParams(-1, dp(56)));' in
 assert 'roleTitle.setMaxLines(2);' in role_card, "Role headings must wrap on narrow screens"
 assert 'ViewCompat.setAccessibilityHeading(roleTitle, true);' in role_card, "Role heading semantics removed"
 assert 'photoFrame.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);' in role_card, "Decorative photo is exposed to TalkBack"
+
+# Workspace toolbar must keep native navigation and notification settings accessible
+# without introducing another floating control over the web portal's WhatsApp widget.
+browser = source.split("private LinearLayout makeBrowser() {", 1)[1].split("webView = new WebView(this);", 1)[0]
+for name, description, action in (
+    ("back", "Back", "showHome()"),
+    ("notifications", "Partner notification on/off settings", "partnerTestPush.openSettings()"),
+    ("home", "Partner home", "showHome()"),
+):
+    assert re.search(r'Button ' + name + r' = button\\(', browser), f"Missing toolbar {name} button"
+    assert f'{name}.setContentDescription("{description}");' in browser, f"Missing accessible {name} label"
+    assert action in browser, f"Missing {name} action"
+    assert re.search(r'bar\\.addView\\(' + name + r', new LinearLayout\\.LayoutParams\\(dp\\(48\\), dp\\(48\\)\\)\\);', browser), f"{name} touch target must remain 48dp"
+assert 'The home-screen floating toggle is hidden over the portal' in browser, "Portal notification overlay separation changed"
+
 print("PASS: three Partner cards retain ordered routes, 8dp gaps, overlay clearance and account access")
