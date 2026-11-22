@@ -15,16 +15,26 @@ function stripCommentsAndStrings(sql) {
     .replace(/'(?:''|[^'])*'/g, "''")
     .replace(/\$([a-zA-Z_][\w]*)?\$[\s\S]*?\$\1\$/g, "''");
 }
+// SELECT INTO and row-locking SELECT are writes/locks even without a DML verb.
+function assertReadOnlyStatement(statement) {
+  assert.match(statement, /^(?:WITH\\b[\\s\\S]*?\\bSELECT\\b|SELECT\\b)/i);
+  assert.doesNotMatch(statement, /\\b(?:INSERT|UPDATE|DELETE|MERGE|TRUNCATE|ALTER|DROP|CREATE|GRANT|REVOKE|CALL|DO|COPY|EXECUTE|COMMIT|ROLLBACK)\\b/i);
+  assert.doesNotMatch(statement, /\\bSELECT\\b[\\s\\S]*?\\bINTO\\s+(?:TEMP(?:ORARY)?\\s+|UNLOGGED\\s+)?(?:TABLE\\s+)?[a-z_]/i);
+  assert.doesNotMatch(statement, /\\bFOR\\s+(?:NO\\s+KEY\\s+UPDATE|KEY\\s+SHARE|UPDATE|SHARE)\\b/i);
+}
+test('SQL safety guard rejects SELECT INTO and locking SELECT', () => {
+  for (const unsafe of ['SELECT * INTO TEMP TABLE x FROM vendors', 'SELECT * FROM vendors FOR UPDATE', 'WITH x AS (DELETE FROM vendors RETURNING *) SELECT * FROM x']) {
+    assert.throws(() => assertReadOnlyStatement(unsafe), undefined, unsafe);
+  }
+  assert.doesNotThrow(() => assertReadOnlyStatement('SELECT id FROM vendors WHERE active IS TRUE'));
+});
 for (const file of files) {
   test(file + ' contains SELECT-only statements', () => {
     const sql = fs.readFileSync(path.join(root, file), 'utf8');
     const cleaned = stripCommentsAndStrings(sql);
     const statements = cleaned.split(';').map(s => s.trim()).filter(Boolean);
     assert.ok(statements.length > 0, 'expected inspection queries');
-    for (const statement of statements) {
-      assert.match(statement, /^(?:WITH\b[\s\S]*?\bSELECT\b|SELECT\b)/i);
-      assert.doesNotMatch(statement, /\b(?:INSERT|UPDATE|DELETE|MERGE|TRUNCATE|ALTER|DROP|CREATE|GRANT|REVOKE|CALL|DO|COPY|EXECUTE|COMMIT|ROLLBACK)\b/i);
-    }
+    for (const statement of statements) assertReadOnlyStatement(statement);
   });
 }
 test('Samsung Point preview preserves fail-closed category and catalogue guards', () => {
