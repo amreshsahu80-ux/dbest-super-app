@@ -60,7 +60,25 @@ jobs:
           grep -Fq 'versionCode 10' app/build.gradle
           grep -Fq "versionName '1.0.6'" app/build.gradle
       - name: Compile isolated unsigned candidate
-        run: gradle :app:assembleRelease :app:bundleRelease --no-daemon
+        shell: bash
+        run: |
+          set -o pipefail
+          for attempt in 1 2 3; do
+            echo "Unsigned candidate Gradle attempt ${attempt}/3"
+            if gradle :app:assembleRelease :app:bundleRelease --no-daemon 2>&1 | tee /tmp/dbest-build10-gradle.log; then
+              exit 0
+            fi
+            # Only retry transient repository throttling; do not hide real build errors.
+            if ! grep -Eq 'Received status code 429|HTTP response code: 429|Too Many Requests' /tmp/dbest-build10-gradle.log; then
+              echo "Non-throttling Gradle failure; stopping without retry."
+              exit 1
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              echo "Dependency repository still throttling after three attempts."
+              exit 1
+            fi
+            sleep $((attempt * 45))
+          done
       - name: Validate release bundle and launcher reference
         run: |
           test -s app/build/outputs/bundle/release/app-release.aab
