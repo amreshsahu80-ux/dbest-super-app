@@ -17,10 +17,10 @@ function stripCommentsAndStrings(sql) {
 }
 // SELECT INTO and row-locking SELECT are writes/locks even without a DML verb.
 function assertReadOnlyStatement(statement) {
-  assert.match(statement, /^(?:WITH\\b[\\s\\S]*?\\bSELECT\\b|SELECT\\b)/i);
-  assert.doesNotMatch(statement, /\\b(?:INSERT|UPDATE|DELETE|MERGE|TRUNCATE|ALTER|DROP|CREATE|GRANT|REVOKE|CALL|DO|COPY|EXECUTE|COMMIT|ROLLBACK)\\b/i);
-  assert.doesNotMatch(statement, /\\bSELECT\\b[\\s\\S]*?\\bINTO\\s+(?:TEMP(?:ORARY)?\\s+|UNLOGGED\\s+)?(?:TABLE\\s+)?[a-z_]/i);
-  assert.doesNotMatch(statement, /\\bFOR\\s+(?:NO\\s+KEY\\s+UPDATE|KEY\\s+SHARE|UPDATE|SHARE)\\b/i);
+  assert.match(statement, /^(?:WITH\b[\s\S]*?\bSELECT\b|SELECT\b)/i);
+  assert.doesNotMatch(statement, /\b(?:INSERT|UPDATE|DELETE|MERGE|TRUNCATE|ALTER|DROP|CREATE|GRANT|REVOKE|CALL|DO|COPY|EXECUTE|COMMIT|ROLLBACK)\b/i);
+  assert.doesNotMatch(statement, /\bSELECT\b[\s\S]*?\bINTO\s+(?:TEMP(?:ORARY)?\s+|UNLOGGED\s+)?(?:TABLE\s+)?[a-z_]/i);
+  assert.doesNotMatch(statement, /\bFOR\s+(?:NO\s+KEY\s+UPDATE|KEY\s+SHARE|UPDATE|SHARE)\b/i);
 }
 test('SQL safety guard rejects SELECT INTO and locking SELECT', () => {
   for (const unsafe of ['SELECT * INTO TEMP TABLE x FROM vendors', 'SELECT * FROM vendors FOR UPDATE', 'WITH x AS (DELETE FROM vendors RETURNING *) SELECT * FROM x']) {
