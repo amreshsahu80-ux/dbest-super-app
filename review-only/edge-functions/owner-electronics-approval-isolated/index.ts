@@ -21,7 +21,7 @@ Deno.serve(async req=>{
   if(error)return reply({error:"catalogue_unavailable"},503);
   const rows=(data||[]).map(p=>{
    const blocked=p.specifications?.customer_publication_blocked===true||p.specifications?.customer_publication_blocked==="true";
-   const reasons=[...(!p.image_url?["image_missing"]:[]),...(!p.image_rights_verified?["image_rights_unverified"]:[]),...(blocked?["customer_publication_blocked"]:[])];
+   const reasons=[...(!p.image_url?["image_missing"]:[]),...(p.image_url?.includes("/functions/v1/dbest-catalogue-image-isolated")?["illustrative_image_not_allowed"]:[]),...(!p.image_rights_verified?["image_rights_unverified"]:[]),...(blocked?["customer_publication_blocked"]:[])];
    return {id:p.id,name:p.name,brand:p.brand,status:p.status,image_url:p.image_url,eligibleForApproval:reasons.length===0,blockers:reasons};
   });
   return reply({ok:true,category:"electronics",total:rows.length,eligible:rows.filter(x=>x.eligibleForApproval).length,rows});
@@ -35,7 +35,7 @@ Deno.serve(async req=>{
  if(!p||p.category!=="electronics")return reply({error:"product_not_found"},404);
  if(p.status!=="draft")return reply({error:"product_not_draft"},409);
  const blocked=p.specifications?.customer_publication_blocked===true||p.specifications?.customer_publication_blocked==="true";
- if(!p.image_rights_verified||!p.image_url||blocked)return reply({error:"publication_checks_incomplete",imageRightsVerified:!!p.image_rights_verified,imagePresent:!!p.image_url,publicationBlocked:blocked},409);
+ if(!p.image_rights_verified||!p.image_url||p.image_url.includes("/functions/v1/dbest-catalogue-image-isolated")||blocked)return reply({error:"publication_checks_incomplete",imageRightsVerified:!!p.image_rights_verified,imagePresent:!!p.image_url,publicationBlocked:blocked},409);
  const {data:changed,error}=await sb.from("dbest_master_products").update({status:"approved",updated_at:new Date().toISOString()})
  .eq("id",p.id).eq("category","electronics").eq("status","draft").eq("image_rights_verified",true).select("id,status").maybeSingle();
  if(error)return reply({error:"approval_failed"},503);
