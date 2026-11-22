@@ -36,10 +36,10 @@ for name, description, action in (
     ("notifications", "Partner notification on/off settings", "partnerTestPush.openSettings()"),
     ("home", "Partner home", "showHome()"),
 ):
-    assert re.search(r'Button ' + name + r' = button\\(', browser), f"Missing toolbar {name} button"
+    assert re.search(r'Button ' + name + r' = button\(', browser), f"Missing toolbar {name} button"
     assert f'{name}.setContentDescription("{description}");' in browser, f"Missing accessible {name} label"
     assert action in browser, f"Missing {name} action"
-    assert re.search(r'bar\\.addView\\(' + name + r', new LinearLayout\\.LayoutParams\\(dp\\(48\\), dp\\(48\\)\\)\\);', browser), f"{name} touch target must remain 48dp"
+    assert re.search(r'bar\.addView\(' + name + r', new LinearLayout\.LayoutParams\(dp\(48\), dp\(48\)\)\);', browser), f"{name} touch target must remain 48dp"
 assert 'The home-screen floating toggle is hidden over the portal' in browser, "Portal notification overlay separation changed"
 
 print("PASS: three Partner cards retain ordered routes, 8dp gaps, overlay clearance and account access")
