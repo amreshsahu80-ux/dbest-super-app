@@ -3,13 +3,13 @@
 // This endpoint does not publish products or modify live vendor offers.
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import {createClient} from "npm:@supabase/supabase-js@2";
-const headers={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"apikey,authorization,content-type,x-dbest-vendor-token","Access-Control-Allow-Methods":"GET,OPTIONS","Content-Type":"application/json","Cache-Control":"no-store"};
+const headers={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"apikey,authorization,content-type,x-vendor-token","Access-Control-Allow-Methods":"GET,OPTIONS","Content-Type":"application/json","Cache-Control":"no-store"};
 const respond=(value:unknown,status=200)=>new Response(JSON.stringify(value),{status,headers});
 async function sha256hex(value:string){const bytes=new TextEncoder().encode(value);const digest=await crypto.subtle.digest("SHA-256",bytes);return [...new Uint8Array(digest)].map(x=>x.toString(16).padStart(2,"0")).join("");}
 Deno.serve(async req=>{
  if(req.method==="OPTIONS")return new Response("ok",{headers});
  if(req.method!=="GET")return respond({error:"method_not_allowed"},405);
- const token=req.headers.get("x-dbest-vendor-token")?.trim();
+ const token=req.headers.get("x-vendor-token")?.trim();
  if(!token||token.length<16||token.length>2048)return respond({error:"vendor_session_required"},401);
  const url=Deno.env.get("SUPABASE_URL"),key=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
  if(!url||!key)return respond({error:"server_not_configured"},503);
