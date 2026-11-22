@@ -67,6 +67,8 @@ public final class MainActivity extends ComponentActivity {
     private boolean showingBrowser;
     private boolean resetWorkspaceHistoryOnLoad;
     private String currentRole = "";
+    // Invalidates callbacks even when a workspace is reopened at the same URL.
+    private long workspaceGeneration;
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
@@ -384,10 +386,12 @@ public final class MainActivity extends ComponentActivity {
                 if (showingBrowser && partnerTestPush != null && isDbest(Uri.parse(url))) {
                     final String completedUrl = url;
                     final String completedRole = currentRole;
+                    final long completedGeneration = workspaceGeneration;
                     v.postDelayed(() -> {
                         // A delayed callback from a previous role must not update push
                         // state after Home navigation or a subsequent workspace switch.
                         if (showingBrowser && partnerTestPush != null
+                                && completedGeneration == workspaceGeneration
                                 && java.util.Objects.equals(completedRole, currentRole)
                                 && completedUrl.equals(v.getUrl())) {
                             partnerTestPush.onPortalPageLoaded();
@@ -558,6 +562,7 @@ public final class MainActivity extends ComponentActivity {
         cancelPendingLocationPrompt();
         if (partnerTestPush != null) partnerTestPush.onWorkspaceSelected(canonicalRole);
         currentRole = canonicalRole;
+        workspaceGeneration++;
         browserTitle.setText(name);
         showingBrowser = true;
         homeScreen.setVisibility(View.GONE);
@@ -571,6 +576,7 @@ public final class MainActivity extends ComponentActivity {
     }
 
     private void showHome() {
+        workspaceGeneration++;
         cancelPendingFileChooser();
         cancelPendingLocationPrompt();
         showingBrowser = false;
@@ -682,6 +688,9 @@ public final class MainActivity extends ComponentActivity {
     }
 
     @Override protected void onDestroy() {
+        // Invalidate queued WebView push callbacks before tearing down the controller.
+        workspaceGeneration++;
+        showingBrowser = false;
         if (partnerTestPush != null) partnerTestPush.shutdown();
         cancelPendingLocationPrompt();
         cancelPendingFileChooser();
