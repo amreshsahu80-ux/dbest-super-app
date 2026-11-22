@@ -173,7 +173,8 @@ public final class MainActivity extends ComponentActivity {
                 "Manage rides, deliveries and trip earnings",
                 0xFF3465F5, R.drawable.partner_vaahak,
                 "/vaahak", "/partner?type=Vaahak"));
-        space(page, 10);
+        // Keep the three workspace cards visually grouped with uniform gaps.
+        space(page, 8);
         page.addView(roleCard(
                 "Service Partner", "REPAIRS · HOME SERVICES",
                 "Receive service requests and manage jobs",
