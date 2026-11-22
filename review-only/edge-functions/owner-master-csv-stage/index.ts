@@ -44,6 +44,26 @@ Deno.serve(async req=>{
  }
  let data:{rows?:Row[]};
  try{data=await req.json()}catch{return reply({error:"invalid_json"},400)}
+ if((data as Record<string,unknown>).action==="review_batch"){
+  const batchId=String((data as Record<string,unknown>).batchId||"");
+  if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(batchId))return reply({error:"invalid_batch_id"},400);
+  const url=Deno.env.get("SUPABASE_URL"),key=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if(!url||!key)return reply({error:"server_not_configured"},503);
+  const sb=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}});
+  const {data:owner,error:authError}=await sb.rpc("validate_owner_session",{p_token:token});
+  if(authError||!owner)return reply({error:"owner_session_invalid"},401);
+  const {data:rows,error:listError}=await sb.from("dbest_master_catalogue_import_staging")
+   .select("id,status,payload").eq("batch_id",batchId).eq("imported_by",owner).limit(101);
+  if(listError)return reply({error:"batch_lookup_failed"},500);
+  if(!rows?.length)return reply({error:"batch_not_found"},404);
+  if(rows.length>100)return reply({error:"batch_exceeds_limit"},422);
+  const invalid=rows.filter(r=>r.status!=="draft"||!r.payload||check(r.payload as Row).length);
+  if(invalid.length)return reply({error:"batch_not_all_valid_drafts",invalid:invalid.length},409);
+  const {data:updated,error:updateError}=await sb.from("dbest_master_catalogue_import_staging")
+   .update({status:"reviewed"}).eq("batch_id",batchId).eq("imported_by",owner).eq("status","draft").select("id");
+  if(updateError)return reply({error:"batch_review_failed"},500);
+  return reply({ok:true,batchId,reviewed:updated?.length||0,published:0,masterApproved:0});
+ }
  if((data as Record<string,unknown>).action==="review_draft"){
   const rowId=String((data as Record<string,unknown>).rowId||"");
   const decision=String((data as Record<string,unknown>).decision||"");
