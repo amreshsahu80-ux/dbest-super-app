@@ -2,7 +2,8 @@ name: Partner Build 11 stale push callback regression
 on:
   push:
     branches:
-      - test/partner-build11-stale-push-callback-20261122
+      - 'fix/partner-build11-workspace-notification-control-20261121'
+      - 'test/partner-build11-*'
   pull_request:
     paths:
       - 'partner-android-app/tests/test_home_stale_push_callback.py'
