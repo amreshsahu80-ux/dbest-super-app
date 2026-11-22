@@ -4,6 +4,7 @@ on:
     paths:
       - 'marketplace-live-catalog-authority.js'
       - 'qa/build10-catalog-request-order.test.cjs'
+      - 'qa/build10-catalog-runtime-order.test.cjs'
       - '.github/workflows/build10-catalog-request-order.yml'
   workflow_dispatch:
 jobs:
@@ -15,4 +16,4 @@ jobs:
         with:
           node-version: '22'
       - name: Verify request-order guards
-        run: node --test qa/build10-catalog-request-order.test.cjs
+        run: node --test qa/build10-catalog-request-order.test.cjs qa/build10-catalog-runtime-order.test.cjs
