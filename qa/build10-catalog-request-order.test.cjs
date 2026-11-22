@@ -22,3 +22,10 @@ test('latest response remains eligible for snapshot application', () => {
   assert.equal(first === current, false);
   assert.equal(second === current, true);
 });
+
+
+test('cached catalogue is scoped to the location that produced it', () => {
+  assert.match(source, /snapshotLocationSig:''/);
+  assert.match(source, /S\.snapshot=d;S\.snapshotLocationSig=S\.locationSig;S\.ready=true/);
+  assert.match(source, /S\.ready&&S\.snapshotLocationSig===S\.locationSig&&t!=='medicine'/);
+});
