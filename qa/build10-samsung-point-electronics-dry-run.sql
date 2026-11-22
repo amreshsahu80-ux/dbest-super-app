@@ -47,6 +47,11 @@ WITH registry AS (
       -- Electronics aliases must still fail closed, including inactive duplicates.
       -- Match the client-side fail-closed activation contract: unknown values
       -- (including 'pending') cannot authorize a category correction.
+      -- Require explicit activation evidence; missing every flag is not approval.
+      AND (NULLIF(trim(c->>'active'),'') IS NOT NULL
+        OR NULLIF(trim(c->>'enabled'),'') IS NOT NULL
+        OR NULLIF(trim(c->>'is_active'),'') IS NOT NULL
+        OR NULLIF(trim(c->>'status'),'') IS NOT NULL)
       AND (NULLIF(trim(c->>'active'),'') IS NULL OR lower(trim(c->>'active')) IN ('true','1','yes','active','enabled','published','live'))
       AND (NULLIF(trim(c->>'enabled'),'') IS NULL OR lower(trim(c->>'enabled')) IN ('true','1','yes','active','enabled','published','live'))
       AND (NULLIF(trim(c->>'is_active'),'') IS NULL OR lower(trim(c->>'is_active')) IN ('true','1','yes','active','enabled','published','live'))
