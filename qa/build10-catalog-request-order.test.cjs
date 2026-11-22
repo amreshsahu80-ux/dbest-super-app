@@ -8,11 +8,11 @@ const source = fs.readFileSync(path.join(__dirname, '..', 'marketplace-live-cata
 
 test('each load receives a monotonic request identity', () => {
   assert.match(source, /requestSeq:0/);
-  assert.match(source, /const requestSeq=\\+\\+S\\.requestSeq/);
+  assert.match(source, /const requestSeq=\+\+S\.requestSeq/);
 });
 
 test('obsolete responses cannot apply a snapshot', () => {
-  assert.match(source, /if\\(requestSeq!==S\\.requestSeq\\)return null;applySnapshot\\(d\\)/);
+  assert.match(source, /if\(requestSeq!==S\.requestSeq\)return null;applySnapshot\(d\)/);
 });
 
 test('latest response remains eligible for snapshot application', () => {
