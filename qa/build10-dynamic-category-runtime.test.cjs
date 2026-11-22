@@ -28,7 +28,7 @@ function harness(payload){
  const window={DBEST_RUNTIME_CONFIG:{supabaseUrl:'https://example.invalid',supabasePublishableKey:'test-public-key'},addEventListener(){}};
  const context={window,document,console:{warn(){}},MutationObserver:class{observe(){}},
    setTimeout(){return 0;},clearTimeout(){},
-   fetch:async()=>({ok:true,json:async()=>registryPayload}),
+   fetch:async()=>{if(registryPayload?.__networkFailure)throw new Error('registry_network_unavailable');return {ok:true,json:async()=>registryPayload};},
  };
  vm.runInNewContext(source,context,{timeout:1000});
  return {select,window,listeners,setRegistry(next){registryPayload=next;}};
@@ -126,4 +126,24 @@ test('empty authoritative registry makes category selector required and blocks s
  const form={querySelectorAll(q){return q==='select[name="type"]'?[h.select]:[];}};
  h.listeners['document:submit'][0]({target:form,preventDefault(){prevented=true;}});
  assert.equal(prevented,true);
+});
+
+// Failure/recovery acceptance: never keep a formerly valid category after the registry is unreachable.
+test('registry network failure clears Electronics and subsequent recovery restores active selection',async()=>{
+ const h=harness({categories:[{key:'electronics',label:'Electronics',active:true}]});
+ await h.window.DBEST_VENDOR_DYNAMIC_CATEGORIES.refresh();
+ h.select.value='electronics';
+ h.setRegistry({__networkFailure:true});
+ await h.window.DBEST_VENDOR_DYNAMIC_CATEGORIES.refresh();
+ assert.equal(h.select.options.some(o=>o.value==='electronics'),false);
+ assert.equal(h.select.required,true);
+ assert.notEqual(h.select.validityMessage,'');
+ h.setRegistry({categories:[{key:'electronics',label:'Electronics',active:true}]});
+ await h.window.DBEST_VENDOR_DYNAMIC_CATEGORIES.refresh();
+ assert.equal(h.select.options.some(o=>o.value==='electronics'),true);
+ assert.equal(h.select.required,true);
+ assert.notEqual(h.select.value,'electronics','failure must not silently restore the previous selection');
+ h.select.value='electronics';
+ h.listeners.change[0]();
+ assert.equal(h.select.validityMessage,'');
 });
