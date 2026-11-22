@@ -1,0 +1,14 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DBest Partner — Automatic Catalogue Preview</title><style>body{font:15px system-ui;margin:0;background:#f5f7fb;color:#14243a}main{max-width:850px;margin:auto;padding:18px}header{background:#153e78;color:white;padding:18px}article{background:white;border-radius:12px;padding:14px;margin:12px 0;display:flex;gap:14px;align-items:center}img{width:88px;height:88px;object-fit:contain;background:#f1f3f6}button{padding:11px 15px;background:#153e78;color:white;border:0;border-radius:8px}small{color:#566}#status{padding:12px;background:white;border-radius:9px}</style></head><body><header><strong>DBest Partner · Auto Catalogue</strong></header><main><p>Read-only isolated preview. Products are assigned automatically by category; there is no per-product approval.</p><button id="load">Load my catalogue</button><p id="status">Sign in to the vendor portal on this preview domain first.</p><div id="items"></div></main><script src="/runtime-config.js"></script><script>
+const el=id=>document.getElementById(id);
+el('load').onclick=async()=>{
+const cfg=window.DBEST_RUNTIME_CONFIG||{},token=sessionStorage.getItem('dbest_vendor_session_token')||sessionStorage.getItem('vendorToken');
+if(!token){el('status').textContent='Vendor session not found in this tab. Sign in using the existing vendor portal.';return}
+if(!cfg.supabaseUrl||!cfg.supabasePublishableKey){el('status').textContent='Preview runtime configuration missing.';return}
+el('status').textContent='Loading…';el('items').replaceChildren();
+try{const r=await fetch(cfg.supabaseUrl+'/functions/v1/partner-auto-catalogue-isolated',{headers:{apikey:cfg.supabasePublishableKey,'x-vendor-token':token}});
+const d=await r.json();if(!r.ok)throw Error(d.error||'Unable to load');
+el('status').textContent=(d.count||0)+' automatically assigned '+(d.category||'')+' products. No individual approvals required.';
+for(const p of d.products||[]){const card=document.createElement('article'),img=document.createElement('img'),detail=document.createElement('div'),name=document.createElement('strong'),info=document.createElement('p'),note=document.createElement('small');img.alt='Product image';if(p.image_url&&/^https:\/\//.test(p.image_url))img.src=p.image_url;name.textContent=p.name||'Product';info.textContent='Vendor price: '+(p.vendor_price??'Not set')+' · Stock: '+(p.vendor_stock??0);note.textContent=p.in_stock?'Stock available':'Out of stock / not confirmed';detail.append(name,info,note);card.append(img,detail);el('items').append(card)}
+}catch(e){el('status').textContent='Cannot load catalogue: '+e.message}
+};
+</script></body></html>
