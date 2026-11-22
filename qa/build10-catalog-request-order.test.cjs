@@ -12,7 +12,7 @@ test('each load receives a monotonic request identity', () => {
 });
 
 test('obsolete responses cannot apply a snapshot', () => {
-  assert.match(source, /if\(requestSeq!==S\.requestSeq\)return null;applySnapshot\(d\)/);
+  assert.match(source, /if\(requestSeq!==S\.requestSeq\|\|requestedLocationSig!==S\.locationSig\)return null;applySnapshot\(d\)/);
 });
 
 test('latest response remains eligible for snapshot application', () => {
@@ -28,4 +28,9 @@ test('cached catalogue is scoped to the location that produced it', () => {
   assert.match(source, /snapshotLocationSig:''/);
   assert.match(source, /S\.snapshot=d;S\.snapshotLocationSig=S\.locationSig;S\.ready=true/);
   assert.match(source, /S\.ready&&S\.snapshotLocationSig===S\.locationSig&&t!=='medicine'/);
+});
+
+test('in-flight response is rejected after a location change', () => {
+  assert.match(source, /const requestedLocationSig=S\.locationSig/);
+  assert.match(source, /requestedLocationSig!==S\.locationSig/);
 });
