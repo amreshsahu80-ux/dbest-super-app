@@ -59,3 +59,27 @@ test('registry refresh rejects previously selected category after deactivation',
  assert.notEqual(h.select.validityMessage,'');
  assert.equal(h.select.required,true);
 });
+
+test('registry label update preserves Electronics selection without duplicate listeners',async()=>{
+ const h=harness({categories:[{key:'electronics',label:'Electronics',active:true}]});
+ await h.window.DBEST_VENDOR_DYNAMIC_CATEGORIES.refresh();
+ h.select.value='electronics';h.listeners.change[0]();
+ h.setRegistry({categories:[{key:'electronics',label:'Electronics & Appliances',active:true}]});
+ await h.window.DBEST_VENDOR_DYNAMIC_CATEGORIES.refresh();
+ assert.equal(h.select.value,'electronics');
+ assert.equal(h.select.options.find(o=>o.value==='electronics')?.textContent,'Electronics & Appliances');
+ assert.equal(h.select.validityMessage,'');
+ assert.equal(h.listeners.change.length,1);
+ await h.window.DBEST_VENDOR_DYNAMIC_CATEGORIES.refresh();
+ assert.equal(h.select.value,'electronics');
+ assert.equal(h.listeners.change.length,1);
+});
+test('invalid registry response fails closed rather than retaining stale Electronics',async()=>{
+ const h=harness({categories:[{key:'electronics',label:'Electronics',active:true}]});
+ await h.window.DBEST_VENDOR_DYNAMIC_CATEGORIES.refresh();
+ h.select.value='electronics';
+ h.setRegistry({error:'registry_unavailable'});
+ await h.window.DBEST_VENDOR_DYNAMIC_CATEGORIES.refresh();
+ assert.equal(h.select.options.some(o=>o.value==='electronics'),false);
+ assert.notEqual(h.select.validityMessage,'');
+});
