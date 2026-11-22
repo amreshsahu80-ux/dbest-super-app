@@ -10,7 +10,7 @@ test('latest location request wins when older fetch completes last',async()=>{
   const location={lat:22.8,lng:86.2};
   const window={DBEST_RUNTIME_CONFIG:{supabaseUrl:'https://example.supabase.co',supabasePublishableKey:'test'},DBEST_TOP_LIVE_LOCATION:location,isSecureContext:false,addEventListener(){},openMarketplace(){},sectionScreen(){}};
   const document={querySelector(){return null},getElementById(){return {}}};
-  const context={window,document,navigator:{},console,Date,JSON,Number,String,Promise,setTimeout(){return 0},clearTimeout(){},setInterval(){return 0},clearInterval(){},requestAnimationFrame(){},sessionStorage:{setItem(){}},localStorage:{getItem(){return null}},fetch(_url,opts){return new Promise(resolve=>pending.push({resolve,body:JSON.parse(opts.body)}))}};
+  const context={window,document,commerceConfig:{products:[],vendors:[]},navigator:{},console,Date,JSON,Number,String,Promise,setTimeout(){return 0},clearTimeout(){},setInterval(){return 0},clearInterval(){},requestAnimationFrame(){},sessionStorage:{setItem(){}},localStorage:{getItem(){return null}},fetch(_url,opts){return new Promise(resolve=>pending.push({resolve,body:JSON.parse(opts.body)}))}};
   vm.runInNewContext(source,context);
   const ctl=window.DBEST_MARKETPLACE_CONTROLLER_V3;
   // boot starts the first request.
