@@ -1,0 +1,18 @@
+name: Partner Build 11 stale push callback regression
+on:
+  push:
+    branches:
+      - test/partner-build11-stale-push-callback-20261122
+  pull_request:
+    paths:
+      - 'partner-android-app/tests/test_home_stale_push_callback.py'
+      - 'partner-android-app/app/src/main/java/com/dbest4u/partner/MainActivity.java'
+      - '.github/workflows/partner-build11-stale-push-regression.yml'
+  workflow_dispatch:
+jobs:
+  stale-push-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate delayed push callback role and URL binding
+        run: python3 partner-android-app/tests/test_home_stale_push_callback.py
