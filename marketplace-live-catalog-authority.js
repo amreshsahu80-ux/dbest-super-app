@@ -2,7 +2,8 @@
 'use strict';
 const VERSION='3.2.0',BUILD='20260923-marketplace-live-refresh-v1';
 const cfg=window.DBEST_RUNTIME_CONFIG||{},BASE=String(cfg.supabaseUrl||'').replace(/\/$/,''),KEY=String(cfg.supabasePublishableKey||''),API=BASE+'/functions/v1/marketplace-local-catalog-live';
-const LIVE_TYPES=['restaurant','grocery','digital'];
+// Include Electronics in the existing live-catalog snapshot path; backend eligibility still governs visibility.
+const LIVE_TYPES=['restaurant','grocery','digital','electronics'];
 const S={location:null,locationSig:'',snapshot:null,ready:false,loading:null,lastLoadedAt:0,renderSeq:0,originalOpen:null,controllerOpen:null,originalSection:null,originalGps:null};
 function finite(v){return v!==null&&v!==undefined&&v!==''&&Number.isFinite(Number(v))}
 function marketOpen(){try{return !!document.querySelector('#m .shopPage')}catch(_){return false}}
