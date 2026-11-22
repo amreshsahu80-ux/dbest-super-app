@@ -125,6 +125,26 @@ WHERE n.nspname = 'public'
   AND (c.relname ILIKE '%catalog%' OR c.relname ILIKE '%categor%')
 ORDER BY c.relname;
 
+
+-- Inspect user-defined triggers that may overwrite or normalize the vendor
+-- business category during Owner/regular onboarding or approval transitions.
+-- Metadata-only: no trigger invocation and no application row reads.
+SELECT n.nspname AS schema_name, c.relname AS table_name,
+       t.tgname AS trigger_name, t.tgenabled AS trigger_enabled,
+       pg_get_triggerdef(t.oid, TRUE) AS trigger_definition,
+       pn.nspname AS trigger_function_schema,
+       p.proname AS trigger_function_name,
+       pg_get_functiondef(p.oid) AS trigger_function_definition
+FROM pg_catalog.pg_trigger t
+JOIN pg_catalog.pg_class c ON c.oid = t.tgrelid
+JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+JOIN pg_catalog.pg_proc p ON p.oid = t.tgfoid
+JOIN pg_catalog.pg_namespace pn ON pn.oid = p.pronamespace
+WHERE NOT t.tgisinternal
+  AND n.nspname = 'public'
+  AND c.relname IN ('marketplace_vendors_live', 'marketplace_catalog_live', 'app_settings')
+ORDER BY c.relname, t.tgname;
+
 -- Acceptance must separately demonstrate (1) an active registry Electronics key,
 -- (2) Samsung Point VND8597199 approved/signed/active with persisted Electronics,
 -- (3) eligible active in-stock catalogue items, (4) the actual deployed public
