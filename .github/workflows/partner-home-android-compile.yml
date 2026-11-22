@@ -9,6 +9,7 @@ on:
     branches:
       - release/partner-build10-isolated-20261114
       - release/partner-postbuild10-consolidation-20261118
+      - fix/partner-build11-workspace-notification-control-20261121
   workflow_dispatch:
 permissions:
   contents: read
@@ -363,7 +364,7 @@ jobs:
       - name: Keep signed candidate private
         uses: actions/upload-artifact@v4
         with:
-          name: partner-build10-signed-aab-and-unsigned-apk
+          name: partner-build11-signed-aab-private
           path: |
             partner-android-app/app/build/outputs/bundle/productionRelease/*.aab
             partner-android-app/app/build/outputs/apk/production/release/*.apk
