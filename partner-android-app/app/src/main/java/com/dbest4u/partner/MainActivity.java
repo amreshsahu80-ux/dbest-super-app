@@ -221,7 +221,7 @@ public final class MainActivity extends ComponentActivity {
         overlayParams.rightMargin = dp(9);
         overlayParams.topMargin = dp(9);
         photoFrame.addView(overlay, overlayParams);
-        card.addView(photoFrame, new LinearLayout.LayoutParams(-1, dp(68)));
+        card.addView(photoFrame, new LinearLayout.LayoutParams(-1, dp(60)));
 
         space(card, 8);
         LinearLayout titleRow = row();
