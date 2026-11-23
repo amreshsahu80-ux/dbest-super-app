@@ -92,6 +92,8 @@ BEGIN
          profile_meta=jsonb_set(v.profile_meta,'{business_category}','"electronics"'::jsonb,true),
          updated_at=now()
    WHERE id=v.id AND updated_at=expected_at AND type='other'
+     AND owner_approval='Approved' AND active IS TRUE
+     AND agreement_status='Fully Signed' AND operational_hold IS FALSE
      AND profile_meta IS NOT DISTINCT FROM v.profile_meta;
   GET DIAGNOSTICS affected = ROW_COUNT;
   IF affected <> 1 THEN
