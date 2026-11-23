@@ -22,3 +22,16 @@ assert 'page.setPadding(dp(16), dp(8), dp(16), dp(84));' in home, "Home footer n
 assert 'bar.addView(back, new LinearLayout.LayoutParams(dp(48), dp(48)));' in home, "Browser Back needs accessible touch target"
 assert 'bar.addView(home, new LinearLayout.LayoutParams(dp(48), dp(48)));' in home, "Browser Home needs accessible touch target"
 print("PASS: notification visibility, left anchoring, WhatsApp clearance and Back/Home controls")
+
+# Scope visibility checks to the actual navigation methods. A matching call in
+# an unrelated method must not mask a broken Home/Workspace transition.
+portal = home.split("private void openPortal(String name, String route) {", 1)[1].split("private void showHome() {", 1)[0]
+return_home = home.split("private void showHome() {", 1)[1].split("private void openTrustedPushTarget(", 1)[0]
+assert 'homeScreen.setVisibility(View.GONE);' in portal, "Workspace must hide role cards"
+assert 'browserShell.setVisibility(View.VISIBLE);' in portal, "Workspace browser must become visible"
+assert 'partnerTestPush.setHomeVisible(false);' in portal, "Workspace must hide notification overlay"
+assert 'homeScreen.setVisibility(View.VISIBLE);' in return_home, "Returning Home must restore role cards"
+assert 'browserShell.setVisibility(View.GONE);' in return_home, "Returning Home must hide browser"
+assert 'partnerTestPush.setHomeVisible(true);' in return_home, "Returning Home must restore notification overlay"
+assert 'landingScroll.scrollTo(0, 0);' in return_home, "Returning Home must reset stale scroll position"
+print("PASS: workspace/home transition state and notification overlay scoped to navigation methods")
