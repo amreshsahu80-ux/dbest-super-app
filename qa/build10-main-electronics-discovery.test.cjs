@@ -105,3 +105,26 @@ test('Replaying cached Electronics snapshot does not postpone backend refresh TT
   assert.ok(S.lastLoadedAt>12345,'fresh backend snapshot must advance timestamp');
   assert.match(source,/applySnapshot\(S\.snapshot,true\)/,'marketplace reopen must identify cached replay');
 });
+
+test('Incomplete catalogue identities cannot erase known-good Electronics records',()=>{
+  const start=source.indexOf('function applySnapshot(d,fromCache=false){');
+  const end=source.indexOf('async function loadSnapshot(',start);
+  assert.ok(start>=0&&end>start);
+  for(const response of [
+    {products:[{type:'electronics'}],vendors:[{id:'new-v',type:'electronics'}]},
+    {products:[{id:'new-p',type:'electronics'}],vendors:[{type:'electronics'}]},
+    {products:[{id:'new-p',type:'electronics'}],vendors:[{id:'new-v'}]},
+    {products:[{id:' ',type:'electronics'}],vendors:[{id:'new-v',type:'electronics'}]}
+  ]){
+    const oldProduct={id:'existing-product',type:'electronics'};
+    const oldVendor={id:'existing-vendor',type:'electronics'};
+    const commerceConfig={products:[oldProduct],vendors:[oldVendor]};
+    const S={locationSig:'qa'};
+    const context={commerceConfig,S,LIVE_TYPES:types,liveProduct:p=>p,liveVendor:v=>v,window:{},Date,VERSION:'qa',BUILD:'10'};
+    vm.runInNewContext(source.slice(start,end)+';globalThis.applySnapshot=applySnapshot;',context);
+    assert.equal(context.applySnapshot(response),false);
+    assert.equal(commerceConfig.products[0],oldProduct);
+    assert.equal(commerceConfig.vendors[0],oldVendor);
+    assert.equal(S.ready,undefined);
+  }
+});
