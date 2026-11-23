@@ -35,8 +35,15 @@ function applySnapshot(d){
   }catch(_error){return false;}
   const previousProducts=Array.isArray(commerceConfig.products)?commerceConfig.products:[];
   const previousVendors=Array.isArray(commerceConfig.vendors)?commerceConfig.vendors:[];
-  commerceConfig.products=previousProducts.filter(p=>!LIVE_TYPES.includes(String(p&&p.type||'').toLowerCase())).concat(products);
-  commerceConfig.vendors=previousVendors.filter(v=>!LIVE_TYPES.includes(String(v&&v.type||'').toLowerCase())).concat(vendors);
+  // Build both replacements first: a malformed existing vendor must not leave
+  // products replaced while vendors still contain the previous snapshot.
+  let nextProducts,nextVendors;
+  try{
+    nextProducts=previousProducts.filter(p=>!LIVE_TYPES.includes(String(p&&p.type||'').toLowerCase())).concat(products);
+    nextVendors=previousVendors.filter(v=>!LIVE_TYPES.includes(String(v&&v.type||'').toLowerCase())).concat(vendors);
+  }catch(_error){return false;}
+  commerceConfig.products=nextProducts;
+  commerceConfig.vendors=nextVendors;
   S.snapshot=d;S.snapshotLocationSig=S.locationSig;S.ready=true;S.lastLoadedAt=Date.now();
   window.DBEST_MARKETPLACE_RADIUS_RULE=d.serviceRadius||null;
   window.DBEST_LIVE_CATALOG_READY={version:VERSION,build:BUILD,productCount:products.length,vendorCount:vendors.length,types:[...new Set(vendors.map(v=>v.type))],location:S.location,serviceRadius:d.serviceRadius||null};
