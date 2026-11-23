@@ -33,7 +33,7 @@ async function scenario(rows,initial,fetchOverride){
   assert.match(malformedRegistry.validity,/could not be verified/i,'malformed category payload must block registration');
   const blocked=await scenario([{key:'Electronics',active:false},{key:'Grocery',active:true}],'Electronics');
   assert.notEqual(blocked.validity,'','disabled Electronics must not be accepted');
-  const dup=await scenario([{key:'Electronics'},{key:' electronics '}],'Electronics');
+  const dup=await scenario([{key:'Electronics',active:true},{key:' electronics ',active:true}],'Electronics');
   assert.match(dup.validity,/could not be verified/i,'duplicate active keys must fail closed');
   const inactive=await scenario([{key:'Electronics',status:'archived'},{key:'Grocery',active:true}],'Electronics');
   assert.notEqual(inactive.validity,'','archived Electronics must not be accepted');
