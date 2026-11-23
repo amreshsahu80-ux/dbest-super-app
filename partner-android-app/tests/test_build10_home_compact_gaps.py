@@ -54,3 +54,16 @@ assert not re.search(r'whatsapp|wa\\.me|api\\.whatsapp', source, re.IGNORECASE),
     "Native WhatsApp control added: check for overlap with existing web floater"
 )
 print("PASS: Home privacy touch target and no duplicate native WhatsApp overlay")
+
+# Each role card must expose independent accessible workspace and Join actions.
+role_card = source.split("private View roleCard(", 1)[1].split("private LinearLayout makeBrowser()", 1)[0]
+assert 'workspace.setContentDescription("Open " + title + " workspace");' in role_card
+assert 'workspace.setOnClickListener(v -> openPortal(title, loginPath));' in role_card
+assert 'join.setContentDescription("Join as " + title);' in role_card
+assert 'join.setOnClickListener(v -> openPortal(title + " · Join", joinPath));' in role_card
+assert 'card.setOnClickListener(v -> openPortal(title, loginPath));' in role_card
+assert 'new LinearLayout.LayoutParams(0, dp(48), 1.5f)' in role_card
+assert 'new LinearLayout.LayoutParams(0, dp(48), 0.72f)' in role_card
+assert 'roleTitle.setMaxLines(2);' in role_card
+assert 'image.setContentDescription(title + " partner services photograph");' in role_card
+print("PASS: independent accessible role-card, workspace and Join routes with 48dp actions")
