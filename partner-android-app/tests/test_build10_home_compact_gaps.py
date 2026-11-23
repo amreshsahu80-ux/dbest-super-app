@@ -44,3 +44,13 @@ assert 'openPortal("Vendor", "/Vendor")' in push_target
 assert 'openPortal("Vaahak", "/vaahak")' in push_target
 assert 'openPortal("Service Partner", "/ServicePartnerDashboard")' in push_target
 print("PASS: notification consent, role binding and workspace lifecycle safeguards")
+
+# Keep the Home toolbar touch target usable and avoid duplicating the web WhatsApp floater.
+assert 'brand.addView(privacyMenu, new LinearLayout.LayoutParams(dp(48), dp(48)));' in home
+assert 'partnerTestPush = new PartnerPushTestController(this, screenHost, webView, () -> currentRole);' in source
+assert 'screenHost.addView(homeScreen, new FrameLayout.LayoutParams(-1, -1));' in source
+assert 'screenHost.addView(browserShell, new FrameLayout.LayoutParams(-1, -1));' in source
+assert not re.search(r'whatsapp|wa\\.me|api\\.whatsapp', source, re.IGNORECASE), (
+    "Native WhatsApp control added: check for overlap with existing web floater"
+)
+print("PASS: Home privacy touch target and no duplicate native WhatsApp overlay")
