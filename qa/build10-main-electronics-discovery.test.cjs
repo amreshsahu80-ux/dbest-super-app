@@ -73,3 +73,19 @@ test('GPS and location refreshes never rerender after rejected catalogue respons
   const guards=source.match(/loadSnapshot\(true\)\.then\(d=>\{if\(d\)renderCurrentOnce\(\)\}\)/g)||[];
   assert.equal(guards.length,2,'GPS control and location-change listener must guard rendering');
 });
+
+test('Failure while preparing existing vendor records cannot partially replace Electronics products',()=>{
+  const start=source.indexOf('function applySnapshot(d){');
+  const end=source.indexOf('async function loadSnapshot(',start);
+  assert.ok(start>=0&&end>start);
+  const originalProduct={id:'existing-product',type:'electronics'};
+  const originalVendor={id:'existing-vendor',get type(){throw Error('corrupt cached vendor');}};
+  const commerceConfig={products:[originalProduct],vendors:[originalVendor]};
+  const S={locationSig:'qa'};
+  const context={commerceConfig,S,LIVE_TYPES:types,liveProduct:p=>p,liveVendor:v=>v,window:{},Date};
+  vm.runInNewContext(source.slice(start,end)+';globalThis.applySnapshot=applySnapshot;',context);
+  assert.equal(context.applySnapshot({products:[{id:'new-product',type:'electronics'}],vendors:[{id:'new-vendor',type:'electronics'}]}),false);
+  assert.equal(commerceConfig.products[0],originalProduct,'products must retain original reference');
+  assert.equal(commerceConfig.vendors[0],originalVendor,'vendors must retain original reference');
+  assert.equal(S.ready,undefined,'failed replacement must not become ready');
+});
