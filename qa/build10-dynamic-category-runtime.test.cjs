@@ -147,3 +147,15 @@ test('registry network failure clears Electronics and subsequent recovery restor
  h.listeners.change[0]();
  assert.equal(h.select.validityMessage,'');
 });
+
+test('registry without explicit activation evidence cannot offer Electronics',async()=>{
+ const h=harness({categories:[{key:'electronics',label:'Electronics'}]});
+ await h.window.DBEST_VENDOR_DYNAMIC_CATEGORIES.refresh();
+ assert.equal(h.select.options.some(o=>o.value==='electronics'),false);
+ assert.notEqual(h.select.validityMessage,'');
+});
+test('archived Electronics cannot be selected despite active flag',async()=>{
+ const h=harness({categories:[{key:'electronics',label:'Electronics',active:true,archived_at:'2026-11-23'}]});
+ await h.window.DBEST_VENDOR_DYNAMIC_CATEGORIES.refresh();
+ assert.equal(h.select.options.some(o=>o.value==='electronics'),false);
+});
