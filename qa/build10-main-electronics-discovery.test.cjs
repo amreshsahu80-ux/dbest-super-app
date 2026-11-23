@@ -67,3 +67,9 @@ test('Rejected catalogue snapshots do not trigger successful refresh rendering',
   assert.match(source,/if\(d&&currentType\(\)===t&&marketOpen\(\)\)renderCurrentOnce\(\)/,
     'refresh caller must render only after a successful snapshot');
 });
+
+test('GPS and location refreshes never rerender after rejected catalogue responses',()=>{
+  assert.doesNotMatch(source,/loadSnapshot\(true\)\.then\(\(\)=>renderCurrentOnce\(\)\)/);
+  const guards=source.match(/loadSnapshot\(true\)\.then\(d=>\{if\(d\)renderCurrentOnce\(\)\}\)/g)||[];
+  assert.equal(guards.length,2,'GPS control and location-change listener must guard rendering');
+});
