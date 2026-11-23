@@ -48,6 +48,12 @@ test('Samsung Point preview preserves fail-closed category and catalogue guards'
     "v.agreement_status = 'Fully Signed'",
     "v.operational_hold IS FALSE",
     "r.electronics_enabled",
+    "NULLIF(trim(c->>'active'),'') IS NOT NULL",
+    "NULLIF(trim(c->>'enabled'),'') IS NOT NULL",
+    "NULLIF(trim(c->>'is_active'),'') IS NOT NULL",
+    "NULLIF(trim(c->>'status'),'') IS NOT NULL",
+    "AND NULLIF(trim(c->>'deleted_at'),'') IS NULL",
+    "AND NULLIF(trim(c->>'archived_at'),'') IS NULL",
     "i.market_type IS DISTINCT FROM 'electronics'",
     "AS correction_eligible"
   ]) assert.ok(sql.includes(guard), 'missing guard: ' + guard);
