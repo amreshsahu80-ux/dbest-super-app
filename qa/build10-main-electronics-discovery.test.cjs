@@ -39,3 +39,20 @@ test('Failed or malformed catalogue responses never clear existing Main App reco
     assert.equal(S.ready,undefined,'invalid response cannot mark catalogue ready');
   }
 });
+
+test('Malformed records and mapper failures preserve last known-good Electronics snapshot',()=>{
+  const start=source.indexOf('function applySnapshot(d){');
+  const end=source.indexOf('async function loadSnapshot(',start);
+  assert.ok(start>=0&&end>start);
+  for(const mode of ['null-product','null-vendor','mapper-throws','mapper-null']){
+    const commerceConfig={products:[{id:'existing-product',type:'electronics'}],vendors:[{id:'existing-vendor',type:'electronics'}]};
+    const S={locationSig:'qa'};
+    const context={commerceConfig,S,LIVE_TYPES:types,liveProduct:p=>{if(mode==='mapper-throws')throw Error('bad product');return mode==='mapper-null'?null:p;},liveVendor:v=>v,window:{},Date};
+    vm.runInNewContext(source.slice(start,end)+';globalThis.applySnapshot=applySnapshot;',context);
+    const response={products:[mode==='null-product'?null:{id:'new',type:'electronics'}],vendors:[mode==='null-vendor'?null:{id:'new-vendor',type:'electronics'}]};
+    assert.equal(context.applySnapshot(response),false,mode);
+    assert.equal(commerceConfig.products[0].id,'existing-product',mode);
+    assert.equal(commerceConfig.vendors[0].id,'existing-vendor',mode);
+    assert.equal(S.ready,undefined,mode);
+  }
+});
