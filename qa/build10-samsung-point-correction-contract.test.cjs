@@ -17,3 +17,9 @@ test('only the intended approved, active, signed vendor can change',()=>{
   assert.equal((sql.match(/\bUPDATE\s+public\.marketplace_vendors_live\b/gi)||[]).length,1,'one vendor update only');
   assert.doesNotMatch(sql,/\b(?:DELETE|TRUNCATE|DROP|ALTER)\s+(?:TABLE\s+)?public\./i);
 });
+
+test('atomic UPDATE repeats approval, active, signed and no-hold eligibility',()=>{
+  const update=sql.slice(sql.indexOf('UPDATE public.marketplace_vendors_live'));
+  assert.match(update,/WHERE id=v\.id AND updated_at=expected_at AND type='other'/);
+  for(const clause of ["owner_approval='Approved'","active IS TRUE","agreement_status='Fully Signed'","operational_hold IS FALSE","profile_meta IS NOT DISTINCT FROM v.profile_meta"]) assert.ok(update.includes(clause),'missing atomic UPDATE predicate: '+clause);
+});
