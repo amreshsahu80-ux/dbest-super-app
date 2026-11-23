@@ -32,6 +32,13 @@ function applySnapshot(d,fromCache=false){
     vendors=d.vendors.map(liveVendor);
     if(!products.every(p=>p&&typeof p==='object'&&!Array.isArray(p)&&p.id!=null&&String(p.id).trim())||
        !vendors.every(v=>v&&typeof v==='object'&&!Array.isArray(v)&&v.id!=null&&String(v.id).trim()&&v.type!=null&&String(v.type).trim()))return false;
+    // Reject noncanonical live-category spellings instead of silently dropping approved vendors.
+    // The backend must supply canonical registry slugs (for example, electronics).
+    // Unknown categories remain excluded by LIVE_TYPES; no production classification is rewritten.
+    if(!products.every(p=>p.type==null||typeof p.type==='string')||
+       !vendors.every(v=>typeof v.type==='string'))return false;
+    if(!products.every(p=>p.type==null||p.type===p.type.trim().toLowerCase())||
+       !vendors.every(v=>v.type===v.type.trim().toLowerCase()))return false;
     // Duplicate IDs make catalogue discovery nondeterministic; preserve the last good snapshot.
     const uniqueIds=items=>{const ids=items.map(item=>String(item.id).trim());return new Set(ids).size===ids.length;};
     if(!uniqueIds(products)||!uniqueIds(vendors))return false;
