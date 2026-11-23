@@ -25,7 +25,7 @@ test('Existing restaurant grocery and digital categories remain enabled',()=>{
 });
 
 test('Failed or malformed catalogue responses never clear existing Main App records',()=>{
-  const start=source.indexOf('function applySnapshot(d){');
+  const start=source.indexOf('function applySnapshot(d,fromCache=false){');
   const end=source.indexOf('async function loadSnapshot(',start);
   assert.ok(start>=0&&end>start,'snapshot function available');
   for(const response of [null,{success:false,products:[],vendors:[]},{ok:false,products:[],vendors:[]},{error:'backend failure',products:[],vendors:[]},{products:[]},{vendors:[]}]){
@@ -41,7 +41,7 @@ test('Failed or malformed catalogue responses never clear existing Main App reco
 });
 
 test('Malformed records and mapper failures preserve last known-good Electronics snapshot',()=>{
-  const start=source.indexOf('function applySnapshot(d){');
+  const start=source.indexOf('function applySnapshot(d,fromCache=false){');
   const end=source.indexOf('async function loadSnapshot(',start);
   assert.ok(start>=0&&end>start);
   for(const mode of ['null-product','null-vendor','mapper-throws','mapper-null']){
@@ -75,7 +75,7 @@ test('GPS and location refreshes never rerender after rejected catalogue respons
 });
 
 test('Failure while preparing existing vendor records cannot partially replace Electronics products',()=>{
-  const start=source.indexOf('function applySnapshot(d){');
+  const start=source.indexOf('function applySnapshot(d,fromCache=false){');
   const end=source.indexOf('async function loadSnapshot(',start);
   assert.ok(start>=0&&end>start);
   const originalProduct={id:'existing-product',type:'electronics'};
