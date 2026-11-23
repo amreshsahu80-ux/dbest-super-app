@@ -23,3 +23,19 @@ test('Main App snapshot retains Electronics vendor and product records', () => {
 test('Existing restaurant grocery and digital categories remain enabled',()=>{
   for(const type of ['restaurant','grocery','digital'])assert.ok(types.includes(type),type);
 });
+
+test('Failed or malformed catalogue responses never clear existing Main App records',()=>{
+  const start=source.indexOf('function applySnapshot(d){');
+  const end=source.indexOf('async function loadSnapshot(',start);
+  assert.ok(start>=0&&end>start,'snapshot function available');
+  for(const response of [null,{success:false,products:[],vendors:[]},{ok:false,products:[],vendors:[]},{error:'backend failure',products:[],vendors:[]},{products:[]},{vendors:[]}]){
+    const commerceConfig={products:[{id:'existing-product',type:'electronics'}],vendors:[{id:'existing-vendor',type:'electronics'}]};
+    const S={locationSig:'qa',location:null};
+    const context={commerceConfig,S,LIVE_TYPES:types,liveProduct:p=>p,liveVendor:v=>v,window:{},Date};
+    vm.runInNewContext(source.slice(start,end)+';globalThis.applySnapshot=applySnapshot;',context);
+    assert.equal(context.applySnapshot(response),false);
+    assert.equal(commerceConfig.products.length,1,'products preserved on invalid response');
+    assert.equal(commerceConfig.vendors.length,1,'vendors preserved on invalid response');
+    assert.equal(S.ready,undefined,'invalid response cannot mark catalogue ready');
+  }
+});
