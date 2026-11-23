@@ -30,8 +30,8 @@ function applySnapshot(d,fromCache=false){
        v.id!=null&&String(v.id).trim()&&v.type!=null&&String(v.type).trim()))return false;
     products=d.products.map(liveProduct);
     vendors=d.vendors.map(liveVendor);
-    if(!products.every(p=>p&&typeof p==='object'&&!Array.isArray(p))||
-       !vendors.every(v=>v&&typeof v==='object'&&!Array.isArray(v)))return false;
+    if(!products.every(p=>p&&typeof p==='object'&&!Array.isArray(p)&&p.id!=null&&String(p.id).trim())||
+       !vendors.every(v=>v&&typeof v==='object'&&!Array.isArray(v)&&v.id!=null&&String(v.id).trim()&&v.type!=null&&String(v.type).trim()))return false;
     products=products.filter(p=>LIVE_TYPES.includes(p.type));
     vendors=vendors.filter(v=>LIVE_TYPES.includes(v.type));
   }catch(_error){return false;}
