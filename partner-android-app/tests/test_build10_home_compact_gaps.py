@@ -28,3 +28,19 @@ assert 'privacy.setContentDescription("Account & Privacy");' in browser
 # The Home screen must remain scrollable above floating native controls.
 assert 'scroll.setClipToPadding(false);' in home
 print("PASS: Build 10 role routes, compact gaps, accessible toolbar and overlay clearance")
+
+
+# Notification consent and role changes must remain guarded across Home navigation.
+assert 'partnerTestPush.setHomeVisible(true);' in source
+assert 'partnerTestPush.setHomeVisible(false);' in source
+assert 'partnerTestPush.onWorkspaceSelected(canonicalRole);' in source
+assert 'cancelPendingFileChooser();' in source
+assert 'cancelPendingLocationPrompt();' in source
+push_target = source.split('private void openTrustedPushTarget(Intent intent) {', 1)[1].split('@Override protected void onNewIntent', 1)[0]
+assert 'getBoolean("enabled", false)' in push_target
+assert 'getBoolean("bound", false)' in push_target
+assert 'role.equals(account.getString("bound_role", ""))' in push_target
+assert 'openPortal("Vendor", "/Vendor")' in push_target
+assert 'openPortal("Vaahak", "/vaahak")' in push_target
+assert 'openPortal("Service Partner", "/ServicePartnerDashboard")' in push_target
+print("PASS: notification consent, role binding and workspace lifecycle safeguards")
