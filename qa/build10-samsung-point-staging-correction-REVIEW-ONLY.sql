@@ -19,6 +19,8 @@ DECLARE
   category_count integer;
   valid_category_count integer;
   affected integer;
+  catalogue_row record;
+  sellable_electronics_count integer := 0;
 BEGIN
   IF current_setting('dbest.build10_isolated_staging_approved', true) IS DISTINCT FROM 'yes'
      OR current_setting('dbest.build10_expected_updated_at', true) IS NULL THEN
@@ -57,16 +59,31 @@ BEGIN
   SELECT * INTO STRICT v FROM public.marketplace_vendors_live
    WHERE id='VND8597199' FOR UPDATE;
 
+  -- Lock existing catalogue rows while checking their classification and stock.
+  -- This prevents concurrent updates/deletions of observed rows during correction.
+  -- New inserts still require coordinated application-level writes and later QA.
+  FOR catalogue_row IN
+    SELECT c.market_type, c.active, c.stock
+      FROM public.marketplace_catalog_live c
+     WHERE c.vendor_id=v.id FOR SHARE
+  LOOP
+    IF catalogue_row.market_type IS DISTINCT FROM 'electronics' THEN
+      RAISE EXCEPTION 'Build 10 correction blocked: incompatible catalogue category';
+    END IF;
+    IF catalogue_row.active IS TRUE AND catalogue_row.stock > 0 THEN
+      sellable_electronics_count := sellable_electronics_count + 1;
+    END IF;
+  END LOOP;
+  IF sellable_electronics_count = 0 THEN
+    RAISE EXCEPTION 'Build 10 correction blocked: no sellable Electronics catalogue rows';
+  END IF;
+
   IF v.updated_at IS DISTINCT FROM expected_at OR v.type <> 'other'
      OR v.owner_approval <> 'Approved' OR v.active IS DISTINCT FROM true
      OR v.agreement_status <> 'Fully Signed' OR v.operational_hold IS DISTINCT FROM false
      OR jsonb_typeof(v.profile_meta) <> 'object'
      OR coalesce(v.profile_meta->>'business_category','') NOT IN ('','other','electronics')
-     OR NOT EXISTS (SELECT 1 FROM public.marketplace_catalog_live c
-                    WHERE c.vendor_id=v.id AND c.market_type='electronics'
-                      AND c.active IS TRUE AND c.stock>0)
-     OR EXISTS (SELECT 1 FROM public.marketplace_catalog_live c
-                WHERE c.vendor_id=v.id AND c.market_type IS DISTINCT FROM 'electronics') THEN
+     THEN
     RAISE EXCEPTION 'Build 10 correction blocked: vendor changed or catalogue incompatible';
   END IF;
 
