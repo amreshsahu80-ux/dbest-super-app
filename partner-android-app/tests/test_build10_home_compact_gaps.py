@@ -1,0 +1,70 @@
+"""Build 10 home-only spacing and role route contract; no Android SDK required."""
+from pathlib import Path
+import re
+
+source = (Path(__file__).resolve().parents[1] / "app/src/main/java/com/dbest4u/partner/MainActivity.java").read_text()
+home = source.split("private View makeHome() {", 1)[1].split("private View roleCard(", 1)[0]
+cards = re.findall(r'page\.addView\(roleCard\(\s*"([^"]+)"[\s\S]*?"([^"]+)",\s*"([^"]+)"\)\);', home)
+assert cards == [
+    ("Vendor", "/Vendor", "/partner?type=Vendor"),
+    ("Vaahak", "/vaahak", "/partner?type=Vaahak"),
+    ("Service Partner", "/ServicePartnerDashboard", "/partner?type=Service%20Partner"),
+], f"Unexpected role routes/order: {cards}"
+chunks = home.split("page.addView(roleCard(")
+assert len(chunks) == 4, "Exactly three role cards expected"
+for chunk in chunks[1:3]:
+    assert re.search(r'\)\);\s*space\(page, 8\);\s*$', chunk), "Role-card gap must be 8dp"
+assert 'page.setPadding(dp(16), dp(8), dp(16), dp(84));' in home, "Floating notification clearance removed"
+assert 'showAccountSettings()' in home, "Account & Privacy control removed"
+
+# Workspace navigation must retain accessible 48dp Back/Home actions.
+browser = source.split("private LinearLayout makeBrowser() {", 1)[1].split("webView = new WebView(this);", 1)[0]
+assert 'back.setContentDescription("Back");' in browser
+assert 'home.setContentDescription("Partner home");' in browser
+assert 'back.setOnClickListener(v -> {' in browser
+assert 'home.setOnClickListener(v -> showHome());' in browser
+assert 'new LinearLayout.LayoutParams(dp(48), dp(48))' in browser
+assert 'privacy.setContentDescription("Account & Privacy");' in browser
+# The Home screen must remain scrollable above floating native controls.
+assert 'scroll.setClipToPadding(false);' in home
+print("PASS: Build 10 role routes, compact gaps, accessible toolbar and overlay clearance")
+
+
+# Notification consent and role changes must remain guarded across Home navigation.
+assert 'partnerTestPush.setHomeVisible(true);' in source
+assert 'partnerTestPush.setHomeVisible(false);' in source
+assert 'partnerTestPush.onWorkspaceSelected(canonicalRole);' in source
+assert 'cancelPendingFileChooser();' in source
+assert 'cancelPendingLocationPrompt();' in source
+push_target = source.split('private void openTrustedPushTarget(Intent intent) {', 1)[1].split('@Override protected void onNewIntent', 1)[0]
+assert 'getBoolean("enabled", false)' in push_target
+assert 'getBoolean("bound", false)' in push_target
+assert 'role.equals(account.getString("bound_role", ""))' in push_target
+assert 'openPortal("Vendor", "/Vendor")' in push_target
+assert 'openPortal("Vaahak", "/vaahak")' in push_target
+assert 'openPortal("Service Partner", "/ServicePartnerDashboard")' in push_target
+print("PASS: notification consent, role binding and workspace lifecycle safeguards")
+
+# Keep the Home toolbar touch target usable and avoid duplicating the web WhatsApp floater.
+assert 'brand.addView(privacyMenu, new LinearLayout.LayoutParams(dp(48), dp(48)));' in home
+assert 'partnerTestPush = new PartnerPushTestController(this, screenHost, webView, () -> currentRole);' in source
+assert 'screenHost.addView(homeScreen, new FrameLayout.LayoutParams(-1, -1));' in source
+assert 'screenHost.addView(browserShell, new FrameLayout.LayoutParams(-1, -1));' in source
+assert not re.search(r'whatsapp|wa\\.me|api\\.whatsapp', source, re.IGNORECASE), (
+    "Native WhatsApp control added: check for overlap with existing web floater"
+)
+print("PASS: Home privacy touch target and no duplicate native WhatsApp overlay")
+
+# Each role card must expose independent accessible workspace and Join actions.
+role_card = source.split("private View roleCard(", 1)[1].split("private LinearLayout makeBrowser()", 1)[0]
+assert 'workspace.setContentDescription("Open " + title + " workspace");' in role_card
+assert 'workspace.setOnClickListener(v -> openPortal(title, loginPath));' in role_card
+assert 'join.setContentDescription("Join as " + title);' in role_card
+assert 'join.setOnClickListener(v -> openPortal(title + " · Join", joinPath));' in role_card
+assert 'card.setOnClickListener(v -> openPortal(title, loginPath));' in role_card
+assert 'new LinearLayout.LayoutParams(0, dp(48), 1.5f)' in role_card
+assert 'new LinearLayout.LayoutParams(0, dp(48), 0.72f)' in role_card
+assert 'card.addView(photoFrame, new LinearLayout.LayoutParams(-1, dp(60)));' in role_card, "Role artwork must remain compact at 60dp"
+assert 'roleTitle.setMaxLines(2);' in role_card
+assert 'image.setContentDescription(title + " partner services photograph");' in role_card
+print("PASS: independent accessible role-card, workspace and Join routes with 48dp actions")
