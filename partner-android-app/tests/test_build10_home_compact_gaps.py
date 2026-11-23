@@ -64,6 +64,7 @@ assert 'join.setOnClickListener(v -> openPortal(title + " · Join", joinPath));'
 assert 'card.setOnClickListener(v -> openPortal(title, loginPath));' in role_card
 assert 'new LinearLayout.LayoutParams(0, dp(48), 1.5f)' in role_card
 assert 'new LinearLayout.LayoutParams(0, dp(48), 0.72f)' in role_card
+assert 'card.addView(photoFrame, new LinearLayout.LayoutParams(-1, dp(60)));' in role_card, "Role artwork must remain compact at 60dp"
 assert 'roleTitle.setMaxLines(2);' in role_card
 assert 'image.setContentDescription(title + " partner services photograph");' in role_card
 print("PASS: independent accessible role-card, workspace and Join routes with 48dp actions")
