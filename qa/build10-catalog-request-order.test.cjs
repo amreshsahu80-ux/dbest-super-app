@@ -12,7 +12,7 @@ test('each load receives a monotonic request identity', () => {
 });
 
 test('obsolete responses cannot apply a snapshot', () => {
-  assert.match(source, /if\(requestSeq!==S\.requestSeq\|\|requestedLocationSig!==S\.locationSig\)return null;applySnapshot\(d\)/);
+  assert.match(source, /if\(requestSeq!==S\.requestSeq\|\|requestedLocationSig!==S\.locationSig\)return null;if\(!applySnapshot\(d\)\)return null;return d/);
 });
 
 test('latest response remains eligible for snapshot application', () => {
