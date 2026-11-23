@@ -14,6 +14,7 @@
 DO $build10$
 DECLARE
   v public.marketplace_vendors_live%ROWTYPE;
+  registry_value jsonb;
   expected_at timestamptz;
   category_count integer;
   valid_category_count integer;
@@ -24,6 +25,15 @@ BEGIN
     RAISE EXCEPTION 'Build 10 correction blocked: verified staging flag and expected timestamp required';
   END IF;
   expected_at := current_setting('dbest.build10_expected_updated_at')::timestamptz;
+
+  -- Lock the authoritative registry row until the transaction ends so a
+  -- concurrent category deactivation cannot race this correction.
+  SELECT value::jsonb INTO STRICT registry_value
+    FROM public.app_settings WHERE key='marketplace_categories' FOR SHARE;
+  IF jsonb_typeof(registry_value) IS DISTINCT FROM 'object'
+     OR jsonb_typeof(registry_value->'categories') IS DISTINCT FROM 'array' THEN
+    RAISE EXCEPTION 'Build 10 correction blocked: invalid category registry structure';
+  END IF;
 
   SELECT count(*), count(*) FILTER (
     WHERE (nullif(trim(c->>'active'),'') IS NOT NULL
@@ -37,18 +47,10 @@ BEGIN
       AND nullif(trim(c->>'deleted_at'),'') IS NULL
       AND nullif(trim(c->>'archived_at'),'') IS NULL
   ) INTO category_count, valid_category_count
-  FROM public.app_settings s
-  CROSS JOIN LATERAL jsonb_array_elements(
-    CASE WHEN jsonb_typeof(s.value::jsonb->'categories')='array'
-      THEN s.value::jsonb->'categories' ELSE '[]'::jsonb END
-  ) c
-  WHERE s.key='marketplace_categories'
-    AND lower(trim(c->>'key'))='electronics';
+  FROM jsonb_array_elements(registry_value->'categories') c
+  WHERE lower(trim(c->>'key'))='electronics';
 
-  IF category_count <> 1 OR valid_category_count <> 1
-     OR (SELECT count(*) FROM public.app_settings WHERE key='marketplace_categories'
-           AND jsonb_typeof(value::jsonb)='object'
-           AND jsonb_typeof(value::jsonb->'categories')='array') <> 1 THEN
+  IF category_count <> 1 OR valid_category_count <> 1 THEN
     RAISE EXCEPTION 'Build 10 correction blocked: Electronics registry not uniquely active';
   END IF;
 
