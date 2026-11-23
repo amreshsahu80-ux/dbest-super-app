@@ -56,3 +56,14 @@ test('Malformed records and mapper failures preserve last known-good Electronics
     assert.equal(S.ready,undefined,mode);
   }
 });
+
+test('Rejected catalogue snapshots do not trigger successful refresh rendering',()=>{
+  const start=source.indexOf('async function loadSnapshot(');
+  const end=source.indexOf('function installStableSectionRenderer(',start);
+  assert.ok(start>=0&&end>start,'loadSnapshot available');
+  const load=source.slice(start,end);
+  assert.match(load,/if\(!applySnapshot\(d\)\)return null;return d/,
+    'failed snapshot validation must return null to callers');
+  assert.match(source,/if\(d&&currentType\(\)===t&&marketOpen\(\)\)renderCurrentOnce\(\)/,
+    'refresh caller must render only after a successful snapshot');
+});
