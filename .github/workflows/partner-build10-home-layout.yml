@@ -6,7 +6,8 @@ on:
   pull_request:
     paths:
       - 'partner-android-app/app/src/main/java/com/dbest4u/partner/MainActivity.java'
-      - 'partner-android-app/tests/test_build10_home_compact_gaps.py'\n      - 'partner-android-app/tests/test_partner_home_safe_area_return.py'
+      - 'partner-android-app/tests/test_build10_home_compact_gaps.py'
+      - 'partner-android-app/tests/test_partner_home_safe_area_return.py'
       - '.github/workflows/partner-build10-home-layout.yml'
   workflow_dispatch:
 jobs:
@@ -20,4 +21,6 @@ jobs:
         with:
           python-version: '3.11'
       - name: Verify role routes, spacing and floating-control clearance
-        run: |\n          python3 partner-android-app/tests/test_build10_home_compact_gaps.py\n          python3 partner-android-app/tests/test_partner_home_safe_area_return.py
+        run: |
+          python3 partner-android-app/tests/test_build10_home_compact_gaps.py
+          python3 partner-android-app/tests/test_partner_home_safe_area_return.py
