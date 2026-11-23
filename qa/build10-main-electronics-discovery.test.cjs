@@ -89,3 +89,19 @@ test('Failure while preparing existing vendor records cannot partially replace E
   assert.equal(commerceConfig.vendors[0],originalVendor,'vendors must retain original reference');
   assert.equal(S.ready,undefined,'failed replacement must not become ready');
 });
+
+test('Replaying cached Electronics snapshot does not postpone backend refresh TTL',()=>{
+  const start=source.indexOf('function applySnapshot(d,fromCache=false){');
+  const end=source.indexOf('async function loadSnapshot(',start);
+  assert.ok(start>=0&&end>start,'cache-aware snapshot application exists');
+  const commerceConfig={products:[],vendors:[]};
+  const S={locationSig:'qa',lastLoadedAt:12345};
+  const context={commerceConfig,S,LIVE_TYPES:types,liveProduct:p=>p,liveVendor:v=>v,window:{},Date};
+  vm.runInNewContext(source.slice(start,end)+';globalThis.applySnapshot=applySnapshot;',context);
+  const snapshot={products:[{id:'p',type:'electronics'}],vendors:[{id:'v',type:'electronics'}]};
+  assert.equal(context.applySnapshot(snapshot,true),true);
+  assert.equal(S.lastLoadedAt,12345,'cache replay must retain original fetch timestamp');
+  assert.equal(context.applySnapshot(snapshot),true);
+  assert.ok(S.lastLoadedAt>12345,'fresh backend snapshot must advance timestamp');
+  assert.match(source,/applySnapshot\(S\.snapshot,true\)/,'marketplace reopen must identify cached replay');
+});
