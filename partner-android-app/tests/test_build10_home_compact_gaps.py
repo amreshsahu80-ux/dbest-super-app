@@ -17,6 +17,8 @@ for chunk in chunks[1:3]:
 assert 'page.setPadding(dp(16), dp(8), dp(16), dp(84));' in home, "Floating notification clearance removed"
 assert 'showAccountSettings()' in home, "Account & Privacy control removed"
 
+assert "card.addView(photoFrame, new LinearLayout.LayoutParams(-1, dp(60)));" in source, "Role artwork must remain compact at 60dp"
+
 # Workspace navigation must retain accessible 48dp Back/Home actions.
 browser = source.split("private LinearLayout makeBrowser() {", 1)[1].split("webView = new WebView(this);", 1)[0]
 assert 'back.setContentDescription("Back");' in browser
