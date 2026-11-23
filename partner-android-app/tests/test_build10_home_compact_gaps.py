@@ -27,3 +27,15 @@ assert 'new LinearLayout.LayoutParams(dp(48), dp(48))' in source, "Compact touch
 assert 'partnerTestPush.setHomeVisible(true)' in source, "Home notification state removed"
 assert 'partnerTestPush.setHomeVisible(false)' in source, "Workspace notification state removed"
 print("PASS: Build 10 role routes, 60dp artwork, controls, and overlay clearance")
+
+# Accessibility and narrow-screen safeguards for the three role cards.
+role_card = source.split("private View roleCard(", 1)[1].split("private LinearLayout makeBrowser()", 1)[0]
+assert 'roleTitle.setMaxLines(2);' in role_card, "Role titles must wrap on narrow screens"
+assert 'ready.setMaxWidth(dp(100));' in role_card, "Decorative badge must not crowd the role title"
+assert 'overlay.setEllipsize(android.text.TextUtils.TruncateAt.END);' in role_card, "Category overlay must truncate safely"
+assert 'workspace.setContentDescription("Open " + title + " workspace");' in role_card, "Workspace accessibility label removed"
+assert 'join.setContentDescription("Join as " + title);' in role_card, "Join accessibility label removed"
+assert 'new LinearLayout.LayoutParams(0, dp(48), 1.5f)' in role_card, "Workspace button minimum touch height changed"
+assert 'new LinearLayout.LayoutParams(0, dp(48), 0.72f)' in role_card, "Join button minimum touch height changed"
+assert 'card.setOnClickListener(v -> openPortal(title, loginPath));' in role_card, "Card tap must open workspace, not onboarding"
+print("PASS: role-card accessibility, narrow-screen text, and independent 48dp actions")
