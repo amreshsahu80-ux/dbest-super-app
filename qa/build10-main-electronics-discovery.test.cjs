@@ -128,3 +128,24 @@ test('Incomplete catalogue identities cannot erase known-good Electronics record
     assert.equal(S.ready,undefined);
   }
 });
+
+test('Mapper-produced incomplete identities cannot replace known-good Electronics',()=>{
+  const start=source.indexOf('function applySnapshot(d,fromCache=false){');
+  const end=source.indexOf('async function loadSnapshot(',start);
+  assert.ok(start>=0&&end>start);
+  for(const mode of ['product-id','vendor-id','vendor-type']){
+    const originalProduct={id:'existing-product',type:'electronics'};
+    const originalVendor={id:'existing-vendor',type:'electronics'};
+    const commerceConfig={products:[originalProduct],vendors:[originalVendor]};
+    const S={locationSig:'qa'};
+    const context={commerceConfig,S,LIVE_TYPES:types,
+      liveProduct:p=>mode==='product-id'?{type:p.type}:p,
+      liveVendor:v=>mode==='vendor-id'?{type:v.type}:mode==='vendor-type'?{id:v.id}:v,
+      window:{},Date,VERSION:'qa',BUILD:'10'};
+    vm.runInNewContext(source.slice(start,end)+';globalThis.applySnapshot=applySnapshot;',context);
+    assert.equal(context.applySnapshot({products:[{id:'p',type:'electronics'}],vendors:[{id:'v',type:'electronics'}]}),false,mode);
+    assert.equal(commerceConfig.products[0],originalProduct,mode);
+    assert.equal(commerceConfig.vendors[0],originalVendor,mode);
+    assert.equal(S.ready,undefined,mode);
+  }
+});
