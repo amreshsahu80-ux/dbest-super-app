@@ -44,3 +44,14 @@ assert 'openPortal("Vendor", "/Vendor")' in push_target
 assert 'openPortal("Vaahak", "/vaahak")' in push_target
 assert 'openPortal("Service Partner", "/ServicePartnerDashboard")' in push_target
 print("PASS: notification consent, role binding and workspace lifecycle safeguards")
+
+# Compact home must keep all three role cards and accessible account entry.
+assert 'brand.addView(privacyMenu, new LinearLayout.LayoutParams(dp(48), dp(48)));' in home
+assert 'privacyMenu.setOnClickListener(v -> showAccountSettings());' in home
+assert 'scroll.setFillViewport(true);' in home
+assert '"Vendor", "GROCERY · RESTAURANT · PHARMACY"' in home
+assert '"Vaahak", "CAB · DELIVERY · TRANSPORT"' in home
+assert '"Service Partner", "REPAIRS · HOME SERVICES"' in home
+# Existing web portal remains responsible for WhatsApp; avoid injecting a second native floater.
+assert 'WhatsApp' not in home and 'whatsapp' not in home.lower()
+print("PASS: three partner cards, privacy touch target and no duplicate native WhatsApp floater")
