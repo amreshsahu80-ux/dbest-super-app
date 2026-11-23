@@ -170,3 +170,22 @@ test('Duplicate snapshot identities cannot replace known-good Electronics',()=>{
     assert.equal(S.ready,undefined);
   }
 });
+
+
+test('Noncanonical mapped category slugs cannot silently remove Electronics inventory',()=>{
+  const start=source.indexOf('function applySnapshot(d,fromCache=false){');
+  const end=source.indexOf('async function loadSnapshot(',start);
+  assert.ok(start>=0&&end>start);
+  for(const badType of ['Electronics',' electronics ','ELECTRONICS']){
+    const oldProduct={id:'old-product',type:'electronics'};
+    const oldVendor={id:'old-vendor',type:'electronics'};
+    const commerceConfig={products:[oldProduct],vendors:[oldVendor]};
+    const S={locationSig:'qa'};
+    const context={commerceConfig,S,LIVE_TYPES:types,liveProduct:p=>p,liveVendor:v=>v,window:{},Date,VERSION:'qa',BUILD:'10'};
+    vm.runInNewContext(source.slice(start,end)+';globalThis.applySnapshot=applySnapshot;',context);
+    assert.equal(context.applySnapshot({products:[{id:'p',type:badType}],vendors:[{id:'v',type:badType}]}),false,badType);
+    assert.equal(commerceConfig.products[0],oldProduct,badType);
+    assert.equal(commerceConfig.vendors[0],oldVendor,badType);
+    assert.equal(S.ready,undefined,badType);
+  }
+});
