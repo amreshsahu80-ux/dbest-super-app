@@ -25,8 +25,7 @@ function applySnapshot(d,fromCache=false){
   let products,vendors;
   try{
     if(!d.products.every(p=>p&&typeof p==='object'&&!Array.isArray(p)&&
-       p.id!=null&&String(p.id).trim()&&p.vendor_id!=null&&String(p.vendor_id).trim()&&
-       p.market_type!=null&&String(p.market_type).trim())||
+       p.id!=null&&String(p.id).trim())||
        !d.vendors.every(v=>v&&typeof v==='object'&&!Array.isArray(v)&&
        v.id!=null&&String(v.id).trim()&&v.type!=null&&String(v.type).trim()))return false;
     products=d.products.map(liveProduct);
