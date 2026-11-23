@@ -159,3 +159,14 @@ test('archived Electronics cannot be selected despite active flag',async()=>{
  await h.window.DBEST_VENDOR_DYNAMIC_CATEGORIES.refresh();
  assert.equal(h.select.options.some(o=>o.value==='electronics'),false);
 });
+
+test('registry error envelope cannot authorize Electronics even when rows are present',async()=>{
+ const h=harness({success:false,error:'registry_unavailable',categories:[{key:'electronics',label:'Electronics',active:true}]});
+ await h.window.DBEST_VENDOR_DYNAMIC_CATEGORIES.refresh();
+ assert.equal(h.select.options.some(o=>o.value==='electronics'),false);
+ assert.notEqual(h.select.validityMessage,'');
+ let prevented=false;
+ const form={querySelectorAll(q){return q==='select[name="type"]'?[h.select]:[];}};
+ h.listeners['document:submit'][0]({target:form,preventDefault(){prevented=true;}});
+ assert.equal(prevented,true);
+});
