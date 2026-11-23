@@ -96,7 +96,7 @@ test('Replaying cached Electronics snapshot does not postpone backend refresh TT
   assert.ok(start>=0&&end>start,'cache-aware snapshot application exists');
   const commerceConfig={products:[],vendors:[]};
   const S={locationSig:'qa',lastLoadedAt:12345};
-  const context={commerceConfig,S,LIVE_TYPES:types,liveProduct:p=>p,liveVendor:v=>v,window:{},Date};
+  const context={commerceConfig,S,LIVE_TYPES:types,liveProduct:p=>p,liveVendor:v=>v,window:{},Date,VERSION:'qa',BUILD:'10'};
   vm.runInNewContext(source.slice(start,end)+';globalThis.applySnapshot=applySnapshot;',context);
   const snapshot={products:[{id:'p',type:'electronics'}],vendors:[{id:'v',type:'electronics'}]};
   assert.equal(context.applySnapshot(snapshot,true),true);
