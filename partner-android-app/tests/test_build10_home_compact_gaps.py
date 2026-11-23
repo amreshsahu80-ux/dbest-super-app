@@ -18,4 +18,12 @@ assert 'page.setPadding(dp(16), dp(8), dp(16), dp(84));' in home, "Floating noti
 assert 'showAccountSettings()' in home, "Account & Privacy control removed"
 assert 'scroll.setFillViewport(true);' in home, "Home must remain scrollable"
 assert 'scroll.setClipToPadding(false);' in home, "Home footer must clear floating controls"
-print("PASS: Build 10 role order/routes, compact gaps, and overlay clearance")
+assert 'card.addView(photoFrame, new LinearLayout.LayoutParams(-1, dp(60)));' in source, "Role artwork must remain compact at 60dp"
+assert 'workspace.setOnClickListener(v -> openPortal(title, loginPath));' in source, "Workspace action route removed"
+assert 'join.setOnClickListener(v -> openPortal(title + " · Join", joinPath));' in source, "Join route removed"
+assert 'back.setContentDescription("Back");' in source, "Back accessibility removed"
+assert 'home.setContentDescription("Partner home");' in source, "Home accessibility removed"
+assert 'new LinearLayout.LayoutParams(dp(48), dp(48))' in source, "Compact touch controls removed"
+assert 'partnerTestPush.setHomeVisible(true)' in source, "Home notification state removed"
+assert 'partnerTestPush.setHomeVisible(false)' in source, "Workspace notification state removed"
+print("PASS: Build 10 role routes, 60dp artwork, controls, and overlay clearance")
