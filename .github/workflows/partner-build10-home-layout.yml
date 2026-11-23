@@ -1,0 +1,23 @@
+name: Partner Build 10 Home Layout Regression
+on:
+  push:
+    branches:
+      - fix/partner-home-build10-fresh-20261124
+  pull_request:
+    paths:
+      - 'partner-android-app/app/src/main/java/com/dbest4u/partner/MainActivity.java'
+      - 'partner-android-app/tests/test_build10_home_compact_gaps.py'
+      - '.github/workflows/partner-build10-home-layout.yml'
+  workflow_dispatch:
+jobs:
+  compact-home-contract:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify role routes, spacing and floating-control clearance
+        run: python3 partner-android-app/tests/test_build10_home_compact_gaps.py
