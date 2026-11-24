@@ -24,19 +24,6 @@ begin
      set status='expired'
    where id=r.id;
 
-  update public.marketplace_master_orders_live m
-     set payment_status='Expired',status='Payment Expired',updated_at=now()
-   where m.payment_status in ('Pending','Unpaid')
-     and exists (
-       select 1
-         from public.marketplace_orders_live c
-         cross join lateral jsonb_array_elements(
-           case when jsonb_typeof(c.items)='array' then c.items else '[]'::jsonb end
-         ) item
-        where c.master_order_id=m.id
-          and item->>'reservationKey'=r.idempotency_key::text
-     );
-
   update public.marketplace_orders_live c
      set payment_status='Expired',status='Payment Expired',updated_at=now()
    where exists (
@@ -56,6 +43,19 @@ begin
         where c.master_order_id=d.master_order_id
           and c.payment_status='Expired'
    );
+
+  update public.marketplace_master_orders_live m
+     set payment_status='Expired',status='Payment Expired',updated_at=now()
+   where m.payment_status in ('Pending','Unpaid')
+     and exists (
+       select 1
+         from public.marketplace_orders_live c
+         cross join lateral jsonb_array_elements(
+           case when jsonb_typeof(c.items)='array' then c.items else '[]'::jsonb end
+         ) item
+        where c.master_order_id=m.id
+          and item->>'reservationKey'=r.idempotency_key::text
+     );
 
   n:=n+1;
  end loop;
