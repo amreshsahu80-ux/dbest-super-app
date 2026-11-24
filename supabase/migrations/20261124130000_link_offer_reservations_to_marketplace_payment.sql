@@ -185,7 +185,7 @@ begin
       and o.status='expired' and o.payment_status='unpaid';
    update public.dbest_vendor_product_offers set stock=stock-required_qty,updated_at=now() where id=v.id;
  end loop;
- update dbest_checkout_private.offer_orders set status='paid',payment_status='paid',razorpay_payment_id=p_payment_id,
+ update dbest_checkout_private.offer_orders set status='paid',payment_status='paid',razorpay_payment_id=p_payment_id
   where member_id=p_member and idempotency_key=any(p_keys) and status in ('reserved','expired') and payment_status='unpaid';
  get diagnostics changed=row_count;
  return changed;
