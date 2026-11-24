@@ -3955,7 +3955,7 @@ async function dbestLoadPublishedVendorOffers(type){
    const price=document.createElement('strong');price.textContent='₹'+Number(p.price).toLocaleString('en-IN');
    const stock=document.createElement('p');stock.textContent=p.stock+' available';
    const notice=document.createElement('small');notice.textContent='Checkout activation pending verification';
-   body.append(name,vendor,price,stock,notice);card.append(image,body);host.append(card);
+   const check=document.createElement('button');check.className='mini';check.textContent='Verify price & stock';check.onclick=async()=>{check.disabled=true;check.textContent='Checking…';try{const res=await fetch('https://ydedmotbacnllkijzmvp.supabase.co/functions/v1/dbest-vendor-offer-quote',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sku:p.sku,vendorId:p.vendorId,qty:1})});const q=await res.json();if(!res.ok||!q.ok)throw Error(q.error||'Offer unavailable');notice.textContent='Verified: ₹'+Number(q.unitPrice).toLocaleString('en-IN')+' • '+q.stock+' in stock. Checkout not yet enabled.';}catch(e){notice.textContent='Unable to verify current availability.';}finally{check.disabled=false;check.textContent='Recheck availability';}};body.append(name,vendor,price,stock,notice,check);card.append(image,body);host.append(card);
   }
   if(!data.items?.length)host.textContent='No published vendor offers currently available.';
  }catch(e){host.textContent='Vendor offers temporarily unavailable.'}
