@@ -38,7 +38,8 @@ BEGIN
   END IF;
 
   SELECT count(*), count(*) FILTER (
-    WHERE (nullif(trim(c->>'active'),'') IS NOT NULL
+    WHERE c->>'key' = 'electronics'
+      AND (nullif(trim(c->>'active'),'') IS NOT NULL
        OR nullif(trim(c->>'enabled'),'') IS NOT NULL
        OR nullif(trim(c->>'is_active'),'') IS NOT NULL
        OR nullif(trim(c->>'status'),'') IS NOT NULL)
@@ -78,10 +79,10 @@ BEGIN
     RAISE EXCEPTION 'Build 10 correction blocked: no sellable Electronics catalogue rows';
   END IF;
 
-  IF v.updated_at IS DISTINCT FROM expected_at OR v.type <> 'other'
-     OR v.owner_approval <> 'Approved' OR v.active IS DISTINCT FROM true
-     OR v.agreement_status <> 'Fully Signed' OR v.operational_hold IS DISTINCT FROM false
-     OR jsonb_typeof(v.profile_meta) <> 'object'
+  IF v.updated_at IS DISTINCT FROM expected_at OR v.type IS DISTINCT FROM 'other'
+     OR v.owner_approval IS DISTINCT FROM 'Approved' OR v.active IS DISTINCT FROM true
+     OR v.agreement_status IS DISTINCT FROM 'Fully Signed' OR v.operational_hold IS DISTINCT FROM false
+     OR jsonb_typeof(v.profile_meta) IS DISTINCT FROM 'object'
      OR coalesce(v.profile_meta->>'business_category','') NOT IN ('','other','electronics')
      THEN
     RAISE EXCEPTION 'Build 10 correction blocked: vendor changed or catalogue incompatible';
