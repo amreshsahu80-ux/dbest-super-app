@@ -79,13 +79,13 @@ async function activateCarpoolSeat({key,payment,notes}){const id=safe(notes.dbes
 async function triggerVendorVoice(key,orderId){try{await fetch(SUPABASE_URL+'/functions/v1/partner-voice-alert',{method:'POST',headers:{apikey:key,'Content-Type':'application/json'},body:JSON.stringify({action:'vendor_order',orderId})});}catch(e){console.error('[vendor voice alert]',e)}}
 async function activateMarketplaceMaster({key,payment,notes}){
   const masterOrderId=safe(notes.master_order_id,80);if(!masterOrderId)return null;
-  const q=new URLSearchParams({select:'id,parent_tx_id,customer_member_id,total_amount,payment_status,status',id:'eq.'+masterOrderId,limit:'1'});
+  const q=new URLSearchParams({select:'id,parent_tx_id,customer_member_id,total_amount,payment_status,status,order_summary',id:'eq.'+masterOrderId,limit:'1'});
   const rows=await sbFetch('/rest/v1/marketplace_master_orders_live?'+q.toString(),key),m=Array.isArray(rows)&&rows[0]?rows[0]:null;
   if(!m){const e=new Error('Paid Marketplace order could not be found centrally');e.statusCode=404;throw e;}
   if(String(m.parent_tx_id||'')!==String(notes.dbest_ref||'')){const e=new Error('Paid Marketplace order reference mismatch');e.statusCode=403;throw e;}
   if(notes.user_id&&String(m.customer_member_id||'')!==String(notes.user_id)){const e=new Error('Paid Marketplace member mismatch');e.statusCode=403;throw e;}
   const expected=Math.round(Number(m.total_amount||0)*100);if(expected!==Number(payment.amount||0)){const e=new Error('Paid Marketplace total does not match Razorpay amount');e.statusCode=400;throw e;}
-  if(String(m.payment_status||'').toLowerCase()==='paid')return {marketplaceMasterId:masterOrderId,marketplaceOrderActivated:true,marketplaceAlreadyPaid:true};
+  const reservationKeys=Array.isArray(m.order_summary?.reservationKeys)?[...new Set(m.order_summary.reservationKeys.map(x=>String(x||'')).filter(x=>/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(x)))]:[];if(reservationKeys.length){await sbFetch('/rest/v1/rpc/dbest_mark_checkout_offer_reservations_paid',key,{method:'POST',body:JSON.stringify({p_member:String(m.customer_member_id||''),p_keys:reservationKeys,p_payment_id:String(payment.id||'')})})}if(String(m.payment_status||'').toLowerCase()==='paid')return {marketplaceMasterId:masterOrderId,marketplaceOrderActivated:true,marketplaceAlreadyPaid:true};
   const now=new Date().toISOString();
   const masterPatch={payment_method:'Razorpay',payment_status:'Paid',status:'Awaiting Vendor Confirmation',updated_at:now};
   await sbFetch('/rest/v1/marketplace_master_orders_live?id=eq.'+encodeURIComponent(masterOrderId),key,{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify(masterPatch)});
