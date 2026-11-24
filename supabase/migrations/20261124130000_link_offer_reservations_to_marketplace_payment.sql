@@ -104,7 +104,7 @@ begin
          or (o.status='paid' and o.payment_status='paid'));
  if found_count<>expected then raise exception 'offer_reservation_expired_or_invalid'; end if;
  update dbest_checkout_private.offer_orders
-    set status='paid',payment_status='paid',razorpay_payment_id=p_payment_id,expires_at=null
+    set status='paid',payment_status='paid',razorpay_payment_id=p_payment_id
   where member_id=p_member and idempotency_key=any(p_keys)
     and status='reserved' and payment_status='unpaid' and expires_at>now();
  get diagnostics changed=row_count;
