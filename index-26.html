@@ -3925,6 +3925,7 @@ function requestCommerceLocation(type,silent=false){
     let s=$("commerceLocationStatus");if(s)s.innerHTML=`GPS locked • ±${Math.round(pos.coords.accuracy)} m<span class="gpsAddress">${esc(label)}</span>`;
     let addr=document.querySelector('textarea[name="address"]');if(addr&&!addr.value)addr.value=label;
     let dg=$("commerceGpsDiag");if(dg)dg.innerHTML=gpsDiagHtml(commerceLocation);
+    if(document.querySelector('#dbestPublishedVendorOffers'))dbestLoadPublishedVendorOffers(type);
     if(!silent)toast("Live delivery location captured");
   },err=>{
     let s=$("commerceLocationStatus");if(s)s.textContent=locationErrorMessage(err);
@@ -3942,7 +3943,8 @@ async function dbestLoadPublishedVendorOffers(type){
  const host=document.querySelector('#dbestPublishedVendorOffers');
  if(!host)return;
  try{
-  const url='https://ydedmotbacnllkijzmvp.supabase.co/functions/v1/dbest-published-vendor-catalogue?category='+encodeURIComponent(category);
+  if(!Number.isFinite(commerceLocation.lat)||!Number.isFinite(commerceLocation.lng)||!commerceLocation.timestamp||Date.now()-commerceLocation.timestamp>300000){host.textContent='Enable or refresh GPS to see sellers within 15 km.';return;}
+  const url='https://ydedmotbacnllkijzmvp.supabase.co/functions/v1/dbest-nearby-vendor-catalogue-preview?'+new URLSearchParams({category,lat:String(commerceLocation.lat),lng:String(commerceLocation.lng)});
   const r=await fetch(url,{cache:'no-store'});if(!r.ok)throw Error('Offers unavailable');
   const data=await r.json();if(!data.ok)throw Error('Offers unavailable');
   host.replaceChildren();
@@ -3957,11 +3959,11 @@ async function dbestLoadPublishedVendorOffers(type){
    const name=document.createElement('b');name.textContent=p.name;
    const price=document.createElement('strong');price.textContent='From ₹'+Number(p.price).toLocaleString('en-IN');
    const details=document.createElement('details');const summary=document.createElement('summary');summary.textContent='Compare '+offers.length+' seller'+(offers.length===1?'':'s');details.append(summary);
-   for(const offer of offers){const row=document.createElement('div');row.style.cssText='padding:10px 0;border-top:1px solid #ddd';const seller=document.createElement('b');seller.textContent=offer.vendorName;const amount=document.createElement('p');amount.textContent='₹'+Number(offer.price).toLocaleString('en-IN')+' • '+offer.stock+' in stock';row.append(seller,amount);details.append(row);}
-   const notice=document.createElement('small');notice.textContent='Seller delivery eligibility and checkout pending verification';
+   for(const offer of offers){const row=document.createElement('div');row.style.cssText='padding:10px 0;border-top:1px solid #ddd';const seller=document.createElement('b');seller.textContent=offer.vendorName;const amount=document.createElement('p');amount.textContent='₹'+Number(offer.price).toLocaleString('en-IN')+' • '+offer.stock+' in stock • '+offer.distanceKm+' km away';row.append(seller,amount);details.append(row);}
+   const notice=document.createElement('small');notice.textContent='Within 15 km • Checkout pending verification';
    body.append(name,price,details,notice);card.append(image,body);host.append(card);
   }
-  if(!data.items?.length)host.textContent='No published vendor offers currently available.';
+  if(!data.items?.length)host.textContent='No eligible sellers within 15 km.';
  }catch(e){host.textContent='Vendor offers temporarily unavailable.'}
 }
 // Read-only shared catalogue used by the web marketplace and WebView-based app screens.
