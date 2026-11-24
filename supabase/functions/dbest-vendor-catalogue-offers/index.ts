@@ -1,0 +1,58 @@
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import {createClient} from "npm:@supabase/supabase-js@2.57.0";
+Deno.serve(async req=>{
+const origin=req.headers.get("origin")||"",allowed=["https://dbest4u.com","https://www.dbest4u.com","https://dbest-public-master-catalogue-db-est.vercel.app"];
+const h={"Content-Type":"application/json","Cache-Control":"no-store","Vary":"Origin","Access-Control-Allow-Origin":allowed.includes(origin)?origin:"https://dbest4u.com","Access-Control-Allow-Methods":"GET,POST,OPTIONS","Access-Control-Allow-Headers":"authorization,content-type,apikey"};
+const send=(d:unknown,status=200)=>new Response(JSON.stringify(d),{status,headers:h});
+const catalogueAliases:Record<string,string>={"grocery":"Grocery & FMCG","grocery & fmcg":"Grocery & FMCG","fmcg":"Grocery & FMCG","electronics":"Electronics","electronic":"Electronics","restaurant":"Restaurant","restaurants":"Restaurant","food":"Restaurant","medicine":"Medicines (OTC)","medicines":"Medicines (OTC)","medicines (otc)":"Medicines (OTC)","pharmacy":"Medicines (OTC)"};
+function catalogueLabel(value:any):string{const raw=String(typeof value==="object"?(value.category||value.label||value.key||value.type||""):value||"").trim();return catalogueAliases[raw.toLowerCase()]||raw}
+function approvedCatalogueCategories(v:any):string[]{const m=v?.profile_meta&&typeof v.profile_meta==="object"?v.profile_meta:{};const raw=m.approvedCategories??m.approvedBusinessCategories??m.businessCategories??m.categories;const rows=Array.isArray(raw)?raw:(typeof raw==="string"?raw.split(/[;,|]/):[]);const out=rows.filter((x:any)=>!(x&&typeof x==="object"&&(x.approved===false||String(x.status||"").toLowerCase().includes("pending")))).map(catalogueLabel).filter(Boolean);if(!out.length&&v?.type)out.push(catalogueLabel(v.type));return [...new Set(out)]}
+if(req.method==="OPTIONS")return new Response(null,{status:204,headers:h});
+if(!["GET","POST"].includes(req.method))return send({error:"method_not_allowed"},405);
+const token=(req.headers.get("authorization")||"").replace(/^Bearer\s+/i,"").trim();
+if(token.length<24||token.length>512)return send({error:"session_required"},401);
+const hash=Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(token)))).map(x=>x.toString(16).padStart(2,"0")).join("");
+const db=createClient(Deno.env.get("SUPABASE_URL")!,Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,{auth:{persistSession:false,autoRefreshToken:false}});
+const now=new Date().toISOString();
+const {data:session,error:se}=await db.from("marketplace_vendor_sessions_live").select("vendor_id").eq("token_hash",hash).gt("expires_at",now).maybeSingle();
+if(se||!session)return send({error:"vendor_session_invalid"},403);
+const {data:vendor}=await db.from("marketplace_vendors_live").select("id,type,profile_meta,active,can_price,can_stock,can_offer,operational_hold,owner_approval").eq("id",session.vendor_id).maybeSingle();
+if(!vendor||!vendor.active||vendor.owner_approval!=="Approved"||vendor.operational_hold)return send({error:"vendor_not_eligible"},403);
+const allowedCategories=approvedCatalogueCategories(vendor);if(!allowedCategories.length)return send({error:"vendor_category_not_approved"},403);
+let postBody:Record<string,unknown>|null=null;if(req.method==="POST"){try{postBody=await req.json()}catch{return send({error:"invalid_json"},400)}const body=postBody;if(body.action==="select"){const sku=String(body.sku||"").trim();if(!/^SKU-[A-Z]+-\d{4}$/.test(sku)||typeof body.selected!=="boolean")return send({error:"invalid_selection"},400);const {data:master}=await db.from("dbest_uploaded_master_catalogue_isolated").select("sku,category").eq("sku",sku).eq("public_catalogue_visible",true).maybeSingle();if(!master)return send({error:"product_unavailable"},404);if(!allowedCategories.some((c:string)=>c.toLowerCase()===catalogueLabel(master.category).toLowerCase()))return send({error:"category_not_approved_for_vendor"},403);const {error}=await db.from("dbest_vendor_catalogue_selections").upsert({vendor_id:vendor.id,sku,selected:body.selected,updated_at:now},{onConflict:"vendor_id,sku"});if(error)return send({error:"selection_save_failed"},500);return send({ok:true,sku,selected:body.selected})}}
+if(req.method==="GET"){
+const url=new URL(req.url);const page=Math.max(0,Math.min(30,Number(url.searchParams.get("page")||0)||0));const mode=url.searchParams.get("mode")==="discover"?"discover":"mine";const requestedCategory=url.searchParams.get("category");
+if(requestedCategory&&!allowedCategories.some((c:string)=>c.toLowerCase()===catalogueLabel(requestedCategory).toLowerCase()))return send({error:"category_not_approved_for_vendor"},403);
+let masterQuery=db.from("dbest_uploaded_master_catalogue_isolated").select("sku,product_title,brand,category,variant_pack,image_src,mrp_inr,suggested_price_inr",{count:"exact"}).eq("public_catalogue_visible",true).in("category",allowedCategories);
+if(requestedCategory)masterQuery=masterQuery.eq("category",catalogueLabel(requestedCategory));
+if(mode==="mine"){
+ const [{data:myOffers},{data:myImages},{data:mySelections}]=await Promise.all([db.from("dbest_vendor_product_offers").select("master_product_id").eq("vendor_id",vendor.id).limit(5000),db.from("dbest_vendor_catalogue_images").select("sku").eq("vendor_id",vendor.id).limit(5000),db.from("dbest_vendor_catalogue_selections").select("sku,selected").eq("vendor_id",vendor.id).limit(5000)]);
+ const ids=(myOffers||[]).map(x=>x.master_product_id);
+ const {data:myLinks}=ids.length?await db.from("dbest_uploaded_master_product_links_isolated").select("sku").in("master_product_id",ids):{data:[]};
+ const excluded=new Set((mySelections||[]).filter(x=>!x.selected).map(x=>x.sku));const skus=[...new Set([...(myLinks||[]).map(x=>x.sku),...(myImages||[]).map(x=>x.sku),...(mySelections||[]).filter(x=>x.selected).map(x=>x.sku)])].filter(sku=>!excluded.has(sku));
+ if(!skus.length)return send({ok:true,total:0,page,mode,can_price:vendor.can_price,can_stock:vendor.can_stock,approvedCategories:allowedCategories,items:[]});
+ masterQuery=masterQuery.in("sku",skus);
+}
+const {data,error,count}=await masterQuery.order("sku").range(page*40,page*40+39);
+if(error)return send({error:"catalogue_error"},503);
+const ids=(data||[]).map(x=>x.sku);
+const {data:links}=await db.from("dbest_uploaded_master_product_links_isolated").select("sku,master_product_id").in("sku",ids);
+const productIds=(links||[]).map(x=>x.master_product_id);
+const {data:offers}=productIds.length?await db.from("dbest_vendor_product_offers").select("master_product_id,price_inclusive_gst,mrp,stock,active").eq("vendor_id",vendor.id).in("master_product_id",productIds):{data:[]};
+const {data:vendorImages}=ids.length?await db.from("dbest_vendor_catalogue_images").select("sku,image_url").eq("vendor_id",vendor.id).in("sku",ids):{data:[]};const imagesBySku=new Map((vendorImages||[]).map(x=>[x.sku,x.image_url]));const {data:selectionRows}=ids.length?await db.from("dbest_vendor_catalogue_selections").select("sku,selected").eq("vendor_id",vendor.id).in("sku",ids):{data:[]};const selectedSkus=new Set((selectionRows||[]).filter(x=>x.selected).map(x=>x.sku));const bySku=new Map((links||[]).map(x=>[x.sku,x.master_product_id]));const byProduct=new Map((offers||[]).map(x=>[x.master_product_id,x]));
+return send({ok:true,total:count,page,mode,can_price:vendor.can_price,can_stock:vendor.can_stock,approvedCategories:allowedCategories,items:(data||[]).map(x=>({...x,selected:mode==="mine"||selectedSkus.has(x.sku),image_src:imagesBySku.get(x.sku)||x.image_src,master_image_src:x.image_src,offer:byProduct.get(bySku.get(x.sku))||null}))});
+}
+if(!vendor.can_price||!vendor.can_stock)return send({error:"vendor_price_stock_permission_required"},403);
+const body=postBody;
+const sku=String(body?.sku||"").trim(),price=Number(body?.price),stock=Number(body?.stock),mrp=body?.mrp===null||body?.mrp===undefined?null:Number(body.mrp);
+if(!/^SKU-[A-Z]+-\d{4}$/.test(sku)||!Number.isFinite(price)||price<=0||price>10000000||!Number.isSafeInteger(stock)||stock<0||stock>10000000||(mrp!==null&&(!Number.isFinite(mrp)||mrp<price)))return send({error:"invalid_sku_price_stock_or_mrp"},400);
+const {data:master}=await db.from("dbest_uploaded_master_catalogue_isolated").select("category").eq("sku",sku).eq("public_catalogue_visible",true).maybeSingle();
+if(!master)return send({error:"sku_not_found"},404);if(!allowedCategories.some((c:string)=>c.toLowerCase()===catalogueLabel(master.category).toLowerCase()))return send({error:"category_not_approved_for_vendor"},403);
+const {data:link}=await db.from("dbest_uploaded_master_product_links_isolated").select("master_product_id").eq("sku",sku).maybeSingle();
+if(!link)return send({error:"sku_not_found"},404);
+const {data:existing}=await db.from("dbest_vendor_product_offers").select("id").eq("vendor_id",vendor.id).eq("master_product_id",link.master_product_id).maybeSingle();
+const payload={vendor_id:vendor.id,master_product_id:link.master_product_id,price_inclusive_gst:price,mrp,stock,active:false,updated_at:now};
+const {error}=await db.from("dbest_vendor_product_offers").upsert(payload,{onConflict:"vendor_id,master_product_id"});
+if(error)return send({error:"offer_save_failed",detail:error.message},409);
+return send({ok:true,sku,offer_saved:true,active:false,notice:"Draft saved. Not yet enabled for customer checkout."});
+});
