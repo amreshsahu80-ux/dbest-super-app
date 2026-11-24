@@ -3946,16 +3946,20 @@ async function dbestLoadPublishedVendorOffers(type){
   const r=await fetch(url,{cache:'no-store'});if(!r.ok)throw Error('Offers unavailable');
   const data=await r.json();if(!data.ok)throw Error('Offers unavailable');
   host.replaceChildren();
-  for(const p of data.items||[]){
+  const groups=new Map();
+  for(const offer of data.items||[]){if(!offer.sku||!offer.vendorId||Number(offer.stock)<=0)continue;const list=groups.get(offer.sku)||[];if(!list.some(x=>x.vendorId===offer.vendorId))list.push(offer);groups.set(offer.sku,list);}
+  for(const offers of groups.values()){
+   offers.sort((a,b)=>Number(a.price)-Number(b.price));
+   const p=offers[0];
    const card=document.createElement('article');card.className='productCard';
    const image=document.createElement('img');image.src=p.imageUrl||'';image.alt=p.name||'Product';image.loading='lazy';image.style.cssText='width:100%;height:190px;object-fit:contain';
    const body=document.createElement('div');body.className='productBody';
    const name=document.createElement('b');name.textContent=p.name;
-   const vendor=document.createElement('p');vendor.textContent='Sold by '+p.vendorName;
-   const price=document.createElement('strong');price.textContent='₹'+Number(p.price).toLocaleString('en-IN');
-   const stock=document.createElement('p');stock.textContent=p.stock+' available';
-   const notice=document.createElement('small');notice.textContent='Checkout activation pending verification';
-   const check=document.createElement('button');check.className='mini';check.textContent='Verify price & stock';check.onclick=async()=>{check.disabled=true;check.textContent='Checking…';try{const res=await fetch('https://ydedmotbacnllkijzmvp.supabase.co/functions/v1/dbest-vendor-offer-quote',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sku:p.sku,vendorId:p.vendorId,qty:1})});const q=await res.json();if(!res.ok||!q.ok)throw Error(q.error||'Offer unavailable');notice.textContent='Verified: ₹'+Number(q.unitPrice).toLocaleString('en-IN')+' • '+q.stock+' in stock. Checkout not yet enabled.';}catch(e){notice.textContent='Unable to verify current availability.';}finally{check.disabled=false;check.textContent='Recheck availability';}};body.append(name,vendor,price,stock,notice,check);card.append(image,body);host.append(card);
+   const price=document.createElement('strong');price.textContent='From ₹'+Number(p.price).toLocaleString('en-IN');
+   const details=document.createElement('details');const summary=document.createElement('summary');summary.textContent='Compare '+offers.length+' seller'+(offers.length===1?'':'s');details.append(summary);
+   for(const offer of offers){const row=document.createElement('div');row.style.cssText='padding:10px 0;border-top:1px solid #ddd';const seller=document.createElement('b');seller.textContent=offer.vendorName;const amount=document.createElement('p');amount.textContent='₹'+Number(offer.price).toLocaleString('en-IN')+' • '+offer.stock+' in stock';row.append(seller,amount);details.append(row);}
+   const notice=document.createElement('small');notice.textContent='Seller delivery eligibility and checkout pending verification';
+   body.append(name,price,details,notice);card.append(image,body);host.append(card);
   }
   if(!data.items?.length)host.textContent='No published vendor offers currently available.';
  }catch(e){host.textContent='Vendor offers temporarily unavailable.'}
