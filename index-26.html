@@ -3950,9 +3950,13 @@ async function dbestLoadPublishedVendorOffers(type){
   host.replaceChildren();
   const groups=new Map();
   for(const offer of data.items||[]){if(!offer.sku||!offer.vendorId||Number(offer.stock)<=0)continue;const list=groups.get(offer.sku)||[];if(!list.some(x=>x.vendorId===offer.vendorId))list.push(offer);groups.set(offer.sku,list);}
-  for(const offers of groups.values()){
-   offers.sort((a,b)=>Number(a.price)-Number(b.price));
-   const p=offers[0];
+  for(const candidates of groups.values()){
+   const eligible=candidates.filter(o=>Number.isFinite(Number(o.distanceKm))&&o.distanceKm!=null&&Number(o.distanceKm)>=0&&Number(o.distanceKm)<=15&&Number(o.price)>0);
+   if(!eligible.length)continue;
+   const minPrice=Math.min(...eligible.map(o=>Number(o.price)));
+   const score=o=>0.5*(1-minPrice/Number(o.price))+0.5*Number(o.distanceKm)/15;
+   const offers=eligible.sort((a,b)=>score(a)-score(b)||Number(a.price)-Number(b.price)||Number(a.distanceKm)-Number(b.distanceKm)||String(a.vendorId).localeCompare(String(b.vendorId))).slice(0,5);
+   const p=offers.reduce((best,o)=>Number(o.price)<Number(best.price)?o:best,offers[0]);
    const card=document.createElement('article');card.className='productCard';
    const image=document.createElement('img');image.src=p.imageUrl||'';image.alt=p.name||'Product';image.loading='lazy';image.style.cssText='width:100%;height:190px;object-fit:contain';
    const body=document.createElement('div');body.className='productBody';
