@@ -55,7 +55,11 @@
 
       const ownerBoot='<script>(function(){function open(){try{if(window.DBEST_OWNER_PORTAL_ROUTE&&window.DBEST_OWNER_PORTAL_ROUTE.open&&location.pathname.toLowerCase()!=="/owner"){location.replace("/owner");return}if(typeof window.ownerLogin==="function"){window.ownerLogin();return}}catch(e){}setTimeout(open,120)}setTimeout(open,80)})();<\/script>';
 
-      html=html.replace('<a href="/owner-catalogue-images.html" style="position:fixed;right:12px;bottom:70px;z-index:9999;background:#173f7e;color:white;border-radius:22px;padding:12px 15px;font:700 13px system-ui;text-decoration:none">📷 Catalogue Image Control</a></body>',scripts+ownerBoot+'</body>');
+      // Always inject owner scripts; the old exact-text replacement silently failed
+      // whenever the floating-link markup was absent or changed.
+      html=html.replace(/<\/body>/i,scripts+ownerBoot+'</body>');
+      if(!html.includes('owner-portal-route.js'))throw new Error('Owner login scripts were not injected');
+
       document.open();document.write(html);document.close();
     }catch(err){
       document.body.innerHTML='<div style="font-family:system-ui;padding:24px"><h2>DBest Project Owner Console</h2><p>Owner Console loading error. Please refresh once.</p><p style="color:#667085">'+String(err&&err.message||err)+'</p></div>';
