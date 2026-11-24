@@ -96,7 +96,7 @@ test('Replaying cached Electronics snapshot does not postpone backend refresh TT
   assert.ok(start>=0&&end>start,'cache-aware snapshot application exists');
   const commerceConfig={products:[],vendors:[]};
   const S={locationSig:'qa',lastLoadedAt:12345};
-  const context={commerceConfig,S,LIVE_TYPES:types,liveProduct:p=>p,liveVendor:v=>v,window:{},Date};
+  const context={commerceConfig,S,LIVE_TYPES:types,liveProduct:p=>p,liveVendor:v=>v,window:{},Date,VERSION:'qa',BUILD:'10'};
   vm.runInNewContext(source.slice(start,end)+';globalThis.applySnapshot=applySnapshot;',context);
   const snapshot={products:[{id:'p',type:'electronics'}],vendors:[{id:'v',type:'electronics'}]};
   assert.equal(context.applySnapshot(snapshot,true),true);
@@ -104,4 +104,88 @@ test('Replaying cached Electronics snapshot does not postpone backend refresh TT
   assert.equal(context.applySnapshot(snapshot),true);
   assert.ok(S.lastLoadedAt>12345,'fresh backend snapshot must advance timestamp');
   assert.match(source,/applySnapshot\(S\.snapshot,true\)/,'marketplace reopen must identify cached replay');
+});
+
+test('Incomplete catalogue identities cannot erase known-good Electronics records',()=>{
+  const start=source.indexOf('function applySnapshot(d,fromCache=false){');
+  const end=source.indexOf('async function loadSnapshot(',start);
+  assert.ok(start>=0&&end>start);
+  for(const response of [
+    {products:[{type:'electronics'}],vendors:[{id:'new-v',type:'electronics'}]},
+    {products:[{id:'new-p',type:'electronics'}],vendors:[{type:'electronics'}]},
+    {products:[{id:'new-p',type:'electronics'}],vendors:[{id:'new-v'}]},
+    {products:[{id:' ',type:'electronics'}],vendors:[{id:'new-v',type:'electronics'}]}
+  ]){
+    const oldProduct={id:'existing-product',type:'electronics'};
+    const oldVendor={id:'existing-vendor',type:'electronics'};
+    const commerceConfig={products:[oldProduct],vendors:[oldVendor]};
+    const S={locationSig:'qa'};
+    const context={commerceConfig,S,LIVE_TYPES:types,liveProduct:p=>p,liveVendor:v=>v,window:{},Date,VERSION:'qa',BUILD:'10'};
+    vm.runInNewContext(source.slice(start,end)+';globalThis.applySnapshot=applySnapshot;',context);
+    assert.equal(context.applySnapshot(response),false);
+    assert.equal(commerceConfig.products[0],oldProduct);
+    assert.equal(commerceConfig.vendors[0],oldVendor);
+    assert.equal(S.ready,undefined);
+  }
+});
+
+test('Mapper-produced incomplete identities cannot replace known-good Electronics',()=>{
+  const start=source.indexOf('function applySnapshot(d,fromCache=false){');
+  const end=source.indexOf('async function loadSnapshot(',start);
+  assert.ok(start>=0&&end>start);
+  for(const mode of ['product-id','vendor-id','vendor-type']){
+    const originalProduct={id:'existing-product',type:'electronics'};
+    const originalVendor={id:'existing-vendor',type:'electronics'};
+    const commerceConfig={products:[originalProduct],vendors:[originalVendor]};
+    const S={locationSig:'qa'};
+    const context={commerceConfig,S,LIVE_TYPES:types,
+      liveProduct:p=>mode==='product-id'?{type:p.type}:p,
+      liveVendor:v=>mode==='vendor-id'?{type:v.type}:mode==='vendor-type'?{id:v.id}:v,
+      window:{},Date,VERSION:'qa',BUILD:'10'};
+    vm.runInNewContext(source.slice(start,end)+';globalThis.applySnapshot=applySnapshot;',context);
+    assert.equal(context.applySnapshot({products:[{id:'p',type:'electronics'}],vendors:[{id:'v',type:'electronics'}]}),false,mode);
+    assert.equal(commerceConfig.products[0],originalProduct,mode);
+    assert.equal(commerceConfig.vendors[0],originalVendor,mode);
+    assert.equal(S.ready,undefined,mode);
+  }
+});
+
+test('Duplicate snapshot identities cannot replace known-good Electronics',()=>{
+  const start=source.indexOf('function applySnapshot(d,fromCache=false){');
+  const end=source.indexOf('async function loadSnapshot(',start);
+  assert.ok(start>=0&&end>start);
+  for(const response of [
+    {products:[{id:'dup',type:'electronics'},{id:'dup',type:'electronics'}],vendors:[{id:'v',type:'electronics'}]},
+    {products:[{id:'p',type:'electronics'}],vendors:[{id:'dup',type:'electronics'},{id:'dup',type:'electronics'}]}
+  ]){
+    const oldProduct={id:'existing-product',type:'electronics'};
+    const oldVendor={id:'existing-vendor',type:'electronics'};
+    const commerceConfig={products:[oldProduct],vendors:[oldVendor]};
+    const S={locationSig:'qa'};
+    const context={commerceConfig,S,LIVE_TYPES:types,liveProduct:p=>p,liveVendor:v=>v,window:{},Date,VERSION:'qa',BUILD:'10'};
+    vm.runInNewContext(source.slice(start,end)+';globalThis.applySnapshot=applySnapshot;',context);
+    assert.equal(context.applySnapshot(response),false);
+    assert.equal(commerceConfig.products[0],oldProduct);
+    assert.equal(commerceConfig.vendors[0],oldVendor);
+    assert.equal(S.ready,undefined);
+  }
+});
+
+
+test('Noncanonical mapped category slugs cannot silently remove Electronics inventory',()=>{
+  const start=source.indexOf('function applySnapshot(d,fromCache=false){');
+  const end=source.indexOf('async function loadSnapshot(',start);
+  assert.ok(start>=0&&end>start);
+  for(const badType of ['Electronics',' electronics ','ELECTRONICS']){
+    const oldProduct={id:'old-product',type:'electronics'};
+    const oldVendor={id:'old-vendor',type:'electronics'};
+    const commerceConfig={products:[oldProduct],vendors:[oldVendor]};
+    const S={locationSig:'qa'};
+    const context={commerceConfig,S,LIVE_TYPES:types,liveProduct:p=>p,liveVendor:v=>v,window:{},Date,VERSION:'qa',BUILD:'10'};
+    vm.runInNewContext(source.slice(start,end)+';globalThis.applySnapshot=applySnapshot;',context);
+    assert.equal(context.applySnapshot({products:[{id:'p',type:badType}],vendors:[{id:'v',type:badType}]}),false,badType);
+    assert.equal(commerceConfig.products[0],oldProduct,badType);
+    assert.equal(commerceConfig.vendors[0],oldVendor,badType);
+    assert.equal(S.ready,undefined,badType);
+  }
 });

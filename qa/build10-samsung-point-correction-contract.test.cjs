@@ -13,7 +13,7 @@ test('registry and catalogue rows remain locked and validated',()=>{
   for(const s of ["WHERE key='marketplace_categories' FOR SHARE","INTO STRICT registry_value","category_count <> 1 OR valid_category_count <> 1","deleted_at","archived_at","WHERE c.vendor_id=v.id FOR SHARE","catalogue_row.market_type IS DISTINCT FROM 'electronics'","sellable_electronics_count = 0"]) required(s);
 });
 test('only the intended approved, active, signed vendor can change',()=>{
-  for(const s of ["WHERE id='VND8597199' FOR UPDATE","v.type <> 'other'","v.owner_approval <> 'Approved'","v.active IS DISTINCT FROM true","v.agreement_status <> 'Fully Signed'","v.operational_hold IS DISTINCT FROM false","profile_meta IS NOT DISTINCT FROM v.profile_meta","profile_meta=jsonb_set(v.profile_meta"]) required(s);
+  for(const s of ["WHERE id='VND8597199' FOR UPDATE","v.type IS DISTINCT FROM 'other'","v.owner_approval IS DISTINCT FROM 'Approved'","v.active IS DISTINCT FROM true","v.agreement_status IS DISTINCT FROM 'Fully Signed'","v.operational_hold IS DISTINCT FROM false","profile_meta IS NOT DISTINCT FROM v.profile_meta","profile_meta=jsonb_set(v.profile_meta"]) required(s);
   assert.equal((sql.match(/\bUPDATE\s+public\.marketplace_vendors_live\b/gi)||[]).length,1,'one vendor update only');
   assert.doesNotMatch(sql,/\b(?:DELETE|TRUNCATE|DROP|ALTER)\s+(?:TABLE\s+)?public\./i);
 });
@@ -22,4 +22,10 @@ test('atomic UPDATE repeats approval, active, signed and no-hold eligibility',()
   const update=sql.slice(sql.indexOf('UPDATE public.marketplace_vendors_live'));
   assert.match(update,/WHERE id=v\.id AND updated_at=expected_at AND type='other'/);
   for(const clause of ["owner_approval='Approved'","active IS TRUE","agreement_status='Fully Signed'","operational_hold IS FALSE","profile_meta IS NOT DISTINCT FROM v.profile_meta"]) assert.ok(update.includes(clause),'missing atomic UPDATE predicate: '+clause);
+});
+
+test('nullable eligibility fields fail closed and registry key is canonical',()=>{
+  required("jsonb_typeof(v.profile_meta) IS DISTINCT FROM 'object'");
+  required("WHERE c->>'key' = 'electronics'");
+  required("WHERE lower(trim(c->>'key'))='electronics'");
 });
