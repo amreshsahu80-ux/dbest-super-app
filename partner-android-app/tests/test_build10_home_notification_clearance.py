@@ -35,3 +35,11 @@ assert 'browserShell.setVisibility(View.GONE);' in return_home, "Returning Home 
 assert 'partnerTestPush.setHomeVisible(true);' in return_home, "Returning Home must restore notification overlay"
 assert 'landingScroll.scrollTo(0, 0);' in return_home, "Returning Home must reset stale scroll position"
 print("PASS: workspace/home transition state and notification overlay scoped to navigation methods")
+
+# Protect safe-area and toolbar navigation behavior on compact devices.
+assert "WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout()" in home, "System bars and display cutouts must be respected"
+assert "view.setPadding(area.left, area.top, area.right, area.bottom);" in home, "Native host must respect safe-area padding"
+assert "if (!resetWorkspaceHistoryOnLoad && webView.canGoBack()) webView.goBack();" in home, "Toolbar Back must not cross pending workspace history reset"
+assert "home.setOnClickListener(v -> showHome());" in home, "Toolbar Home must return to native landing"
+assert "browserTitle.setEllipsize(android.text.TextUtils.TruncateAt.END);" in home, "Workspace title must not crowd navigation controls"
+print("PASS: safe-area insets and compact toolbar navigation")
