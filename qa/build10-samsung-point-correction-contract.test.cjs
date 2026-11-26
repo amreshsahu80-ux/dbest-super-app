@@ -29,3 +29,8 @@ test('nullable eligibility fields fail closed and registry key is canonical',()=
   required("WHERE c->>'key' = 'electronics'");
   required("WHERE lower(trim(c->>'key'))='electronics'");
 });
+
+test('persisted category and all unrelated vendor fields are verified before commit',()=>{
+  const post=sql.slice(sql.indexOf('GET DIAGNOSTICS affected = ROW_COUNT'));
+  for(const s of ["persisted.id=v.id","persisted.type='electronics'","persisted.profile_meta IS NOT DISTINCT FROM","jsonb_set(v.profile_meta","to_jsonb(persisted) - ARRAY['type','profile_meta','updated_at']","to_jsonb(v) - ARRAY['type','profile_meta','updated_at']","RAISE EXCEPTION 'Build 10 correction blocked: persisted vendor postcondition failed'"]) assert.ok(post.includes(s),'missing persisted postcondition: '+s);
+});
