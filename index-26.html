@@ -4007,13 +4007,13 @@ async function dbestLoadSharedMaster(type,more=false){
  const box=document.getElementById("dbestSharedMasterItems");if(!box)return;
  const category=({grocery:"Grocery & FMCG",restaurant:"Restaurant",medicine:"Medicines (OTC)",electronics:"Electronics"})[type],feed=window.dbestMasterFeed;
  if(!category){box.textContent="Master catalogue is not configured for this section.";return}
- if(!more||feed.type!==type){if(feed.observer)feed.observer.disconnect();feed.type=type;feed.page=0;feed.loading=false;feed.done=false;box.textContent="Loading live master products…"}
+ if(!more||feed.type!==type){if(feed.observer)feed.observer.disconnect();feed.type=type;feed.page=0;feed.loading=false;feed.done=false;feed.requestId=(feed.requestId||0)+1;box.textContent="Loading live master products…"}
  if(feed.loading||feed.done)return;
  feed.loading=true;
  try{
-  const page=feed.page,url="https://ydedmotbacnllkijzmvp.supabase.co/functions/v1/dbest-public-master-catalogue?"+new URLSearchParams({category,page:String(page)});
+  const page=feed.page,requestId=feed.requestId,url="https://ydedmotbacnllkijzmvp.supabase.co/functions/v1/dbest-public-master-catalogue?"+new URLSearchParams({category,page:String(page)});
   const response=await fetch(url,{cache:"no-store"});if(!response.ok)throw Error("Catalogue unavailable");
-  const result=await response.json();if(!result.ok)throw Error("Catalogue unavailable");
+  const result=await response.json();if(requestId!==feed.requestId||feed.type!==type)return;if(!result.ok)throw Error("Catalogue unavailable");
   if(!more)box.replaceChildren();
   for(const item of result.items||[]){
    const card=document.createElement("article");card.className="productCard dbestMasterCard";card.dataset.masterSku=item.sku||"";
