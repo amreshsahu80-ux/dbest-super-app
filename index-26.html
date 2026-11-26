@@ -4009,9 +4009,9 @@ async function dbestLoadSharedMaster(type,more=false){
  if(!category){box.textContent="Master catalogue is not configured for this section.";return}
  if(!more||feed.type!==type){if(feed.observer)feed.observer.disconnect();feed.type=type;feed.page=0;feed.loading=false;feed.done=false;feed.requestId=(feed.requestId||0)+1;box.textContent="Loading live master products…"}
  if(feed.loading||feed.done)return;
- feed.loading=true;
+ feed.loading=true;const requestId=feed.requestId;
  try{
-  const page=feed.page,requestId=feed.requestId,url="https://ydedmotbacnllkijzmvp.supabase.co/functions/v1/dbest-public-master-catalogue?"+new URLSearchParams({category,page:String(page)});
+  const page=feed.page,url="https://ydedmotbacnllkijzmvp.supabase.co/functions/v1/dbest-public-master-catalogue?"+new URLSearchParams({category,page:String(page)});
   const response=await fetch(url,{cache:"no-store"});if(!response.ok)throw Error("Catalogue unavailable");
   const result=await response.json();if(requestId!==feed.requestId||feed.type!==type)return;if(!result.ok)throw Error("Catalogue unavailable");
   if(!more)box.replaceChildren();
@@ -4028,7 +4028,7 @@ async function dbestLoadSharedMaster(type,more=false){
   feed.done=items.length===0||items.length<48||(total>0&&feed.page*48>=total);feed.loading=false;
   if(!items.length&&!more)box.textContent="No master products in this category.";
   dbestReconcileMasterCards();dbestWatchMasterFeed(type);
- }catch(e){feed.loading=false;if(!more)box.textContent="Unable to load live master catalogue."}
+ }catch(e){if(requestId===feed.requestId&&feed.type===type){feed.loading=false;if(!more)box.textContent="Unable to load live master catalogue."}}
 }
 function marketProductCard(p){let v=marketVendor(p.vendorId),discount=Number(p.offer||0);return `<div class="productCard"><div class="productImage"><img src="${esc(p.image||"")}" alt="${esc(p.name)}" onerror="this.style.display='none'"></div><div class="productBody"><b>${esc(p.name)}</b><small>${esc(p.unit||"")} • ${esc(p.category||"")}</small><span class="vendorName">${esc(v?.name||"DBest Vendor")}</span>${discount?`<span class="offerTag">${discount}% OFF</span>`:""}${p.rx?`<span class="rxTag">Rx Required</span>`:""}<div class="productPrice"><strong>₹${Number(p.price||0)}</strong>${Number(p.mrp||0)>Number(p.price||0)?`<del>₹${Number(p.mrp)}</del>`:""}</div><small class="${Number(p.stock||0)>0?"stockOk":""}">${Number(p.stock||0)>0?`${Number(p.stock)} available`:"Out of stock"}</small>${marketCart(p.type).some(x=>String(x.id)===String(p.id))?`<div class="qtyControl"><button type="button" aria-label="Remove one ${esc(p.name)}" onclick="return marketCardAction(this)" data-market-action="qty" data-market-type="${esc(p.type)}" data-market-id="${esc(p.id)}" data-market-delta="-1">−</button><b>${marketCart(p.type).find(x=>String(x.id)===String(p.id))?.qty||0}</b><button type="button" aria-label="Add one ${esc(p.name)}" onclick="return marketCardAction(this)" data-market-action="qty" data-market-type="${esc(p.type)}" data-market-id="${esc(p.id)}" data-market-delta="1">+</button></div>`:`<button class="addCartBtn" onclick="return marketCardAction(this)" data-market-action="add" data-market-type="${esc(p.type)}" data-market-id="${esc(p.id)}">+ Add to Cart</button>`}</div></div>`}
 function marketAdd(type,id){let p=marketProduct(id);if(!p||p.type!==type||!catalogueLive(p)||Number(p.stock||0)<=0)return;let cart=marketCart(type),row=cart.find(x=>String(x.id)===String(id));if(row)row.qty=Math.min(Number(p.stock),Number(row.qty||0)+1);else cart.push({id,qty:1});commerceCarts[type]=cart;save();toast(p.name+" added");openMarketplace(type)}
