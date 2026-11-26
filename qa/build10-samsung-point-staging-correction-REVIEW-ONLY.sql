@@ -100,6 +100,20 @@ BEGIN
   IF affected <> 1 THEN
     RAISE EXCEPTION 'Build 10 correction blocked: affected % rows, expected exactly one', affected;
   END IF;
+  -- Re-read persisted values to detect a trigger rewriting the category or
+  -- any other vendor field unexpectedly. An exception rolls back the update.
+  IF NOT EXISTS (
+    SELECT 1 FROM public.marketplace_vendors_live persisted
+    WHERE persisted.id=v.id
+      AND persisted.type='electronics'
+      AND persisted.profile_meta IS NOT DISTINCT FROM
+          jsonb_set(v.profile_meta,'{business_category}','"electronics"'::jsonb,true)
+      AND (to_jsonb(persisted) - ARRAY['type','profile_meta','updated_at'])
+          IS NOT DISTINCT FROM
+          (to_jsonb(v) - ARRAY['type','profile_meta','updated_at'])
+  ) THEN
+    RAISE EXCEPTION 'Build 10 correction blocked: persisted vendor postcondition failed';
+  END IF;
   RAISE NOTICE 'Build 10 staging correction updated exactly one vendor; transaction still requires explicit COMMIT';
 END
 $build10$;
