@@ -3,6 +3,7 @@
 const cfg=window.DBEST_RUNTIME_CONFIG||{},base=String(cfg.supabaseUrl||'').replace(/\/$/,''),key=String(cfg.supabasePublishableKey||'');
 if(!base||!key)return;
 const uploadApi=base+'/functions/v1/marketplace-upload-requests',quoteApi=base+'/functions/v1/marketplace-multi-vendor-quotes';
+const liveHost=['dbest4u.com','www.dbest4u.com'].includes(String(location.hostname||'').toLowerCase());
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function token(){try{return window.DBEST_MEMBER_LIVE?.getToken?.()||''}catch(_){return''}}
 async function call(url,body,member=true){const t=member?token():'';const h={apikey:key,Authorization:'Bearer '+key,'Content-Type':'application/json'};if(member)h['x-dbest-member-token']=t;const r=await fetch(url,{method:'POST',headers:h,cache:'no-store',body:JSON.stringify(body)}),d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'Request failed ('+r.status+')');return d}
@@ -12,6 +13,7 @@ function draw(){
  if(typeof sectionScreen!=='function')return;
  sectionScreen(`${typeof sectionTopBar==='function'?sectionTopBar('📄 Upload a Bulk Order','Send one list to nearby Marketplace vendors','openCommerceHub()'):''}<div class="sectionContent shopPage"><div class="sectionHero"><b>Upload Bulk Order</b><small>Upload your grocery, restaurant or medicine list and invite up to five nearby vendors to quote. No order or payment is created by uploading.</small></div><div class="checkoutCard"><div id="bulkStatus" class="notice">Member login and delivery location are required.</div><div class="serviceFormGrid"><div class="sf"><label>Category</label><select id="bulkCategory"><option value="grocery">Grocery & FMCG</option><option value="restaurant">Restaurant & Food</option><option value="medicine">Medicines</option></select></div><div class="sf"><label>Delivery location</label><button class="btn soft" id="bulkLocation" type="button">Use current location</button><small id="bulkLocLabel">Location not set</small></div><div class="sf full"><label>Order list image or PDF (max 8 MB)</label><input id="bulkFile" type="file" accept="image/jpeg,image/png,application/pdf"></div><div class="sf full"><label>Nearby vendors (choose up to 5)</label><div id="bulkVendors" class="notice">Set your location to find eligible vendors.</div></div><div class="sf full"><button class="btn" type="button" id="bulkSubmit">Upload and request quotes</button></div></div><div id="bulkResult"></div></div></div>`);
  const status=document.getElementById('bulkStatus'),locLabel=document.getElementById('bulkLocLabel'),vendorHost=document.getElementById('bulkVendors'),cat=document.getElementById('bulkCategory');
+ if(!liveHost)status.textContent='Preview only: uploads and vendor invitations are disabled here to protect live order data.';
  let location=getLoc(),vendors=[];
  if(!token()){status.innerHTML='Please <button type="button" class="mini" onclick="location.href=\'/preview-member-login-v2.html?return=%2F\'">log in</button> with your DBest member account before uploading.'}
  function paintLocation(){locLabel.textContent=location?'Location ready • '+location.lat.toFixed(4)+', '+location.lng.toFixed(4):'Location not set'}
@@ -20,6 +22,7 @@ function draw(){
  cat.onchange=loadVendors;
  paintLocation();if(location)loadVendors();
  document.getElementById('bulkSubmit').onclick=async()=>{
+   if(!liveHost){say('This preview is read-only. No upload or vendor request was sent.');return}
    if(!token()){say('Please log in as a DBest member first.');return}
    if(!location){say('Set your delivery location first.');return}
    const file=document.getElementById('bulkFile').files?.[0];if(!file){say('Choose an order list image or PDF.');return}
