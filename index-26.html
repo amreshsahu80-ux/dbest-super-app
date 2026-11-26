@@ -3979,8 +3979,7 @@ async function dbestLoadPublishedVendorOffers(type){
    const sellerLabel=document.createElement('small');sellerLabel.textContent='Choose from the top '+offers.length+' sellers within 15 km (price + distance ranked equally)';
    const sellerChoices=document.createElement('div');sellerChoices.className='dbestSellerChoices';sellerChoices.setAttribute('role','radiogroup');sellerChoices.setAttribute('aria-label','Choose a seller');
    const cartRowsForProduct=dbestOfferCartRead().filter(x=>x.sku===p.sku&&x.marketType===type);
-   const selectedSeller={index:Math.max(0,offers.findIndex(o=>cartRowsForProduct.some(x=>x.vendorId===o.vendorId)))};
-   if(!cartRowsForProduct.length)selectedSeller.index=-1;
+   const selectedSeller={index:cartRowsForProduct.length?offers.findIndex(o=>cartRowsForProduct.some(x=>x.vendorId===o.vendorId)):-1};
    const offerControls=document.createElement('div');
    const addButton=document.createElement('button');addButton.type='button';addButton.className='addCartBtn';addButton.textContent='+ Add to Cart';
    const selectedOffer=()=>selectedSeller.index>=0?offers[selectedSeller.index]:null;
