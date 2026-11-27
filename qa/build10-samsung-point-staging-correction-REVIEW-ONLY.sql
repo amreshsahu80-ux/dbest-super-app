@@ -28,6 +28,10 @@ BEGIN
   END IF;
   expected_at := current_setting('dbest.build10_expected_updated_at')::timestamptz;
 
+  -- Prevent catalogue inserts and other writes during the staging correction.
+  -- Fail immediately on contention; never wait while holding other row locks.
+  LOCK TABLE public.marketplace_catalog_live IN SHARE ROW EXCLUSIVE MODE NOWAIT;
+
   -- Lock the authoritative registry row until the transaction ends so a
   -- concurrent category deactivation cannot race this correction.
   SELECT value::jsonb INTO STRICT registry_value
@@ -62,7 +66,7 @@ BEGIN
 
   -- Lock existing catalogue rows while checking their classification and stock.
   -- This prevents concurrent updates/deletions of observed rows during correction.
-  -- New inserts still require coordinated application-level writes and later QA.
+  -- The table lock above also prevents concurrent inserts until transaction end.
   FOR catalogue_row IN
     SELECT c.market_type, c.active, c.stock
       FROM public.marketplace_catalog_live c
