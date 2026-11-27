@@ -1,0 +1,95 @@
+name: Partner Build 10 isolated KYC checks
+on:
+  push:
+    branches:
+      - release/partner-build10-isolated-20261114
+  workflow_dispatch:
+jobs:
+  kyc-static:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify isolated Partner release identity
+        run: |
+          node -e "const fs=require('fs');const g=fs.readFileSync('partner-android-app/app/build.gradle','utf8');for(const v of ['com.dbest4u.partner','versionCode 10',\"versionName '1.0.6'\"])if(!g.includes(v))throw Error('Missing '+v);console.log('Native Partner release identity passed')"
+      - name: Note separately gated website onboarding QA
+        run: echo 'Shared website onboarding/KYC scripts excluded from this isolated Android release; validate separately before production.'
+  android-build10-signed:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: partner-android-app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+      - name: Check release identity
+        run: |
+          grep -Fq "applicationId 'com.dbest4u.partner'" app/build.gradle
+          grep -Fq 'versionCode 10' app/build.gradle
+          grep -Fq "versionName '1.0.6'" app/build.gradle
+      - name: Compile isolated release candidate
+        run: gradle :app:assembleRelease :app:bundleRelease --no-daemon
+      - name: Verify signing credentials are provisioned
+        env:
+          UPLOAD_KEY_B64: ${{ secrets.DBEST_PARTNER_UPLOAD_KEY_B64 }}
+          UPLOAD_KEY_ALIAS: ${{ secrets.DBEST_PARTNER_UPLOAD_KEY_ALIAS }}
+          UPLOAD_KEY_PASSWORD: ${{ secrets.DBEST_PARTNER_UPLOAD_KEY_PASSWORD }}
+        run: |
+          test -n "$UPLOAD_KEY_B64" || { echo "::error::Missing DBEST_PARTNER_UPLOAD_KEY_B64"; exit 1; }
+          test -n "$UPLOAD_KEY_ALIAS" || { echo "::error::Missing DBEST_PARTNER_UPLOAD_KEY_ALIAS"; exit 1; }
+          test -n "$UPLOAD_KEY_PASSWORD" || { echo "::error::Missing DBEST_PARTNER_UPLOAD_KEY_PASSWORD"; exit 1; }
+      - name: Verify existing Play upload certificate fingerprint
+        env:
+          UPLOAD_KEY_B64: ${{ secrets.DBEST_PARTNER_UPLOAD_KEY_B64 }}
+          UPLOAD_KEY_ALIAS: ${{ secrets.DBEST_PARTNER_UPLOAD_KEY_ALIAS }}
+          UPLOAD_KEY_PASSWORD: ${{ secrets.DBEST_PARTNER_UPLOAD_KEY_PASSWORD }}
+          EXPECTED_SHA256: ${{ secrets.DBEST_PARTNER_UPLOAD_CERT_SHA256 }}
+        run: |
+          set -euo pipefail
+          test -n "$EXPECTED_SHA256" || { echo "::error::Missing verified Play upload certificate SHA256"; exit 1; }
+          KEY_FILE="$(mktemp --suffix=.p12)"
+          trap 'rm -f "$KEY_FILE"' EXIT
+          printf '%s' "$UPLOAD_KEY_B64" | base64 --decode > "$KEY_FILE"
+          ACTUAL_SHA256="$(keytool -list -v -keystore "$KEY_FILE" -storetype PKCS12 -storepass "$UPLOAD_KEY_PASSWORD" -alias "$UPLOAD_KEY_ALIAS" | sed -n 's/^[[:space:]]*SHA256: //p' | head -n 1)"
+          test -n "$ACTUAL_SHA256" || { echo "::error::Unable to read signing certificate"; exit 1; }
+          test "${ACTUAL_SHA256^^}" = "${EXPECTED_SHA256^^}" || { echo "::error::Upload certificate fingerprint mismatch"; exit 1; }
+      - name: Sign release AAB with existing upload key
+        env:
+          UPLOAD_KEY_B64: ${{ secrets.DBEST_PARTNER_UPLOAD_KEY_B64 }}
+          UPLOAD_KEY_ALIAS: ${{ secrets.DBEST_PARTNER_UPLOAD_KEY_ALIAS }}
+          UPLOAD_KEY_PASSWORD: ${{ secrets.DBEST_PARTNER_UPLOAD_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          KEY_FILE="$(mktemp --suffix=.p12)"
+          trap 'rm -f "$KEY_FILE"' EXIT
+          printf '%s' "$UPLOAD_KEY_B64" | base64 --decode > "$KEY_FILE"
+          jarsigner -keystore "$KEY_FILE" -storetype PKCS12 -storepass:env UPLOAD_KEY_PASSWORD -keypass:env UPLOAD_KEY_PASSWORD app/build/outputs/bundle/release/app-release.aab "$UPLOAD_KEY_ALIAS"
+          jarsigner -verify -strict app/build/outputs/bundle/release/app-release.aab
+      - name: Validate release bundle and launcher reference
+        run: |
+          test -s app/build/outputs/bundle/release/app-release.aab
+          grep -Fq 'android:icon="@drawable/dbest_brand"' app/src/main/AndroidManifest.xml
+          grep -Fq 'android:roundIcon="@drawable/dbest_brand"' app/src/main/AndroidManifest.xml
+          test ! -e app/src/main/res/drawable/partner_launcher.xml
+          test ! -e app/src/main/res/drawable/partner_symbol.xml
+          ! grep -R -E '@drawable/(partner_launcher|partner_symbol)' app/src/main
+          test -s app/src/main/res/drawable-nodpi/dbest_brand.png
+          file app/src/main/res/drawable-nodpi/dbest_brand.png | grep -q 'PNG image data'
+          jarsigner -verify -strict app/build/outputs/bundle/release/app-release.aab
+      - name: Keep signed candidate private
+        uses: actions/upload-artifact@v4
+        with:
+          name: partner-build10-signed-aab-and-unsigned-apk
+          path: |
+            partner-android-app/app/build/outputs/bundle/release/*.aab
+            partner-android-app/app/build/outputs/apk/release/*.apk
+          retention-days: 1
