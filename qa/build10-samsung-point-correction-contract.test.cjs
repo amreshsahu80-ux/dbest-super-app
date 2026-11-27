@@ -29,3 +29,19 @@ test('nullable eligibility fields fail closed and registry key is canonical',()=
   required("WHERE c->>'key' = 'electronics'");
   required("WHERE lower(trim(c->>'key'))='electronics'");
 });
+
+test('persisted category and all unrelated vendor fields are verified before commit',()=>{
+  const post=sql.slice(sql.indexOf('GET DIAGNOSTICS affected = ROW_COUNT'));
+  for(const s of ["persisted.id=v.id","persisted.type='electronics'","persisted.profile_meta IS NOT DISTINCT FROM","jsonb_set(v.profile_meta","to_jsonb(persisted) - ARRAY['type','profile_meta','updated_at']","to_jsonb(v) - ARRAY['type','profile_meta','updated_at']","RAISE EXCEPTION 'Build 10 correction blocked: persisted vendor postcondition failed'"]) assert.ok(post.includes(s),'missing persisted postcondition: '+s);
+});
+
+test('catalogue insert exclusion is fail-fast and precedes row locks',()=>{
+  const lock='LOCK TABLE public.marketplace_catalog_live IN SHARE ROW EXCLUSIVE MODE NOWAIT;';
+  required(lock);
+  const at=sql.indexOf(lock);
+  assert.ok(at>sql.indexOf('expected_at := current_setting'));
+  for(const clause of ["WHERE key='marketplace_categories' FOR SHARE","WHERE id='VND8597199' FOR UPDATE","WHERE c.vendor_id=v.id FOR SHARE"]) {
+    required(clause);
+    assert.ok(at<sql.indexOf(clause),'table lock must precede '+clause);
+  }
+});

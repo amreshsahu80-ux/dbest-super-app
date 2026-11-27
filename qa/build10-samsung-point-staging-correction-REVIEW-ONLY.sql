@@ -28,6 +28,10 @@ BEGIN
   END IF;
   expected_at := current_setting('dbest.build10_expected_updated_at')::timestamptz;
 
+  -- Prevent catalogue inserts and other writes during the staging correction.
+  -- Fail immediately on contention; never wait while holding other row locks.
+  LOCK TABLE public.marketplace_catalog_live IN SHARE ROW EXCLUSIVE MODE NOWAIT;
+
   -- Lock the authoritative registry row until the transaction ends so a
   -- concurrent category deactivation cannot race this correction.
   SELECT value::jsonb INTO STRICT registry_value
@@ -62,7 +66,7 @@ BEGIN
 
   -- Lock existing catalogue rows while checking their classification and stock.
   -- This prevents concurrent updates/deletions of observed rows during correction.
-  -- New inserts still require coordinated application-level writes and later QA.
+  -- The table lock above also prevents concurrent inserts until transaction end.
   FOR catalogue_row IN
     SELECT c.market_type, c.active, c.stock
       FROM public.marketplace_catalog_live c
@@ -99,6 +103,20 @@ BEGIN
   GET DIAGNOSTICS affected = ROW_COUNT;
   IF affected <> 1 THEN
     RAISE EXCEPTION 'Build 10 correction blocked: affected % rows, expected exactly one', affected;
+  END IF;
+  -- Re-read persisted values to detect a trigger rewriting the category or
+  -- any other vendor field unexpectedly. An exception rolls back the update.
+  IF NOT EXISTS (
+    SELECT 1 FROM public.marketplace_vendors_live persisted
+    WHERE persisted.id=v.id
+      AND persisted.type='electronics'
+      AND persisted.profile_meta IS NOT DISTINCT FROM
+          jsonb_set(v.profile_meta,'{business_category}','"electronics"'::jsonb,true)
+      AND (to_jsonb(persisted) - ARRAY['type','profile_meta','updated_at'])
+          IS NOT DISTINCT FROM
+          (to_jsonb(v) - ARRAY['type','profile_meta','updated_at'])
+  ) THEN
+    RAISE EXCEPTION 'Build 10 correction blocked: persisted vendor postcondition failed';
   END IF;
   RAISE NOTICE 'Build 10 staging correction updated exactly one vendor; transaction still requires explicit COMMIT';
 END

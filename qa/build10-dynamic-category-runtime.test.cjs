@@ -170,3 +170,15 @@ test('registry error envelope cannot authorize Electronics even when rows are pr
  h.listeners['document:submit'][0]({target:form,preventDefault(){prevented=true;}});
  assert.equal(prevented,true);
 });
+
+for (const [name,payload] of [['empty',{categories:[]}],['failed',{error:'registry_unavailable'}]]) {
+ test('repeated '+name+' registry refresh preserves placeholder DOM identity',async()=>{
+  const h=harness(payload);
+  await h.window.DBEST_VENDOR_DYNAMIC_CATEGORIES.refresh();
+  const placeholder=h.select.options[0];
+  await h.window.DBEST_VENDOR_DYNAMIC_CATEGORIES.refresh();
+  assert.equal(h.select.options.length,1);
+  assert.equal(h.select.options[0],placeholder);
+  assert.notEqual(h.select.validityMessage,'');
+ });
+}
