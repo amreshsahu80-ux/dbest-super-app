@@ -4,7 +4,7 @@ const VERSION='1.1.0';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let decorating=false;
 function type(){try{return String(marketState?.type||'grocery').toLowerCase()}catch(e){return'grocery'}}
-function products(){try{return (commerceConfig?.products||[]).filter(p=>String(p.type||'').toLowerCase()===type()&&p.active!==false)}catch(e){return[]}}
+function products(){try{const t=type();if(t!=='digital')return[];return (commerceConfig?.products||[]).filter(p=>String(p.type||'').toLowerCase()===t&&p.active!==false)}catch(e){return[]}}
 function cart(){try{return typeof marketCart==='function'?(marketCart(type())||[]):((commerceCarts?.[type()])||[])}catch(e){return[]}}
 function persist(){try{typeof save==='function'&&save()}catch(e){}}
 function product(id){try{return typeof marketProduct==='function'?marketProduct(id):(commerceConfig?.products||[]).find(p=>String(p.id)===String(id))}catch(e){return null}}
