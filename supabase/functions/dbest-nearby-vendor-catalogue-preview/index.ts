@@ -12,9 +12,17 @@ Deno.serve(async req=>{
  const distance=(a:number,b:number)=>{const rad=Math.PI/180;const h=Math.sin((a-lat)*rad/2)**2+Math.cos(lat*rad)*Math.cos(a*rad)*Math.sin((b-lng)*rad/2)**2;return 6371*2*Math.asin(Math.sqrt(Math.min(1,h)));};
  if(!["Electronics","Grocery & FMCG","Grocery","FMCG","Cosmetics","Restaurant","Medicines (OTC)"].includes(category))return reply({error:"invalid_category"},400);
  const db=createClient(Deno.env.get("SUPABASE_URL")!,Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,{auth:{persistSession:false,autoRefreshToken:false}});
- const {data:masters,error}=await db.from("dbest_uploaded_master_catalogue_isolated")// A vendor offer is independently publishable once selected, priced, and stocked. Keep the owner visibility gate, but do not require the master-only customer_publish flag for vendor offers.
- .select("sku,product_title,category,image_src,variant_pack,public_catalogue_visible").eq("category",category).eq("public_catalogue_visible",true).limit(100);
- if(error)return reply({error:"catalogue_unavailable"},503);
+ // Read every owner-visible master product in stable pages. A fixed 100-row
+ // limit hid later selected products (for example SKU-ELEC-0001 at row 219).
+ const masters:any[]=[];const pageSize=500;
+ for(let from=0;;from+=pageSize){
+  const {data:page,error}=await db.from("dbest_uploaded_master_catalogue_isolated")
+   .select("sku,product_title,category,image_src,variant_pack,public_catalogue_visible")
+   .eq("category",category).eq("public_catalogue_visible",true)
+   .order("sku",{ascending:true}).range(from,from+pageSize-1);
+  if(error)return reply({error:"catalogue_unavailable"},503);
+  const rows=page||[];masters.push(...rows);if(rows.length<pageSize)break;
+ }
  const skus=(masters||[]).map(x=>x.sku);
  if(!skus.length)return reply({ok:true,items:[]});
  const {data:links}=await db.from("dbest_uploaded_master_product_links_isolated").select("sku,master_product_id").in("sku",skus);
