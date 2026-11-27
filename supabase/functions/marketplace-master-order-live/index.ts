@@ -20,7 +20,7 @@ function deliveryCalc(cfg:any,type:string,subtotal:number,distance:number){if(ty
 async function uuidFromHash(value:string){const a=(await sha(value)).slice(0,32).split('');a[12]='5';a[16]='a';const h=a.join('');return h.slice(0,8)+'-'+h.slice(8,12)+'-'+h.slice(12,16)+'-'+h.slice(16,20)+'-'+h.slice(20)}
 async function loadVendorMasterOffer(sb:any,vendorId:string,sku:string){
  const {data:link,error:le}=await sb.from('dbest_uploaded_master_product_links_isolated').select('master_product_id').eq('sku',sku).maybeSingle();if(le)throw le;if(!link?.master_product_id)return null;
- const {data:master,error:me}=await sb.from('dbest_uploaded_master_catalogue_isolated').select('sku,category,product_title,brand,variant_pack,mrp_inr,image_src,customer_publish,public_catalogue_visible').eq('sku',sku).maybeSingle();if(me)throw me;if(!master||master.customer_publish!==true||master.public_catalogue_visible!==true)return null;
+ const {data:master,error:me}=await sb.from('dbest_uploaded_master_catalogue_isolated').select('sku,category,product_title,brand,variant_pack,mrp_inr,image_src,public_catalogue_visible').eq('sku',sku).maybeSingle();if(me)throw me;/* Vendor-selected offers are orderable when the owner-visible master item has an active vendor offer. The master-only customer_publish flag must not block them. */if(!master||master.public_catalogue_visible!==true)return null;
  const {data:offer,error:oe}=await sb.from('dbest_vendor_product_offers').select('id,vendor_id,master_product_id,price_inclusive_gst,mrp,stock,active').eq('vendor_id',vendorId).eq('master_product_id',link.master_product_id).eq('active',true).order('updated_at',{ascending:false}).limit(1).maybeSingle();if(oe)throw oe;if(!offer)return null;
  return {master,offer};
 }
