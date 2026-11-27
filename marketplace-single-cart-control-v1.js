@@ -26,6 +26,7 @@ function clean(card){
  extras.forEach(n=>{
    if(n.nodeType===3){if(/^\s*\d+\s*(?:[×x]\s*)?[^\n]{1,60}\s*$/.test(n.textContent||''))n.remove();return}
    if(n.nodeType!==1)return;
+   if(n.classList.contains('dbestQtyControl')){n.remove();return}
    if(n.querySelector('button,input,.qtyControl,.addCartBtn'))return;
    const t=(n.textContent||'').trim();
    if(/^\d+\s*(?:[×x]\s*)?(?:Plates?|Items?|Large|Regular|Pieces?|Pcs?|Qty\b)[^\n]{0,40}$/i.test(t))n.remove();

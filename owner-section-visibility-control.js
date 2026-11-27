@@ -27,12 +27,14 @@ function parseOpenService(el){const s=String(el?.getAttribute?.('onclick')||'');
 function parseOpenSub(el){const s=String(el?.getAttribute?.('onclick')||'');const m=s.match(/openContentForm\(\s*['"]([^'"]+)['"]\s*,\s*(\d+)\s*\)/);return m?{id:m[1],i:Number(m[2])}:null}
 function hide(el,flag){if(!el)return; if(flag){if(el.dataset.dbestVisibilityPrevDisplay===undefined)el.dataset.dbestVisibilityPrevDisplay=el.style.display||'';el.style.setProperty('display','none','important');el.setAttribute('data-dbest-disabled-by-owner','1')}else if(el.getAttribute('data-dbest-disabled-by-owner')==='1'){el.style.display=el.dataset.dbestVisibilityPrevDisplay||'';delete el.dataset.dbestVisibilityPrevDisplay;el.removeAttribute('data-dbest-disabled-by-owner')}}
 function isOwnerControlScreen(){try{const roots=[...document.querySelectorAll('.sectionContent')];return roots.some(r=>/Section & Subsection Visibility|Owner Operations|Project Owner Console|Master Control/i.test(r.innerText||''))}catch(e){return false}}
+function marketplaceCardVisible(el){try{const on=String(el?.getAttribute?.('onclick')||''),m=on.match(/openMarketplace\(\s*['"]([^'"]+)['"]/);if(!m)return true;const type=String(m[1]).toLowerCase(),sc=store(),v2=sc.__visibilityV2||{},sections=v2.sections||{},subs=v2.subsections||{};if(sections.store===false||sc.store?.visible===false)return false;const aliases={grocery:['grocery','grocery_fmcg','grocery_and_fmcg'],restaurant:['restaurant','restaurants','food'],digital:['digital','digital_items'],medicine:['medicine','medicines','medicines_otc','pharmacy'],electronics:['electronics','electronic']}[type]||[type];if(aliases.some(k=>sections[k]===false||sc[k]?.visible===false))return false;const idx={grocery:0,restaurant:1,digital:2}[type];if(idx!==undefined&&subs['store::'+idx]===false)return false;return true}catch(_){return true}}
 function applyVisibility(){
   if(applying)return;applying=true;
   try{
     if(owner()&&isOwnerControlScreen())return;
     document.querySelectorAll('[onclick*="openService("]').forEach(el=>{const id=parseOpenService(el);if(id)hide(el,!sectionEnabled(id))});
     document.querySelectorAll('[onclick*="openContentForm("]').forEach(el=>{const p=parseOpenSub(el);if(p)hide(el,!subsectionEnabled(p.id,p.i))});
+    document.querySelectorAll('[onclick*="openMarketplace("]').forEach(el=>hide(el,!marketplaceCardVisible(el)));
   }catch(e){console.warn('DBest visibility apply',e)}finally{applying=false}
 }
 async function persist(){

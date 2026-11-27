@@ -67,7 +67,8 @@ function refreshTotals(type,form){
 }
 function refreshCheckout(){checkout()}
 let queued=false;
-function update(){if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;dock();if(document.querySelector('.checkoutCard')&&!document.getElementById('dbestCheckoutItems'))checkout()})}
+function hideCustomerVendorPortal(){document.querySelectorAll(".shopPage").forEach(scope=>{if(!scope.querySelector(".marketHubGrid"))return;scope.querySelectorAll("a,button,[role=link],[role=button]").forEach(el=>{if(/vendor\s*portal/i.test(el.textContent||""))el.remove()})})}
+function update(){if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;hideCustomerVendorPortal();dock();if(document.querySelector('.checkoutCard')&&!document.getElementById('dbestCheckoutItems'))checkout()})}
 function start(){
  // Cart mutations are handled exclusively by the native marketAdd/marketQty
  // functions in index-26.html. Do not intercept product clicks here.
