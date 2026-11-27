@@ -139,16 +139,16 @@ public final class MainActivity extends ComponentActivity {
         space(page, 8);
 
         LinearLayout hero = column();
-        hero.setPadding(dp(16), dp(13), dp(16), dp(14));
+        hero.setPadding(dp(16), dp(9), dp(16), dp(10));
         GradientDrawable heroShape = new GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 new int[]{0xFF102F68, 0xFF1760FF, 0xFF6D52EF});
         heroShape.setCornerRadius(dp(18));
         hero.setBackground(heroShape);
         hero.addView(txt("ONE PARTNER NETWORK", 10, 0xFFE6EDFF, true));
-        space(hero, 8);
+        space(hero, 5);
         hero.addView(txt("Your work. Your growth.", 22, Color.WHITE, true));
-        space(hero, 6);
+        space(hero, 4);
         TextView caption = txt("Orders, trips and service jobs—one dedicated DBest app.", 12, 0xFFF0F3FF, false);
         caption.setLineSpacing(dp(2), 1);
         hero.addView(caption);
