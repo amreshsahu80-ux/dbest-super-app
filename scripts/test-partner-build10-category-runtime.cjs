@@ -13,6 +13,15 @@ function selector(initial){
     appendChild(o){this.options.push(o);if(o.selected)this.value=o.value;},
     set innerHTML(v){this.options=[];this.value='';}};
 }
+// Model the browser SubmitEvent methods, including capture-phase cancellation.
+function submit(s,expectedBlocked,message){
+  let prevented=false,stopped=false;
+  s.onSubmit({target:{querySelectorAll:()=>[s]},
+    preventDefault(){prevented=true;},
+    stopImmediatePropagation(){stopped=true;}});
+  assert.equal(prevented,expectedBlocked,message);
+  assert.equal(stopped,expectedBlocked,message+' (downstream handlers)');
+}
 async function scenario(rows,initial,fetchOverride){
   const s=selector(initial),scheduled=[];
   const document={documentElement:{},querySelectorAll:()=>[s],createElement:()=>option(),addEventListener(type,fn){if(type==='submit')s.onSubmit=fn;}};
@@ -45,6 +54,8 @@ async function scenario(rows,initial,fetchOverride){
   assert.notEqual(isActiveDisabled.validity,'','string-zero is_active must not be accepted');
   const empty=await scenario([],'Electronics');
   assert.equal(empty.validity,'No active business categories available','empty authoritative registry must fail closed');
+  submit(empty,true,'empty registry must stop registration handlers');
+  submit(registryFailure,true,'unavailable registry must stop registration handlers');
   const deleted=await scenario([{key:'Electronics',status:'deleted'},{key:'Grocery',active:true}],'Electronics');
   assert.notEqual(deleted.validity,'','deleted Electronics must not be accepted');
   const softDeleted=await scenario([{key:'Electronics',active:true,deleted_at:'2026-11-20T00:00:00Z'},{key:'Grocery',active:true}],'Electronics');
@@ -72,8 +83,8 @@ async function scenario(rows,initial,fetchOverride){
   selectable.value='UnregisteredCategory';
   selectable.onChange();
   assert.notEqual(selectable.validity,'','unregistered category must fail validation');
-  let prevented=false;selectable.value='UnregisteredCategory';selectable.onSubmit({target:{querySelectorAll:()=>[selectable]},preventDefault(){prevented=true;}});assert.equal(prevented,true,'unregistered category must block form submission');
-  prevented=false;selectable.value='Electronics';selectable.onSubmit({target:{querySelectorAll:()=>[selectable]},preventDefault(){prevented=true;}});assert.equal(prevented,false,'active category must permit form submission');
+  selectable.value='UnregisteredCategory';submit(selectable,true,'unregistered category must block form submission');
+  selectable.value='Electronics';submit(selectable,false,'active category must permit form submission');
   // A refresh must discard cached category authorization after owner registry changes.
   {
     const s=selector('Electronics'),scheduled=[];
@@ -92,9 +103,7 @@ async function scenario(rows,initial,fetchOverride){
     active=false;
     await window.DBEST_VENDOR_DYNAMIC_CATEGORIES.refresh();
     assert.ok(requests>=2,'refresh must request the latest registry instead of using cached categories');
-    let prevented=false;
-    s.onSubmit({target:{querySelectorAll:()=>[s]},preventDefault(){prevented=true;}});
-    assert.equal(prevented,true,'revoked Electronics category must not submit after registry refresh');
+    submit(s,true,'revoked Electronics category must not submit after registry refresh');
   }
   // A competing legacy script may replace options without changing the select node.
   // The authoritative registry must restore the options on the next observer pass.
@@ -133,9 +142,8 @@ async function scenario(rows,initial,fetchOverride){
     await stale;
     assert.equal(requests,2,'refresh must fetch new registry while prior request is pending');
     assert.ok(!s.options.some(o=>o.value==='Electronics'),'stale response must not restore revoked Electronics');
-    let prevented=false;s.value='Electronics';
-    s.onSubmit({target:{querySelectorAll:()=>[s]},preventDefault(){prevented=true;}});
-    assert.equal(prevented,true,'stale response must not authorize Electronics submission');
+    s.value='Electronics';
+    submit(s,true,'stale response must not authorize Electronics submission');
   }
   // Returning to a backgrounded tab must recheck Owner category revocations.
   {
@@ -155,9 +163,8 @@ async function scenario(rows,initial,fetchOverride){
     handlers.visibilitychange();
     await new Promise(resolve=>setImmediate(resolve));
     assert.ok(requests>=2,'returning to tab must re-fetch Owner registry');
-    let prevented=false;s.value='Electronics';
-    s.onSubmit({target:{querySelectorAll:()=>[s]},preventDefault(){prevented=true;}});
-    assert.equal(prevented,true,'Owner-revoked Electronics must not submit after tab return');
+    s.value='Electronics';
+    submit(s,true,'Owner-revoked Electronics must not submit after tab return');
   }
   console.log('Build 10 category registry runtime smoke: PASS');
 })().catch(e=>{console.error(e);process.exitCode=1;});
