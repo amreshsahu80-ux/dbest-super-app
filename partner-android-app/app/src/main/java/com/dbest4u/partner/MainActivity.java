@@ -161,7 +161,7 @@ public final class MainActivity extends ComponentActivity {
         space(page, 9);
 
         page.addView(roleCard(
-                "Vendor", "GROCERY · RESTAURANT · PHARMACY",
+                "Vendor", "RETAIL · FOOD · PHARMACY",
                 "Manage store, orders, catalog and earnings",
                 0xFF0B987F, R.drawable.partner_vendor,
                 "/Vendor", "/partner?type=Vendor"));
