@@ -1,0 +1,26 @@
+name: Build 10 Electronics SQL safety regression
+on:
+  pull_request:
+    paths:
+      - 'qa/build10-electronics-sql-safety.test.cjs'
+      - 'qa/build10-samsung-point-correction-contract.test.cjs'
+      - 'qa/build10-samsung-point-staging-correction-REVIEW-ONLY.sql'
+      - 'qa/build10-samsung-point-electronics-dry-run.sql'
+      - 'qa/build10-electronics-discovery-contract-inspection.sql'
+      - '.github/workflows/build10-electronics-sql-safety.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sql-safety:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run Samsung Point read-only SQL regression
+        run: node --test qa/build10-electronics-sql-safety.test.cjs qa/build10-samsung-point-correction-contract.test.cjs

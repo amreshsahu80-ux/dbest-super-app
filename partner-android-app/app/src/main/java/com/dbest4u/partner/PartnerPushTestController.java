@@ -38,11 +38,16 @@ public final class PartnerPushTestController {
         firebaseReady=init();
         control=new Button(activity);
         control.setAllCaps(false);
-        control.setTextSize(12);
+        control.setTextSize(11);
+        control.setMinWidth(dp(64));
+        control.setMinimumWidth(dp(64));
+        control.setPadding(dp(9),0,dp(9),0);
+        control.setContentDescription("Partner notification settings");
         control.setTextColor(Color.WHITE);
         FrameLayout.LayoutParams lp=new FrameLayout.LayoutParams(
-            FrameLayout.LayoutParams.WRAP_CONTENT,dp(44),Gravity.BOTTOM|Gravity.LEFT);
-        lp.setMargins(dp(13),0,dp(13),dp(12));
+            FrameLayout.LayoutParams.WRAP_CONTENT,dp(48),Gravity.BOTTOM|Gravity.LEFT);
+        lp.setMargins(dp(12),0,dp(12),dp(12));
+        // Keep native notification toggle bottom-left, away from the portal's bottom-right WhatsApp floater.
         root.addView(control,lp);
         control.setOnClickListener(v->tap());
         refresh();
@@ -62,9 +67,13 @@ public final class PartnerPushTestController {
         ContextCompat.checkSelfPermission(activity,Manifest.permission.POST_NOTIFICATIONS)==PackageManager.PERMISSION_GRANTED;}
     public void refresh(){
         boolean active=on()&&permission();
-        control.setText(active?"🔔 Partner alerts ON"
-            : accountBinding.hasAccountBinding() ? "🔕 Unlink pending" : "🔕 Partner alerts OFF");
+        control.setText(active?"🔔 ON"
+            : accountBinding.hasAccountBinding() ? "🔕 Unlink" : "🔕 OFF");
+        control.setContentDescription(active ? "Partner notifications on. Tap for settings" :
+            accountBinding.hasAccountBinding() ? "Notification unlink pending. Tap to retry" :
+            "Partner notifications off. Tap for settings");
         control.setBackgroundTintList(ColorStateList.valueOf(active?0xFF18784B:0xFF3D5B83));
+        // Accessible ON/OFF state is included in contentDescription above.
     }
     private void tap(){
         if(!firebaseReady){Toast.makeText(activity,"Firebase not ready.",Toast.LENGTH_LONG).show();return;}

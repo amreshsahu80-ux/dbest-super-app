@@ -1,0 +1,21 @@
+name: Build 10 dynamic category runtime regression
+on:
+  pull_request:
+    paths:
+      - 'vendor-dynamic-categories-v1.js'
+      - 'qa/build10-dynamic-category-runtime.test.cjs'
+      - '.github/workflows/build10-dynamic-category-runtime.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  category-runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test isolated authoritative category selector
+        run: node --test qa/build10-dynamic-category-runtime.test.cjs

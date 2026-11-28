@@ -2,8 +2,9 @@
 'use strict';
 const VERSION='3.2.0',BUILD='20260923-marketplace-live-refresh-v1';
 const cfg=window.DBEST_RUNTIME_CONFIG||{},BASE=String(cfg.supabaseUrl||'').replace(/\/$/,''),KEY=String(cfg.supabasePublishableKey||''),API=BASE+'/functions/v1/marketplace-local-catalog-live';
-const LIVE_TYPES=['restaurant','grocery','digital'];
-const S={location:null,locationSig:'',snapshot:null,ready:false,loading:null,lastLoadedAt:0,renderSeq:0,originalOpen:null,controllerOpen:null,originalSection:null,originalGps:null};
+// Include Electronics in the existing live-catalog snapshot path; backend eligibility still governs visibility.
+const LIVE_TYPES=['restaurant','grocery','digital','electronics'];
+const S={location:null,locationSig:'',snapshot:null,snapshotLocationSig:'',ready:false,loading:null,lastLoadedAt:0,requestSeq:0,renderSeq:0,originalOpen:null,controllerOpen:null,originalSection:null,originalGps:null};
 function finite(v){return v!==null&&v!==undefined&&v!==''&&Number.isFinite(Number(v))}
 function marketOpen(){try{return !!document.querySelector('#m .shopPage')}catch(_){return false}}
 function overlay(){try{return document.querySelector('#m .sectionOverlay')}catch(_){return null}}
@@ -17,17 +18,59 @@ async function api(body={}){if(!BASE||!KEY)throw new Error('marketplace_runtime_
 function detail(p){const d=String(p.description||'').trim();let category='General',unit='';if(d.includes(' • ')){const a=d.split(' • ');category=String(a.shift()||'General').trim()||'General';unit=a.join(' • ').trim()}else if(d.includes('|')){const a=d.split('|');category=String(a.shift()||'General').trim()||'General';unit=a.join(' | ').trim()}else if(d)category=d.length<=40?d:'General';return {category,unit}}
 function liveProduct(p){const x=detail(p);return {id:String(p.id),type:String(p.market_type||'').trim().toLowerCase(),vendorId:String(p.vendor_id),name:String(p.name||''),category:x.category,unit:x.unit,description:String(p.description||''),price:Number(p.price||0),mrp:Number(p.mrp||p.base_price||p.price||0),stock:Number(p.stock||0),offer:Number(p.effective_offer_percent??p.offer_percent??0),active:p.active!==false,image:String(p.image_url||''),ownerApproved:true,approvalStatus:'Approved',liveBackend:true}}
 function liveVendor(v){return {id:String(v.id),name:String(v.name||''),type:String(v.type||'').trim().toLowerCase(),city:String(v.city||''),active:true,ownerApproval:'Approved',liveBackend:true,canPrice:true,canStock:true,canOffer:true,distanceKm:v.distance_km==null?null:Number(v.distance_km),serviceRadiusKm:v.service_radius_km==null?null:Number(v.service_radius_km),agreement:{partnerSigned:true,ownerSigned:true,status:'Fully Signed'}}}
-function applySnapshot(d){if(!d||typeof commerceConfig==='undefined')return false;commerceConfig.products=Array.isArray(commerceConfig.products)?commerceConfig.products:[];commerceConfig.vendors=Array.isArray(commerceConfig.vendors)?commerceConfig.vendors:[];commerceConfig.products=commerceConfig.products.filter(p=>!LIVE_TYPES.includes(String(p.type||'').toLowerCase()));commerceConfig.vendors=commerceConfig.vendors.filter(v=>!LIVE_TYPES.includes(String(v.type||'').toLowerCase()));const products=(Array.isArray(d.products)?d.products:[]).map(liveProduct).filter(p=>LIVE_TYPES.includes(p.type)),vendors=(Array.isArray(d.vendors)?d.vendors:[]).map(liveVendor).filter(v=>LIVE_TYPES.includes(v.type));commerceConfig.products.push(...products);commerceConfig.vendors.push(...vendors);S.snapshot=d;S.ready=true;S.lastLoadedAt=Date.now();window.DBEST_MARKETPLACE_RADIUS_RULE=d.serviceRadius||null;window.DBEST_LIVE_CATALOG_READY={version:VERSION,build:BUILD,productCount:products.length,vendorCount:vendors.length,types:[...new Set(vendors.map(v=>v.type))],location:S.location,serviceRadius:d.serviceRadius||null};return true}
-async function loadSnapshot(force=false){if(S.loading&&!force)return S.loading;const run=(async()=>{await acquireGpsOnce();const body={};if(S.location){body.customerLat=S.location.lat;body.customerLng=S.location.lng}try{const d=await api(body);applySnapshot(d);return d}catch(e){console.warn('DBest Marketplace snapshot',e);return null}})();S.loading=run;try{return await run}finally{if(S.loading===run)S.loading=null}}
+function applySnapshot(d,fromCache=false){
+  if(!d||d.success===false||d.ok===false||d.error||!Array.isArray(d.products)||!Array.isArray(d.vendors)||typeof commerceConfig==='undefined')return false;
+  // Prepare the complete replacement before touching the last known-good catalogue.
+  // A malformed record or mapper exception must not erase Electronics inventory.
+  let products,vendors;
+  try{
+    if(!d.products.every(p=>p&&typeof p==='object'&&!Array.isArray(p)&&
+       p.id!=null&&String(p.id).trim())||
+       !d.vendors.every(v=>v&&typeof v==='object'&&!Array.isArray(v)&&
+       v.id!=null&&String(v.id).trim()&&v.type!=null&&String(v.type).trim()))return false;
+    products=d.products.map(liveProduct);
+    vendors=d.vendors.map(liveVendor);
+    if(!products.every(p=>p&&typeof p==='object'&&!Array.isArray(p)&&p.id!=null&&String(p.id).trim())||
+       !vendors.every(v=>v&&typeof v==='object'&&!Array.isArray(v)&&v.id!=null&&String(v.id).trim()&&v.type!=null&&String(v.type).trim()))return false;
+    // Reject noncanonical live-category spellings instead of silently dropping approved vendors.
+    // The backend must supply canonical registry slugs (for example, electronics).
+    // Unknown categories remain excluded by LIVE_TYPES; no production classification is rewritten.
+    if(!products.every(p=>p.type==null||typeof p.type==='string')||
+       !vendors.every(v=>typeof v.type==='string'))return false;
+    if(!products.every(p=>p.type==null||p.type===p.type.trim().toLowerCase())||
+       !vendors.every(v=>v.type===v.type.trim().toLowerCase()))return false;
+    // Duplicate IDs make catalogue discovery nondeterministic; preserve the last good snapshot.
+    const uniqueIds=items=>{const ids=items.map(item=>String(item.id).trim());return new Set(ids).size===ids.length;};
+    if(!uniqueIds(products)||!uniqueIds(vendors))return false;
+    products=products.filter(p=>LIVE_TYPES.includes(p.type));
+    vendors=vendors.filter(v=>LIVE_TYPES.includes(v.type));
+  }catch(_error){return false;}
+  const previousProducts=Array.isArray(commerceConfig.products)?commerceConfig.products:[];
+  const previousVendors=Array.isArray(commerceConfig.vendors)?commerceConfig.vendors:[];
+  // Build both replacements first: a malformed existing vendor must not leave
+  // products replaced while vendors still contain the previous snapshot.
+  let nextProducts,nextVendors;
+  try{
+    nextProducts=previousProducts.filter(p=>!LIVE_TYPES.includes(String(p&&p.type||'').toLowerCase())).concat(products);
+    nextVendors=previousVendors.filter(v=>!LIVE_TYPES.includes(String(v&&v.type||'').toLowerCase())).concat(vendors);
+  }catch(_error){return false;}
+  commerceConfig.products=nextProducts;
+  commerceConfig.vendors=nextVendors;
+  S.snapshot=d;S.snapshotLocationSig=S.locationSig;S.ready=true;if(!fromCache)S.lastLoadedAt=Date.now();
+  window.DBEST_MARKETPLACE_RADIUS_RULE=d.serviceRadius||null;
+  window.DBEST_LIVE_CATALOG_READY={version:VERSION,build:BUILD,productCount:products.length,vendorCount:vendors.length,types:[...new Set(vendors.map(v=>v.type))],location:S.location,serviceRadius:d.serviceRadius||null};
+  return true;
+}
+async function loadSnapshot(force=false){if(S.loading&&!force)return S.loading;const requestSeq=++S.requestSeq;const run=(async()=>{await acquireGpsOnce();const requestedLocationSig=S.locationSig;const body={};if(S.location){body.customerLat=S.location.lat;body.customerLng=S.location.lng}try{const d=await api(body);if(requestSeq!==S.requestSeq||requestedLocationSig!==S.locationSig)return null;if(!applySnapshot(d))return null;return d}catch(e){if(requestSeq===S.requestSeq)console.warn('DBest Marketplace snapshot',e);return null}})();S.loading=run;try{return await run}finally{if(S.loading===run)S.loading=null}}
 function installStableSectionRenderer(){try{if(S.originalSection||typeof window.sectionScreen!=='function')return;S.originalSection=window.sectionScreen;window.sectionScreen=function(content){const isMarket=String(content||'').includes('shopPage'),page=document.querySelector('#m .sectionPage'),ov=overlay();if(isMarket&&page&&ov&&marketOpen()){const top=ov.scrollTop,active=document.activeElement,searchFocused=!!(active&&active.classList&&active.classList.contains('shopSearch')),start=searchFocused?active.selectionStart:null,end=searchFocused?active.selectionEnd:null;page.innerHTML=content;ov.scrollTop=top;cleanGpsUi();if(searchFocused){const inp=document.querySelector('#m .shopSearch');if(inp){try{inp.focus({preventScroll:true});if(start!==null)inp.setSelectionRange(start,end??start)}catch(_){}}}requestAnimationFrame(()=>{if(ov)ov.scrollTop=top});return}return S.originalSection(content)}}catch(e){console.warn('Marketplace stable section renderer',e)}}
 function renderCurrentOnce(){const t=currentType();if(!t||!marketOpen()||typeof window.openMarketplace!=='function')return;const seq=++S.renderSeq,cat=marketState?.category||'All',vendor=marketState?.vendor||'All';setTimeout(()=>{if(seq===S.renderSeq&&currentType()===t&&marketOpen())window.openMarketplace(t,cat,vendor)},0)}
-function installGpsControl(){try{if(S.originalGps||typeof window.requestCommerceLocation!=='function')return;S.originalGps=window.requestCommerceLocation;window.requestCommerceLocation=function(type,silent=false){if(silent&&S.location)return;const before=S.locationSig,out=S.originalGps(type,silent);if(!silent){let n=0;const timer=setInterval(()=>{n++;const l=readKnownLocation();if(l){const changed=adoptLocation(l);if(changed||S.locationSig!==before){clearInterval(timer);loadSnapshot(true).then(()=>renderCurrentOnce())}}if(n>20)clearInterval(timer)},200)}return out}}catch(e){console.warn('Marketplace GPS control',e)}}
-function installMarketplaceSwitch(){try{if(S.originalOpen){if(S.controllerOpen&&window.openMarketplace!==S.controllerOpen)window.openMarketplace=S.controllerOpen;return}if(typeof window.openMarketplace!=='function')return;S.originalOpen=window.openMarketplace;window.__DBEST_MARKETPLACE_BASE_OPEN=S.originalOpen;S.controllerOpen=function(type='grocery',category=null,vendor=null){const t=String(type||'grocery').toLowerCase();if(S.ready&&t!=='medicine')applySnapshot(S.snapshot);const out=S.originalOpen(t,category,vendor);cleanGpsUi();if(t!=='medicine'){const stale=!S.ready||Date.now()-Number(S.lastLoadedAt||0)>5000; if(stale)loadSnapshot(true).then(d=>{if(d&&currentType()===t&&marketOpen())renderCurrentOnce()})}return out};window.openMarketplace=S.controllerOpen}catch(e){console.warn('Marketplace switch install',e)}}
+function installGpsControl(){try{if(S.originalGps||typeof window.requestCommerceLocation!=='function')return;S.originalGps=window.requestCommerceLocation;window.requestCommerceLocation=function(type,silent=false){if(silent&&S.location)return;const before=S.locationSig,out=S.originalGps(type,silent);if(!silent){let n=0;const timer=setInterval(()=>{n++;const l=readKnownLocation();if(l){const changed=adoptLocation(l);if(changed||S.locationSig!==before){clearInterval(timer);loadSnapshot(true).then(d=>{if(d)renderCurrentOnce()})}}if(n>20)clearInterval(timer)},200)}return out}}catch(e){console.warn('Marketplace GPS control',e)}}
+function installMarketplaceSwitch(){try{if(S.originalOpen){if(S.controllerOpen&&window.openMarketplace!==S.controllerOpen)window.openMarketplace=S.controllerOpen;return}if(typeof window.openMarketplace!=='function')return;S.originalOpen=window.openMarketplace;window.__DBEST_MARKETPLACE_BASE_OPEN=S.originalOpen;S.controllerOpen=function(type='grocery',category=null,vendor=null){const t=String(type||'grocery').toLowerCase();if(S.ready&&S.snapshotLocationSig===S.locationSig&&t!=='medicine')applySnapshot(S.snapshot,true);const out=S.originalOpen(t,category,vendor);cleanGpsUi();if(t!=='medicine'){const stale=!S.ready||Date.now()-Number(S.lastLoadedAt||0)>5000; if(stale)loadSnapshot(true).then(d=>{if(d&&currentType()===t&&marketOpen())renderCurrentOnce()})}return out};window.openMarketplace=S.controllerOpen}catch(e){console.warn('Marketplace switch install',e)}}
 function medicineReady(){if(currentType()==='medicine'&&marketOpen())renderCurrentOnce()}
 function boot(){installStableSectionRenderer();installGpsControl();installMarketplaceSwitch();cleanGpsUi();if(!S.ready&&!S.loading)loadSnapshot(false)}
 window.DBEST_MARKETPLACE_CONTROLLER_V3={version:VERSION,build:BUILD,state:S,boot,loadSnapshot,customerLocation:()=>S.location,onMedicineReady:medicineReady};
 boot();let tries=0;const installAgain=()=>{tries++;boot();if(tries<12&&!S.originalOpen)setTimeout(installAgain,250)};if(!S.originalOpen)setTimeout(installAgain,250);
-window.addEventListener('dbest-location-changed',()=>{const l=readKnownLocation();if(l&&adoptLocation(l))loadSnapshot(true).then(()=>renderCurrentOnce())});
+window.addEventListener('dbest-location-changed',()=>{const l=readKnownLocation();if(l&&adoptLocation(l))loadSnapshot(true).then(d=>{if(d)renderCurrentOnce()})});
 window.addEventListener('focus',()=>{boot();const l=readKnownLocation();if(l&&adoptLocation(l))loadSnapshot(true)});
 try{if(!document.querySelector('script[data-dbest-meds-preview]')){const s=document.createElement('script');s.src='./dbest-meds-preview-catalog.js?v='+BUILD;s.setAttribute('data-dbest-meds-preview','1');(document.body||document.documentElement).appendChild(s)}}catch(e){console.warn('DBest Meds preview loader',e)}
 })();

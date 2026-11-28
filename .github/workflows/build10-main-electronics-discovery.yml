@@ -1,0 +1,17 @@
+name: Build 10 Main App Electronics discovery regression
+on:
+  pull_request:
+    paths:
+      - 'marketplace-live-catalog-authority.js'
+      - 'qa/build10-main-electronics-discovery.test.cjs'
+      - '.github/workflows/build10-main-electronics-discovery.yml'
+  workflow_dispatch:
+jobs:
+  electronics-discovery:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test qa/build10-main-electronics-discovery.test.cjs

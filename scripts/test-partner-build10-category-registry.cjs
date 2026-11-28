@@ -1,0 +1,22 @@
+'use strict';
+// Build 10: fail-closed registry selector contract checks. No network or production writes.
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const source = fs.readFileSync('vendor-dynamic-categories-v1.js', 'utf8');
+new vm.Script(source, {filename: 'vendor-dynamic-categories-v1.js'});
+assert.match(source, /action:'public_categories'/, 'categories must originate from server registry');
+assert.match(source, /category_registry_config_unavailable/, 'missing registry config must fail closed');
+assert.match(source, /category_registry_invalid/, 'invalid registry response must fail closed');
+assert.match(source, /category_registry_duplicate_keys/, 'duplicate active keys must fail closed');
+assert.match(source, /validFlag\(x\.active\)&&validFlag\(x\.enabled\)&&validFlag\(x\.is_active\)/, 'all three activation flags must use the fail-closed validator');
+assert.match(source, /\['active','enabled','published','live'\]\.includes\(String\(x\.status\)/, 'status must accept only known active values');
+assert.match(source, /const keys=filtered\.map\(x=>x\.key\.trim\(\)\.toLowerCase\(\)\)/, 'duplicate check must use active normalized keys');
+assert.match(source, /key:x\.key\.trim\(\)/, 'selected values must be canonical trimmed keys');
+assert.match(source, /const keys=filtered\.map[\s\S]*?new Set\(keys\)\.size!==keys\.length[\s\S]*?category_registry_duplicate_keys[\s\S]*?const normalized=filtered\.map/, 'normalization must follow duplicate rejection');
+assert.match(source, /setCustomValidity\('Choose an active business category'\)/, 'unknown selection must block submission');
+assert.match(source, /generation\+\+;cache=null;loading=null/, 'refresh must invalidate stale cache');
+assert.doesNotMatch(source, /localStorage\.setItem\(|sessionStorage\.setItem\(/, 'registry selector must not persist unaudited client categories');
+assert.match(source, /const matched=current&&rows\.find\(x=>String\(x\.key\)\.toLowerCase\(\)===current\.trim\(\)\.toLowerCase\(\)\)/, 'legacy category selections must resolve to canonical registry keys');
+assert.match(source, /s\.value=String\(matched\.key\)/, 'restored selection must use authoritative key');
+console.log('Build 10 category selector contract: PASS');
