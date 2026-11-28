@@ -90,20 +90,22 @@ test('form submission blocks stale Electronics after registry deactivation',asyn
  h.select.value='electronics';
  h.setRegistry({categories:[{key:'electronics',label:'Electronics',active:false}]});
  await h.window.DBEST_VENDOR_DYNAMIC_CATEGORIES.refresh();
- let prevented=false;
+ let prevented=false, stopped=false;
  const form={querySelectorAll(q){return q==='select[name="type"]'?[h.select]:[];}};
- h.listeners['document:submit'][0]({target:form,preventDefault(){prevented=true;}});
+ h.listeners['document:submit'][0]({target:form,preventDefault(){prevented=true;},stopImmediatePropagation(){stopped=true;}});
  assert.equal(prevented,true);
+ assert.equal(stopped,true);
  assert.notEqual(h.select.validityMessage,'');
 });
 test('form submission accepts active Electronics registry selection',async()=>{
  const h=harness({categories:[{key:'electronics',label:'Electronics',active:true}]});
  await h.window.DBEST_VENDOR_DYNAMIC_CATEGORIES.refresh();
  h.select.value='electronics';
- let prevented=false;
+ let prevented=false, stopped=false;
  const form={querySelectorAll(q){return q==='select[name="type"]'?[h.select]:[];}};
- h.listeners['document:submit'][0]({target:form,preventDefault(){prevented=true;}});
+ h.listeners['document:submit'][0]({target:form,preventDefault(){prevented=true;},stopImmediatePropagation(){stopped=true;}});
  assert.equal(prevented,false);
+ assert.equal(stopped,false);
  assert.equal(h.select.validityMessage,'');
 });
 
@@ -112,20 +114,22 @@ test('invalid registry response makes category selector required and blocks subm
  await h.window.DBEST_VENDOR_DYNAMIC_CATEGORIES.refresh();
  assert.equal(h.select.required,true);
  assert.notEqual(h.select.validityMessage,'');
- let prevented=false;
+ let prevented=false, stopped=false;
  const form={querySelectorAll(q){return q==='select[name="type"]'?[h.select]:[];}};
- h.listeners['document:submit'][0]({target:form,preventDefault(){prevented=true;}});
+ h.listeners['document:submit'][0]({target:form,preventDefault(){prevented=true;},stopImmediatePropagation(){stopped=true;}});
  assert.equal(prevented,true);
+ assert.equal(stopped,true);
 });
 test('empty authoritative registry makes category selector required and blocks submission',async()=>{
  const h=harness({categories:[]});
  await h.window.DBEST_VENDOR_DYNAMIC_CATEGORIES.refresh();
  assert.equal(h.select.required,true);
  assert.notEqual(h.select.validityMessage,'');
- let prevented=false;
+ let prevented=false, stopped=false;
  const form={querySelectorAll(q){return q==='select[name="type"]'?[h.select]:[];}};
- h.listeners['document:submit'][0]({target:form,preventDefault(){prevented=true;}});
+ h.listeners['document:submit'][0]({target:form,preventDefault(){prevented=true;},stopImmediatePropagation(){stopped=true;}});
  assert.equal(prevented,true);
+ assert.equal(stopped,true);
 });
 
 // Failure/recovery acceptance: never keep a formerly valid category after the registry is unreachable.
@@ -165,10 +169,11 @@ test('registry error envelope cannot authorize Electronics even when rows are pr
  await h.window.DBEST_VENDOR_DYNAMIC_CATEGORIES.refresh();
  assert.equal(h.select.options.some(o=>o.value==='electronics'),false);
  assert.notEqual(h.select.validityMessage,'');
- let prevented=false;
+ let prevented=false, stopped=false;
  const form={querySelectorAll(q){return q==='select[name="type"]'?[h.select]:[];}};
- h.listeners['document:submit'][0]({target:form,preventDefault(){prevented=true;}});
+ h.listeners['document:submit'][0]({target:form,preventDefault(){prevented=true;},stopImmediatePropagation(){stopped=true;}});
  assert.equal(prevented,true);
+ assert.equal(stopped,true);
 });
 
 for (const [name,payload] of [['empty',{categories:[]}],['failed',{error:'registry_unavailable'}]]) {
